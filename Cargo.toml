@@ -5,3 +5,4 @@ authors = ["silverweed <silverweed1991@gmail.com>"]
 
 [dependencies]
 anymap = "*"
+typename = "*"

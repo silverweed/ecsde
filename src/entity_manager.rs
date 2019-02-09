@@ -16,6 +16,8 @@ struct Generational_Allocator {
 	alive: Vec<bool>,
 	// generation of i-th slot
 	gens: Vec<u64>,
+	// list of currently free slots
+	free_slots: Vec<usize>,
 }
 
 impl Generational_Allocator {
@@ -23,9 +25,14 @@ impl Generational_Allocator {
 		let mut alloc = Generational_Allocator {
 			alive: Vec::new(),
 			gens: Vec::new(),
+			free_slots: Vec::new(),
 		};
 		alloc.alive.resize(initial_size, false);
 		alloc.gens.resize(initial_size, 0);
+		alloc.free_slots.reserve(initial_size);
+		for i in (0..initial_size).rev() {
+			alloc.free_slots.push(i);
+		}
 
 		return alloc;
 	}
@@ -38,9 +45,14 @@ impl Generational_Allocator {
 		let i = self.first_free_slot();
 		if i == self.alive.len() {
 			// Grow the vectors
-			let size = self.alive.len() * 2;
-			self.alive.resize(size, false);
-			self.gens.resize(size, 0);
+			let oldsize = self.alive.len();
+			let newsize = self.alive.len() * 2;
+			self.alive.resize(newsize, false);
+			self.gens.resize(newsize, 0);
+			self.free_slots.reserve(newsize);
+			for i in (oldsize + 1..newsize).rev() {
+				self.free_slots.push(i);
+			}
 		}
 
 		self.alive[i] = true;
@@ -53,13 +65,11 @@ impl Generational_Allocator {
 	}
 
 	// @return either a valid index inside `slots` or `self.alive.len()` if all are occupied.
-	fn first_free_slot(&self) -> usize {
-		let mut i = 0;
-		while i < self.alive.len() {
-			if !self.alive[i] { break; }
-			i += 1;
+	fn first_free_slot(&mut self) -> usize {
+		match self.free_slots.pop() {
+			Some(slot) => slot,
+			None => self.alive.len(),
 		}
-		return i;
 	}
 
 	fn deallocate(&mut self, idx: Generational_Index) {
@@ -76,6 +86,7 @@ impl Generational_Allocator {
 			panic!("Tried to deallocate a Generational_Index that is not allocated! Double free?");
 		}
 		self.alive[idx.index] = false;
+		self.free_slots.push(idx.index);
 	}
 }
 
@@ -83,12 +94,20 @@ impl Generational_Allocator {
 mod tests_gen_allocator {
 	use super::*;
 
+	fn assert_invariant_free_slots_alive(alloc : &Generational_Allocator) {
+		for free in &alloc.free_slots {
+			assert!(!alloc.alive[*free], "Slot {} should not be alive but is!", *free);
+		}
+	}
+
 	#[test]
 	fn test_create_gen_alloc() {
 		let n = 10;
 		let alloc = Generational_Allocator::new(n);
 		assert_eq!(alloc.alive.len(), n);
 		assert_eq!(alloc.gens.len(), n);
+		assert_eq!(alloc.free_slots.len(), n);
+		assert_invariant_free_slots_alive(&alloc);
 	}
 
 	#[test]
@@ -98,8 +117,9 @@ mod tests_gen_allocator {
 
 		for i in 0..2*n {
 			let i1 = alloc.allocate();
-			assert!(i1.index == i);
+			assert!(i1.index == i, "Index should be {} but is {}!", i, i1.index);
 			assert!(i1.gen == 1);
+			assert_invariant_free_slots_alive(&alloc);
 		}
 	}
 
@@ -114,10 +134,12 @@ mod tests_gen_allocator {
 			v.push(i1);
 			assert!(i1.index == i);
 			assert!(i1.gen == 1);
+			assert_invariant_free_slots_alive(&alloc);
 		}
 
 		for i in 0..n {
 			alloc.deallocate(v[i]);
+			assert_invariant_free_slots_alive(&alloc);
 		}
 	}
 
@@ -136,7 +158,7 @@ mod tests_gen_allocator {
 		let mut alloc = Generational_Allocator::new(n);
 		let e1 = alloc.allocate();
 		alloc.deallocate(e1);
-		let e2 = alloc.allocate();
+		let _e2 = alloc.allocate();
 		alloc.deallocate(e1);
 	}
 
@@ -145,7 +167,7 @@ mod tests_gen_allocator {
 	fn test_gen_alloc_bad_deallocate_3() {
 		let n = 10;
 		let mut alloc = Generational_Allocator::new(n);
-		let e1 = alloc.allocate();
+		let _e1 = alloc.allocate();
 		alloc.deallocate(Generational_Index{ index: 0, gen: 2 });
 	}
 
@@ -162,10 +184,12 @@ mod tests_gen_allocator {
 		let n = 10;
 		let mut alloc = Generational_Allocator::new(n);
 		let e1 = alloc.allocate();
-		let e2 = alloc.allocate();
+		let _e2 = alloc.allocate();
 		alloc.deallocate(e1);
+		assert_invariant_free_slots_alive(&alloc);
 		let e3 = alloc.allocate();
 		assert!(e3.index == 0 && e3.gen == 2);
+		assert_invariant_free_slots_alive(&alloc);
 	}
 
 	#[test]
@@ -173,9 +197,10 @@ mod tests_gen_allocator {
 		let n = 10;
 		let mut alloc = Generational_Allocator::new(n);
 
-		let mut v : Vec<Generational_Index> = Vec::new();
-		for i in 0..3 * n {
-			let i1 = alloc.allocate();
+		let _v : Vec<Generational_Index> = Vec::new();
+		for _i in 0..3 * n {
+			let _i1 = alloc.allocate();
+			assert_invariant_free_slots_alive(&alloc);
 		}
 	}
 }
@@ -187,8 +212,10 @@ pub struct Entity_Manager {
 }
 
 pub type Entity = Generational_Index;
+type VecOpt<T> = Vec<Option<T>>;
 
 impl Entity_Manager {
+
 	pub fn new() -> Entity_Manager {
 		return Entity_Manager {
 			allocator: Generational_Allocator::new(4),
@@ -196,9 +223,16 @@ impl Entity_Manager {
 		};
 	}
 
+	fn get_comp_storage<C: Component + 'static>(&self) -> Option<&VecOpt<C>> {
+		self.components.get::<VecOpt<C>>()
+	}
+
+	fn get_mut_comp_storage<C: Component + 'static>(&mut self) -> Option<&mut VecOpt<C>> {
+		self.components.get_mut::<VecOpt<C>>()
+	}
+
 	pub fn new_entity(&mut self) -> Entity {
-		let entity = self.allocator.allocate();
-		return entity;
+		self.allocator.allocate()
 	}
 
 	pub fn is_valid_entity(&self, e: Entity) -> bool {
@@ -211,10 +245,10 @@ impl Entity_Manager {
 	}
 
 	pub fn register_component<C: Component + 'static>(&mut self) {
-		if let Some(_) = self.components.get::<Vec<Option<C>>>() {
-			panic!("Tried to register the same component twice!"); // @Clarity: add component type name to err msg
+		if let Some(_) = self.get_comp_storage::<C>() {
+			panic!("Tried to register the same component {} twice!", C::type_name());
 		}
-		let mut v: Vec<Option<C>> = Vec::new();
+		let v: VecOpt<C> = Vec::new();
 		self.components.insert(v);
 	}
 
@@ -224,13 +258,14 @@ impl Entity_Manager {
 			panic!("Tried to add component to invalid entity {:?}", e);
 		}
 
-		match self.components.get_mut::<Vec<Option<C>>>() {
+		let alloc_size = self.allocator.size();
+		match self.get_mut_comp_storage::<C>() {
 			Some(vec) => {
-				vec.resize(self.allocator.size(), None);
+				vec.resize(alloc_size, None);
 				let mut c = C::default();
 				vec[e.index] = Some(c);
 			},
-			None => panic!("Tried to add unregistered component to entity!"), // @Clarity: add component type name to err msg
+			None => panic!("Tried to add unregistered component {} to entity!", C::type_name()),
 		}
 	}
 
@@ -239,13 +274,13 @@ impl Entity_Manager {
 			panic!("Tried to get component of invalid entity {:?}", e);
 		}
 
-		match self.components.get::<Vec<Option<C>>>() {
+		match self.get_comp_storage::<C>() {
 			Some(vec) => {
 				// Note: we may not have added any component yet, so the components Vec is of len 0
 				if e.index < vec.len() { return vec[e.index].as_ref(); }
 				return None;
 			},
-			None => panic!("Tried to get unregistered component!"), // @Clarity: add component type name to err msg
+			None => panic!("Tried to get unregistered component {}!", C::type_name()),
 		}
 	}
 
@@ -255,13 +290,17 @@ impl Entity_Manager {
 			panic!("Tried to get component of invalid entity {:?}", e);
 		}
 
-		match self.components.get_mut::<Vec<Option<C>>>() {
+		match self.get_mut_comp_storage::<C>() {
 			Some(vec) => {
 				if e.index < vec.len() { return vec[e.index].as_mut(); }
 				return None;
 			},
-			None => panic!("Tried to get unregistered component!"), // @Clarity: add component type name to err msg
+			None => panic!("Tried to get unregistered component {}!", C::type_name()),
 		}
+	}
+
+	pub fn has_component<C: Component + 'static>(&self, e: Entity) -> bool {
+		self.get_component::<C>(e).is_some()
 	}
 }
 
@@ -269,7 +308,7 @@ impl Entity_Manager {
 mod tests_entity_manager {
 	use super::*;
 
-	#[derive(Copy, Clone, Debug, Default)]
+	#[derive(Copy, Clone, Debug, Default, TypeName)]
 	struct C_Test {
 		foo: i32
 	}
@@ -315,7 +354,7 @@ mod tests_entity_manager {
 
 		em.add_component::<C_Test>(e);
 		{
-			let mut c = em.get_component_mut::<C_Test>(e).unwrap();
+			let c = em.get_component_mut::<C_Test>(e).unwrap();
 			c.foo = 4242;
 		}
 		assert!(em.get_component::<C_Test>(e).unwrap().foo == 4242);
