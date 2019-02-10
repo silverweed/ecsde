@@ -90,8 +90,14 @@ fn main() {
 
 	let sleep_ms = Duration::from_millis(16);
 	let args: Vec<String> = env::args().collect();
-	let n = parse_nth_argument_or(&args, 1, 2usize);
-	let n_sin = parse_nth_argument_or(&args, 2, n);
+	let n = match parse_nth_argument_or(&args, 1, 2usize) {
+		Ok(x) => x,
+		Err(x) => { println!("{}", x); return; }
+	};
+	let n_sin = match parse_nth_argument_or(&args, 2, n) {
+		Ok(x) => x,
+		Err(x) => { println!("{}", x); return; }
+	};
 
 	let mut entities: Vec<Entity> = Vec::with_capacity(n);
 
@@ -128,13 +134,14 @@ fn init_components(em: &mut Entity_Manager, wave: Entity, phase: f32) {
 	}
 }
 
-fn parse_nth_argument_or<T: FromStr + TypeName>(args: &Vec<String>, n: usize, default: T) -> T {
+fn parse_nth_argument_or<T: FromStr + TypeName>(args: &Vec<String>, n: usize, default: T) -> Result<T, String> {
 	if args.len() > n {
 		if let Ok(x) = args[n].parse::<T>() {
-			return x
+			Ok(x)
 		} else {
-			println!("Expected a type compatible with {} as first argument.", T::type_name());
+			Err(format!("Expected a type compatible with {} as first argument.", T::type_name()))
 		}
+	} else {
+		Ok(default)
 	}
-	default
 }
