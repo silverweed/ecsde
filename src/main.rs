@@ -2,17 +2,15 @@
 
 #[macro_use] extern crate typename;
 
-mod entity_manager;
-mod components;
-mod systems;
+mod core;
 
 use std::time::{SystemTime, Duration};
 use std::f32;
 use std::env;
 use std::str::FromStr;
 
-use entity_manager::*;
-use systems::*;
+use core::entity_manager::*;
+use core::systems::*;
 use typename::TypeName;
 
 #[derive(Copy, Clone, Debug, Default, TypeName)]

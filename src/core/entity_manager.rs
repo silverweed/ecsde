@@ -1,9 +1,10 @@
 extern crate anymap;
 
-use self::anymap::AnyMap;
 use std::vec::Vec;
 use std::option::Option;
-use components::Component;
+
+use core::components::Component;
+use self::anymap::AnyMap;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Generational_Index {
