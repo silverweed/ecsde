@@ -35,10 +35,7 @@ impl Generational_Allocator {
 		};
 		alloc.alive.resize(initial_size, false);
 		alloc.gens.resize(initial_size, 0);
-		alloc.free_slots.reserve(initial_size);
-		for i in (0..initial_size).rev() {
-			alloc.free_slots.push(i);
-		}
+		alloc.free_slots = (0..initial_size).rev().collect();
 
 		return alloc;
 	}
@@ -348,6 +345,7 @@ impl Entity_Manager {
 #[cfg(test)]
 mod tests_entity_manager {
 	use super::*;
+	use typename::TypeName;
 
 	#[derive(Copy, Clone, Debug, Default, TypeName)]
 	struct C_Test {

@@ -9,13 +9,10 @@ mod demo_priv;
 
 use std::time::{SystemTime, Duration};
 use std::f32;
-use std::error::Error;
-use std::str::FromStr;
 
 use gfx::window as win;
 use demo_priv::*;
 use core::entity_manager::*;
-use typename::TypeName;
 
 pub mod demo {
 	use super::*;
