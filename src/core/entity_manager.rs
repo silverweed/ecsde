@@ -231,7 +231,6 @@ pub type Entity = Generational_Index;
 type VecOpt<T> = Vec<Option<T>>;
 
 impl Entity_Manager {
-
 	pub fn new() -> Entity_Manager {
 		Entity_Manager {
 			allocator: Generational_Allocator::new(4),
@@ -239,11 +238,15 @@ impl Entity_Manager {
 		}
 	}
 
-	fn get_comp_storage<C: Component + 'static>(&self) -> Option<&VecOpt<C>> {
+	fn get_comp_storage<C>(&self) -> Option<&VecOpt<C>>
+		where C: Component + 'static
+	{
 		self.components.get::<VecOpt<C>>()
 	}
 
-	fn get_mut_comp_storage<C: Component + 'static>(&mut self) -> Option<&mut VecOpt<C>> {
+	fn get_mut_comp_storage<C>(&mut self) -> Option<&mut VecOpt<C>>
+		where C: Component + 'static
+	{
 		self.components.get_mut::<VecOpt<C>>()
 	}
 
@@ -260,7 +263,9 @@ impl Entity_Manager {
 		self.allocator.deallocate(e);
 	}
 
-	pub fn register_component<C: Component + 'static>(&mut self) {
+	pub fn register_component<C>(&mut self)
+		where C: Component + 'static
+	{
 		if let Some(_) = self.get_comp_storage::<C>() {
 			panic!("Tried to register the same component {} twice!", C::type_name());
 		}
@@ -269,7 +274,9 @@ impl Entity_Manager {
 	}
 
 	// Adds a component of type C to `e` and returns a mutable reference to it.
-	pub fn add_component<C: Component + 'static>(&mut self, e: Entity) -> &mut C {
+	pub fn add_component<C>(&mut self, e: Entity) -> &mut C
+		where C: Component + 'static
+	{
 		if !self.is_valid_entity(e) {
 			panic!("Tried to add component {} to invalid entity {:?}", C::type_name(), e);
 		}
@@ -286,7 +293,9 @@ impl Entity_Manager {
 		}
 	}
 
-	pub fn remove_component<C: Component + 'static>(&mut self, e: Entity) {
+	pub fn remove_component<C>(&mut self, e: Entity)
+		where C: Component + 'static
+	{
 		if !self.is_valid_entity(e) {
 			panic!("Tried to remove component {} from invalid entity {:?}", C::type_name(), e);
 		}
@@ -297,7 +306,9 @@ impl Entity_Manager {
 		}
 	}
 
-	pub fn get_component<'a, C: Component + 'static>(&'a self, e: Entity) -> Option<&'a C> {
+	pub fn get_component<'a, C>(&'a self, e: Entity) -> Option<&'a C>
+		where C: Component + 'static
+	{
 		if !self.is_valid_entity(e) {
 			panic!("Tried to get component of invalid entity {:?}", e);
 		}
@@ -312,7 +323,9 @@ impl Entity_Manager {
 	}
 
 	// @Refactoring: this code is almost exactly the same as `get_component`. Can we do something about it?
-	pub fn get_component_mut<'a, C: Component + 'static>(&'a mut self, e: Entity) -> Option<&'a mut C> {
+	pub fn get_component_mut<'a, C>(&'a mut self, e: Entity) -> Option<&'a mut C>
+		where C: Component + 'static
+	{
 		if !self.is_valid_entity(e) {
 			panic!("Tried to get component of invalid entity {:?}", e);
 		}
@@ -325,7 +338,9 @@ impl Entity_Manager {
 		}
 	}
 
-	pub fn has_component<C: Component + 'static>(&self, e: Entity) -> bool {
+	pub fn has_component<C>(&self, e: Entity) -> bool
+		where C: Component + 'static
+	{
 		self.get_component::<C>(e).is_some()
 	}
 }
