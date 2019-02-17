@@ -11,6 +11,7 @@ pub fn create_render_window<V: Into<sfwin::VideoMode>>(video_mode: V, title: &st
 		sfwin::Style::CLOSE,
 		&Default::default());
 
+	window.set_vertical_sync_enabled(true);
 	window.set_framerate_limit(60);
 
 	window

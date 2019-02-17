@@ -8,5 +8,3 @@ anymap = "*"
 typename = "*"
 sfml = "0.14.0"
 
-[profile.release]
-panic = "abort"

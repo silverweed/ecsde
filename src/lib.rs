@@ -29,7 +29,7 @@ pub mod demo {
 	}
 
 	impl Config {
-		const default_particles: usize = 2usize;
+		const DEFAULT_PARTICLES: usize = 2usize;
 
 		pub fn new(mut args: std::env::Args) -> Self {
 			// ignore program name
@@ -40,8 +40,8 @@ pub mod demo {
 					_ => Demo_Type::Console,
 				}
 			);
-			let n_particles = args.next().map_or(Self::default_particles, |n|
-				n.parse::<usize>().unwrap_or(Self::default_particles)
+			let n_particles = args.next().map_or(Self::DEFAULT_PARTICLES, |n|
+				n.parse::<usize>().unwrap_or(Self::DEFAULT_PARTICLES)
 			);
 			let n_sine_waves = args.next().map_or(n_particles, |n|
 				n.parse::<usize>().unwrap_or(n_particles)
@@ -78,7 +78,7 @@ pub mod demo {
 			entities.push(e);
 			em.add_component::<C_Horiz_Pos>(e);
 			if i % n_sin != 0 { em.add_component::<C_Sine_Wave>(e); }
-			init_components(&mut em, e, 0f32 + i as f32 * 3.1415f32 / (n as f32));
+			init_components(&mut em, e, 40f32, 0f32 + i as f32 * 3.1415f32 / (n as f32));
 		}
 
 		let mut sine_update_system = S_Sine_Update::default();
@@ -115,11 +115,12 @@ pub mod demo {
 			entities.push(e);
 			em.add_component::<C_Horiz_Pos>(e);
 			if i % n_sin != 0 { em.add_component::<C_Sine_Wave>(e); }
-			init_components(&mut em, e, 0f32 + i as f32 * 3.1415f32 / (n as f32));
+			init_components(&mut em, e, 200f32, 0f32 + i as f32 * 3.1415f32 / (n as f32));
 		}
 
 		let mut sine_update_system = S_Sine_Update::default();
 		let mut draw_system = S_Particle_Draw_Gfx::new(window);
+		draw_system.point_width = 10f32;
 
 		let mut time = SystemTime::now();
 
@@ -135,9 +136,9 @@ pub mod demo {
 		}
 	}
 
-	fn init_components(em: &mut Entity_Manager, wave: Entity, phase: f32) {
+	fn init_components(em: &mut Entity_Manager, wave: Entity, ampl: f32, phase: f32) {
 		if let Some(sine_wave) = em.get_component_mut::<C_Sine_Wave>(wave) {
-			sine_wave.ampl = 40;
+			sine_wave.ampl = ampl;
 			sine_wave.freq = 6f32;
 			sine_wave.phase = phase;
 		}
