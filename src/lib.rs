@@ -17,7 +17,13 @@ use core::entity_manager::*;
 pub mod demo {
 	use super::*;
 
+	pub enum Demo_Type {
+		Console,
+		Gfx,
+	}
+
 	pub struct Config {
+		pub demo_type: Demo_Type,
 		pub n_particles: usize,
 		pub n_sine_waves: usize,
 	}
@@ -28,6 +34,12 @@ pub mod demo {
 		pub fn new(mut args: std::env::Args) -> Self {
 			// ignore program name
 			args.next();
+			let demo_type = args.next().map_or(Demo_Type::Console, |s|
+				match s.as_ref() {
+					"gfx" | "g" => Demo_Type::Gfx,
+					_ => Demo_Type::Console,
+				}
+			);
 			let n_particles = args.next().map_or(Self::default_particles, |n|
 				n.parse::<usize>().unwrap_or(Self::default_particles)
 			);
@@ -35,13 +47,21 @@ pub mod demo {
 				n.parse::<usize>().unwrap_or(n_particles)
 			);
 			Config {
+				demo_type,
 				n_particles,
 				n_sine_waves
 			}
 		}
 	}
 
-	pub fn console_test(config: &Config) {
+	pub fn run(config: &Config) {
+		match config.demo_type {
+			Demo_Type::Console => console_test(&config),
+			Demo_Type::Gfx => gfx_test(&config)
+		}
+	}
+
+	fn console_test(config: &Config) {
 		let mut em = Entity_Manager::new();
 
 		em.register_component::<C_Horiz_Pos>();
@@ -78,7 +98,7 @@ pub mod demo {
 		}
 	}
 
-	pub fn gfx_test(config: &Config) {
+	fn gfx_test(config: &Config) {
 		let window = win::create_render_window((800, 600), "Gfx test");
 		let mut em = Entity_Manager::new();
 
