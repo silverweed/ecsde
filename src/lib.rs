@@ -10,7 +10,9 @@ mod demo_priv;
 use std::time::{SystemTime, Duration};
 use std::f32;
 
+use sfml::graphics::RenderTarget;
 use gfx::window as win;
+use gfx::render;
 use demo_priv::*;
 use core::entity_manager::*;
 
@@ -119,20 +121,24 @@ pub mod demo {
 		}
 
 		let mut sine_update_system = S_Sine_Update::default();
-		let mut draw_system = S_Particle_Draw_Gfx::new(window);
+		let mut draw_system = S_Particle_Draw_Gfx::new(&window.sf_win.size());
 		draw_system.point_width = 10f32;
 
 		let mut time = SystemTime::now();
+		let mut renderer = render::Renderer::new(window);
 
-		while !draw_system.should_close() {
+		while !renderer.should_close() {
 			let dtr = time.elapsed().unwrap();
 			let dt = dtr.as_secs() as f32 + dtr.subsec_nanos() as f32 * 1e-9;
 			time = SystemTime::now();
 
-			draw_system.event_loop();
+			renderer.event_loop();
 
 			sine_update_system.update(dt, &mut em, &entities);
 			draw_system.update(dt, &mut em, &entities);
+
+			let drawables: [&sfml::graphics::Drawable; 1] = [&draw_system];
+			renderer.draw(&drawables[..]);
 		}
 	}
 

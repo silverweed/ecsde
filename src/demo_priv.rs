@@ -1,8 +1,10 @@
 use core::entity_manager::*;
 pub use core::systems::*;
 use gfx::window as win;
-use sfml::graphics::{RenderWindow, RenderTarget, Vertex, VertexArray, PrimitiveType, Color};
+use sfml::graphics as sfgfx;
+use sfml::graphics::{RenderTarget, Vertex, Color};
 use sfml::system::Vector2f;
+use sfml::system::Vector2u;
 use typename::TypeName;
 
 #[derive(Copy, Clone, Debug, Default, TypeName)]
@@ -73,10 +75,10 @@ impl S_Particle_Draw_Console {
 }
 
 pub struct S_Particle_Draw_Gfx {
-	window: RenderWindow,
-	vertex_array: VertexArray,
-	vertices: Vec<Vertex>,
+	pub win_size: Vector2u,
 	pub point_width: f32,
+
+	vertices: Vec<Vertex>,
 }
 
 impl System for S_Particle_Draw_Gfx {
@@ -88,32 +90,39 @@ impl System for S_Particle_Draw_Gfx {
 				self.add_particle_to_draw(x);
 			}
 		}
-		self.draw();
+	}
+}
+
+impl sfgfx::Drawable for S_Particle_Draw_Gfx {
+	fn draw<'a: 'shader, 'texture, 'shader, 'shader_texture>(
+	    &'a self,
+	    target: &mut RenderTarget,
+	    states: sfgfx::RenderStates<'texture, 'shader, 'shader_texture>
+	) {
+		let mut vertex_array = sfgfx::VertexArray::new(
+			sfgfx::PrimitiveType::Triangles,
+			self.vertices.len()
+		);
+		for i in 0..self.vertices.len() {
+			vertex_array[i] = self.vertices[i];
+		}
+		target.draw_with_renderstates(&vertex_array, states);
 	}
 }
 
 impl S_Particle_Draw_Gfx {
-	pub fn new(window: RenderWindow) -> S_Particle_Draw_Gfx {
+	pub fn new(winsize: &Vector2u) -> S_Particle_Draw_Gfx {
+		let win_size = *winsize;
 		S_Particle_Draw_Gfx {
-			window,
-			vertex_array: VertexArray::new(
-				PrimitiveType::Triangles,
-				64
-			),
-			vertices: Vec::new(),
+			win_size,
 			point_width: 5f32,
+			vertices: Vec::new(),
 		}
 	}
 
-	pub fn should_close(&self) -> bool { !self.window.is_open() }
-
-	pub fn event_loop(&mut self) {
-		win::event_loop(&mut self.window);
-	}
-
 	fn add_particle_to_draw(&mut self, x: f32) {
-		let half_width = self.window.size().x as f32 / 2f32;
-		let half_height = self.window.size().y as f32 / 2f32;
+		let half_width = self.win_size.x as f32 / 2f32;
+		let half_height = self.win_size.y as f32 / 2f32;
 		let (vx, vy) = (half_width + x as f32, half_height);
 		let hpw = self.point_width * 0.5;
 
@@ -132,17 +141,6 @@ impl S_Particle_Draw_Gfx {
 			Color::RED,
 			Vector2f::new(0., 0.)
 		));
-	}
-
-	pub fn draw(&mut self) {
-		self.vertex_array.clear();
-		self.vertex_array.resize(self.vertices.len());
-		for i in 0..self.vertices.len() {
-			self.vertex_array[i] = self.vertices[i];
-		}
-		self.window.clear(&Color::BLACK);
-		self.window.draw(&self.vertex_array);
-		self.window.display();
 	}
 }
 
