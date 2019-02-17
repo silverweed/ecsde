@@ -1,8 +1,5 @@
 #![allow(non_camel_case_types)]
 
-extern crate typename;
-extern crate sfml;
-
 mod core;
 mod gfx;
 mod demo_priv;
@@ -11,10 +8,11 @@ use std::time::{SystemTime, Duration};
 use std::f32;
 
 use sfml::graphics::RenderTarget;
-use gfx::window as win;
-use gfx::render;
-use demo_priv::*;
-use core::entity_manager::*;
+use crate::gfx::window as win;
+use crate::gfx::render;
+use crate::demo_priv::*;
+use crate::core::entity_manager::*;
+use crate::core::systems::System;
 
 pub mod demo {
 	use super::*;

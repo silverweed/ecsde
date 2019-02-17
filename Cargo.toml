@@ -1,4 +1,5 @@
 [package]
+edition = "2018"
 name = "ecs"
 version = "0.1.0"
 authors = ["silverweed <silverweed1991@gmail.com>"]
@@ -7,4 +8,4 @@ authors = ["silverweed <silverweed1991@gmail.com>"]
 anymap = "*"
 typename = "*"
 sfml = "0.14.0"
-
+rand = "*"

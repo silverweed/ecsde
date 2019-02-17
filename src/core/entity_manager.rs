@@ -3,10 +3,11 @@ extern crate anymap;
 use std::vec::Vec;
 use std::option::Option;
 
-use core::components::Component;
-use self::anymap::AnyMap;
+use crate::core::components::Component;
 
-#[derive(Copy, Clone, Debug)]
+use anymap::AnyMap;
+
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Generational_Index {
 	pub index: usize,
 	pub gen: u64
@@ -247,6 +248,27 @@ impl Entity_Manager {
 		self.components.get_mut::<VecOpt<C>>()
 	}
 
+	// Returns a vector of references to Option<C>, all of which are guaranteed to be Some.
+	pub fn get_components<C>(&self) -> Vec<&C>
+		where C: Component + 'static
+	{
+		self.components.get::<VecOpt<C>>()
+			.expect(&format!("Tried to get_components of unregistered type {}!", C::type_name()))
+			.iter()
+			.filter_map(|c| c.as_ref())
+			.collect()
+	}
+
+	pub fn get_components_mut<C>(&mut self) -> Vec<&mut C>
+		where C: Component + 'static
+	{
+		self.components.get_mut::<VecOpt<C>>()
+			.expect(&format!("Tried to get_components of unregistered type {}!", C::type_name()))
+			.iter_mut()
+			.filter_map(|c| c.as_mut())
+			.collect()
+	}
+
 	pub fn new_entity(&mut self) -> Entity {
 		self.allocator.allocate()
 	}
@@ -282,8 +304,7 @@ impl Entity_Manager {
 		match self.get_mut_comp_storage::<C>() {
 			Some(vec) => {
 				vec.resize(alloc_size, None);
-				let mut c = C::default();
-				vec[e.index] = Some(c);
+				vec[e.index] = Some(C::default());
 				vec[e.index].as_mut().unwrap()
 			},
 			None => panic!("Tried to add unregistered component {} to entity!", C::type_name()),
@@ -349,6 +370,11 @@ mod tests_entity_manager {
 
 	#[derive(Copy, Clone, Debug, Default, TypeName)]
 	struct C_Test {
+		foo: i32
+	}
+
+	#[derive(Copy, Clone, Debug, Default, TypeName)]
+	struct C_Test2 {
 		foo: i32
 	}
 
@@ -541,5 +567,118 @@ mod tests_entity_manager {
 		em.destroy_entity(e);
 		em.new_entity();
 		em.remove_component::<C_Test>(e);
+	}
+
+	#[test]
+	fn test_get_components_size() {
+		let mut em = Entity_Manager::new();
+		em.register_component::<C_Test>();
+		for _i in 0..10 {
+			let e = em.new_entity();
+			em.add_component::<C_Test>(e);
+		}
+		assert_eq!(em.get_components::<C_Test>().len(), 10);
+	}
+
+	#[test]
+	fn test_get_components_size_empty() {
+		let mut em = Entity_Manager::new();
+		em.register_component::<C_Test>();
+		assert_eq!(em.get_components::<C_Test>().len(), 0);
+	}
+
+	#[test]
+	#[should_panic]
+	fn test_get_unregistered_components() {
+		let em = Entity_Manager::new();
+		em.get_components::<C_Test>();
+	}
+
+	#[test]
+	fn test_get_components_mut_size() {
+		let mut em = Entity_Manager::new();
+		em.register_component::<C_Test>();
+		for _i in 0..10 {
+			let e = em.new_entity();
+			em.add_component::<C_Test>(e);
+		}
+		assert_eq!(em.get_components_mut::<C_Test>().len(), 10);
+	}
+
+	#[test]
+	fn test_get_components_mut_size_empty() {
+		let mut em = Entity_Manager::new();
+		em.register_component::<C_Test>();
+		assert_eq!(em.get_components_mut::<C_Test>().len(), 0);
+	}
+
+	#[test]
+	#[should_panic]
+	fn test_get_unregistered_components_mut() {
+		let mut em = Entity_Manager::new();
+		em.get_components_mut::<C_Test>();
+	}
+
+	#[test]
+	fn test_has_get_consistency() {
+		let mut em = Entity_Manager::new();
+		let mut entities: Vec<Entity> = vec![];
+		em.register_component::<C_Test>();
+		em.register_component::<C_Test2>();
+		for i in 0..100 {
+			let e = em.new_entity();
+			entities.push(e);
+			em.add_component::<C_Test>(e);
+			if i % 2 == 0 {
+				em.add_component::<C_Test2>(e);
+			}
+		}
+
+		{
+			let filtered: Vec<Entity> = entities.iter().filter(|&&e|
+				em.has_component::<C_Test>(e) &&
+				em.has_component::<C_Test2>(e)
+			).cloned().collect();
+			for e in filtered {
+				assert!(em.get_component::<C_Test>(e).is_some());
+				assert!(em.get_component::<C_Test2>(e).is_some());
+			}
+		}
+		{
+			let filtered: Vec<Entity> = entities.iter().filter(|&&e|
+				em.has_component::<C_Test>(e)
+			).cloned().collect();
+			for e in filtered {
+				assert!(em.get_component::<C_Test>(e).is_some());
+			}
+		}
+		{
+			let filtered: Vec<Entity> = entities.iter().filter(|&&e|
+				em.has_component::<C_Test>(e) &&
+				!em.has_component::<C_Test2>(e)
+			).cloned().collect();
+			for e in filtered {
+				assert!(em.get_component::<C_Test>(e).is_some());
+				assert!(em.get_component::<C_Test2>(e).is_none());
+			}
+		}
+	}
+
+	#[test]
+	fn test_has_get_consistency_2() {
+		let mut em = Entity_Manager::new();
+		let mut entities: Vec<Entity> = vec![];
+		em.register_component::<C_Test>();
+		for _i in 0..66 {
+			let e = em.new_entity();
+			entities.push(e);
+			em.add_component::<C_Test>(e);
+		}
+
+		let filtered: Vec<Entity> = entities.iter().filter(|&&e|
+			em.has_component::<C_Test>(e)
+		).cloned().collect();
+		let all_nonnull_comps = em.get_components::<C_Test>();
+		assert_eq!(filtered.len(), all_nonnull_comps.len());
 	}
 }

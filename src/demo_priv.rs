@@ -1,10 +1,11 @@
-use core::entity_manager::*;
-pub use core::systems::*;
-use gfx::window as win;
+use crate::core::entity_manager::*;
+use crate::core::systems::*;
+
 use sfml::graphics as sfgfx;
 use sfml::graphics::{RenderTarget, Vertex, Color};
 use sfml::system::Vector2f;
 use sfml::system::Vector2u;
+
 use typename::TypeName;
 
 #[derive(Copy, Clone, Debug, Default, TypeName)]
