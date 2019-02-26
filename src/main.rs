@@ -2,12 +2,12 @@
 
 use std::env;
 
-//pub(crate) mod core;
-//pub(crate) mod gfx;
+mod core;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /*let config = ecs::demo::Config::new(env::args());*/
-    /*ecs::demo::run(&config);*/
-    //particles_demo::run();
-    Ok(())
+fn main() -> core::common::Maybe_Error {
+    let mut app = core::app::App::new();
+    let cfg = core::app::Config::new(env::args());
+
+    app.init(&cfg)?;
+    app.run()
 }
