@@ -7,8 +7,8 @@ impl<T> Component for T where T: Copy + Clone + Default + Debug + TypeName {}
 
 #[derive(Copy, Clone, Default, Debug, TypeName, PartialEq)] // @Convenience: there's gotta be a better way to say this is a Component
 pub struct C_Position2D {
-	pub x: f32,
-	pub y: f32,
+    pub x: f32,
+    pub y: f32,
 }
 
 impl Eq for C_Position2D {}
