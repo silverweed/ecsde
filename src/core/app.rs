@@ -1,4 +1,5 @@
 use super::common;
+use super::env::Env_Info;
 use super::input;
 use super::system::System;
 use super::time;
@@ -42,6 +43,7 @@ impl Config {
 pub struct App {
     time: time::Time,
     should_close: bool,
+    env: Env_Info,
     input_system: input::Input_System,
     render_system: gfx::render::Render_System,
 }
@@ -55,13 +57,18 @@ impl App {
         App {
             time: time::Time::new(),
             should_close: false,
+            env: Env_Info::gather().unwrap(),
             input_system: input::Input_System::new(Rc::clone(&window)),
             render_system: gfx::render::Render_System::new(Rc::clone(&window)),
         }
     }
 
     pub fn init(&mut self) -> common::Maybe_Error {
-        println!("Hello Sailor!");
+        println!(
+            "Working dir = {}\nExe = {}",
+            self.env.get_cwd(),
+            self.env.get_exe()
+        );
 
         self.input_system.init(())?;
         self.render_system.init(gfx::render::Render_System_Config {
