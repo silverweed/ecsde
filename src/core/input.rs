@@ -1,5 +1,6 @@
 use super::system::System;
 use crate::gfx::window::Window;
+use sfml::graphics as sfgfx;
 use sfml::window as sfwin;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -15,18 +16,12 @@ pub enum Action {
 impl Eq for Action {}
 
 pub struct Input_System {
-    // Note: we need mutable access to window for polling events,
-    // but the window is also mutably owned by the rendering system.
-    window: Rc<RefCell<Window>>,
     actions: Vec<Action>,
 }
 
 impl Input_System {
-    pub fn new(window: Rc<RefCell<Window>>) -> Input_System {
-        Input_System {
-            window: Rc::clone(&window),
-            actions: vec![],
-        }
+    pub fn new() -> Input_System {
+        Input_System { actions: vec![] }
     }
 
     pub fn has_action(&self, action: &Action) -> bool {
@@ -34,15 +29,21 @@ impl Input_System {
     }
 }
 
+pub struct Input_System_Update_Params {
+    pub window: Rc<RefCell<Window>>,
+}
+
 impl System for Input_System {
     type Config = ();
+    type Update_Params = Input_System_Update_Params;
 
-    fn update(&mut self, _delta: &time::Duration) {
+    fn update(&mut self, params: Self::Update_Params) {
         use sfwin::Key;
 
         self.actions.clear();
 
-        while let Some(event) = self.window.borrow_mut().sf_win.poll_event() {
+        let window = &mut params.window.borrow_mut().sf_win;
+        while let Some(event) = window.poll_event() {
             match event {
                 sfwin::Event::Closed => self.actions.push(Action::Quit),
                 sfwin::Event::KeyPressed { code, .. } => match code {

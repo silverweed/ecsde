@@ -2,7 +2,10 @@
 
 use std::env;
 
+pub(crate) mod audio;
 pub(crate) mod core;
+pub(crate) mod ecs;
+pub(crate) mod game;
 pub(crate) mod gfx;
 
 fn main() -> core::common::Maybe_Error {

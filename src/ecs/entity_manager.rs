@@ -1,6 +1,6 @@
 extern crate anymap;
 
-use self::components::Component;
+use super::components::Component;
 
 use std::option::Option;
 use std::vec::Vec;

@@ -5,8 +5,8 @@ pub struct String_Id(u32);
 
 impl Eq for String_Id {}
 
-impl String_Id {
-    pub fn from(s: &str) -> String_Id {
+impl std::convert::From<&str> for String_Id {
+    fn from(s: &str) -> String_Id {
         String_Id(fnv1a(s.as_bytes()))
     }
 }

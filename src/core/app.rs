@@ -1,8 +1,11 @@
 use super::common;
 use super::env::Env_Info;
 use super::input;
+use super::resources;
 use super::system::System;
 use super::time;
+use crate::audio;
+use crate::game::gameplay_system;
 use crate::gfx;
 use sfml::graphics as sfgfx;
 use std::cell::RefCell;
@@ -44,23 +47,31 @@ pub struct App {
     time: time::Time,
     should_close: bool,
     env: Env_Info,
+    resources: resources::Resources,
+    window: Rc<RefCell<gfx::window::Window>>,
     input_system: input::Input_System,
     render_system: gfx::render::Render_System,
+    audio_system: audio::system::Audio_System,
+    gameplay_system: gameplay_system::Gameplay_System,
 }
 
 impl App {
     pub fn new(cfg: &Config) -> App {
-        let window = Rc::new(RefCell::new(gfx::window::create_render_window(
-            cfg.target_win_size,
-            &cfg.title,
-        )));
-        App {
+        let app = App {
             time: time::Time::new(),
             should_close: false,
             env: Env_Info::gather().unwrap(),
-            input_system: input::Input_System::new(Rc::clone(&window)),
-            render_system: gfx::render::Render_System::new(Rc::clone(&window)),
-        }
+            resources: resources::Resources::new(),
+            window: Rc::new(RefCell::new(gfx::window::create_render_window(
+                cfg.target_win_size,
+                &cfg.title,
+            ))),
+            input_system: input::Input_System::new(),
+            render_system: gfx::render::Render_System::new(),
+            audio_system: audio::system::Audio_System::new(),
+            gameplay_system: gameplay_system::Gameplay_System::new(),
+        };
+        app
     }
 
     pub fn init(&mut self) -> common::Maybe_Error {
@@ -70,10 +81,7 @@ impl App {
             self.env.get_exe()
         );
 
-        self.input_system.init(())?;
-        self.render_system.init(gfx::render::Render_System_Config {
-            clear_color: sfgfx::Color::rgb(48, 10, 36),
-        })?;
+        self.init_all_systems()?;
 
         Ok(())
     }
@@ -86,11 +94,29 @@ impl App {
         Ok(())
     }
 
+    fn init_all_systems(&mut self) -> common::Maybe_Error {
+        self.input_system.init(())?;
+        self.render_system.init(gfx::render::Render_System_Config {
+            clear_color: sfgfx::Color::rgb(48, 10, 36),
+        })?;
+        self.audio_system.init(())?;
+        self.gameplay_system.init(())?;
+
+        Ok(())
+    }
+
     fn update_all_systems(&mut self) -> common::Maybe_Error {
         let dt = &self.time.dt();
 
-        self.input_system.update(dt);
-        self.render_system.update(dt);
+        self.input_system.update(input::Input_System_Update_Params {
+            window: Rc::clone(&self.window),
+        });
+        self.gameplay_system.update(());
+        self.render_system
+            .update(gfx::render::Render_System_Update_Params {
+                window: Rc::clone(&self.window),
+            });
+        self.audio_system.update(());
 
         if self.input_system.has_action(&input::Action::Quit) {
             self.should_close = true;
