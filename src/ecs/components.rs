@@ -1,3 +1,4 @@
+use crate::resources::resources;
 use sfml::graphics::Sprite;
 use std::fmt::Debug;
 
@@ -15,6 +16,6 @@ pub struct C_Position2D {
 impl Eq for C_Position2D {}
 
 #[derive(Clone, Default, Debug, TypeName)]
-pub struct C_Renderable<'a> {
-    pub sprite: Sprite<'a>,
+pub struct C_Renderable {
+    pub sprite: resources::Sprite_Handle,
 }

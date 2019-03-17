@@ -1,10 +1,5 @@
-use super::system::System;
-use crate::gfx::window::Window;
 use sfml::graphics as sfgfx;
 use sfml::window as sfwin;
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::time;
 use std::vec::Vec;
 
 #[derive(PartialEq, Hash)]
@@ -12,8 +7,6 @@ pub enum Action {
     Quit,
     Resize(u32, u32),
 }
-
-impl Eq for Action {}
 
 pub struct Input_System {
     actions: Vec<Action>,
@@ -27,22 +20,16 @@ impl Input_System {
     pub fn has_action(&self, action: &Action) -> bool {
         self.actions.contains(&action)
     }
-}
 
-pub struct Input_System_Update_Params {
-    pub window: Rc<RefCell<Window>>,
-}
+    pub fn get_actions(&self) -> &Vec<Action> {
+        &self.actions
+    }
 
-impl System for Input_System {
-    type Config = ();
-    type Update_Params = Input_System_Update_Params;
-
-    fn update(&mut self, params: Self::Update_Params) {
+    pub fn update(&mut self, window: &mut sfgfx::RenderWindow) {
         use sfwin::Key;
 
         self.actions.clear();
 
-        let window = &mut params.window.borrow_mut().sf_win;
         while let Some(event) = window.poll_event() {
             match event {
                 sfwin::Event::Closed => self.actions.push(Action::Quit),

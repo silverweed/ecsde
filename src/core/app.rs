@@ -1,15 +1,14 @@
 use super::common;
 use super::env::Env_Info;
 use super::input;
-use super::resources;
-use super::system::System;
 use super::time;
 use crate::audio;
 use crate::game::gameplay_system;
 use crate::gfx;
+use crate::resources::resources;
 use sfml::graphics as sfgfx;
-use std::cell::RefCell;
-use std::rc::Rc;
+use sfml::graphics::RenderTarget;
+use sfml::system as sfsys;
 
 pub struct Config {
     title: String,
@@ -43,29 +42,26 @@ impl Config {
     }
 }
 
-pub struct App {
+pub struct App<'a> {
     time: time::Time,
     should_close: bool,
     env: Env_Info,
-    resources: resources::Resources,
-    window: Rc<RefCell<gfx::window::Window>>,
+    resources: resources::Resources<'a>,
+    window: gfx::window::Window,
     input_system: input::Input_System,
     render_system: gfx::render::Render_System,
     audio_system: audio::system::Audio_System,
     gameplay_system: gameplay_system::Gameplay_System,
 }
 
-impl App {
-    pub fn new(cfg: &Config) -> App {
+impl<'a> App<'a> {
+    pub fn new(cfg: &Config) -> Self {
         let app = App {
             time: time::Time::new(),
             should_close: false,
             env: Env_Info::gather().unwrap(),
             resources: resources::Resources::new(),
-            window: Rc::new(RefCell::new(gfx::window::create_render_window(
-                cfg.target_win_size,
-                &cfg.title,
-            ))),
+            window: gfx::window::create_render_window(cfg.target_win_size, &cfg.title),
             input_system: input::Input_System::new(),
             render_system: gfx::render::Render_System::new(),
             audio_system: audio::system::Audio_System::new(),
@@ -95,12 +91,10 @@ impl App {
     }
 
     fn init_all_systems(&mut self) -> common::Maybe_Error {
-        self.input_system.init(())?;
         self.render_system.init(gfx::render::Render_System_Config {
             clear_color: sfgfx::Color::rgb(48, 10, 36),
         })?;
-        self.audio_system.init(())?;
-        self.gameplay_system.init(())?;
+        self.gameplay_system.init(&self.env, &mut self.resources)?;
 
         Ok(())
     }
@@ -108,18 +102,31 @@ impl App {
     fn update_all_systems(&mut self) -> common::Maybe_Error {
         let dt = &self.time.dt();
 
-        self.input_system.update(input::Input_System_Update_Params {
-            window: Rc::clone(&self.window),
-        });
-        self.gameplay_system.update(());
-        self.render_system
-            .update(gfx::render::Render_System_Update_Params {
-                window: Rc::clone(&self.window),
-            });
-        self.audio_system.update(());
+        self.input_system.update(&mut self.window.sf_win);
+        self.gameplay_system.update();
+        self.render_system.update(&mut self.window.sf_win);
+        self.audio_system.update();
 
+        self.handle_actions()
+    }
+
+    fn handle_actions(&mut self) -> common::Maybe_Error {
         if self.input_system.has_action(&input::Action::Quit) {
+            // If we're ask to close, don't bother processing other actions.
             self.should_close = true;
+            return Ok(());
+        }
+
+        for action in self.input_system.get_actions() {
+            match action {
+                input::Action::Resize(width, height) => {
+                    self.window.sf_win.set_view(&gfx::window::keep_ratio(
+                        &sfsys::Vector2u::new(*width, *height),
+                        &self.window.target_size,
+                    ));
+                }
+                _ => {}
+            }
         }
 
         Ok(())

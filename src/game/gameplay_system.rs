@@ -1,30 +1,11 @@
-use crate::core;
 use crate::core::common;
-use crate::core::resources::Resources;
+use crate::core::env::Env_Info;
 use crate::ecs::components as comp;
-use crate::ecs::entity_manager::{Entity, Entity_Manager};
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::ecs::entity_manager::Entity_Manager;
+use crate::resources::resources::{tex_path, Resources};
 
 pub struct Gameplay_System {
     entity_manager: Entity_Manager,
-}
-
-impl core::system::System for Gameplay_System {
-    type Config = ();
-    type Update_Params = ();
-
-    fn init(&mut self, cfg: Self::Config) -> common::Maybe_Error {
-        self.register_all_components();
-
-        // #DEMO
-
-        // #DEMO
-
-        Ok(())
-    }
-
-    fn update(&mut self, params: Self::Update_Params) {}
 }
 
 impl Gameplay_System {
@@ -33,6 +14,29 @@ impl Gameplay_System {
             entity_manager: Entity_Manager::new(),
         }
     }
+
+    pub fn init(&mut self, env: &Env_Info, rsrc: &mut Resources) -> common::Maybe_Error {
+        self.register_all_components();
+
+        // #DEMO
+        let em = &mut self.entity_manager;
+        let e = em.new_entity();
+        {
+            let mut pos = em.add_component::<comp::C_Position2D>(e);
+            pos.x = 200.0;
+            pos.y = 200.0;
+        }
+        {
+            let mut rend = em.add_component::<comp::C_Renderable>(e);
+            rend.sprite = rsrc.new_sprite(&tex_path(&env, "yv.png"));
+        }
+
+        // #DEMO
+
+        Ok(())
+    }
+
+    pub fn update(&mut self) {}
 
     fn register_all_components(&mut self) {
         let em = &mut self.entity_manager;
