@@ -2,6 +2,7 @@ extern crate sdl2;
 
 use super::common;
 use super::common::vector::Vec2u;
+use super::debug;
 use super::env::Env_Info;
 use super::input;
 use super::time;
@@ -76,7 +77,7 @@ impl App {
         let video_subsystem = sdl.video().unwrap();
         let window =
             gfx::window::create_render_window(&video_subsystem, cfg.target_win_size, &cfg.title);
-        let canvas = window.into_canvas().build().unwrap();
+        let canvas = window.into_canvas().present_vsync().build().unwrap();
 
         let app = App {
             sdl: Sdl {
@@ -111,9 +112,12 @@ impl App {
     }
 
     pub fn run(&mut self) -> common::Maybe_Error {
+        let mut fps_debug =
+            debug::fps::Fps_Console_Printer::new(&std::time::Duration::from_secs(1));
         while !self.should_close {
             self.time.update();
             self.update_all_systems()?;
+            fps_debug.tick(&self.time);
         }
         Ok(())
     }

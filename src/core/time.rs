@@ -24,6 +24,10 @@ impl Time {
     }
 
     pub fn dt_secs(&self) -> f32 {
-        self.m_dt.as_secs() as f32 + self.m_dt.subsec_nanos() as f32 * 1e-9
+        to_secs_frac(&self.m_dt)
     }
+}
+
+pub fn to_secs_frac(d: &Duration) -> f32 {
+    d.as_secs() as f32 + d.subsec_nanos() as f32 * 1e-9
 }

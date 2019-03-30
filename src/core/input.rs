@@ -31,11 +31,11 @@ impl Input_System {
 
         for event in event_pump.poll_iter() {
             match event {
-                Event::Quit { .. } => self.actions.push(Action::Quit),
-                Event::KeyDown { keycode: code, .. } => match code {
-                    Some(Keycode::Q) => self.actions.push(Action::Quit),
-                    _ => (),
-                },
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Q),
+                    ..
+                } => self.actions.push(Action::Quit),
                 Event::Window {
                     win_event: WindowEvent::Resized(width, height),
                     ..
