@@ -1,5 +1,3 @@
-use sfml::graphics as sfgfx;
-use sfml::window as sfwin;
 use std::vec::Vec;
 
 #[derive(PartialEq, Hash)]
@@ -25,21 +23,25 @@ impl Input_System {
         &self.actions
     }
 
-    pub fn update(&mut self, window: &mut sfgfx::RenderWindow) {
-        use sfwin::Key;
+    pub fn update(&mut self, event_pump: &mut sdl2::EventPump) {
+        use sdl2::event::{Event, WindowEvent};
+        use sdl2::keyboard::Keycode;
 
         self.actions.clear();
 
-        while let Some(event) = window.poll_event() {
+        for event in event_pump.poll_iter() {
             match event {
-                sfwin::Event::Closed => self.actions.push(Action::Quit),
-                sfwin::Event::KeyPressed { code, .. } => match code {
-                    Key::Q => self.actions.push(Action::Quit),
+                Event::Quit { .. } => self.actions.push(Action::Quit),
+                Event::KeyDown { keycode: code, .. } => match code {
+                    Some(Keycode::Q) => self.actions.push(Action::Quit),
                     _ => (),
                 },
-                sfwin::Event::Resized { width, height } => {
-                    self.actions.push(Action::Resize(width, height))
-                }
+                Event::Window {
+                    win_event: WindowEvent::Resized(width, height),
+                    ..
+                } => self
+                    .actions
+                    .push(Action::Resize(width as u32, height as u32)),
                 _ => (),
             }
         }

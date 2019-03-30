@@ -95,7 +95,7 @@ impl Generational_Allocator {
         self.free_slots.push(idx.index);
     }
 
-    pub fn is_valid(&self, idx: &Generational_Index) -> bool {
+    pub fn is_valid(&self, idx: Generational_Index) -> bool {
         (idx.index < self.alive.len()) && (idx.gen == self.gens[idx.index]) && self.alive[idx.index]
     }
 }

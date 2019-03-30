@@ -1,5 +1,4 @@
 use crate::resources::resources;
-use sfml::graphics::Sprite;
 use std::fmt::Debug;
 
 use typename::TypeName;

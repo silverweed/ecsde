@@ -7,5 +7,6 @@ authors = ["silverweed <silverweed1991@gmail.com>"]
 [dependencies]
 anymap = "*"
 typename = "*"
-sfml = "0.14.0"
+sdl2 = "0.32.1"
 rand = "*"
+cgmath = "0.17.0"

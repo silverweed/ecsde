@@ -2,19 +2,18 @@ mod cache;
 mod sprite_storage;
 
 use crate::core::env::Env_Info;
-use sfml::audio::SoundBuffer;
-use sfml::graphics::Texture;
 use sprite_storage::Sprite_Storage;
 
 pub type Sprite_Handle = sprite_storage::Sprite_Handle;
 pub type Texture_Handle = cache::Texture_Handle;
+pub type Sound_Handle = cache::Sound_Handle;
 
-pub struct Resources<'a> {
+pub struct Resources {
     cache: cache::Cache,
-    sprite_storage: Sprite_Storage<'a>,
+    sprite_storage: Sprite_Storage,
 }
 
-impl<'a> Resources<'a> {
+impl Resources {
     pub fn new() -> Self {
         Resources {
             cache: cache::Cache::new(),
@@ -30,7 +29,7 @@ impl<'a> Resources<'a> {
         self.cache.n_loaded_textures()
     }
 
-    pub fn load_sound(&mut self, fname: &str) -> Option<&SoundBuffer> {
+    pub fn load_sound(&mut self, fname: &str) -> Sound_Handle {
         self.cache.load_sound(fname)
     }
 
@@ -40,8 +39,7 @@ impl<'a> Resources<'a> {
 
     pub fn new_sprite(&mut self, tex_fname: &str) -> Sprite_Handle {
         let handle = self.load_texture(tex_fname);
-        self.sprite_storage
-            .new_sprite(self.cache.get_texture(&handle))
+        self.sprite_storage.new_sprite(handle)
     }
 
     pub fn destroy_sprite(&mut self, sprite: Sprite_Handle) {

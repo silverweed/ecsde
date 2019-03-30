@@ -78,7 +78,7 @@ impl Entity_Manager {
     }
 
     pub fn is_valid_entity(&self, e: Entity) -> bool {
-        self.allocator.is_valid(&e)
+        self.allocator.is_valid(e)
     }
 
     pub fn destroy_entity(&mut self, e: Entity) {

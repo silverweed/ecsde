@@ -1,4 +1,7 @@
+extern crate sdl2;
+
 use super::common;
+use super::common::vector::Vec2u;
 use super::env::Env_Info;
 use super::input;
 use super::time;
@@ -6,9 +9,7 @@ use crate::audio;
 use crate::game::gameplay_system;
 use crate::gfx;
 use crate::resources::resources;
-use sfml::graphics as sfgfx;
-use sfml::graphics::RenderTarget;
-use sfml::system as sfsys;
+use sdl2::pixels::Color;
 
 pub struct Config {
     title: String,
@@ -42,26 +43,53 @@ impl Config {
     }
 }
 
-pub struct App<'a> {
+struct Sdl {
+    context: sdl2::Sdl,
+    event_pump: sdl2::EventPump,
+    video_subsystem: sdl2::VideoSubsystem,
+}
+
+pub struct App {
+    sdl: Sdl,
+
+    window_target_size: common::vector::Vec2u,
+    canvas: sdl2::render::WindowCanvas,
+
     time: time::Time,
+
     should_close: bool,
+
     env: Env_Info,
-    resources: resources::Resources<'a>,
-    window: gfx::window::Window,
+    resources: resources::Resources,
+
+    // Engine Systems
     input_system: input::Input_System,
     render_system: gfx::render::Render_System,
     audio_system: audio::system::Audio_System,
     gameplay_system: gameplay_system::Gameplay_System,
 }
 
-impl<'a> App<'a> {
+impl App {
     pub fn new(cfg: &Config) -> Self {
+        let sdl = sdl2::init().unwrap();
+        let event_pump = sdl.event_pump().unwrap();
+        let video_subsystem = sdl.video().unwrap();
+        let window =
+            gfx::window::create_render_window(&video_subsystem, cfg.target_win_size, &cfg.title);
+        let canvas = window.into_canvas().build().unwrap();
+
         let app = App {
+            sdl: Sdl {
+                context: sdl,
+                event_pump,
+                video_subsystem,
+            },
+            window_target_size: Vec2u::new(cfg.target_win_size.0, cfg.target_win_size.1),
+            canvas,
             time: time::Time::new(),
             should_close: false,
             env: Env_Info::gather().unwrap(),
             resources: resources::Resources::new(),
-            window: gfx::window::create_render_window(cfg.target_win_size, &cfg.title),
             input_system: input::Input_System::new(),
             render_system: gfx::render::Render_System::new(),
             audio_system: audio::system::Audio_System::new(),
@@ -92,7 +120,7 @@ impl<'a> App<'a> {
 
     fn init_all_systems(&mut self) -> common::Maybe_Error {
         self.render_system.init(gfx::render::Render_System_Config {
-            clear_color: sfgfx::Color::rgb(48, 10, 36),
+            clear_color: Color::RGB(48, 10, 36),
         })?;
         self.gameplay_system.init(&self.env, &mut self.resources)?;
 
@@ -102,9 +130,9 @@ impl<'a> App<'a> {
     fn update_all_systems(&mut self) -> common::Maybe_Error {
         let dt = &self.time.dt();
 
-        self.input_system.update(&mut self.window.sf_win);
+        self.input_system.update(&mut self.sdl.event_pump);
         self.gameplay_system.update();
-        self.render_system.update(&mut self.window.sf_win);
+        self.render_system.update(&mut self.canvas);
         self.audio_system.update();
 
         self.handle_actions()
@@ -120,10 +148,10 @@ impl<'a> App<'a> {
         for action in self.input_system.get_actions() {
             match action {
                 input::Action::Resize(width, height) => {
-                    self.window.sf_win.set_view(&gfx::window::keep_ratio(
-                        &sfsys::Vector2u::new(*width, *height),
-                        &self.window.target_size,
-                    ));
+                    self.canvas.set_viewport(Some(gfx::window::keep_ratio(
+                        &Vec2u::new(*width, *height),
+                        &self.window_target_size,
+                    )));
                 }
                 _ => {}
             }

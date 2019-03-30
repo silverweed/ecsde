@@ -1,15 +1,17 @@
 use crate::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
-use sfml::graphics::{Sprite, Texture};
 use std::vec::Vec;
 
-pub struct Sprite_Storage<'a> {
+// TODO
+pub type Sprite = ();
+
+pub struct Sprite_Storage {
     allocator: Generational_Allocator,
-    sprites: Vec<Sprite<'a>>,
+    sprites: Vec<Sprite>,
 }
 
 pub type Sprite_Handle = Generational_Index;
 
-impl<'a> Sprite_Storage<'a> {
+impl Sprite_Storage {
     const INITIAL_SIZE: usize = 128;
 
     pub fn new() -> Self {
@@ -21,13 +23,14 @@ impl<'a> Sprite_Storage<'a> {
         }
     }
 
-    pub fn new_sprite(&mut self, texture: &'a Texture) -> Sprite_Handle {
+    pub fn new_sprite(&mut self, texture: super::Texture_Handle) -> Sprite_Handle {
         let s = self.allocator.allocate();
         if s.index >= self.sprites.len() {
             self.sprites
                 .resize(self.allocator.size(), Sprite::default());
         }
-        self.sprites[s.index] = Sprite::with_texture(texture);
+        // TODO
+        self.sprites[s.index] = (); //Sprite::with_texture(texture);
         s
     }
 
@@ -35,7 +38,7 @@ impl<'a> Sprite_Storage<'a> {
         self.allocator.deallocate(sprite);
     }
 
-    pub fn is_valid_sprite(&self, sprite: &Sprite_Handle) -> bool {
+    pub fn is_valid_sprite(&self, sprite: Sprite_Handle) -> bool {
         self.allocator.is_valid(sprite)
     }
 
@@ -46,7 +49,7 @@ impl<'a> Sprite_Storage<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::resources::Resources;
+    use super::super::Resources;
     use super::*;
 
     #[test]
@@ -59,11 +62,11 @@ mod tests {
         let t = res.load_texture("none"); // get fallback texture
         let s = storage.new_sprite(t);
 
-        assert!(storage.is_valid_sprite(&s));
+        assert!(storage.is_valid_sprite(s));
         assert_eq!(storage.n_loaded_sprites(), 1);
 
         storage.destroy_sprite(s);
-        assert!(!storage.is_valid_sprite(&s));
+        assert!(!storage.is_valid_sprite(s));
         assert_eq!(storage.n_loaded_sprites(), 0);
     }
 }

@@ -1,15 +1,13 @@
-extern crate sfml;
-
-use self::sfml::graphics as sfgfx;
-use self::sfml::graphics::RenderTarget;
 use crate::core;
+use sdl2::pixels::Color;
+use sdl2::render::Canvas;
 
 pub struct Render_System {
     config: Render_System_Config,
 }
 
 pub struct Render_System_Config {
-    pub clear_color: sfgfx::Color,
+    pub clear_color: Color,
 }
 
 impl Render_System {
@@ -21,7 +19,7 @@ impl Render_System {
 
     fn default_config() -> Render_System_Config {
         Render_System_Config {
-            clear_color: sfgfx::Color::BLACK,
+            clear_color: Color::RGB(0, 0, 0),
         }
     }
 
@@ -30,8 +28,9 @@ impl Render_System {
         Ok(())
     }
 
-    pub fn update(&mut self, window: &mut sfgfx::RenderWindow) {
-        window.clear(&self.config.clear_color);
-        window.display();
+    pub fn update(&mut self, canvas: &mut Canvas<sdl2::video::Window>) {
+        canvas.set_draw_color(self.config.clear_color);
+        canvas.clear();
+        canvas.present();
     }
 }

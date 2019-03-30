@@ -1,40 +1,34 @@
-extern crate sfml;
+use crate::core::common::vector::Vec2u;
+use sdl2::video::Window;
 
-use self::sfml::graphics as sfgfx;
-use self::sfml::system as sfsys;
-use self::sfml::window as sfwin;
-
-pub struct Window {
-    pub sf_win: sfgfx::RenderWindow,
-    pub target_size: sfsys::Vector2u,
+pub fn create_render_window(
+    video_subsystem: &sdl2::VideoSubsystem,
+    target_size: (u32, u32),
+    title: &str,
+) -> Window {
+    video_subsystem
+        .window(title, target_size.0, target_size.1)
+        .resizable()
+        .build()
+        .unwrap()
 }
 
-pub fn create_render_window(target_size: (u32, u32), title: &str) -> Window {
-    let mut window = sfgfx::RenderWindow::new(
-        sfwin::VideoMode::new(
-            target_size.0,
-            target_size.1,
-            sfwin::VideoMode::desktop_mode().bits_per_pixel,
-        ),
-        title,
-        sfwin::Style::CLOSE | sfwin::Style::RESIZE,
-        &Default::default(),
-    );
-
-    window.set_vertical_sync_enabled(true);
-    window.set_framerate_limit(60);
-
-    Window {
-        sf_win: window,
-        target_size: sfsys::Vector2u::new(target_size.0, target_size.1),
-    }
-}
-
-pub fn keep_ratio(new_size: &sfsys::Vector2u, target_size: &sfsys::Vector2u) -> sfgfx::View {
+pub fn keep_ratio(new_size: &Vec2u, target_size: &Vec2u) -> sdl2::rect::Rect {
     let screen_width = new_size.x as f32 / target_size.x as f32;
     let screen_height = new_size.y as f32 / target_size.y as f32;
 
-    let mut viewport = sfgfx::FloatRect::new(0f32, 0f32, 1f32, 1f32);
+    struct FloatRect {
+        pub left: f32,
+        pub top: f32,
+        pub width: f32,
+        pub height: f32,
+    }
+    let mut viewport = FloatRect {
+        left: 0f32,
+        top: 0f32,
+        width: 1f32,
+        height: 1f32,
+    };
     if screen_width > screen_height {
         viewport.width = screen_height / screen_width;
         viewport.left = 0.5 * (1f32 - viewport.width);
@@ -43,12 +37,10 @@ pub fn keep_ratio(new_size: &sfsys::Vector2u, target_size: &sfsys::Vector2u) -> 
         viewport.top = 0.5 * (1f32 - viewport.height);
     };
 
-    let mut view = sfgfx::View::from_rect(&sfgfx::FloatRect::new(
-        0f32,
-        0f32,
-        target_size.x as f32,
-        target_size.y as f32,
-    ));
-    view.set_viewport(&viewport);
-    view
+    sdl2::rect::Rect::new(
+        0,
+        0,
+        (screen_width * viewport.width) as u32,
+        (screen_height * viewport.height) as u32,
+    )
 }
