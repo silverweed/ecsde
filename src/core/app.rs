@@ -115,7 +115,7 @@ impl App {
 
     pub fn run(&mut self) -> common::Maybe_Error {
         let mut fps_debug =
-            debug::fps::Fps_Console_Printer::new(&std::time::Duration::from_secs(1));
+            debug::fps::Fps_Console_Printer::new(&std::time::Duration::from_secs(3));
 
         while !self.should_close {
             self.time.update();
@@ -136,8 +136,12 @@ impl App {
     }
 
     fn update_all_systems(&mut self) -> common::Maybe_Error {
+        let dt = self.time.dt();
+
         self.input_system.update(&mut self.sdl.event_pump);
-        self.gameplay_system.update();
+        let actions = self.input_system.get_actions();
+
+        self.gameplay_system.update(&dt, actions);
         self.render_system.update(
             &mut self.canvas,
             &self.resources,
@@ -149,14 +153,17 @@ impl App {
     }
 
     fn handle_actions(&mut self) -> common::Maybe_Error {
-        if self.input_system.has_action(&input::Action::Quit) {
-            // If we're ask to close, don't bother processing other actions.
+        let actions = self.input_system.get_actions();
+
+        if actions.has_action(&input::Action::Quit) {
+            // If we're asked to close, don't bother processing other actions.
             self.should_close = true;
             return Ok(());
         }
 
-        for action in self.input_system.get_actions() {
+        for action in actions.iter() {
             match action {
+                // FIXME
                 //input::Action::Resize(width, height) => {
                 //self.canvas.set_viewport(Some(gfx::window::keep_ratio(
                 //&Vec2u::new(*width, *height),

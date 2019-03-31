@@ -14,7 +14,12 @@ pub struct C_Position2D {
 
 impl Eq for C_Position2D {}
 
-#[derive(Clone, Default, Debug, TypeName)]
+#[derive(Copy, Clone, Default, Debug, TypeName)]
 pub struct C_Renderable {
     pub sprite: resources::Sprite_Handle,
+}
+
+#[derive(Copy, Clone, Default, Debug, TypeName)]
+pub struct C_Controllable {
+    pub speed: f32,
 }

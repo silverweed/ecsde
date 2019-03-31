@@ -13,6 +13,7 @@ pub fn create_render_window(
         .unwrap()
 }
 
+// FIXME
 pub fn keep_ratio(new_size: &Vec2u, target_size: &Vec2u) -> sdl2::rect::Rect {
     let screen_width = new_size.x as f32 / target_size.x as f32;
     let screen_height = new_size.y as f32 / target_size.y as f32;

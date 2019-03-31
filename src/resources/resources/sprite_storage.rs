@@ -77,16 +77,17 @@ impl Sprite_Storage {
 mod tests {
     use super::super::Resources;
     use super::*;
+    use crate::gfx;
 
     #[test]
     fn test_create_destroy_sprite() {
-        let mut res = Resources::new();
+        let mut res = create_resources();
         let mut storage = Sprite_Storage::new();
 
         assert_eq!(storage.n_loaded_sprites(), 0);
 
         let t = res.load_texture("none"); // get fallback texture
-        let s = storage.new_sprite(t);
+        let s = storage.new_sprite(t, 1, 1);
 
         assert!(storage.is_valid_sprite(s));
         assert_eq!(storage.n_loaded_sprites(), 1);
@@ -94,5 +95,14 @@ mod tests {
         storage.destroy_sprite(s);
         assert!(!storage.is_valid_sprite(s));
         assert_eq!(storage.n_loaded_sprites(), 0);
+    }
+
+    fn create_resources() -> Resources {
+        let sdl = sdl2::init().unwrap();
+        let video_subsystem = sdl.video().unwrap();
+        let window = gfx::window::create_render_window(&video_subsystem, (0, 0), "Test");
+        let canvas = window.into_canvas().present_vsync().build().unwrap();
+        let texture_creator = canvas.texture_creator();
+        Resources::new(texture_creator)
     }
 }
