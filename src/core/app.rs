@@ -7,6 +7,7 @@ use super::env::Env_Info;
 use super::input;
 use super::time;
 use crate::audio;
+use crate::ecs::components as comp;
 use crate::game::gameplay_system;
 use crate::gfx;
 use crate::resources::resources;
@@ -78,6 +79,7 @@ impl App {
         let window =
             gfx::window::create_render_window(&video_subsystem, cfg.target_win_size, &cfg.title);
         let canvas = window.into_canvas().present_vsync().build().unwrap();
+        let texture_creator = canvas.texture_creator();
 
         let app = App {
             sdl: Sdl {
@@ -90,7 +92,7 @@ impl App {
             time: time::Time::new(),
             should_close: false,
             env: Env_Info::gather().unwrap(),
-            resources: resources::Resources::new(),
+            resources: resources::Resources::new(texture_creator),
             input_system: input::Input_System::new(),
             render_system: gfx::render::Render_System::new(),
             audio_system: audio::system::Audio_System::new(),
@@ -114,11 +116,13 @@ impl App {
     pub fn run(&mut self) -> common::Maybe_Error {
         let mut fps_debug =
             debug::fps::Fps_Console_Printer::new(&std::time::Duration::from_secs(1));
+
         while !self.should_close {
             self.time.update();
             self.update_all_systems()?;
             fps_debug.tick(&self.time);
         }
+
         Ok(())
     }
 
@@ -132,11 +136,13 @@ impl App {
     }
 
     fn update_all_systems(&mut self) -> common::Maybe_Error {
-        let dt = &self.time.dt();
-
         self.input_system.update(&mut self.sdl.event_pump);
         self.gameplay_system.update();
-        self.render_system.update(&mut self.canvas);
+        self.render_system.update(
+            &mut self.canvas,
+            &self.resources,
+            &self.gameplay_system.get_renderable_entities(),
+        );
         self.audio_system.update();
 
         self.handle_actions()
@@ -151,12 +157,12 @@ impl App {
 
         for action in self.input_system.get_actions() {
             match action {
-                input::Action::Resize(width, height) => {
-                    self.canvas.set_viewport(Some(gfx::window::keep_ratio(
-                        &Vec2u::new(*width, *height),
-                        &self.window_target_size,
-                    )));
-                }
+                //input::Action::Resize(width, height) => {
+                //self.canvas.set_viewport(Some(gfx::window::keep_ratio(
+                //&Vec2u::new(*width, *height),
+                //&self.window_target_size,
+                //)));
+                //}
                 _ => {}
             }
         }

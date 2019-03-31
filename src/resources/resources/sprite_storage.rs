@@ -1,8 +1,22 @@
+use super::cache::Texture_Handle;
 use crate::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
+use sdl2::rect::Rect;
 use std::vec::Vec;
 
-// TODO
-pub type Sprite = ();
+#[derive(Clone, Copy, Debug)]
+pub struct Sprite {
+    pub texture: Texture_Handle,
+    pub rect: Rect,
+}
+
+impl std::default::Default for Sprite {
+    fn default() -> Self {
+        Sprite {
+            texture: Texture_Handle::default(),
+            rect: Rect::new(0, 0, 0, 0),
+        }
+    }
+}
 
 pub struct Sprite_Storage {
     allocator: Generational_Allocator,
@@ -23,14 +37,21 @@ impl Sprite_Storage {
         }
     }
 
-    pub fn new_sprite(&mut self, texture: super::Texture_Handle) -> Sprite_Handle {
+    pub fn new_sprite(
+        &mut self,
+        texture: Texture_Handle,
+        width: u32,
+        height: u32,
+    ) -> Sprite_Handle {
         let s = self.allocator.allocate();
         if s.index >= self.sprites.len() {
             self.sprites
                 .resize(self.allocator.size(), Sprite::default());
         }
-        // TODO
-        self.sprites[s.index] = (); //Sprite::with_texture(texture);
+        self.sprites[s.index] = Sprite {
+            texture,
+            rect: Rect::new(0, 0, width, height),
+        };
         s
     }
 
@@ -44,6 +65,11 @@ impl Sprite_Storage {
 
     pub fn n_loaded_sprites(&self) -> usize {
         self.allocator.live_size()
+    }
+
+    pub fn get_sprite(&self, handle: Sprite_Handle) -> &Sprite {
+        assert!(self.is_valid_sprite(handle));
+        &self.sprites[handle.index]
     }
 }
 

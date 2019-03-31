@@ -1,6 +1,8 @@
 use crate::core;
+use crate::ecs::components as comp;
+use crate::resources::resources;
 use sdl2::pixels::Color;
-use sdl2::render::Canvas;
+use sdl2::render::WindowCanvas;
 
 pub struct Render_System {
     config: Render_System_Config,
@@ -28,9 +30,29 @@ impl Render_System {
         Ok(())
     }
 
-    pub fn update(&mut self, canvas: &mut Canvas<sdl2::video::Window>) {
+    pub fn update(
+        &mut self,
+        canvas: &mut WindowCanvas,
+        resources: &resources::Resources,
+        renderables: &[(&comp::C_Renderable, &comp::C_Position2D)],
+    ) {
         canvas.set_draw_color(self.config.clear_color);
         canvas.clear();
+        canvas.set_draw_color(Color::RGB(255, 255, 255));
+        for (rend, pos) in renderables {
+            let sprite = resources.get_sprite(rend.sprite);
+            let texture = resources.get_texture(sprite.texture);
+            let dst = sdl2::rect::Rect::new(
+                pos.x as i32,
+                pos.y as i32,
+                sprite.rect.width(),
+                sprite.rect.height(),
+            );
+
+            if let Err(msg) = canvas.copy(texture, Some(sprite.rect), dst) {
+                eprintln!("Error copying texture to window: {}", msg);
+            }
+        }
         canvas.present();
     }
 }

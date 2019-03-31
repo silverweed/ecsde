@@ -1,4 +1,4 @@
-#[derive(PartialEq, Hash, Copy, Clone)]
+#[derive(PartialEq, Hash, Copy, Clone, Debug)]
 pub struct String_Id(u32);
 
 impl Eq for String_Id {}
