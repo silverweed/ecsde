@@ -3,6 +3,7 @@ extern crate anymap;
 use super::components::Component;
 use crate::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
 
+use std::iter::Iterator;
 use std::option::Option;
 use std::vec::Vec;
 
@@ -197,6 +198,48 @@ impl Entity_Manager {
     {
         self.get_component::<C>(e).is_some()
     }
+
+    pub fn get_component_tuple<'a, C1, C2>(&'a self) -> impl Iterator<Item = (&'a C1, &'a C2)>
+    where
+        C1: Component + 'static,
+        C2: Component + 'static,
+    {
+        let comps1 = self
+            .get_comp_storage::<C1>()
+            .expect(format!("Tried to get unregistered component {}!", C1::type_name()).as_str());
+        let comps2 = self
+            .get_comp_storage::<C2>()
+            .expect(format!("Tried to get unregistered component {}!", C1::type_name()).as_str());
+        let it = comps1.iter().zip(comps2.iter()).filter_map(|(c1, c2)| {
+            let c1 = c1.as_ref()?;
+            let c2 = c2.as_ref()?;
+            Some((c1, c2))
+        });
+
+        Component_Tuple_Iterator { it }
+    }
+}
+
+struct Component_Tuple_Iterator<'a, C1, C2, It>
+where
+    C1: Component + 'a,
+    C2: Component + 'a,
+    It: Iterator<Item = (&'a C1, &'a C2)>,
+{
+    it: It,
+}
+
+impl<'a, C1, C2, It> Iterator for Component_Tuple_Iterator<'a, C1, C2, It>
+where
+    C1: Component + 'a,
+    C2: Component + 'a,
+    It: Iterator<Item = (&'a C1, &'a C2)>,
+{
+    type Item = (&'a C1, &'a C2);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.it.next()
+    }
 }
 
 #[cfg(test)]
@@ -211,6 +254,11 @@ mod tests_entity_manager {
 
     #[derive(Copy, Clone, Debug, Default, TypeName)]
     struct C_Test2 {
+        foo: i32,
+    }
+
+    #[derive(Copy, Clone, Debug, Default, TypeName)]
+    struct C_Test3 {
         foo: i32,
     }
 
@@ -522,5 +570,61 @@ mod tests_entity_manager {
             .collect();
         let all_nonnull_comps = em.get_components::<C_Test>();
         assert_eq!(filtered.len(), all_nonnull_comps.len());
+    }
+
+    #[test]
+    fn test_get_component_tuple() {
+        let mut em = Entity_Manager::new();
+        let mut entities: Vec<Entity> = vec![];
+
+        em.register_component::<C_Test>();
+        em.register_component::<C_Test2>();
+
+        let has_both_1 = em.new_entity();
+        em.add_component::<C_Test>(has_both_1);
+        em.add_component::<C_Test2>(has_both_1);
+
+        let has_first = em.new_entity();
+        em.add_component::<C_Test>(has_first);
+
+        let has_none = em.new_entity();
+
+        let has_both_2 = em.new_entity();
+        em.add_component::<C_Test>(has_both_2);
+        em.add_component::<C_Test2>(has_both_2);
+
+        let has_second = em.new_entity();
+        em.add_component::<C_Test>(has_second);
+
+        let has_both_3 = em.new_entity();
+        em.add_component::<C_Test>(has_both_3);
+        em.add_component::<C_Test2>(has_both_3);
+
+        let has_none_2 = em.new_entity();
+
+        let only_both: Vec<(&C_Test, &C_Test2)> =
+            em.get_component_tuple::<C_Test, C_Test2>().collect();
+        assert_eq!(only_both.len(), 3);
+
+        let only_both: Vec<(&C_Test2, &C_Test)> =
+            em.get_component_tuple::<C_Test2, C_Test>().collect();
+        assert_eq!(only_both.len(), 3);
+    }
+
+    #[test]
+    fn test_get_component_tuple_empty() {
+        let mut em = Entity_Manager::new();
+        let mut entities: Vec<Entity> = vec![];
+
+        em.register_component::<C_Test>();
+        em.register_component::<C_Test2>();
+        em.register_component::<C_Test3>();
+
+        let e = em.new_entity();
+        em.add_component::<C_Test>(e);
+        em.add_component::<C_Test2>(e);
+
+        let empty: Vec<(&C_Test, &C_Test3)> = em.get_component_tuple::<C_Test, C_Test3>().collect();
+        assert_eq!(empty.len(), 0);
     }
 }

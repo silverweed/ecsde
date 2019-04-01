@@ -40,7 +40,9 @@ impl Generational_Allocator {
     }
 
     pub fn live_size(&self) -> usize {
-        self.alive.iter().filter(|&&e| e).count()
+        self.alive
+            .iter()
+            .fold(0, |acc, &e| if e { acc + 1 } else { acc })
     }
 
     pub fn allocate(&mut self) -> Generational_Index {

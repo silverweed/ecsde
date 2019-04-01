@@ -100,16 +100,8 @@ impl Gameplay_System {
     }
 
     pub fn get_renderable_entities(&self) -> Vec<(&comp::C_Renderable, &comp::C_Position2D)> {
-        self.entities
-            .iter()
-            .map(|&e| {
-                (
-                    self.entity_manager.get_component::<comp::C_Renderable>(e),
-                    self.entity_manager.get_component::<comp::C_Position2D>(e),
-                )
-            })
-            .filter(|(r, p)| r.is_some() && p.is_some())
-            .map(|(r, p)| (r.unwrap(), p.unwrap()))
+        self.entity_manager
+            .get_component_tuple::<comp::C_Renderable, comp::C_Position2D>()
             .collect()
     }
 
