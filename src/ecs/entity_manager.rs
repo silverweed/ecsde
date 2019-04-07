@@ -210,35 +210,12 @@ impl Entity_Manager {
         let comps2 = self
             .get_comp_storage::<C2>()
             .expect(format!("Tried to get unregistered component {}!", C1::type_name()).as_str());
-        let it = comps1.iter().zip(comps2.iter()).filter_map(|(c1, c2)| {
+
+        comps1.iter().zip(comps2.iter()).filter_map(|(c1, c2)| {
             let c1 = c1.as_ref()?;
             let c2 = c2.as_ref()?;
             Some((c1, c2))
-        });
-
-        Component_Tuple_Iterator { it }
-    }
-}
-
-struct Component_Tuple_Iterator<'a, C1, C2, It>
-where
-    C1: Component + 'a,
-    C2: Component + 'a,
-    It: Iterator<Item = (&'a C1, &'a C2)>,
-{
-    it: It,
-}
-
-impl<'a, C1, C2, It> Iterator for Component_Tuple_Iterator<'a, C1, C2, It>
-where
-    C1: Component + 'a,
-    C2: Component + 'a,
-    It: Iterator<Item = (&'a C1, &'a C2)>,
-{
-    type Item = (&'a C1, &'a C2);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.it.next()
+        })
     }
 }
 
