@@ -1,5 +1,10 @@
 #![allow(non_camel_case_types)]
 
+extern crate anymap;
+extern crate cgmath;
+extern crate sdl2;
+extern crate stb_image;
+
 use std::env;
 
 pub(crate) mod alloc;

@@ -1,5 +1,3 @@
-extern crate sdl2;
-
 use super::common;
 use super::common::vector::Vec2u;
 use super::debug;

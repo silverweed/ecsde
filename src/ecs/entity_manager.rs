@@ -1,5 +1,3 @@
-extern crate anymap;
-
 use super::components::Component;
 use crate::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
 

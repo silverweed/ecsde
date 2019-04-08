@@ -1,5 +1,3 @@
-extern crate cgmath;
-
 use cgmath::Vector2;
 
 pub type Vec2u = Vector2<u32>;

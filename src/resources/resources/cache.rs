@@ -1,5 +1,3 @@
-extern crate stb_image;
-
 use crate::core::common::stringid::String_Id;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::render::Texture;
