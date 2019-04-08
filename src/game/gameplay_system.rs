@@ -1,4 +1,5 @@
 use crate::core::common;
+use crate::core::common::transform::C_Transform2D;
 use crate::core::common::vector::Vec2f;
 use crate::core::env::Env_Info;
 use crate::core::input;
@@ -29,9 +30,9 @@ impl Gameplay_System {
         let yv = em.new_entity();
         self.entities.push(yv);
         {
-            let mut pos = em.add_component::<comp::C_Position2D>(yv);
-            pos.x = 300.0;
-            pos.y = 200.0;
+            let tr = em.add_component::<C_Transform2D>(yv);
+            tr.set_position(300.0, 200.0);
+            tr.set_scale(1.0, 2.2);
         }
         {
             let mut rend = em.add_component::<comp::C_Renderable>(yv);
@@ -45,9 +46,8 @@ impl Gameplay_System {
         let plant = em.new_entity();
         self.entities.push(plant);
         {
-            let mut pos = em.add_component::<comp::C_Position2D>(plant);
-            pos.x = 400.0;
-            pos.y = 500.0;
+            let tr = em.add_component::<C_Transform2D>(plant);
+            tr.set_position(400.0, 500.0);
         }
         {
             let mut rend = em.add_component::<comp::C_Renderable>(plant);
@@ -58,20 +58,16 @@ impl Gameplay_System {
         Ok(())
     }
 
-    pub fn update(&mut self, dt: &Duration, actions: &input::Action_List) {
+    pub fn update(
+        &mut self,
+        dt: &Duration,
+        actions: &input::Action_List,
+        camera: &mut C_Transform2D,
+    ) {
         use crate::core::common::direction::Direction;
         use input::Action;
 
         let em = &mut self.entity_manager;
-
-        let controllable: Vec<&Entity> = self
-            .entities
-            .iter()
-            .filter(|&&e| {
-                em.has_component::<comp::C_Position2D>(e)
-                    && em.has_component::<comp::C_Controllable>(e)
-            })
-            .collect();
 
         let mut movement = Vec2f::new(0.0, 0.0);
         if actions.has_action(&Action::Move(Direction::Left)) {
@@ -87,28 +83,46 @@ impl Gameplay_System {
             movement.y += 1.0;
         }
 
-        for &ctrl in controllable {
+        let t = movement * time::to_secs_frac(dt) * 300f32;
+        camera.translate(t.x, t.y);
+
+        for a in actions.iter() {
+            match a {
+                Action::Zoom(factor) => {
+                    camera.add_scale(0.01 * *factor as f32, 0.01 * *factor as f32)
+                }
+                _ => (),
+            }
+        }
+
+        let controllables: Vec<&Entity> = self
+            .entities
+            .iter()
+            .filter(|&&e| {
+                em.has_component::<C_Transform2D>(e) && em.has_component::<comp::C_Controllable>(e)
+            })
+            .collect();
+        for &ctrl in controllables {
             let speed = em
                 .get_component::<comp::C_Controllable>(ctrl)
                 .unwrap()
                 .speed;
             let velocity = movement * speed * time::to_secs_frac(dt);
-            let pos = em.get_component_mut::<comp::C_Position2D>(ctrl).unwrap();
-            pos.x += velocity.x;
-            pos.y += velocity.y;
+            let tr = em.get_component_mut::<C_Transform2D>(ctrl).unwrap();
+            tr.rotate(cgmath::Rad(time::to_secs_frac(dt)));
         }
     }
 
-    pub fn get_renderable_entities(&self) -> Vec<(&comp::C_Renderable, &comp::C_Position2D)> {
+    pub fn get_renderable_entities(&self) -> Vec<(&comp::C_Renderable, &C_Transform2D)> {
         self.entity_manager
-            .get_component_tuple::<comp::C_Renderable, comp::C_Position2D>()
+            .get_component_tuple::<comp::C_Renderable, C_Transform2D>()
             .collect()
     }
 
     fn register_all_components(&mut self) {
         let em = &mut self.entity_manager;
 
-        em.register_component::<comp::C_Position2D>();
+        em.register_component::<C_Transform2D>();
         em.register_component::<comp::C_Renderable>();
         em.register_component::<comp::C_Controllable>();
     }

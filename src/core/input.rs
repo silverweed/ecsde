@@ -6,6 +6,8 @@ pub enum Action {
     Quit,
     Resize(u32, u32),
     Move(Direction),
+    Zoom(i32), // Note: the zoom factor is an integer rather than a float as it can be hashed.
+               // This integer must be divided by 100 to obtain the actual scaling factor.
 }
 
 #[derive(Default)]
@@ -76,6 +78,8 @@ impl Input_System {
                     Keycode::A => self.actions.move_left = true,
                     Keycode::S => self.actions.move_down = true,
                     Keycode::D => self.actions.move_right = true,
+                    Keycode::KpPlus => actions.push(Action::Zoom(10)),
+                    Keycode::KpMinus => actions.push(Action::Zoom(-10)),
                     _ => (),
                 },
                 Event::KeyUp {

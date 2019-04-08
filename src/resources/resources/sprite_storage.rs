@@ -100,8 +100,7 @@ mod tests {
     fn create_resources() -> Resources {
         let sdl = sdl2::init().unwrap();
         let video_subsystem = sdl.video().unwrap();
-        let window = gfx::window::create_render_window(&video_subsystem, (0, 0), "Test");
-        let canvas = window.into_canvas().present_vsync().build().unwrap();
+        let canvas = gfx::window::create_render_canvas(&video_subsystem, (0, 0), "Test");
         let texture_creator = canvas.texture_creator();
         Resources::new(texture_creator)
     }

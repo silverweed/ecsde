@@ -74,9 +74,8 @@ impl App {
         let sdl = sdl2::init().unwrap();
         let event_pump = sdl.event_pump().unwrap();
         let video_subsystem = sdl.video().unwrap();
-        let window =
-            gfx::window::create_render_window(&video_subsystem, cfg.target_win_size, &cfg.title);
-        let canvas = window.into_canvas().present_vsync().build().unwrap();
+        let canvas =
+            gfx::window::create_render_canvas(&video_subsystem, cfg.target_win_size, &cfg.title);
         let texture_creator = canvas.texture_creator();
 
         let app = App {
@@ -139,7 +138,8 @@ impl App {
         self.input_system.update(&mut self.sdl.event_pump);
         let actions = self.input_system.get_actions();
 
-        self.gameplay_system.update(&dt, actions);
+        self.gameplay_system
+            .update(&dt, actions, &mut self.render_system.camera);
         self.render_system.update(
             &mut self.canvas,
             &self.resources,
@@ -159,18 +159,11 @@ impl App {
             return Ok(());
         }
 
-        for action in actions.iter() {
-            match action {
-                // FIXME
-                //input::Action::Resize(width, height) => {
-                //self.canvas.set_viewport(Some(gfx::window::keep_ratio(
-                //&Vec2u::new(*width, *height),
-                //&self.window_target_size,
-                //)));
-                //}
-                _ => {}
-            }
-        }
+        //for action in actions.iter() {
+        //match action {
+        //_ => {}
+        //}
+        //}
 
         Ok(())
     }
