@@ -4,6 +4,7 @@ mod sprite_storage;
 use crate::core::env::Env_Info;
 use sdl2::render::{Texture, TextureQuery};
 use sprite_storage::Sprite_Storage;
+use std::path::{Path, PathBuf};
 
 pub type Sprite_Handle = sprite_storage::Sprite_Handle;
 pub type Sprite = sprite_storage::Sprite;
@@ -61,12 +62,10 @@ impl Resources {
 
 // TODO when we have a frame temp allocator, this should probably allocate there.
 pub fn asset_path(env: &Env_Info, dir: &str, file: &str) -> String {
-    let mut s = String::from(env.get_assets_root());
-    s.push('/');
-    s.push_str(dir);
-    s.push('/');
-    s.push_str(file);
-    s
+    let mut s = PathBuf::from(env.get_assets_root());
+    s.push(dir);
+    s.push(file);
+    s.into_os_string().into_string().unwrap()
 }
 
 pub fn tex_path(env: &Env_Info, file: &str) -> String {

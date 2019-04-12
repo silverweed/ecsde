@@ -100,7 +100,7 @@ impl App {
 
     pub fn init(&mut self) -> common::Maybe_Error {
         println!(
-            "Working dir = {}\nExe = {}",
+            "Working dir = {:?}\nExe = {:?}",
             self.env.get_cwd(),
             self.env.get_exe()
         );
