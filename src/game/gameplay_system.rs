@@ -32,7 +32,7 @@ impl Gameplay_System {
         {
             let tr = em.add_component::<C_Transform2D>(yv);
             tr.set_position(300.0, 200.0);
-            tr.set_scale(1.0, 2.2);
+            tr.set_scale(3.0, 3.0);
         }
         {
             let mut rend = em.add_component::<comp::C_Renderable>(yv);
@@ -48,6 +48,7 @@ impl Gameplay_System {
         {
             let tr = em.add_component::<C_Transform2D>(plant);
             tr.set_position(400.0, 500.0);
+            tr.set_scale(1.0, 2.2);
         }
         {
             let mut rend = em.add_component::<comp::C_Renderable>(plant);
@@ -109,7 +110,7 @@ impl Gameplay_System {
                 .speed;
             let velocity = movement * speed * time::to_secs_frac(dt);
             let tr = em.get_component_mut::<C_Transform2D>(ctrl).unwrap();
-            tr.rotate(cgmath::Rad(time::to_secs_frac(dt)));
+            tr.rotate(cgmath::Rad(3.0 * time::to_secs_frac(dt)));
         }
     }
 

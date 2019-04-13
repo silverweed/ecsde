@@ -3,8 +3,10 @@ use crate::core::common::transform::C_Transform2D;
 use crate::core::common::vector::Vec2f;
 use crate::ecs::components as comp;
 use crate::resources::resources;
+use cgmath::Deg;
 use sdl2::pixels::Color;
 use sdl2::render::WindowCanvas;
+use std::convert::Into;
 
 pub struct Render_System {
     config: Render_System_Config,
@@ -55,7 +57,8 @@ impl Render_System {
             let texture = resources.get_texture(sprite.texture);
 
             let pos = transf.position();
-            let cgmath::Rad(angle) = transf.rotation();
+            let angle: Deg<f32> = transf.rotation().into();
+            let Deg(angle) = angle;
             let scale = transf.scale();
 
             let dst = sdl2::rect::Rect::new(
@@ -69,7 +72,7 @@ impl Render_System {
                 texture,
                 Some(sprite.rect),
                 dst,
-                angle as f64,
+                angle as f64, // degrees!
                 None,
                 false,
                 false,

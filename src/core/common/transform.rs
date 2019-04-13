@@ -6,13 +6,17 @@ use typename::TypeName;
 
 #[derive(Copy, Clone, Debug, TypeName, PartialEq)]
 pub struct C_Transform2D {
-    transform: Matrix3<f32>,
+    position: Vec2f,
+    rotation: Rad<f32>,
+    scale: Vec2f,
 }
 
 impl Default for C_Transform2D {
     fn default() -> Self {
         C_Transform2D {
-            transform: Matrix3::identity(),
+            position: Vec2f::new(0.0, 0.0),
+            rotation: Rad(0.0),
+            scale: Vec2f::new(1.0, 1.0),
         }
     }
 }
@@ -23,50 +27,43 @@ impl C_Transform2D {
     }
 
     pub fn translate(&mut self, x: f32, y: f32) {
-        self.transform[2][0] += x;
-        self.transform[2][1] += y;
+        self.position.x += x;
+        self.position.y += y;
     }
 
     pub fn set_position(&mut self, x: f32, y: f32) {
-        self.transform[2][0] = x;
-        self.transform[2][1] = y;
+        self.position.x = x;
+        self.position.y = y;
     }
 
     pub fn position(&self) -> Vec2f {
-        Vec2f::new(self.transform[2][0], self.transform[2][1])
+        self.position
     }
 
     pub fn add_scale(&mut self, x: f32, y: f32) {
-        self.transform[0][0] += x;
-        self.transform[1][1] += y;
+        self.scale.x += x;
+        self.scale.y += y;
     }
 
     pub fn set_scale(&mut self, x: f32, y: f32) {
-        self.transform[0][0] = x;
-        self.transform[1][1] = y;
+        self.scale.x = x;
+        self.scale.y = y;
     }
 
     pub fn scale(&self) -> Vec2f {
-        Vec2f::new(self.transform[0][0], self.transform[1][1])
+        self.scale
     }
 
-    // FIXME
     pub fn set_rotation<T: Into<Rad<f32>>>(&mut self, angle: T) {
-        let new_angle: Rad<f32> = angle.into();
-        self.transform[0][0] = new_angle.cos();
-        self.transform[0][1] = -new_angle.sin();
-        self.transform[1][0] = new_angle.sin();
-        self.transform[1][1] = new_angle.cos();
+        self.rotation = angle.into();
     }
 
     pub fn rotate<T: Into<Rad<f32>>>(&mut self, angle: T) {
-        let diff_rad: Rad<f32> = angle.into();
-        let new_angle = self.rotation().add(diff_rad);
-        self.set_rotation(new_angle);
+        self.rotation += angle.into();
     }
 
     pub fn rotation(&self) -> Rad<f32> {
-        Rad::acos(self.transform[0][0])
+        self.rotation
     }
 }
 
