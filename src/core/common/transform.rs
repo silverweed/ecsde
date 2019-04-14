@@ -31,6 +31,11 @@ impl C_Transform2D {
         self.position.y += y;
     }
 
+    pub fn translate_v(&mut self, v: Vec2f) {
+        self.position.x += v.x;
+        self.position.y += v.y;
+    }
+
     pub fn set_position(&mut self, x: f32, y: f32) {
         self.position.x = x;
         self.position.y = y;

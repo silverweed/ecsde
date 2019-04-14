@@ -34,6 +34,7 @@ impl Render_System {
 
     pub fn init(&mut self, cfg: Render_System_Config) -> core::common::Maybe_Error {
         self.config = cfg;
+        self.camera.translate(150.0, 100.0);
         Ok(())
     }
 

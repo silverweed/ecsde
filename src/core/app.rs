@@ -138,8 +138,7 @@ impl App {
         self.input_system.update(&mut self.sdl.event_pump);
         let actions = self.input_system.get_actions();
 
-        self.gameplay_system
-            .update(&dt, actions, &mut self.render_system.camera);
+        self.gameplay_system.update(&dt, actions);
         self.render_system.update(
             &mut self.canvas,
             &self.resources,
@@ -154,16 +153,8 @@ impl App {
         let actions = self.input_system.get_actions();
 
         if actions.has_action(&input::Action::Quit) {
-            // If we're asked to close, don't bother processing other actions.
             self.should_close = true;
-            return Ok(());
         }
-
-        //for action in actions.iter() {
-        //match action {
-        //_ => {}
-        //}
-        //}
 
         Ok(())
     }

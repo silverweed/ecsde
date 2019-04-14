@@ -1,4 +1,5 @@
 use crate::core::common::direction::Direction;
+use crate::core::common::vector::Vec2f;
 use std::vec::Vec;
 
 #[derive(PartialEq, Hash)]
@@ -100,4 +101,23 @@ impl Input_System {
             }
         }
     }
+}
+
+pub fn get_movement_from_input(actions: &Action_List) -> Vec2f {
+    use crate::core::common::direction::Direction;
+
+    let mut movement = Vec2f::new(0.0, 0.0);
+    if actions.has_action(&Action::Move(Direction::Left)) {
+        movement.x -= 1.0;
+    }
+    if actions.has_action(&Action::Move(Direction::Right)) {
+        movement.x += 1.0;
+    }
+    if actions.has_action(&Action::Move(Direction::Up)) {
+        movement.y -= 1.0;
+    }
+    if actions.has_action(&Action::Move(Direction::Down)) {
+        movement.y += 1.0;
+    }
+    movement
 }
