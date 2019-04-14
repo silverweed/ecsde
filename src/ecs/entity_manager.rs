@@ -207,7 +207,7 @@ impl Entity_Manager {
             .expect(format!("Tried to get unregistered component {}!", C1::type_name()).as_str());
         let comps2 = self
             .get_comp_storage::<C2>()
-            .expect(format!("Tried to get unregistered component {}!", C1::type_name()).as_str());
+            .expect(format!("Tried to get unregistered component {}!", C2::type_name()).as_str());
 
         comps1.iter().zip(comps2.iter()).filter_map(|(c1, c2)| {
             let c1 = c1.as_ref()?;

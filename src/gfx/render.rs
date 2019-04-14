@@ -5,6 +5,7 @@ use crate::ecs::components as comp;
 use crate::resources::resources;
 use cgmath::Deg;
 use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 use sdl2::render::WindowCanvas;
 use std::convert::Into;
 
@@ -53,25 +54,30 @@ impl Render_System {
         canvas.set_scale(cam_sx, cam_sy).unwrap();
 
         for (rend, transf) in renderables {
-            let sprite = resources.get_sprite(rend.sprite);
-            let texture = resources.get_texture(sprite.texture);
+            let comp::C_Renderable {
+                texture: tex_id,
+                rect: src_rect,
+                ..
+            } = rend;
+
+            let texture = resources.get_texture(*tex_id);
 
             let pos = transf.position();
-            let angle: Deg<f32> = transf.rotation().into();
-            let Deg(angle) = angle;
+            let Deg(angle) = transf.rotation().into();
+            //let Deg(angle) = angle;
             let scale = transf.scale();
 
-            let dst = sdl2::rect::Rect::new(
+            let dst_rect = Rect::new(
                 (pos.x - cam_x) as i32,
                 (pos.y - cam_y) as i32,
-                (scale.x * (sprite.rect.width() as f32)) as u32,
-                (scale.y * (sprite.rect.height() as f32)) as u32,
+                (scale.x * (src_rect.width() as f32)) as u32,
+                (scale.y * (src_rect.height() as f32)) as u32,
             );
 
             if let Err(msg) = canvas.copy_ex(
                 texture,
-                Some(sprite.rect),
-                dst,
+                Some(*src_rect),
+                dst_rect,
                 angle as f64, // degrees!
                 None,
                 false,

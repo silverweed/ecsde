@@ -101,7 +101,7 @@ impl Cache {
         let id = String_Id::from(fname);
         match self.sounds.entry(id) {
             Entry::Occupied(_) => Some(id),
-            Entry::Vacant(v) => {
+            Entry::Vacant(_v) => {
                 Some(id) // TODO
                          //if let Some(sound) = SoundBuffer::from_file(fname) {
                          //Some(v.insert(sound))
