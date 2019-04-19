@@ -1,9 +1,8 @@
 mod cache;
-mod sprite_storage;
 
 use crate::core::env::Env_Info;
-use sdl2::render::{Texture, TextureQuery};
-use std::path::{Path, PathBuf};
+use sdl2::render::Texture;
+use std::path::PathBuf;
 
 pub type Texture_Handle = cache::Texture_Handle;
 pub type Sound_Handle = cache::Sound_Handle;

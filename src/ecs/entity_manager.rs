@@ -7,9 +7,9 @@ use std::vec::Vec;
 
 use anymap::AnyMap;
 
-// An Entity_Manager provides the public interface to allocate/deallocate Entities
-// along with their Components' storage. It allows to add/remove/query Components
-// to/from their associated Entity.
+/// An Entity_Manager provides the public interface to allocate/deallocate Entities
+/// along with their Components' storage. It allows to add/remove/query Components
+/// to/from their associated Entity.
 pub struct Entity_Manager {
     allocator: Generational_Allocator,
     // map { CompType => Vec<CompType> }
@@ -41,7 +41,6 @@ impl Entity_Manager {
         self.components.get_mut::<VecOpt<C>>()
     }
 
-    // Returns a vector of references to Option<C>, all of which are guaranteed to be Some.
     pub fn get_components<C>(&self) -> Vec<&C>
     where
         C: Component + 'static,
@@ -98,7 +97,7 @@ impl Entity_Manager {
         self.components.insert(v);
     }
 
-    // Adds a component of type C to `e` and returns a mutable reference to it.
+    /// Adds a component of type C to `e` and returns a mutable reference to it.
     pub fn add_component<C>(&mut self, e: Entity) -> &mut C
     where
         C: Component + 'static,
@@ -211,6 +210,29 @@ impl Entity_Manager {
 
         comps1.iter().zip(comps2.iter()).filter_map(|(c1, c2)| {
             let c1 = c1.as_ref()?;
+            let c2 = c2.as_ref()?;
+            Some((c1, c2))
+        })
+    }
+
+    pub fn get_component_tuple_first_mut<C1, C2>(
+        &self,
+    ) -> impl Iterator<Item = (&'_ mut C1, &'_ C2)> + '_
+    where
+        C1: Component + 'static,
+        C2: Component + 'static,
+    {
+        let comps1 = self
+            .get_comp_storage::<C1>()
+            .expect(format!("Tried to get unregistered component {}!", C1::type_name()).as_str());
+        let comps2 = self
+            .get_comp_storage::<C2>()
+            .expect(format!("Tried to get unregistered component {}!", C2::type_name()).as_str());
+
+        comps1.iter().zip(comps2.iter()).filter_map(|(c1, c2)| {
+            let c1 = c1.as_ref()?;
+            // @Hack: Dirty trick to mutably and immutably borrow at the same time
+            let c1 = unsafe { ((c1 as *const C1) as *mut C1).as_mut()? };
             let c2 = c2.as_ref()?;
             Some((c1, c2))
         })
@@ -550,7 +572,6 @@ mod tests_entity_manager {
     #[test]
     fn test_get_component_tuple() {
         let mut em = Entity_Manager::new();
-        let mut entities: Vec<Entity> = vec![];
 
         em.register_component::<C_Test>();
         em.register_component::<C_Test2>();
@@ -562,7 +583,7 @@ mod tests_entity_manager {
         let has_first = em.new_entity();
         em.add_component::<C_Test>(has_first);
 
-        let has_none = em.new_entity();
+        em.new_entity();
 
         let has_both_2 = em.new_entity();
         em.add_component::<C_Test>(has_both_2);
@@ -575,7 +596,7 @@ mod tests_entity_manager {
         em.add_component::<C_Test>(has_both_3);
         em.add_component::<C_Test2>(has_both_3);
 
-        let has_none_2 = em.new_entity();
+        em.new_entity();
 
         let only_both: Vec<(&C_Test, &C_Test2)> =
             em.get_component_tuple::<C_Test, C_Test2>().collect();
@@ -589,7 +610,6 @@ mod tests_entity_manager {
     #[test]
     fn test_get_component_tuple_empty() {
         let mut em = Entity_Manager::new();
-        let mut entities: Vec<Entity> = vec![];
 
         em.register_component::<C_Test>();
         em.register_component::<C_Test2>();
@@ -600,6 +620,64 @@ mod tests_entity_manager {
         em.add_component::<C_Test2>(e);
 
         let empty: Vec<(&C_Test, &C_Test3)> = em.get_component_tuple::<C_Test, C_Test3>().collect();
+        assert_eq!(empty.len(), 0);
+    }
+
+    #[test]
+    fn test_get_component_tuple_first_mut() {
+        let mut em = Entity_Manager::new();
+
+        em.register_component::<C_Test>();
+        em.register_component::<C_Test2>();
+
+        let has_both_1 = em.new_entity();
+        em.add_component::<C_Test>(has_both_1);
+        em.add_component::<C_Test2>(has_both_1);
+
+        let has_first = em.new_entity();
+        em.add_component::<C_Test>(has_first);
+
+        em.new_entity();
+
+        let has_both_2 = em.new_entity();
+        em.add_component::<C_Test>(has_both_2);
+        em.add_component::<C_Test2>(has_both_2);
+
+        let has_second = em.new_entity();
+        em.add_component::<C_Test>(has_second);
+
+        let has_both_3 = em.new_entity();
+        em.add_component::<C_Test>(has_both_3);
+        em.add_component::<C_Test2>(has_both_3);
+
+        em.new_entity();
+
+        let only_both: Vec<(&mut C_Test, &C_Test2)> = em
+            .get_component_tuple_first_mut::<C_Test, C_Test2>()
+            .collect();
+        assert_eq!(only_both.len(), 3);
+
+        let only_both: Vec<(&mut C_Test2, &C_Test)> = em
+            .get_component_tuple_first_mut::<C_Test2, C_Test>()
+            .collect();
+        assert_eq!(only_both.len(), 3);
+    }
+
+    #[test]
+    fn test_get_component_tuple_first_mut_empty() {
+        let mut em = Entity_Manager::new();
+
+        em.register_component::<C_Test>();
+        em.register_component::<C_Test2>();
+        em.register_component::<C_Test3>();
+
+        let e = em.new_entity();
+        em.add_component::<C_Test>(e);
+        em.add_component::<C_Test2>(e);
+
+        let empty: Vec<(&mut C_Test, &C_Test3)> = em
+            .get_component_tuple_first_mut::<C_Test, C_Test3>()
+            .collect();
         assert_eq!(empty.len(), 0);
     }
 }

@@ -6,11 +6,11 @@ pub struct Generational_Index {
     pub gen: u64,
 }
 
-// Generational_Allocator provides an interface to allocate/deallocate
-// Generational Indices and check if an index is valid.
-// The allocator is given an initial size and grows automatically when
-// more indices than initially available are requested.
-// Deallocated slots are reused whenever possible.
+/// Generational_Allocator provides an interface to allocate/deallocate
+/// Generational Indices and check if an index is valid.
+/// The allocator is given an initial size and grows automatically when
+/// more indices than initially available are requested.
+/// Deallocated slots are reused whenever possible.
 pub struct Generational_Allocator {
     // true if i-th slot is in use, false otherwise
     alive: Vec<bool>,
@@ -68,7 +68,7 @@ impl Generational_Allocator {
         }
     }
 
-    // @return either a valid index inside `slots` or `self.alive.len()` if all are occupied.
+    /// Returns either a valid index inside `slots` or `self.alive.len()` if all are occupied.
     fn first_free_slot(&mut self) -> usize {
         match self.free_slots.pop() {
             Some(slot) => slot,

@@ -5,7 +5,6 @@ use super::env::Env_Info;
 use super::input;
 use super::time;
 use crate::audio;
-use crate::ecs::components as comp;
 use crate::game::gameplay_system;
 use crate::gfx;
 use crate::resources::resources;

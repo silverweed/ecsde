@@ -1,4 +1,3 @@
-use crate::core::common::vector::Vec2u;
 use sdl2::render::WindowCanvas;
 
 pub fn create_render_canvas(

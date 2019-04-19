@@ -1,9 +1,7 @@
 use crate::core::common;
 use crate::core::common::transform::C_Transform2D;
-use crate::core::common::vector::Vec2f;
 use crate::core::env::Env_Info;
 use crate::core::input;
-use crate::core::time;
 use crate::ecs::components as comp;
 use crate::ecs::entity_manager::{Entity, Entity_Manager};
 use crate::game;
@@ -36,7 +34,7 @@ impl Gameplay_System {
     pub fn update(&mut self, dt: &Duration, actions: &input::Action_List) {
         ///// Update all game systems /////
         gfx::animation_system::update(&dt, &mut self.entity_manager);
-        game::controllable_system::update(&dt, actions, &self.entities, &mut self.entity_manager);
+        game::controllable_system::update(&dt, actions, &mut self.entity_manager);
     }
 
     pub fn get_renderable_entities(&self) -> Vec<(&comp::C_Renderable, &C_Transform2D)> {

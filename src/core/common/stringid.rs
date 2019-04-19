@@ -10,6 +10,7 @@ impl std::convert::From<&str> for String_Id {
 }
 
 const FNV_PRIME32: u32 = 16777619;
+
 fn fnv1a(bytes: &[u8]) -> u32 {
     let mut result = 2166136261;
     for &b in bytes {

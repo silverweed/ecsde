@@ -1,7 +1,6 @@
 use crate::core::common::vector::Vec2f;
-use cgmath::{Angle, Matrix3, Rad, SquareMatrix};
+use cgmath::Rad;
 use std::convert::Into;
-use std::ops::Add;
 use typename::TypeName;
 
 #[derive(Copy, Clone, Debug, TypeName, PartialEq)]
