@@ -17,7 +17,7 @@ impl Fps_Console_Printer {
 
     pub fn tick(&mut self, time: &time::Time) {
         self.frames_elapsed += 1;
-        self.time_elapsed += time.dt();
+        self.time_elapsed += time.real_dt();
 
         if self.time_elapsed >= self.update_rate {
             eprintln!(

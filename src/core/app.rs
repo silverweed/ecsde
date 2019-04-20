@@ -153,6 +153,16 @@ impl App {
 
         if actions.has_action(&input::Action::Quit) {
             self.should_close = true;
+        } else {
+            for action in actions.iter() {
+                match action {
+                    input::Action::ChangeSpeed(delta) => {
+                        self.time
+                            .set_time_scale(self.time.get_time_scale() + *delta as f32 * 0.01);
+                    }
+                    _ => (),
+                }
+            }
         }
 
         Ok(())

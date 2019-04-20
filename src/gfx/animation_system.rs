@@ -17,7 +17,7 @@ pub fn update(dt: &Duration, em: &mut Entity_Manager) {
             sprite.frame_time_elapsed = 0.0;
 
             let width = sprite.rect.width();
-            let x = (sprite.rect.x + width as i32) % (width * sprite.n_frames - 1) as i32;
+            let x = (sprite.rect.x + width as i32) % (width * (sprite.n_frames - 1)) as i32;
 
             sprite.rect.x = x;
         }
