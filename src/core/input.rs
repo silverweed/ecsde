@@ -1,6 +1,7 @@
 use crate::core::common::direction::Direction;
 use crate::core::common::vector::Vec2f;
 use std::vec::Vec;
+use cgmath::InnerSpace;
 
 #[derive(PartialEq, Hash)]
 pub enum Action {
@@ -123,4 +124,9 @@ pub fn get_movement_from_input(actions: &Action_List) -> Vec2f {
         movement.y += 1.0;
     }
     movement
+}
+
+pub fn get_normalized_movement_from_input(actions: &Action_List) -> Vec2f {
+    let m = get_movement_from_input(actions);
+    if m.magnitude2() == 0.0 { m } else { m.normalize() }
 }

@@ -6,7 +6,7 @@ use crate::ecs::entity_manager::Entity_Manager;
 use std::time::Duration;
 
 pub fn update(dt: &Duration, actions: &input::Action_List, em: &mut Entity_Manager) {
-    let movement = input::get_movement_from_input(actions);
+    let movement = input::get_normalized_movement_from_input(actions);
     let dt_secs = time::to_secs_frac(&dt);
     let controllables = em.get_component_tuple_first_mut::<C_Transform2D, C_Controllable>();
 
