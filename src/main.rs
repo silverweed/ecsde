@@ -2,6 +2,7 @@
 
 extern crate anymap;
 extern crate cgmath;
+extern crate ears;
 extern crate sdl2;
 extern crate stb_image;
 

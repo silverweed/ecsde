@@ -47,10 +47,12 @@ impl Entity_Manager {
         C: Component + 'static,
     {
         self.get_comp_storage::<C>()
-            .expect(&format!(
-                "Tried to get_components of unregistered type {}!",
-                C::type_name()
-            ))
+            .unwrap_or_else(|| {
+                panic!(
+                    "Tried to get_components of unregistered type {}!",
+                    C::type_name()
+                )
+            })
             .iter()
             .filter_map(|c| Some(c.as_ref()?.borrow()))
             .collect()
@@ -61,10 +63,12 @@ impl Entity_Manager {
         C: Component + 'static,
     {
         self.get_comp_storage_mut::<C>()
-            .expect(&format!(
-                "Tried to get_components of unregistered type {}!",
-                C::type_name()
-            ))
+            .unwrap_or_else(|| {
+                panic!(
+                    "Tried to get_components of unregistered type {}!",
+                    C::type_name()
+                )
+            })
             .iter_mut()
             .filter_map(|c| Some(c.as_ref()?.borrow_mut()))
             .collect()
@@ -86,7 +90,7 @@ impl Entity_Manager {
     where
         C: Component + 'static,
     {
-        if let Some(_) = self.get_comp_storage::<C>() {
+        if self.get_comp_storage::<C>().is_some() {
             panic!(
                 "Tried to register the same component {} twice!",
                 C::type_name()
@@ -146,7 +150,7 @@ impl Entity_Manager {
         }
     }
 
-    pub fn get_component<'a, C>(&'a self, e: Entity) -> Option<Ref<'a, C>>
+    pub fn get_component<C>(&self, e: Entity) -> Option<Ref<'_, C>>
     where
         C: Component + 'static,
     {
@@ -171,8 +175,7 @@ impl Entity_Manager {
         }
     }
 
-    // @Refactoring: this code is almost exactly the same as `get_component`. Can we do something about it?
-    pub fn get_component_mut<'a, C>(&'a mut self, e: Entity) -> Option<RefMut<'a, C>>
+    pub fn get_component_mut<C>(&mut self, e: Entity) -> Option<RefMut<'_, C>>
     where
         C: Component + 'static,
     {
@@ -212,10 +215,10 @@ impl Entity_Manager {
     {
         let comps1 = self
             .get_comp_storage::<C1>()
-            .expect(format!("Tried to get unregistered component {}!", C1::type_name()).as_str());
+            .unwrap_or_else(|| panic!("Tried to get unregistered component {}!", C1::type_name()));
         let comps2 = self
             .get_comp_storage::<C2>()
-            .expect(format!("Tried to get unregistered component {}!", C2::type_name()).as_str());
+            .unwrap_or_else(|| panic!("Tried to get unregistered component {}!", C2::type_name()));
 
         comps1.iter().zip(comps2.iter()).filter_map(|(c1, c2)| {
             let c1 = c1.as_ref()?.borrow();
@@ -233,10 +236,10 @@ impl Entity_Manager {
     {
         let comps1 = self
             .get_comp_storage::<C1>()
-            .expect(format!("Tried to get unregistered component {}!", C1::type_name()).as_str());
+            .unwrap_or_else(|| panic!("Tried to get unregistered component {}!", C1::type_name()));
         let comps2 = self
             .get_comp_storage::<C2>()
-            .expect(format!("Tried to get unregistered component {}!", C2::type_name()).as_str());
+            .unwrap_or_else(|| panic!("Tried to get unregistered component {}!", C2::type_name()));
 
         comps1.iter().zip(comps2.iter()).filter_map(|(c1, c2)| {
             let c1 = c1.as_ref()?;

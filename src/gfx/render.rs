@@ -86,7 +86,7 @@ impl Render_System {
                 texture,
                 Some(*src_rect),
                 dst_rect,
-                angle as f64, // degrees!
+                f64::from(angle), // degrees!
                 None,
                 false,
                 false,

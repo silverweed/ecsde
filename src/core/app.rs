@@ -77,7 +77,7 @@ impl App {
             gfx::window::create_render_canvas(&video_subsystem, cfg.target_win_size, &cfg.title);
         let texture_creator = canvas.texture_creator();
 
-        let app = App {
+        App {
             sdl: Sdl {
                 context: sdl,
                 event_pump,
@@ -91,10 +91,9 @@ impl App {
             resources: resources::Resources::new(texture_creator),
             input_system: input::Input_System::new(),
             render_system: gfx::render::Render_System::new(),
-            audio_system: audio::system::Audio_System::new(),
+            audio_system: audio::system::Audio_System::new(10),
             gameplay_system: gameplay_system::Gameplay_System::new(),
-        };
-        app
+        }
     }
 
     pub fn init(&mut self) -> common::Maybe_Error {
@@ -127,7 +126,6 @@ impl App {
             clear_color: Color::RGB(48, 10, 36),
         })?;
         self.gameplay_system.init(&self.env, &mut self.resources)?;
-
         Ok(())
     }
 

@@ -31,7 +31,7 @@ impl Generational_Allocator {
         alloc.gens.resize(initial_size, 0);
         alloc.free_slots = (0..initial_size).rev().collect();
 
-        return alloc;
+        alloc
     }
 
     // Note: this returns the size of internal arrays, not the number of LIVE entities.

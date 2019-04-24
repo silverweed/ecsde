@@ -12,10 +12,13 @@ pub struct Env_Info {
 impl Env_Info {
     pub fn gather() -> std::io::Result<Env_Info> {
         let full_exe_path = fs::canonicalize(env::current_exe()?)?;
-        let working_dir = PathBuf::from(full_exe_path.parent()
-		.expect(&format!("Wierd exe path: {:?}", full_exe_path)));
-	let mut assets_root_buf = PathBuf::from(working_dir.clone());
-	assets_root_buf.push("assets");
+        let working_dir = PathBuf::from(
+            full_exe_path
+                .parent()
+                .unwrap_or_else(|| panic!("Wierd exe path: {:?}", full_exe_path)),
+        );
+        let mut assets_root_buf = working_dir.clone();
+        assets_root_buf.push("assets");
         let assets_root = assets_root_buf.into_boxed_path();
         Ok(Env_Info {
             full_exe_path: full_exe_path.into_boxed_path(),

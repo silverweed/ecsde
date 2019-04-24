@@ -10,6 +10,7 @@ typename = "*"
 rand = "*"
 cgmath = "0.17.0"
 stb_image = "0.2.2"
+ears = "0.5.1"
 
 [dependencies.sdl2]
 version = "0.32.1"

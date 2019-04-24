@@ -1,21 +1,21 @@
 use crate::core::common::stringid::String_Id;
+use ears::{Music, Sound, SoundData};
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::render::Texture;
 use stb_image::image;
+use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 pub type Texture_Handle = Option<String_Id>;
 pub type Sound_Handle = Option<String_Id>;
-
 pub type Texture_Creator = sdl2::render::TextureCreator<sdl2::video::WindowContext>;
-
-// TODO
-pub type SoundBuffer = ();
+pub type Sound_Buffer = Rc<RefCell<SoundData>>;
 
 pub struct Cache {
     textures: HashMap<String_Id, Texture>,
-    sounds: HashMap<String_Id, SoundBuffer>,
+    sounds: HashMap<String_Id, Sound_Buffer>,
     fallback_texture: Texture,
     texture_creator: Texture_Creator,
 }
@@ -101,16 +101,22 @@ impl Cache {
         let id = String_Id::from(fname);
         match self.sounds.entry(id) {
             Entry::Occupied(_) => Some(id),
-            Entry::Vacant(_v) => {
-                Some(id) // TODO
-                         //if let Some(sound) = SoundBuffer::from_file(fname) {
-                         //Some(v.insert(sound))
-                         //} else {
-                         //eprintln!("Error loading sound {}!", fname);
-                         //None // No fallback for sounds as it wouldn't make a lot of sense
-                         //}
-            }
+            Entry::Vacant(v) => match SoundData::new(fname) {
+                Ok(sound_data) => {
+                    v.insert(Rc::new(RefCell::new(sound_data)));
+                    Some(id)
+                }
+                Err(msg) => {
+                    eprintln!("Error loading sound {}: {}!", fname, msg);
+                    None
+                }
+            },
         }
+    }
+
+    /// Retrieves a Sound_Buffer from a valid handle. Panics if the handle is invalid.
+    pub fn get_sound(&self, handle: Sound_Handle) -> Sound_Buffer {
+        self.sounds[&handle.unwrap()].clone()
     }
 
     pub fn n_loaded_sounds(&self) -> usize {

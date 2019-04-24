@@ -9,12 +9,12 @@ impl std::convert::From<&str> for String_Id {
     }
 }
 
-const FNV_PRIME32: u32 = 16777619;
+const FNV_PRIME32: u32 = 16_777_619;
 
 fn fnv1a(bytes: &[u8]) -> u32 {
-    let mut result = 2166136261;
+    let mut result = 2_166_136_261;
     for &b in bytes {
-        result ^= b as u32;
+        result ^= u32::from(b);
         result = result.wrapping_mul(FNV_PRIME32);
     }
     result

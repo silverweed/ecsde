@@ -29,16 +29,12 @@ mod tests {
     use super::*;
     use crate::core::env::Env_Info;
     use crate::gfx;
-    use crate::resources::resources::{tex_path, Resources};
+    use crate::resources::resources::{self, tex_path, Resources};
     use sdl2::rect::Rect;
 
     #[test]
-    fn test_animation_system() {
-        let sdl_video = sdl2::init().unwrap().video().unwrap();
-        let texture_creator =
-            gfx::window::create_render_canvas(&sdl_video, (0, 0), "").texture_creator();
-        let mut rsrc = Resources::new(texture_creator);
-        let env = Env_Info::gather().expect("Failed to gather env info!");
+    fn animation_system() {
+        let (mut rsrc, env) = resources::create_test_resources_and_env();
         let mut em = Entity_Manager::new();
         em.register_component::<C_Renderable>();
 
