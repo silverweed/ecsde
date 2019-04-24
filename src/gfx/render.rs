@@ -7,6 +7,7 @@ use cgmath::Deg;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::WindowCanvas;
+use std::cell::Ref;
 use std::convert::Into;
 
 pub struct Render_System {
@@ -42,10 +43,16 @@ impl Render_System {
         &mut self,
         canvas: &mut WindowCanvas,
         resources: &resources::Resources,
-        renderables: &[(&comp::C_Renderable, &C_Transform2D)],
+        renderables: &[(Ref<'_, comp::C_Renderable>, Ref<'_, C_Transform2D>)],
     ) {
         canvas.set_draw_color(self.config.clear_color);
         canvas.clear();
+
+        // DEBUG
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        let (out_x, out_y) = canvas.output_size().unwrap();
+        canvas.fill_rect(Rect::new(0, 0, out_x, out_y));
+        // END DEBUG
 
         let Vec2f { x: cam_x, y: cam_y } = self.camera.position();
         let Vec2f {
@@ -55,6 +62,7 @@ impl Render_System {
         canvas.set_scale(cam_sx, cam_sy).unwrap();
 
         for (rend, transf) in renderables {
+            let rend: &comp::C_Renderable = &*rend;
             let comp::C_Renderable {
                 texture: tex_id,
                 rect: src_rect,
@@ -65,7 +73,6 @@ impl Render_System {
 
             let pos = transf.position();
             let Deg(angle) = transf.rotation().into();
-            //let Deg(angle) = angle;
             let scale = transf.scale();
 
             let dst_rect = Rect::new(

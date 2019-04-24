@@ -8,6 +8,7 @@ use crate::game;
 use crate::gfx;
 use crate::resources::resources::{tex_path, Resources};
 use sdl2::rect::Rect;
+use std::cell::Ref;
 use std::time::Duration;
 
 pub struct Gameplay_System {
@@ -37,7 +38,9 @@ impl Gameplay_System {
         game::controllable_system::update(&dt, actions, &mut self.entity_manager);
     }
 
-    pub fn get_renderable_entities(&self) -> Vec<(&comp::C_Renderable, &C_Transform2D)> {
+    pub fn get_renderable_entities(
+        &self,
+    ) -> Vec<(Ref<'_, comp::C_Renderable>, Ref<'_, C_Transform2D>)> {
         self.entity_manager
             .get_component_tuple::<comp::C_Renderable, C_Transform2D>()
             .collect()
@@ -57,7 +60,7 @@ impl Gameplay_System {
         let yv = em.new_entity();
         self.entities.push(yv);
         {
-            let tr = em.add_component::<C_Transform2D>(yv);
+            let mut tr = em.add_component::<C_Transform2D>(yv);
             tr.set_position(300.0, 200.0);
             tr.set_scale(3.0, 3.0);
         }
@@ -70,7 +73,7 @@ impl Gameplay_System {
         let plant = em.new_entity();
         self.entities.push(plant);
         {
-            let tr = em.add_component::<C_Transform2D>(plant);
+            let mut tr = em.add_component::<C_Transform2D>(plant);
             tr.set_position(400.0, 500.0);
         }
         {

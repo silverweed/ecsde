@@ -1,6 +1,7 @@
 use super::components::Component;
 use crate::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
 
+use std::cell::{Ref, RefCell, RefMut};
 use std::iter::Iterator;
 use std::option::Option;
 use std::vec::Vec;
@@ -17,7 +18,7 @@ pub struct Entity_Manager {
 }
 
 pub type Entity = Generational_Index;
-type VecOpt<T> = Vec<Option<T>>;
+type VecOpt<T> = Vec<Option<RefCell<T>>>;
 
 impl Entity_Manager {
     pub fn new() -> Entity_Manager {
@@ -34,40 +35,38 @@ impl Entity_Manager {
         self.components.get::<VecOpt<C>>()
     }
 
-    fn get_mut_comp_storage<C>(&mut self) -> Option<&mut VecOpt<C>>
+    fn get_comp_storage_mut<C>(&mut self) -> Option<&mut VecOpt<C>>
     where
         C: Component + 'static,
     {
         self.components.get_mut::<VecOpt<C>>()
     }
 
-    pub fn get_components<C>(&self) -> Vec<&C>
+    pub fn get_components<C>(&self) -> Vec<Ref<'_, C>>
     where
         C: Component + 'static,
     {
-        self.components
-            .get::<VecOpt<C>>()
+        self.get_comp_storage::<C>()
             .expect(&format!(
                 "Tried to get_components of unregistered type {}!",
                 C::type_name()
             ))
             .iter()
-            .filter_map(|c| c.as_ref())
+            .filter_map(|c| Some(c.as_ref()?.borrow()))
             .collect()
     }
 
-    pub fn get_components_mut<C>(&mut self) -> Vec<&mut C>
+    pub fn get_components_mut<C>(&mut self) -> Vec<RefMut<'_, C>>
     where
         C: Component + 'static,
     {
-        self.components
-            .get_mut::<VecOpt<C>>()
+        self.get_comp_storage_mut::<C>()
             .expect(&format!(
                 "Tried to get_components of unregistered type {}!",
                 C::type_name()
             ))
             .iter_mut()
-            .filter_map(|c| c.as_mut())
+            .filter_map(|c| Some(c.as_ref()?.borrow_mut()))
             .collect()
     }
 
@@ -98,7 +97,7 @@ impl Entity_Manager {
     }
 
     /// Adds a component of type C to `e` and returns a mutable reference to it.
-    pub fn add_component<C>(&mut self, e: Entity) -> &mut C
+    pub fn add_component<C>(&mut self, e: Entity) -> RefMut<'_, C>
     where
         C: Component + 'static,
     {
@@ -111,11 +110,11 @@ impl Entity_Manager {
         }
 
         let alloc_size = self.allocator.size();
-        match self.get_mut_comp_storage::<C>() {
+        match self.get_comp_storage_mut::<C>() {
             Some(vec) => {
                 vec.resize(alloc_size, None);
-                vec[e.index] = Some(C::default());
-                vec[e.index].as_mut().unwrap()
+                vec[e.index] = Some(RefCell::new(C::default()));
+                vec[e.index].as_ref().unwrap().borrow_mut()
             }
             None => panic!(
                 "Tried to add unregistered component {} to entity!",
@@ -136,7 +135,7 @@ impl Entity_Manager {
             );
         }
 
-        match self.get_mut_comp_storage::<C>() {
+        match self.get_comp_storage_mut::<C>() {
             Some(vec) => {
                 vec[e.index] = None;
             } // We don't assert if component is already None.
@@ -147,7 +146,7 @@ impl Entity_Manager {
         }
     }
 
-    pub fn get_component<'a, C>(&'a self, e: Entity) -> Option<&'a C>
+    pub fn get_component<'a, C>(&'a self, e: Entity) -> Option<Ref<'a, C>>
     where
         C: Component + 'static,
     {
@@ -159,7 +158,11 @@ impl Entity_Manager {
             Some(vec) => {
                 // Note: we may not have added any component yet, so the components Vec is of len 0
                 if e.index < vec.len() {
-                    vec[e.index].as_ref()
+                    if let Some(opt) = vec[e.index].as_ref() {
+                        Some(opt.borrow())
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
@@ -169,7 +172,7 @@ impl Entity_Manager {
     }
 
     // @Refactoring: this code is almost exactly the same as `get_component`. Can we do something about it?
-    pub fn get_component_mut<'a, C>(&'a mut self, e: Entity) -> Option<&'a mut C>
+    pub fn get_component_mut<'a, C>(&'a mut self, e: Entity) -> Option<RefMut<'a, C>>
     where
         C: Component + 'static,
     {
@@ -177,10 +180,14 @@ impl Entity_Manager {
             panic!("Tried to get component of invalid entity {:?}", e);
         }
 
-        match self.get_mut_comp_storage::<C>() {
+        match self.get_comp_storage_mut::<C>() {
             Some(vec) => {
                 if e.index < vec.len() {
-                    vec[e.index].as_mut()
+                    if let Some(opt) = vec[e.index].as_mut() {
+                        Some(opt.borrow_mut())
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
@@ -196,7 +203,9 @@ impl Entity_Manager {
         self.get_component::<C>(e).is_some()
     }
 
-    pub fn get_component_tuple<'a, C1, C2>(&'a self) -> impl Iterator<Item = (&'a C1, &'a C2)>
+    pub fn get_component_tuple<'a, C1, C2>(
+        &'a self,
+    ) -> impl Iterator<Item = (Ref<'a, C1>, Ref<'a, C2>)>
     where
         C1: Component + 'static,
         C2: Component + 'static,
@@ -209,15 +218,15 @@ impl Entity_Manager {
             .expect(format!("Tried to get unregistered component {}!", C2::type_name()).as_str());
 
         comps1.iter().zip(comps2.iter()).filter_map(|(c1, c2)| {
-            let c1 = c1.as_ref()?;
-            let c2 = c2.as_ref()?;
+            let c1 = c1.as_ref()?.borrow();
+            let c2 = c2.as_ref()?.borrow();
             Some((c1, c2))
         })
     }
 
-    pub fn get_component_tuple_first_mut<C1, C2>(
+    pub fn get_component_tuple_mut<C1, C2>(
         &self,
-    ) -> impl Iterator<Item = (&'_ mut C1, &'_ C2)> + '_
+    ) -> impl Iterator<Item = (&RefCell<C1>, &RefCell<C2>)> + '_
     where
         C1: Component + 'static,
         C2: Component + 'static,
@@ -231,8 +240,6 @@ impl Entity_Manager {
 
         comps1.iter().zip(comps2.iter()).filter_map(|(c1, c2)| {
             let c1 = c1.as_ref()?;
-            // @Hack: Dirty trick to mutably and immutably borrow at the same time
-            let c1 = unsafe { ((c1 as *const C1) as *mut C1).as_mut()? };
             let c2 = c2.as_ref()?;
             Some((c1, c2))
         })
@@ -298,7 +305,7 @@ mod tests_entity_manager {
 
         let e = em.new_entity();
         {
-            let c = em.add_component::<C_Test>(e);
+            let mut c = em.add_component::<C_Test>(e);
             c.foo = 4242;
         }
 
@@ -598,11 +605,11 @@ mod tests_entity_manager {
 
         em.new_entity();
 
-        let only_both: Vec<(&C_Test, &C_Test2)> =
+        let only_both: Vec<(Ref<'_, C_Test>, Ref<'_, C_Test2>)> =
             em.get_component_tuple::<C_Test, C_Test2>().collect();
         assert_eq!(only_both.len(), 3);
 
-        let only_both: Vec<(&C_Test2, &C_Test)> =
+        let only_both: Vec<(Ref<'_, C_Test2>, Ref<'_, C_Test>)> =
             em.get_component_tuple::<C_Test2, C_Test>().collect();
         assert_eq!(only_both.len(), 3);
     }
@@ -619,12 +626,13 @@ mod tests_entity_manager {
         em.add_component::<C_Test>(e);
         em.add_component::<C_Test2>(e);
 
-        let empty: Vec<(&C_Test, &C_Test3)> = em.get_component_tuple::<C_Test, C_Test3>().collect();
+        let empty: Vec<(Ref<'_, C_Test>, Ref<'_, C_Test3>)> =
+            em.get_component_tuple::<C_Test, C_Test3>().collect();
         assert_eq!(empty.len(), 0);
     }
 
     #[test]
-    fn test_get_component_tuple_first_mut() {
+    fn test_get_component_tuple_mut() {
         let mut em = Entity_Manager::new();
 
         em.register_component::<C_Test>();
@@ -652,19 +660,17 @@ mod tests_entity_manager {
 
         em.new_entity();
 
-        let only_both: Vec<(&mut C_Test, &C_Test2)> = em
-            .get_component_tuple_first_mut::<C_Test, C_Test2>()
-            .collect();
+        let only_both: Vec<(&RefCell<C_Test>, &RefCell<C_Test2>)> =
+            em.get_component_tuple_mut::<C_Test, C_Test2>().collect();
         assert_eq!(only_both.len(), 3);
 
-        let only_both: Vec<(&mut C_Test2, &C_Test)> = em
-            .get_component_tuple_first_mut::<C_Test2, C_Test>()
-            .collect();
+        let only_both: Vec<(&RefCell<C_Test2>, &RefCell<C_Test>)> =
+            em.get_component_tuple_mut::<C_Test2, C_Test>().collect();
         assert_eq!(only_both.len(), 3);
     }
 
     #[test]
-    fn test_get_component_tuple_first_mut_empty() {
+    fn test_get_component_tuple_mut_empty() {
         let mut em = Entity_Manager::new();
 
         em.register_component::<C_Test>();
@@ -675,9 +681,8 @@ mod tests_entity_manager {
         em.add_component::<C_Test>(e);
         em.add_component::<C_Test2>(e);
 
-        let empty: Vec<(&mut C_Test, &C_Test3)> = em
-            .get_component_tuple_first_mut::<C_Test, C_Test3>()
-            .collect();
+        let empty: Vec<(&RefCell<C_Test>, &RefCell<C_Test3>)> =
+            em.get_component_tuple_mut::<C_Test, C_Test3>().collect();
         assert_eq!(empty.len(), 0);
     }
 }

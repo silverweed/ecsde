@@ -44,7 +44,7 @@ mod tests {
 
         let e = em.new_entity();
         {
-            let r = em.add_component::<C_Renderable>(e);
+            let mut r = em.add_component::<C_Renderable>(e);
             r.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
             r.rect = Rect::new(0, 0, 96, 96);
             r.n_frames = 4;
