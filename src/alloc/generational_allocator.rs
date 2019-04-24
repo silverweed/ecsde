@@ -103,7 +103,7 @@ impl Generational_Allocator {
 }
 
 #[cfg(test)]
-mod tests_gen_allocator {
+mod tests {
     use super::*;
 
     fn assert_invariant_free_slots_alive(alloc: &Generational_Allocator) {
@@ -126,7 +126,7 @@ mod tests_gen_allocator {
     }
 
     #[test]
-    fn test_gen_alloc_create() {
+    fn gen_alloc_create() {
         let n = 10;
         let alloc = Generational_Allocator::new(n);
         assert_eq!(alloc.alive.len(), n);
@@ -136,7 +136,7 @@ mod tests_gen_allocator {
     }
 
     #[test]
-    fn test_gen_alloc_allocate() {
+    fn gen_alloc_allocate() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
 
@@ -149,7 +149,7 @@ mod tests_gen_allocator {
     }
 
     #[test]
-    fn test_gen_alloc_deallocate() {
+    fn gen_alloc_deallocate() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
 
@@ -172,7 +172,7 @@ mod tests_gen_allocator {
     #[should_panic(
         expected = "Tried to deallocate a Generational_Index whose index is greater than biggest one!"
     )]
-    fn test_gen_alloc_bad_deallocate_1() {
+    fn gen_alloc_bad_deallocate_1() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
         alloc.deallocate(Generational_Index { index: 11, gen: 0 });
@@ -180,7 +180,7 @@ mod tests_gen_allocator {
 
     #[test]
     #[should_panic(expected = "Tried to deallocate an old Generational_Index! Double free?")]
-    fn test_gen_alloc_bad_deallocate_2() {
+    fn gen_alloc_bad_deallocate_2() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
         let e1 = alloc.allocate();
@@ -193,7 +193,7 @@ mod tests_gen_allocator {
     #[should_panic(
         expected = "Tried to deallocate a Generational_Index with a generation greater than current!"
     )]
-    fn test_gen_alloc_bad_deallocate_3() {
+    fn gen_alloc_bad_deallocate_3() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
         alloc.allocate();
@@ -204,14 +204,14 @@ mod tests_gen_allocator {
     #[should_panic(
         expected = "Tried to deallocate a Generational_Index that is not allocated! Double free?"
     )]
-    fn test_gen_alloc_bad_deallocate_4() {
+    fn gen_alloc_bad_deallocate_4() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
         alloc.deallocate(Generational_Index { index: 0, gen: 0 });
     }
 
     #[test]
-    fn test_reuse_empty_slot() {
+    fn reuse_empty_slot() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
         let e1 = alloc.allocate();
@@ -224,7 +224,7 @@ mod tests_gen_allocator {
     }
 
     #[test]
-    fn test_gen_alloc_allocate_past_initial_size() {
+    fn gen_alloc_allocate_past_initial_size() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
 

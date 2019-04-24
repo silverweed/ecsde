@@ -247,7 +247,7 @@ impl Entity_Manager {
 }
 
 #[cfg(test)]
-mod tests_entity_manager {
+mod tests {
     use super::*;
     use typename::TypeName;
 
@@ -268,14 +268,14 @@ mod tests_entity_manager {
 
     #[test]
     #[should_panic]
-    fn test_register_same_component_twice() {
+    fn register_same_component_twice() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         em.register_component::<C_Test>();
     }
 
     #[test]
-    fn test_get_component() {
+    fn get_component() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
 
@@ -287,7 +287,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_get_component_mut() {
+    fn get_component_mut() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
 
@@ -299,7 +299,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_mutate_component() {
+    fn mutate_component() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
 
@@ -314,7 +314,7 @@ mod tests_entity_manager {
 
     #[test]
     #[should_panic]
-    fn test_add_component_inexisting_entity() {
+    fn add_component_inexisting_entity() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         em.add_component::<C_Test>(Entity { index: 0, gen: 1 });
@@ -322,7 +322,7 @@ mod tests_entity_manager {
 
     #[test]
     #[should_panic]
-    fn test_get_component_inexisting_entity() {
+    fn get_component_inexisting_entity() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         em.get_component::<C_Test>(Entity { index: 0, gen: 1 });
@@ -330,14 +330,14 @@ mod tests_entity_manager {
 
     #[test]
     #[should_panic]
-    fn test_get_component_mut_inexisting_entity() {
+    fn get_component_mut_inexisting_entity() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         em.get_component_mut::<C_Test>(Entity { index: 0, gen: 1 });
     }
 
     #[test]
-    fn test_destroy_entity() {
+    fn destroy_entity() {
         let mut em = Entity_Manager::new();
         let e = em.new_entity();
         em.destroy_entity(e);
@@ -345,7 +345,7 @@ mod tests_entity_manager {
 
     #[test]
     #[should_panic]
-    fn test_double_free_entity() {
+    fn double_free_entity() {
         let mut em = Entity_Manager::new();
         let e = em.new_entity();
         em.destroy_entity(e);
@@ -354,14 +354,14 @@ mod tests_entity_manager {
 
     #[test]
     #[should_panic]
-    fn test_destroy_inexisting_entity() {
+    fn destroy_inexisting_entity() {
         let mut em = Entity_Manager::new();
         em.destroy_entity(Entity { index: 0, gen: 1 });
     }
 
     #[test]
     #[should_panic]
-    fn test_add_component_destroyed_entity() {
+    fn add_component_destroyed_entity() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
@@ -371,7 +371,7 @@ mod tests_entity_manager {
 
     #[test]
     #[should_panic]
-    fn test_get_component_destroyed_entity() {
+    fn get_component_destroyed_entity() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
@@ -382,7 +382,7 @@ mod tests_entity_manager {
 
     #[test]
     #[should_panic]
-    fn test_get_component_destroyed_and_recreated_entity() {
+    fn get_component_destroyed_and_recreated_entity() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
@@ -393,7 +393,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_get_component_destroyed_and_recreated_entity_good() {
+    fn get_component_destroyed_and_recreated_entity_good() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
 
@@ -406,7 +406,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_remove_component() {
+    fn remove_component() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
@@ -415,7 +415,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_double_remove_component() {
+    fn double_remove_component() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
@@ -425,7 +425,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_get_removed_component() {
+    fn get_removed_component() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
@@ -435,7 +435,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_remove_and_readd_component() {
+    fn remove_and_readd_component() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
@@ -447,7 +447,7 @@ mod tests_entity_manager {
 
     #[test]
     #[should_panic]
-    fn test_remove_component_destroyed_and_recreated_entity() {
+    fn remove_component_destroyed_and_recreated_entity() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
@@ -458,7 +458,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_get_components_size() {
+    fn get_components_size() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         for _i in 0..10 {
@@ -469,7 +469,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_get_components_size_empty() {
+    fn get_components_size_empty() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         assert_eq!(em.get_components::<C_Test>().len(), 0);
@@ -477,13 +477,13 @@ mod tests_entity_manager {
 
     #[test]
     #[should_panic]
-    fn test_get_unregistered_components() {
+    fn get_unregistered_components() {
         let em = Entity_Manager::new();
         em.get_components::<C_Test>();
     }
 
     #[test]
-    fn test_get_components_mut_size() {
+    fn get_components_mut_size() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         for _i in 0..10 {
@@ -494,7 +494,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_get_components_mut_size_empty() {
+    fn get_components_mut_size_empty() {
         let mut em = Entity_Manager::new();
         em.register_component::<C_Test>();
         assert_eq!(em.get_components_mut::<C_Test>().len(), 0);
@@ -502,13 +502,13 @@ mod tests_entity_manager {
 
     #[test]
     #[should_panic]
-    fn test_get_unregistered_components_mut() {
+    fn get_unregistered_components_mut() {
         let mut em = Entity_Manager::new();
         em.get_components_mut::<C_Test>();
     }
 
     #[test]
-    fn test_has_get_consistency() {
+    fn has_get_consistency() {
         let mut em = Entity_Manager::new();
         let mut entities: Vec<Entity> = vec![];
         em.register_component::<C_Test>();
@@ -557,7 +557,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_has_get_consistency_2() {
+    fn has_get_consistency_2() {
         let mut em = Entity_Manager::new();
         let mut entities: Vec<Entity> = vec![];
         em.register_component::<C_Test>();
@@ -577,7 +577,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_get_component_tuple() {
+    fn get_component_tuple() {
         let mut em = Entity_Manager::new();
 
         em.register_component::<C_Test>();
@@ -615,7 +615,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_get_component_tuple_empty() {
+    fn get_component_tuple_empty() {
         let mut em = Entity_Manager::new();
 
         em.register_component::<C_Test>();
@@ -632,7 +632,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_get_component_tuple_mut() {
+    fn get_component_tuple_mut() {
         let mut em = Entity_Manager::new();
 
         em.register_component::<C_Test>();
@@ -670,7 +670,7 @@ mod tests_entity_manager {
     }
 
     #[test]
-    fn test_get_component_tuple_mut_empty() {
+    fn get_component_tuple_mut_empty() {
         let mut em = Entity_Manager::new();
 
         em.register_component::<C_Test>();
@@ -684,5 +684,48 @@ mod tests_entity_manager {
         let empty: Vec<(&RefCell<C_Test>, &RefCell<C_Test3>)> =
             em.get_component_tuple_mut::<C_Test, C_Test3>().collect();
         assert_eq!(empty.len(), 0);
+    }
+
+    #[test]
+    fn get_component_tuple_mut_mutability() {
+        let mut em = Entity_Manager::new();
+
+        em.register_component::<C_Test>();
+        em.register_component::<C_Test2>();
+
+        let e = em.new_entity();
+        em.add_component::<C_Test>(e);
+        em.add_component::<C_Test2>(e);
+
+        for (test, test2) in em.get_component_tuple_mut::<C_Test, C_Test2>() {
+            test.borrow_mut().foo = 42;
+        }
+
+        let test = em.get_component::<C_Test>(e);
+        assert_eq!(test.unwrap().foo, 42);
+    }
+
+    #[test]
+    fn get_component_tuple_mut_borrow_rules() {
+        let mut em = Entity_Manager::new();
+
+        em.register_component::<C_Test>();
+        em.register_component::<C_Test2>();
+
+        let e = em.new_entity();
+        em.add_component::<C_Test>(e);
+        {
+            let mut t2 = em.add_component::<C_Test2>(e);
+            t2.foo = 42;
+        }
+
+        for (test, test2) in em.get_component_tuple_mut::<C_Test, C_Test2>() {
+            let test2 = test2.borrow();
+            let mut test = test.borrow_mut();
+            test.foo = test2.foo;
+        }
+
+        let test = em.get_component::<C_Test>(e);
+        assert_eq!(test.unwrap().foo, 42);
     }
 }

@@ -76,7 +76,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_default() {
+    fn default() {
         let tr = C_Transform2D::new();
         assert_eq!(tr.position(), Vec2f::new(0.0, 0.0));
         assert_eq!(tr.rotation(), Rad(0.0));
@@ -84,7 +84,7 @@ mod tests {
     }
 
     #[test]
-    fn test_translate() {
+    fn translate() {
         let mut tr = C_Transform2D::new();
         tr.translate(-42.0, 21.0);
         assert_eq!(tr.position(), Vec2f::new(-42.0, 21.0));
@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    fn test_set_position() {
+    fn set_position() {
         let mut tr = C_Transform2D::new();
         tr.set_position(-222.2, 0.02);
         assert_eq!(tr.position(), Vec2f::new(-222.2, 0.02));
@@ -102,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_scale() {
+    fn add_scale() {
         let mut tr = C_Transform2D::new();
         tr.add_scale(0.5, -0.5);
         assert_eq!(tr.scale(), Vec2f::new(1.5, 0.5));
@@ -111,7 +111,7 @@ mod tests {
     }
 
     #[test]
-    fn test_set_scale() {
+    fn set_scale() {
         let mut tr = C_Transform2D::new();
         tr.set_scale(0.5, -0.5);
         assert_eq!(tr.scale(), Vec2f::new(0.5, -0.5));
@@ -120,7 +120,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rotate() {
+    fn rotate() {
         let mut tr = C_Transform2D::new();
         tr.rotate(Rad(2.0));
         assert_approx_eq(tr.rotation(), Rad(2.0));
@@ -129,7 +129,7 @@ mod tests {
     }
 
     #[test]
-    fn test_set_rotation() {
+    fn set_rotation() {
         let mut tr = C_Transform2D::new();
         tr.set_rotation(Rad(2.0));
         assert_approx_eq(tr.rotation(), Rad(2.0));
