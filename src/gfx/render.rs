@@ -2,7 +2,7 @@ use crate::core;
 use crate::core::common::transform::C_Transform2D;
 use crate::core::common::vector::Vec2f;
 use crate::ecs::components as comp;
-use crate::resources::resources;
+use crate::resources;
 use cgmath::Deg;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;

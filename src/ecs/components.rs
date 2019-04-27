@@ -1,4 +1,4 @@
-use crate::resources::resources;
+use crate::resources;
 use sdl2::rect::Rect;
 use std::fmt::Debug;
 

@@ -7,7 +7,7 @@ use super::time;
 use crate::audio;
 use crate::game::gameplay_system;
 use crate::gfx;
-use crate::resources::resources;
+use crate::resources;
 use sdl2::pixels::Color;
 
 pub struct Config {

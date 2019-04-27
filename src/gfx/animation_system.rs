@@ -29,12 +29,13 @@ mod tests {
     use super::*;
     use crate::core::env::Env_Info;
     use crate::gfx;
-    use crate::resources::resources::{self, tex_path, Resources};
+    use crate::resources::{self, tex_path, Resources};
+    use crate::test_common;
     use sdl2::rect::Rect;
 
     #[test]
     fn animation_system() {
-        let (mut rsrc, env) = resources::create_test_resources_and_env();
+        let (mut rsrc, env) = test_common::create_test_resources_and_env();
         let mut em = Entity_Manager::new();
         em.register_component::<C_Renderable>();
 

@@ -6,7 +6,7 @@ use crate::ecs::components as comp;
 use crate::ecs::entity_manager::{Entity, Entity_Manager};
 use crate::game;
 use crate::gfx;
-use crate::resources::resources::{tex_path, Resources};
+use crate::resources::{tex_path, Resources};
 use sdl2::rect::Rect;
 use std::cell::Ref;
 use std::time::Duration;

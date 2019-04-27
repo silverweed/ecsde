@@ -15,6 +15,8 @@ pub(crate) mod ecs;
 pub(crate) mod game;
 pub(crate) mod gfx;
 pub(crate) mod resources;
+#[cfg(test)]
+pub(crate) mod test_common;
 
 fn main() -> core::common::Maybe_Error {
     let cfg = core::app::Config::new(env::args());

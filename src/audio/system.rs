@@ -18,7 +18,6 @@ impl Audio_System {
 
     pub fn update(&mut self) {
         let mut i = 0;
-        println!("Playing {} sounds.", self.sounds_playing.len());
         while i < self.sounds_playing.len() {
             let sound = &self.sounds_playing[i];
             if !sound.is_playing() {
@@ -47,13 +46,14 @@ impl Audio_System {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::resources::resources;
+    use crate::resources;
+    use crate::test_common;
 
     #[test]
     fn max_concurrent_sounds() {
         let max_conc_sounds = 5;
         let mut a_sys = Audio_System::new(max_conc_sounds);
-        let (mut rsrc, env) = resources::create_test_resources_and_env();
+        let (mut rsrc, env) = test_common::create_test_resources_and_env();
         let snd_handle = rsrc.load_sound(&resources::sound_path(&env, "coin.ogg"));
         let snd_data = rsrc.get_sound(snd_handle);
 
