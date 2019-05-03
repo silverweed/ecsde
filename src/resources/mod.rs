@@ -37,7 +37,10 @@ impl<'l> Resources<'l> {
     }
 
     pub fn load_texture(&mut self, fname: &str) -> Texture_Handle {
-        self.textures.load(fname).unwrap_or(None)
+        self.textures.load(fname).unwrap_or_else(|msg| {
+            eprintln!("{}", msg);
+            None
+        })
     }
 
     pub fn get_texture<'a>(&self, handle: Texture_Handle) -> &Texture<'a>
@@ -57,7 +60,10 @@ impl<'l> Resources<'l> {
                 path: String::from(fname),
                 size,
             })
-            .unwrap_or(None)
+            .unwrap_or_else(|msg| {
+                eprintln!("{}", msg);
+                None
+            })
     }
 
     pub fn get_font<'a>(&self, handle: Font_Handle) -> &Font<'a, 'static>
@@ -82,7 +88,10 @@ impl<'l> Resources<'l> {
     }
 
     pub fn load_sound(&mut self, fname: &str) -> Sound_Handle {
-        self.sounds.load(fname).unwrap_or(None)
+        self.sounds.load(fname).unwrap_or_else(|msg| {
+            eprintln!("{}", msg);
+            None
+        })
     }
 
     pub fn n_loaded_sounds(&self) -> usize {

@@ -67,6 +67,7 @@ impl Gameplay_System {
         {
             let mut rend = em.add_component::<comp::C_Renderable>(yv);
             rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
+	    assert!(rend.texture.is_some(), "Could not load yv texture!");
             rend.rect = Rect::new(0, 0, 148, 125);
         }
 
@@ -79,6 +80,7 @@ impl Gameplay_System {
         {
             let mut rend = em.add_component::<comp::C_Renderable>(plant);
             rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
+	    assert!(rend.texture.is_some(), "Could not load plant texture!");
             rend.rect = Rect::new(0, 0, 96, 96);
             rend.n_frames = 4;
             rend.frame_time = 0.1;
