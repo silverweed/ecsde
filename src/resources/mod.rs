@@ -1,47 +1,96 @@
 mod cache;
+pub mod loaders;
 
+use self::cache::{Font_Manager, Sound_Manager, Texture_Manager};
+use self::loaders::Font_Load_Info;
+use crate::audio::sound_loader::Sound_Loader;
+use crate::core::common::stringid::String_Id;
 use crate::core::env::Env_Info;
+use sdl2::pixels::Color;
 use sdl2::render::Texture;
+use sdl2::ttf::{Font, Sdl2TtfContext};
 use std::path::PathBuf;
 
-pub type Texture_Handle = cache::Texture_Handle;
-pub type Sound_Handle = cache::Sound_Handle;
+pub type Texture_Handle = Option<String_Id>;
+pub type Sound_Handle = Option<String_Id>;
+pub type Font_Handle = Option<String_Id>;
 pub type Sound_Buffer = cache::Sound_Buffer;
 type Texture_Creator = cache::Texture_Creator;
 
-pub struct Resources {
-    cache: cache::Cache,
+pub struct Resources<'l> {
+    textures: Texture_Manager<'l>,
+    fonts: Font_Manager<'l>,
+    sounds: Sound_Manager<'l>,
 }
 
-impl Resources {
-    pub fn new(texture_creator: Texture_Creator) -> Self {
+impl<'l> Resources<'l> {
+    pub fn new(
+        texture_creator: &'l Texture_Creator,
+        ttf: &'l Sdl2TtfContext,
+        sound_loader: &'l Sound_Loader,
+    ) -> Self {
         Resources {
-            cache: cache::Cache::new(texture_creator),
+            textures: Texture_Manager::new(&texture_creator),
+            fonts: Font_Manager::new(&ttf),
+            sounds: Sound_Manager::new(&sound_loader),
         }
     }
 
     pub fn load_texture(&mut self, fname: &str) -> Texture_Handle {
-        self.cache.load_texture(fname)
+        self.textures.load(fname).unwrap_or(None)
+    }
+
+    pub fn get_texture<'a>(&self, handle: Texture_Handle) -> &Texture<'a>
+    where
+        'l: 'a,
+    {
+        self.textures.must_get(handle)
     }
 
     pub fn n_loaded_textures(&self) -> usize {
-        self.cache.n_loaded_textures()
+        self.textures.n_loaded()
+    }
+
+    pub fn load_font(&mut self, fname: &str, size: u16) -> Font_Handle {
+        self.fonts
+            .load(&Font_Load_Info {
+                path: String::from(fname),
+                size,
+            })
+            .unwrap_or(None)
+    }
+
+    pub fn get_font<'a>(&self, handle: Font_Handle) -> &Font<'a, 'static>
+    where
+        'l: 'a,
+    {
+        self.fonts.must_get(handle)
+    }
+
+    pub fn n_loaded_fonts(&self) -> usize {
+        self.fonts.n_loaded()
+    }
+
+    pub fn create_font_texture(
+        &mut self,
+        txt: &str,
+        font_handle: Font_Handle,
+        color: Color,
+    ) -> Texture_Handle {
+        self.textures
+            .create_font_texture(&self.fonts, txt, font_handle, color)
     }
 
     pub fn load_sound(&mut self, fname: &str) -> Sound_Handle {
-        self.cache.load_sound(fname)
+        self.sounds.load(fname).unwrap_or(None)
     }
 
     pub fn n_loaded_sounds(&self) -> usize {
-        self.cache.n_loaded_sounds()
-    }
-
-    pub fn get_texture(&self, handle: Texture_Handle) -> &Texture {
-        self.cache.get_texture(handle)
+        self.sounds.n_loaded()
     }
 
     pub fn get_sound(&self, handle: Sound_Handle) -> Sound_Buffer {
-        self.cache.get_sound(handle)
+        self.sounds.must_get(handle).clone()
     }
 }
 
@@ -59,4 +108,8 @@ pub fn tex_path(env: &Env_Info, file: &str) -> String {
 
 pub fn sound_path(env: &Env_Info, file: &str) -> String {
     asset_path(env, "sounds", file)
+}
+
+pub fn font_path(env: &Env_Info, file: &str) -> String {
+    asset_path(env, "fonts", file)
 }

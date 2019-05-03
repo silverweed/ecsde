@@ -35,7 +35,8 @@ mod tests {
 
     #[test]
     fn animation_system() {
-        let (mut rsrc, env) = test_common::create_test_resources_and_env();
+        let (loaders, _, _) = test_common::create_resource_loaders();
+        let (mut rsrc, env) = test_common::create_test_resources_and_env(&loaders);
         let mut em = Entity_Manager::new();
         em.register_component::<C_Renderable>();
 

@@ -46,13 +46,8 @@ impl Render_System {
         renderables: &[(Ref<'_, comp::C_Renderable>, Ref<'_, C_Transform2D>)],
     ) {
         canvas.set_draw_color(self.config.clear_color);
-        canvas.clear();
-
-        // DEBUG
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
         let (out_x, out_y) = canvas.output_size().unwrap();
         canvas.fill_rect(Rect::new(0, 0, out_x, out_y));
-        // END DEBUG
 
         let Vec2f { x: cam_x, y: cam_y } = self.camera.position();
         let Vec2f {
@@ -94,6 +89,5 @@ impl Render_System {
                 eprintln!("Error copying texture to window: {}", msg);
             }
         }
-        canvas.present();
     }
 }

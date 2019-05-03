@@ -1,125 +1,102 @@
+use super::loaders::Resource_Loader;
+use crate::audio::sound_loader::Sound_Loader;
 use crate::core::common::stringid::String_Id;
 use ears::{Music, Sound, SoundData};
-use sdl2::pixels::PixelFormatEnum;
+use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::render::Texture;
-use stb_image::image;
+use sdl2::ttf::{Font, Sdl2TtfContext};
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::convert::Into;
 use std::rc::Rc;
 
-pub type Texture_Handle = Option<String_Id>;
-pub type Sound_Handle = Option<String_Id>;
 pub type Texture_Creator = sdl2::render::TextureCreator<sdl2::video::WindowContext>;
 pub type Sound_Buffer = Rc<RefCell<SoundData>>;
 
-pub struct Cache {
-    textures: HashMap<String_Id, Texture>,
-    sounds: HashMap<String_Id, Sound_Buffer>,
-    fallback_texture: Texture,
-    texture_creator: Texture_Creator,
+pub struct Resource_Manager<'l, Res, Loader>
+where
+    Loader: 'l + Resource_Loader<'l, Res>,
+{
+    loader: &'l Loader,
+    cache: HashMap<String_Id, Res>,
 }
 
-impl Cache {
-    pub fn new(texture_creator: Texture_Creator) -> Self {
-        let fallback_texture = Self::create_fallback_texture(&texture_creator);
-        Cache {
-            texture_creator,
-            textures: HashMap::new(),
-            sounds: HashMap::new(),
-            fallback_texture,
+impl<'l, Res, Loader> Resource_Manager<'l, Res, Loader>
+where
+    Loader: 'l + Resource_Loader<'l, Res>,
+{
+    pub fn new(loader: &'l Loader) -> Self {
+        Resource_Manager {
+            cache: HashMap::new(),
+            loader,
         }
     }
 
-    pub fn load_texture(&mut self, fname: &str) -> Texture_Handle {
-        let id = String_Id::from(fname);
-        match self.textures.entry(id) {
-            Entry::Occupied(_) => Some(id),
-            Entry::Vacant(v) => match image::load(fname) {
-                image::LoadResult::Error(msg) => {
-                    eprintln!("Failed to load {}: {}", fname, msg);
-                    None
-                }
-                image::LoadResult::ImageU8(mut img) => {
-                    let pitch = (img.width * img.depth + 3) & !3;
-                    if let Ok(surface) = sdl2::surface::Surface::from_data(
-                        img.data.as_mut_slice(),
-                        img.width as u32,
-                        img.height as u32,
-                        pitch as u32,
-                        PixelFormatEnum::RGBA32,
-                    ) {
-                        if let Ok(texture) =
-                            self.texture_creator.create_texture_from_surface(surface)
-                        {
-                            eprintln!("Loaded texture {}", fname);
-                            v.insert(texture);
-                            Some(id)
-                        } else {
-                            eprintln!("Error loading texture {}!", fname);
-                            None
-                        }
-                    } else {
-                        eprintln!("Failed to load surface {}!", fname);
-                        None
-                    }
-                }
-                image::LoadResult::ImageF32(_) => {
-                    eprintln!("Unsupported format for {}", fname);
-                    None
-                }
-            },
+    pub fn load<'d, D>(&mut self, load_info: &'d D) -> Result<Option<String_Id>, String>
+    where
+        Loader: Resource_Loader<'l, Res, Args = D>,
+        D: ?Sized + std::fmt::Debug + 'd,
+        String_Id: std::convert::From<&'d D>,
+    {
+        let path_id = String_Id::from(load_info);
+        if self.cache.get(&path_id).is_none() {
+            let resource = self.loader.load(load_info)?;
+            eprintln!("Loaded resource {:?}", load_info);
+            self.cache.insert(path_id, resource);
         }
+        Ok(Some(path_id))
     }
 
-    pub fn n_loaded_textures(&self) -> usize {
-        self.textures.len()
+    pub fn n_loaded(&self) -> usize {
+        self.cache.len()
     }
 
-    pub fn get_texture(&self, handle: Texture_Handle) -> &Texture {
-        if let Some(id) = handle {
-            &self.textures[&id]
-        } else {
-            &self.fallback_texture
-        }
+    pub fn must_get<'a>(&'a self, res: Option<String_Id>) -> &'a Res
+    where
+        'l: 'a,
+    {
+        &self.cache[&res.unwrap()]
     }
 
-    fn create_fallback_texture(texture_creator: &Texture_Creator) -> Texture {
-        let pixels: [u8; 4] = [255, 10, 250, 255];
-        let mut fallback_texture = texture_creator
-            .create_texture_static(Some(sdl2::pixels::PixelFormatEnum::RGBA8888), 1, 1)
-            .expect("Failed to create fallback texture!");
-        if let Err(msg) = fallback_texture.update(None, &pixels, 4) {
-            eprintln!("Failed to update fallback texture: {}", msg);
-        }
-        // TODO set this texture as repeated (probably need to use raw openGL)
-        //fallback_texture.set_repeated(true);
-        fallback_texture
+    pub fn must_get_mut<'a>(&'a mut self, res: Option<String_Id>) -> &'a mut Res
+    where
+        'l: 'a,
+    {
+        self.cache.get_mut(&res.unwrap()).unwrap()
     }
+}
 
-    pub fn load_sound(&mut self, fname: &str) -> Sound_Handle {
-        let id = String_Id::from(fname);
-        match self.sounds.entry(id) {
-            Entry::Occupied(_) => Some(id),
-            Entry::Vacant(v) => match SoundData::new(fname) {
-                Ok(sound_data) => {
-                    v.insert(Rc::new(RefCell::new(sound_data)));
-                    Some(id)
-                }
+pub type Texture_Manager<'l> = Resource_Manager<'l, Texture<'l>, Texture_Creator>;
+pub type Font_Manager<'l> = Resource_Manager<'l, Font<'l, 'static>, Sdl2TtfContext>;
+pub type Sound_Manager<'l> = Resource_Manager<'l, Sound_Buffer, Sound_Loader>;
+
+impl<'l> Texture_Manager<'l> {
+    pub fn create_font_texture(
+        &mut self,
+        fonts: &Font_Manager<'l>,
+        txt: &str,
+        font: Option<String_Id>,
+        color: Color,
+    ) -> Option<String_Id> {
+        let cache_id = font.expect("Called create_font_texture() with an invalid Font_Handle!");
+        let font = fonts.must_get(font);
+        if self.cache.get(&cache_id).is_none() {
+            let surface = font
+                .render(txt)
+                .blended(color)
+                .map_err(|e| e.to_string())
+                .unwrap();
+            let texture = match self.loader.create_texture_from_surface(&surface) {
+                Ok(tex) => tex,
                 Err(msg) => {
-                    eprintln!("Error loading sound {}: {}!", fname, msg);
-                    None
+                    eprintln!("Error creating font texture: {}", msg);
+                    return None;
                 }
-            },
+            };
+            eprintln!("Created texture for '{}'", txt);
+            self.cache.insert(cache_id, texture);
         }
-    }
-
-    /// Retrieves a Sound_Buffer from a valid handle. Panics if the handle is invalid.
-    pub fn get_sound(&self, handle: Sound_Handle) -> Sound_Buffer {
-        self.sounds[&handle.unwrap()].clone()
-    }
-
-    pub fn n_loaded_sounds(&self) -> usize {
-        self.sounds.len()
+        Some(cache_id)
     }
 }

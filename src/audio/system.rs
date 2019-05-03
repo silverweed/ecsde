@@ -1,3 +1,4 @@
+use crate::resources::{Resources, Sound_Handle};
 use ears::{AudioController, Sound, SoundData};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -28,11 +29,12 @@ impl Audio_System {
         }
     }
 
-    pub fn play_sound(&mut self, sound_data: Rc<RefCell<SoundData>>) {
+    pub fn play_sound(&mut self, rsrc: &Resources, sound_handle: Sound_Handle) {
         if self.sounds_playing.len() == self.max_concurrent_sounds {
             // @Incomplete: remove oldest sound
             self.sounds_playing.pop();
         }
+        let sound_data = rsrc.get_sound(sound_handle);
         let mut sound = Sound::new_with_data(sound_data.clone()).unwrap();
         sound.play();
         self.sounds_playing.push(sound)
@@ -53,19 +55,19 @@ mod tests {
     fn max_concurrent_sounds() {
         let max_conc_sounds = 5;
         let mut a_sys = Audio_System::new(max_conc_sounds);
-        let (mut rsrc, env) = test_common::create_test_resources_and_env();
+        let (loaders, _, _) = test_common::create_resource_loaders();
+        let (mut rsrc, env) = test_common::create_test_resources_and_env(&loaders);
         let snd_handle = rsrc.load_sound(&resources::sound_path(&env, "coin.ogg"));
-        let snd_data = rsrc.get_sound(snd_handle);
 
-        a_sys.play_sound(snd_data.clone());
+        a_sys.play_sound(&rsrc, snd_handle);
         assert_eq!(a_sys.n_sounds_playing(), 1);
 
-        a_sys.play_sound(snd_data.clone());
-        a_sys.play_sound(snd_data.clone());
-        a_sys.play_sound(snd_data.clone());
-        a_sys.play_sound(snd_data.clone());
-        a_sys.play_sound(snd_data.clone());
-        a_sys.play_sound(snd_data.clone());
+        a_sys.play_sound(&rsrc, snd_handle);
+        a_sys.play_sound(&rsrc, snd_handle);
+        a_sys.play_sound(&rsrc, snd_handle);
+        a_sys.play_sound(&rsrc, snd_handle);
+        a_sys.play_sound(&rsrc, snd_handle);
+        a_sys.play_sound(&rsrc, snd_handle);
         assert_eq!(a_sys.n_sounds_playing(), max_conc_sounds);
     }
 }
