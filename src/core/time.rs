@@ -68,3 +68,7 @@ impl Time {
 pub fn to_secs_frac(d: &Duration) -> f32 {
     d.as_secs() as f32 + d.subsec_nanos() as f32 * 1e-9
 }
+
+pub fn duration_ratio(a: &Duration, b: &Duration) -> f32 {
+    to_secs_frac(a) / to_secs_frac(b)
+}

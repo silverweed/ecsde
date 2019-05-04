@@ -206,9 +206,7 @@ impl Entity_Manager {
         self.get_component::<C>(e).is_some()
     }
 
-    pub fn get_component_tuple<'a, C1, C2>(
-        &'a self,
-    ) -> impl Iterator<Item = (Ref<'a, C1>, Ref<'a, C2>)>
+    pub fn get_component_tuple<C1, C2>(&self) -> impl Iterator<Item = (Ref<'_, C1>, Ref<'_, C2>)>
     where
         C1: Component + 'static,
         C2: Component + 'static,

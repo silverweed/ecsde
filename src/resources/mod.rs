@@ -43,11 +43,12 @@ impl<'l> Resources<'l> {
         })
     }
 
-    pub fn get_texture<'a>(&self, handle: Texture_Handle) -> &Texture<'a>
-    where
-        'l: 'a,
-    {
+    pub fn get_texture(&self, handle: Texture_Handle) -> &Texture<'l> {
         self.textures.must_get(handle)
+    }
+
+    pub fn get_texture_mut(&mut self, handle: Texture_Handle) -> &mut Texture<'l> {
+        self.textures.must_get_mut(handle)
     }
 
     pub fn n_loaded_textures(&self) -> usize {
@@ -66,10 +67,7 @@ impl<'l> Resources<'l> {
             })
     }
 
-    pub fn get_font<'a>(&self, handle: Font_Handle) -> &Font<'a, 'static>
-    where
-        'l: 'a,
-    {
+    pub fn get_font(&self, handle: Font_Handle) -> &Font<'_, 'static> {
         self.fonts.must_get(handle)
     }
 

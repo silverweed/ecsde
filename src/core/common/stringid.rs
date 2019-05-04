@@ -9,6 +9,12 @@ impl std::convert::From<&str> for String_Id {
     }
 }
 
+impl std::fmt::Display for String_Id {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 const FNV_PRIME32: u32 = 16_777_619;
 
 fn fnv1a(bytes: &[u8]) -> u32 {
@@ -33,5 +39,18 @@ mod tests {
                          dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. \
                          Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt \
                          mollit anim id est laborum."), 0x7c0594dd);
+    }
+
+    #[test]
+    fn stringid_from_str() {
+        assert_eq!(String_Id::from("A test string"), String_Id(943117577));
+        assert_eq!(String_Id::from("A test string").0, fnv1a(b"A test string"));
+    }
+
+    #[test]
+    fn fmt_stringid() {
+        let sid = String_Id::from("A test string");
+        let fmtd = format!("{}", sid);
+        assert_eq!(fmtd, "943117577");
     }
 }

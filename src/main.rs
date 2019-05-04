@@ -3,6 +3,7 @@
 extern crate anymap;
 extern crate cgmath;
 extern crate ears;
+extern crate notify;
 extern crate sdl2;
 
 use std::env;
@@ -11,6 +12,7 @@ pub(crate) mod alloc;
 pub(crate) mod audio;
 pub(crate) mod core;
 pub(crate) mod ecs;
+pub(crate) mod fs;
 pub(crate) mod game;
 pub(crate) mod gfx;
 pub(crate) mod resources;

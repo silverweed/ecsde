@@ -1,14 +1,13 @@
 use super::loaders::Resource_Loader;
 use crate::audio::sound_loader::Sound_Loader;
+use crate::core::common;
 use crate::core::common::stringid::String_Id;
-use ears::{Music, Sound, SoundData};
-use sdl2::pixels::{Color, PixelFormatEnum};
+use ears::SoundData;
+use sdl2::pixels::Color;
 use sdl2::render::Texture;
 use sdl2::ttf::{Font, Sdl2TtfContext};
 use std::cell::RefCell;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::convert::Into;
 use std::rc::Rc;
 
 pub type Texture_Creator = sdl2::render::TextureCreator<sdl2::video::WindowContext>;
@@ -79,7 +78,7 @@ impl<'l> Texture_Manager<'l> {
         font: Option<String_Id>,
         color: Color,
     ) -> Option<String_Id> {
-        let cache_id = font.expect("Called create_font_texture() with an invalid Font_Handle!");
+        let cache_id = Self::cache_id_for_text(txt, font, color);
         let font = fonts.must_get(font);
         if self.cache.get(&cache_id).is_none() {
             let surface = font
@@ -94,9 +93,15 @@ impl<'l> Texture_Manager<'l> {
                     return None;
                 }
             };
-            eprintln!("Created texture for '{}'", txt);
             self.cache.insert(cache_id, texture);
         }
         Some(cache_id)
+    }
+
+    fn cache_id_for_text(txt: &str, font: Option<String_Id>, color: Color) -> String_Id {
+        let font = font.expect("Invalid font handle given to create_font_texture!");
+        String_Id::from(
+            format!("{}_{}_{}", txt, font, common::colors::color_to_hex(color)).as_str(),
+        )
     }
 }

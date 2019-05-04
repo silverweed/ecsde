@@ -7,6 +7,7 @@ pub struct Env_Info {
     full_exe_path: Box<Path>,
     working_dir: Box<Path>,
     assets_root: Box<Path>,
+    cfg_root: Box<Path>,
 }
 
 impl Env_Info {
@@ -17,13 +18,21 @@ impl Env_Info {
                 .parent()
                 .unwrap_or_else(|| panic!("Wierd exe path: {:?}", full_exe_path)),
         );
-        let mut assets_root_buf = working_dir.clone();
-        assets_root_buf.push("assets");
-        let assets_root = assets_root_buf.into_boxed_path();
+        let assets_root = {
+            let mut assets_root_buf = working_dir.clone();
+            assets_root_buf.push("assets");
+            assets_root_buf.into_boxed_path()
+        };
+        let cfg_root = {
+            let mut cfgs_root_buf = working_dir.clone();
+            cfgs_root_buf.push("cfg");
+            cfgs_root_buf.into_boxed_path()
+        };
         Ok(Env_Info {
             full_exe_path: full_exe_path.into_boxed_path(),
             working_dir: working_dir.into_boxed_path(),
             assets_root,
+            cfg_root,
         })
     }
 
@@ -37,5 +46,9 @@ impl Env_Info {
 
     pub fn get_assets_root(&self) -> &Path {
         &self.assets_root
+    }
+
+    pub fn get_cfg_root(&self) -> &Path {
+        &self.cfg_root
     }
 }

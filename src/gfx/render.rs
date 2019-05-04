@@ -47,7 +47,7 @@ impl Render_System {
     ) {
         canvas.set_draw_color(self.config.clear_color);
         let (out_x, out_y) = canvas.output_size().unwrap();
-        canvas.fill_rect(Rect::new(0, 0, out_x, out_y));
+        canvas.fill_rect(Rect::new(0, 0, out_x, out_y)).unwrap();
 
         let Vec2f { x: cam_x, y: cam_y } = self.camera.position();
         let Vec2f {
