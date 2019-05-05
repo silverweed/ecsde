@@ -6,13 +6,15 @@ use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 use std::thread;
 use std::time::Duration;
 
-pub fn file_watcher_create(path: PathBuf, ui_req_tx: Sender<UI_Request>) -> Maybe_Error {
-    Ok(thread::Builder::new()
+pub fn file_watcher_create(
+    path: PathBuf,
+    ui_req_tx: Sender<UI_Request>,
+) -> Result<thread::JoinHandle<()>, std::io::Error> {
+    thread::Builder::new()
         .name(format!("file_watcher_{:?}", path))
         .spawn(move || {
             file_watch_listen(path, ui_req_tx).unwrap();
         })
-        .map(|_| ())?)
 }
 
 fn file_watch_listen(path: PathBuf, mut ui_req_tx: Sender<UI_Request>) -> Maybe_Error {

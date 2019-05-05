@@ -1,10 +1,11 @@
-use super::common;
 use super::common::vector::Vec2u;
+use super::common::{self, Maybe_Error};
 use super::debug;
 use super::env::Env_Info;
 use super::input;
 use super::time;
 use crate::audio;
+use crate::cfg;
 use crate::fs;
 use crate::game::gameplay_system;
 use crate::gfx;
@@ -105,7 +106,7 @@ impl<'r> App<'r> {
         }
     }
 
-    pub fn init(&mut self) -> common::Maybe_Error {
+    pub fn init(&mut self) -> Maybe_Error {
         println!(
             "Working dir = {:?}\nExe = {:?}",
             self.env.get_cwd(),
@@ -114,10 +115,12 @@ impl<'r> App<'r> {
 
         self.init_all_systems()?;
 
+        cfg::Config::new(&self.env);
+
         Ok(())
     }
 
-    pub fn run(&mut self) -> common::Maybe_Error {
+    pub fn run(&mut self) -> Maybe_Error {
         let mut fps_debug =
             debug::fps::Fps_Console_Printer::new(&std::time::Duration::from_secs(3));
 
@@ -130,7 +133,7 @@ impl<'r> App<'r> {
         Ok(())
     }
 
-    fn init_all_systems(&mut self) -> common::Maybe_Error {
+    fn init_all_systems(&mut self) -> Maybe_Error {
         self.render_system.init(gfx::render::Render_System_Config {
             clear_color: Color::RGB(48, 10, 36),
         })?;
@@ -173,7 +176,7 @@ impl<'r> App<'r> {
         Ok(())
     }
 
-    fn update_all_systems(&mut self) -> common::Maybe_Error {
+    fn update_all_systems(&mut self) -> Maybe_Error {
         let dt = self.time.dt();
 
         self.input_system.update(&mut self.sdl.event_pump);
@@ -197,7 +200,7 @@ impl<'r> App<'r> {
         self.handle_actions()
     }
 
-    fn handle_actions(&mut self) -> common::Maybe_Error {
+    fn handle_actions(&mut self) -> Maybe_Error {
         let actions = self.input_system.get_actions();
 
         if actions.has_action(&input::Action::Quit) {

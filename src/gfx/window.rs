@@ -11,7 +11,12 @@ pub fn create_render_canvas(
         .build()
         .unwrap();
 
-    let mut canvas = window.into_canvas().present_vsync().build().unwrap();
+    let mut canvas = window
+        .into_canvas()
+        .accelerated()
+        .present_vsync()
+        .build()
+        .unwrap();
     canvas
         .set_logical_size(target_size.0, target_size.1)
         .unwrap();

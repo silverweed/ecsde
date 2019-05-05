@@ -10,6 +10,7 @@ use std::env;
 
 pub(crate) mod alloc;
 pub(crate) mod audio;
+pub(crate) mod cfg;
 pub(crate) mod core;
 pub(crate) mod ecs;
 pub(crate) mod fs;

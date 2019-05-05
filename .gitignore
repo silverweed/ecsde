@@ -5,3 +5,5 @@
 *~
 .gdbhist
 Cargo.lock
+cfg/*
+!cfg/*.cfg
