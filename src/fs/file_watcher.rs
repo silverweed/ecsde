@@ -1,50 +1,38 @@
 use crate::core::common::Maybe_Error;
 use crate::gfx::ui::UI_Request;
 use notify::{watcher, DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
+use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
+use std::thread;
 use std::time::Duration;
 
-pub struct File_Watcher_System {
-    watcher: RecommendedWatcher,
-    rx: Receiver<DebouncedEvent>,
-    ui_req_tx: Option<Sender<UI_Request>>, // Note: for now we keep this "optional" to have a more loosely coupled design (is it, though?). This system is likely gonna change a lot anyway, so this is not final by any measure.
+pub fn file_watcher_create(path: PathBuf, ui_req_tx: Sender<UI_Request>) -> Maybe_Error {
+    Ok(thread::Builder::new()
+        .name(format!("file_watcher_{:?}", path))
+        .spawn(move || {
+            file_watch_listen(path, ui_req_tx).unwrap();
+        })
+        .map(|_| ())?)
 }
 
-impl File_Watcher_System {
-    pub fn new() -> File_Watcher_System {
-        let (tx, rx) = channel();
-        File_Watcher_System {
-            watcher: watcher(tx, Duration::from_secs(2)).unwrap(),
-            rx,
-            ui_req_tx: None,
-        }
-    }
+fn file_watch_listen(path: PathBuf, mut ui_req_tx: Sender<UI_Request>) -> Maybe_Error {
+    let (tx, rx) = channel();
+    let mut watcher = watcher(tx, Duration::from_secs(2)).unwrap();
+    watcher.watch(path.to_str().unwrap(), RecursiveMode::Recursive)?;
+    eprintln!("Started watching {:?}", path);
 
-    // @Incomplete: pass a pattern rather than a path
-    pub fn init(&mut self, path: &str, ui_req_tx: Sender<UI_Request>) -> Maybe_Error {
-        eprintln!("File_Watcher_System: watching {}", path);
-        self.watcher.watch(path, RecursiveMode::Recursive)?;
-        self.ui_req_tx = Some(ui_req_tx);
-        Ok(())
+    loop {
+        handle_file_event(&mut ui_req_tx, rx.recv()?);
     }
+}
 
-    pub fn update(&mut self) {
-        match self.rx.try_recv() {
-            Ok(event) => self.handle_file_event(event),
-            Err(err) => match err {
-                TryRecvError::Disconnected => println!("Watch error: {:?}", err),
-                TryRecvError::Empty => (),
-            },
-        }
-    }
-
-    fn handle_file_event(&mut self, event: DebouncedEvent) {
-        // @Incomplete
-        let tx = self.ui_req_tx.as_mut().unwrap();
-        tx.send(UI_Request::Add_Fadeout_Text(
+fn handle_file_event(ui_req_tx: &mut Sender<UI_Request>, event: DebouncedEvent) {
+    // @Incomplete
+    eprintln!("Event");
+    ui_req_tx
+        .send(UI_Request::Add_Fadeout_Text(
             format!("{:?}", event),
             Duration::from_secs(2),
         ))
         .unwrap();
-    }
 }

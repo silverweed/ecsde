@@ -121,6 +121,7 @@ impl UI_System {
     fn draw_fadeout_texts(&mut self, canvas: &mut WindowCanvas, rsrc: &mut Resources) {
         let blend_mode = canvas.blend_mode();
         canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
+        let mut i = 0;
         for text in self.fadeout_texts.iter() {
             let texture = rsrc.get_texture_mut(text.texture);
             let TextureQuery { width, height, .. } = texture.query();
@@ -129,10 +130,11 @@ impl UI_System {
             texture.set_alpha_mod(alpha);
             let rect = Rect::new(
                 Self::FADEOUT_TEXT_PAD_X,
-                Self::FADEOUT_TEXT_PAD_Y,
+                Self::FADEOUT_TEXT_PAD_Y + i * (height as i32 + Self::FADEOUT_TEXT_PAD_Y),
                 width,
                 height,
             );
+            i += 1;
             if let Err(msg) = canvas.copy(&texture, None, rect) {
                 eprintln!("Error copying texture to window: {}", msg);
             }

@@ -65,7 +65,6 @@ pub struct App<'r> {
     render_system: gfx::render::Render_System,
     ui_system: gfx::ui::UI_System,
     audio_system: audio::system::Audio_System,
-    file_watcher_system: fs::file_watcher::File_Watcher_System,
     gameplay_system: gameplay_system::Gameplay_System,
 }
 
@@ -102,7 +101,6 @@ impl<'r> App<'r> {
             render_system: gfx::render::Render_System::new(),
             ui_system: gfx::ui::UI_System::new(),
             audio_system: audio::system::Audio_System::new(10),
-            file_watcher_system: fs::file_watcher::File_Watcher_System::new(),
             gameplay_system: gameplay_system::Gameplay_System::new(),
         }
     }
@@ -136,20 +134,25 @@ impl<'r> App<'r> {
         self.render_system.init(gfx::render::Render_System_Config {
             clear_color: Color::RGB(48, 10, 36),
         })?;
-
-        // FIXME test
-        let path = {
-            let mut s = std::path::PathBuf::from(self.env.get_cfg_root());
-            s.push("foo");
-            s.into_os_string().into_string().unwrap()
-        };
-        //
-        self.file_watcher_system
-            .init(&path, self.ui_system.new_request_sender())?;
         self.gameplay_system.init(&self.env, &mut self.resources)?;
         self.ui_system.init(&self.env, &mut self.resources)?;
 
         // FIXME test
+        self.ui_system.add_fadeout_text(
+            &mut self.resources,
+            "Hello sailor!",
+            std::time::Duration::from_secs(2),
+        );
+        self.ui_system.add_fadeout_text(
+            &mut self.resources,
+            "Hello sailor!",
+            std::time::Duration::from_secs(2),
+        );
+        self.ui_system.add_fadeout_text(
+            &mut self.resources,
+            "Hello sailor!",
+            std::time::Duration::from_secs(2),
+        );
         self.ui_system.add_fadeout_text(
             &mut self.resources,
             "Hello sailor!",
@@ -161,6 +164,11 @@ impl<'r> App<'r> {
             .load_sound(&resources::sound_path(&self.env, "coin.ogg"));
         self.audio_system.play_sound(&self.resources, snd);
         //
+
+        fs::file_watcher::file_watcher_create(
+            self.env.get_cfg_root().to_path_buf(),
+            self.ui_system.new_request_sender(),
+        )?;
 
         Ok(())
     }
@@ -174,7 +182,6 @@ impl<'r> App<'r> {
         self.canvas.set_draw_color(Color::RGB(0, 0, 0));
         self.canvas.clear();
 
-        self.file_watcher_system.update();
         self.gameplay_system.update(&dt, actions);
         self.render_system.update(
             &mut self.canvas,
