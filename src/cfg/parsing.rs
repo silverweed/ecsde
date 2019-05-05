@@ -55,18 +55,16 @@ fn parse_lines(lines: impl std::iter::Iterator<Item = String>, path: &Path) -> V
         line
     });
 
-    let mut lineno = 0;
-    for line in lines {
+    for (lineno, line) in lines.enumerate() {
         let line = line.trim();
 
-        lineno += 1;
-        if line.len() == 0 {
+        if line.is_empty() {
             continue;
         }
 
         let first_char = line.chars().next().unwrap();
         if first_char == HEADER_SEPARATOR {
-            if cur_section.header.len() > 0 {
+            if !cur_section.header.is_empty() {
                 eprintln!("pushed section {:?}", cur_section);
                 sections.push(cur_section);
                 cur_section = Cfg_Section {
@@ -93,7 +91,7 @@ fn parse_lines(lines: impl std::iter::Iterator<Item = String>, path: &Path) -> V
             cur_section.entries.push(entry);
         }
     }
-    if cur_section.header.len() > 0 {
+    if !cur_section.header.is_empty() {
         eprintln!("pushed section {:?}", cur_section);
         sections.push(cur_section);
     }
@@ -102,7 +100,7 @@ fn parse_lines(lines: impl std::iter::Iterator<Item = String>, path: &Path) -> V
 }
 
 fn parse_value(raw: &str) -> Cfg_Value {
-    if raw.len() == 0 {
+    if raw.is_empty() {
         Cfg_Value::Nil
     }
     // @Speed: this is easy but inefficient! An actual lexer would be faster, but for now this is ok.
