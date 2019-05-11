@@ -1,14 +1,19 @@
 // Engine config (mapped from the cfg files)
 mod parsing;
+mod var;
+
+use var::{Cfg_Var, Cfg_Var_Type};
 
 use crate::core::env::Env_Info;
 use crate::resources;
 use std::collections::HashMap;
+use std::convert::From;
 use std::path::PathBuf;
 use std::vec::Vec;
 
 #[derive(Debug, PartialEq)]
-enum Cfg_Value {
+// @Cleanup: this type is pub because we need it to expose Cfg_Var_Type. Maybe find a way to expose less.
+pub enum Cfg_Value {
     Nil,
     Bool(bool),
     Int(i32),
@@ -31,7 +36,7 @@ pub struct Config {
 #[derive(Debug)]
 struct Cfg_Section {
     pub header: String,
-    pub entries: Vec<Cfg_Entry>,
+    pub entries: HashMap<String, Cfg_Entry>,
 }
 
 #[derive(Debug)]
@@ -41,10 +46,43 @@ struct Cfg_Entry {
 }
 
 impl Config {
-    pub fn new(env: &Env_Info) -> Config {
-        let sections = parsing::parse_config_dir(env.get_cfg_root()).unwrap();
-        Config {
-            sections: HashMap::new(),
+    pub fn new(path: &std::path::Path) -> Config {
+        let sections_list = parsing::parse_config_dir(path).unwrap();
+        let mut sections = HashMap::new();
+        for section in sections_list.into_iter() {
+            sections.insert(String::from(section.header.as_str()), section);
+        }
+        Config { sections }
+    }
+
+    /// Gets a config variable via a path of the form: section/entry.
+    pub fn get_var<T: Cfg_Var_Type>(&self, path: &str) -> Option<Cfg_Var<T::Type>> {
+        let tokens: Vec<&str> = path.split('/').collect();
+        if tokens.len() == 2 {
+            let (section_name, entry_name) = (tokens[0], tokens[1]);
+            let section = self.sections.get(section_name)?;
+            let entry = section.entries.get(entry_name)?;
+            if T::is_type(&entry.value) {
+                eprintln!("Found {} with value {:?}", path, entry.value);
+                Some(Cfg_Var::new(T::value(&entry.value)))
+            } else {
+                eprintln!("Cfg var {} found, but its type is not the right one!", path);
+                None
+            }
+        } else {
+            eprintln!("Cfg var not found: {}", path);
+            None
+        }
+    }
+
+    pub fn get_var_or<D, T: Cfg_Var_Type>(&self, path: &str, default: D) -> Option<Cfg_Var<T::Type>>
+    where
+        T::Type: From<D>,
+    {
+        if let Some(var) = self.get_var::<T>(path) {
+            Some(var)
+        } else {
+            Some(Cfg_Var::new(default.into()))
         }
     }
 }

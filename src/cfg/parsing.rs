@@ -1,4 +1,5 @@
 use super::{Cfg_Entry, Cfg_Section, Cfg_Value};
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -45,7 +46,7 @@ fn parse_lines(lines: impl std::iter::Iterator<Item = String>, path: &Path) -> V
     let mut sections = vec![];
     let mut cur_section = Cfg_Section {
         header: String::from(""),
-        entries: vec![],
+        entries: HashMap::new(),
     };
 
     let lines = lines.map(|mut line| {
@@ -69,7 +70,7 @@ fn parse_lines(lines: impl std::iter::Iterator<Item = String>, path: &Path) -> V
                 sections.push(cur_section);
                 cur_section = Cfg_Section {
                     header: String::from(""),
-                    entries: vec![],
+                    entries: HashMap::new(),
                 };
             }
             cur_section.header = String::from(&line[1..]);
@@ -78,17 +79,13 @@ fn parse_lines(lines: impl std::iter::Iterator<Item = String>, path: &Path) -> V
             let (key, val) = match tokens.len() {
                 1 => (tokens[0], ""),
                 2 => (tokens[0], tokens[1]),
-                _ => {
-                    // Should never happen due to splitn(2).
-                    eprintln!("Line {} in file {:?} is invalid: `{}`", lineno, path, line);
-                    continue;
-                }
+                _ => unreachable!(),
             };
             let entry = Cfg_Entry {
                 key: String::from(key),
                 value: parse_value(val.trim_left()),
             };
-            cur_section.entries.push(entry);
+            cur_section.entries.insert(entry.key.clone(), entry);
         }
     }
     if !cur_section.header.is_empty() {
@@ -148,26 +145,22 @@ mod tests {
         assert_eq!(sec1.header, "header");
         assert_eq!(sec1.entries.len(), 7);
 
-        assert_eq!(sec1.entries[0].key, "entry_int");
-        assert_eq!(sec1.entries[0].value, Cfg_Value::Int(1));
-        assert_eq!(sec1.entries[1].key, "entry_bool");
-        assert_eq!(sec1.entries[1].value, Cfg_Value::Bool(false));
-        assert_eq!(sec1.entries[2].key, "entry_nil");
-        assert_eq!(sec1.entries[2].value, Cfg_Value::Nil);
-        assert_eq!(sec1.entries[3].key, "entry_string");
+        assert_eq!(sec1.entries["entry_int"].value, Cfg_Value::Int(1));
+        assert_eq!(sec1.entries["entry_bool"].value, Cfg_Value::Bool(false));
+        assert_eq!(sec1.entries["entry_nil"].value, Cfg_Value::Nil);
         assert_eq!(
-            sec1.entries[3].value,
+            sec1.entries["entry_string"].value,
             Cfg_Value::String(String::from("foo"))
         );
-        assert_eq!(sec1.entries[4].key, "entry_multi_string");
         assert_eq!(
-            sec1.entries[4].value,
+            sec1.entries["entry_multi_string"].value,
             Cfg_Value::String(String::from("foo bar   baz"))
         );
-        assert_eq!(sec1.entries[5].key, "entry_int_neg");
-        assert_eq!(sec1.entries[5].value, Cfg_Value::Int(-2));
-        assert_eq!(sec1.entries[6].key, "entry_float_neg");
-        assert_eq!(sec1.entries[6].value, Cfg_Value::Float(-1.2));
+        assert_eq!(sec1.entries["entry_int_neg"].value, Cfg_Value::Int(-2));
+        assert_eq!(
+            sec1.entries["entry_float_neg"].value,
+            Cfg_Value::Float(-1.2)
+        );
 
         let sec2 = &parsed[1];
         assert_eq!(sec2.header, "other_header");

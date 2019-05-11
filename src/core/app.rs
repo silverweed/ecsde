@@ -61,6 +61,8 @@ pub struct App<'r> {
     env: Env_Info,
     resources: resources::Resources<'r>,
 
+    config: cfg::Config,
+
     // Engine Systems
     input_system: input::Input_System,
     render_system: gfx::render::Render_System,
@@ -90,14 +92,18 @@ impl<'r> App<'r> {
             &loaders.sound_loader,
         );
 
+        let env = Env_Info::gather().unwrap();
+        let config = cfg::Config::new(env.get_cfg_root());
+
         App {
             sdl,
             window_target_size: Vec2u::new(cfg.target_win_size.0, cfg.target_win_size.1),
             canvas,
             time: time::Time::new(),
             should_close: false,
-            env: Env_Info::gather().unwrap(),
+            env,
             resources,
+            config,
             input_system: input::Input_System::new(),
             render_system: gfx::render::Render_System::new(),
             ui_system: gfx::ui::UI_System::new(),
@@ -114,8 +120,6 @@ impl<'r> App<'r> {
         );
 
         self.init_all_systems()?;
-
-        cfg::Config::new(&self.env);
 
         Ok(())
     }
