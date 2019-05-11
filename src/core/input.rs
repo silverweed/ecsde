@@ -1,7 +1,7 @@
 use crate::core::common::direction::Direction;
 use crate::core::common::vector::Vec2f;
-use std::vec::Vec;
 use cgmath::InnerSpace;
+use std::vec::Vec;
 
 #[derive(PartialEq, Hash)]
 pub enum Action {
@@ -10,7 +10,9 @@ pub enum Action {
     Move(Direction),
     Zoom(i32), // Note: the zoom factor is an integer rather than a float as it can be hashed.
     // This integer must be divided by 100 to obtain the actual scaling factor.
-    ChangeSpeed(i32),
+    Change_Speed(i32),
+    Pause_Toggle,
+    Step_Simulation,
 }
 
 #[derive(Default)]
@@ -83,8 +85,10 @@ impl Input_System {
                     Keycode::D => self.actions.move_right = true,
                     Keycode::KpPlus => actions.push(Action::Zoom(10)),
                     Keycode::KpMinus => actions.push(Action::Zoom(-10)),
-                    Keycode::Num1 => actions.push(Action::ChangeSpeed(-10)),
-                    Keycode::Num2 => actions.push(Action::ChangeSpeed(10)),
+                    Keycode::Num1 | Keycode::Minus => actions.push(Action::Change_Speed(-10)),
+                    Keycode::Num2 | Keycode::Equals => actions.push(Action::Change_Speed(10)),
+                    Keycode::Period => actions.push(Action::Pause_Toggle),
+                    Keycode::Slash => actions.push(Action::Step_Simulation),
                     _ => (),
                 },
                 Event::KeyUp {
@@ -128,5 +132,9 @@ pub fn get_movement_from_input(actions: &Action_List) -> Vec2f {
 
 pub fn get_normalized_movement_from_input(actions: &Action_List) -> Vec2f {
     let m = get_movement_from_input(actions);
-    if m.magnitude2() == 0.0 { m } else { m.normalize() }
+    if m.magnitude2() == 0.0 {
+        m
+    } else {
+        m.normalize()
+    }
 }

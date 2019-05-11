@@ -33,10 +33,7 @@ fn handle_file_event(ui_req_tx: &mut Sender<UI_Request>, event: DebouncedEvent) 
     // @Incomplete
     match event {
         DebouncedEvent::Write(ref pathbuf) if !utils::is_hidden(&pathbuf) => ui_req_tx
-            .send(UI_Request::Add_Fadeout_Text(
-                format!("{:?}", event),
-                Duration::from_secs(2),
-            ))
+            .send(UI_Request::Add_Fadeout_Text(format!("{:?}", event)))
             .unwrap(),
         _ => (),
     }

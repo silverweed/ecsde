@@ -2,7 +2,7 @@ use super::Cfg_Value;
 use std::cmp::PartialEq;
 use std::convert::From;
 use std::mem::discriminant;
-use std::ops::Deref;
+use std::ops::{Add, Deref, Div, Mul, Sub};
 
 pub trait Cfg_Var_Type {
     type Type;
@@ -98,6 +98,50 @@ where
 {
     fn eq(&self, other: &T) -> bool {
         self.value == *other
+    }
+}
+
+impl<T: Add<Output = T>> Add<T> for Cfg_Var<T>
+where
+    T: Add,
+{
+    type Output = T;
+
+    fn add(self, other: T) -> T {
+        self.value + other
+    }
+}
+
+impl<T: Sub<Output = T>> Sub<T> for Cfg_Var<T>
+where
+    T: Sub,
+{
+    type Output = T;
+
+    fn sub(self, other: T) -> T {
+        self.value - other
+    }
+}
+
+impl<T: Mul<Output = T>> Mul<T> for Cfg_Var<T>
+where
+    T: Mul,
+{
+    type Output = T;
+
+    fn mul(self, other: T) -> T {
+        self.value * other
+    }
+}
+
+impl<T: Div<Output = T>> Div<T> for Cfg_Var<T>
+where
+    T: Div,
+{
+    type Output = T;
+
+    fn div(self, other: T) -> T {
+        self.value / other
     }
 }
 

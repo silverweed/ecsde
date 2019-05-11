@@ -29,12 +29,7 @@ impl Env_Info {
             cfgs_root_buf.push("cfg");
             cfgs_root_buf.into_boxed_path()
         };
-        let test_cfg = {
-            let mut tests_root_buf = working_dir.clone();
-            tests_root_buf.push("test_resources");
-            tests_root_buf.push("cfg");
-            tests_root_buf.into_boxed_path()
-        };
+        let test_cfg = Self::build_test_cfg(&working_dir);
         Ok(Env_Info {
             full_exe_path: full_exe_path.into_boxed_path(),
             working_dir: working_dir.into_boxed_path(),
@@ -64,6 +59,19 @@ impl Env_Info {
     pub fn get_test_cfg_root(&self) -> &Path {
         &self.test_paths.cfg_root
     }
+
+    #[cfg(not(test))]
+    fn build_test_cfg(_working_dir: &PathBuf) -> Option<Box<Path>> {
+        None
+    }
+
+    #[cfg(test)]
+    fn build_test_cfg(working_dir: &PathBuf) -> Option<Box<Path>> {
+        let mut tests_root_buf = working_dir.clone();
+        tests_root_buf.push("test_resources");
+        tests_root_buf.push("cfg");
+        Some(tests_root_buf.into_boxed_path())
+    }
 }
 
 #[cfg(test)]
@@ -76,12 +84,14 @@ struct Test_Paths {}
 
 impl Test_Paths {
     #[cfg(test)]
-    pub fn new(cfg_root: Box<Path>) -> Test_Paths {
-        Test_Paths { cfg_root }
+    pub fn new(cfg_root: Option<Box<Path>>) -> Test_Paths {
+        Test_Paths {
+            cfg_root: cfg_root.unwrap(),
+        }
     }
 
     #[cfg(not(test))]
-    pub fn new(_cfg_root: Box<Path>) -> Test_Paths {
+    pub fn new(_cfg_root: Option<Box<Path>>) -> Test_Paths {
         Test_Paths {}
     }
 }

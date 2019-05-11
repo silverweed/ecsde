@@ -83,7 +83,7 @@ fn parse_lines(lines: impl std::iter::Iterator<Item = String>, path: &Path) -> V
             };
             let entry = Cfg_Entry {
                 key: String::from(key),
-                value: parse_value(val.trim_left()),
+                value: parse_value(val.trim_start()),
             };
             cur_section.entries.insert(entry.key.clone(), entry);
         }

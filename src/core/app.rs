@@ -11,6 +11,7 @@ use crate::game::gameplay_system;
 use crate::gfx;
 use crate::resources;
 use sdl2::pixels::Color;
+use std::convert::TryFrom;
 
 pub struct Config {
     pub title: String,
@@ -63,6 +64,8 @@ pub struct App<'r> {
 
     config: cfg::Config,
 
+    ui_req_tx: Option<std::sync::mpsc::Sender<gfx::ui::UI_Request>>,
+
     // Engine Systems
     input_system: input::Input_System,
     render_system: gfx::render::Render_System,
@@ -104,6 +107,7 @@ impl<'r> App<'r> {
             env,
             resources,
             config,
+            ui_req_tx: None,
             input_system: input::Input_System::new(),
             render_system: gfx::render::Render_System::new(),
             ui_system: gfx::ui::UI_System::new(),
@@ -145,33 +149,7 @@ impl<'r> App<'r> {
             .init(&self.env, &mut self.resources, &self.config)?;
         self.ui_system.init(&self.env, &mut self.resources)?;
 
-        // FIXME test
-        self.ui_system.add_fadeout_text(
-            &mut self.resources,
-            "Hello sailor!",
-            std::time::Duration::from_secs(2),
-        );
-        self.ui_system.add_fadeout_text(
-            &mut self.resources,
-            "Hello sailor!",
-            std::time::Duration::from_secs(2),
-        );
-        self.ui_system.add_fadeout_text(
-            &mut self.resources,
-            "Hello sailor!",
-            std::time::Duration::from_secs(2),
-        );
-        self.ui_system.add_fadeout_text(
-            &mut self.resources,
-            "Hello sailor!",
-            std::time::Duration::from_secs(2),
-        );
-
-        let snd = self
-            .resources
-            .load_sound(&resources::sound_path(&self.env, "coin.ogg"));
-        self.audio_system.play_sound(&self.resources, snd);
-        //
+        self.ui_req_tx = Some(self.ui_system.new_request_sender());
 
         fs::file_watcher::file_watcher_create(
             self.env.get_cfg_root().to_path_buf(),
@@ -182,7 +160,10 @@ impl<'r> App<'r> {
     }
 
     fn update_all_systems(&mut self) -> Maybe_Error {
+        self.handle_actions()?;
+
         let dt = self.time.dt();
+        let real_dt = self.time.real_dt();
 
         self.input_system.update(&mut self.sdl.event_pump);
         let actions = self.input_system.get_actions();
@@ -197,25 +178,64 @@ impl<'r> App<'r> {
             &self.gameplay_system.get_renderable_entities(),
         );
         self.ui_system
-            .update(&dt, &mut self.canvas, &mut self.resources);
+            .update(&real_dt, &mut self.canvas, &mut self.resources);
         self.audio_system.update();
 
         self.canvas.present();
 
-        self.handle_actions()
+        Ok(())
     }
 
     fn handle_actions(&mut self) -> Maybe_Error {
-        let actions = self.input_system.get_actions();
+        use gfx::ui::UI_Request;
+        use input::Action;
+        use std::time::Duration;
 
-        if actions.has_action(&input::Action::Quit) {
+        let actions = self.input_system.get_actions();
+        let ui_req_tx = self.ui_req_tx.as_ref().unwrap();
+
+        if actions.has_action(&Action::Quit) {
             self.should_close = true;
         } else {
             for action in actions.iter() {
                 match action {
-                    input::Action::ChangeSpeed(delta) => {
-                        self.time
-                            .set_time_scale(self.time.get_time_scale() + *delta as f32 * 0.01);
+                    Action::Change_Speed(delta) => {
+                        let ts = self.time.get_time_scale() + *delta as f32 * 0.01;
+                        if ts > 0.0 {
+                            self.time.set_time_scale(ts);
+                        }
+                        ui_req_tx
+                            .send(UI_Request::Add_Fadeout_Text(format!(
+                                "Time scale: {:.2}",
+                                self.time.get_time_scale()
+                            )))
+                            .unwrap();
+                    }
+                    Action::Pause_Toggle => {
+                        self.time.set_paused(!self.time.is_paused());
+                        ui_req_tx
+                            .send(UI_Request::Add_Fadeout_Text(String::from(
+                                if self.time.is_paused() {
+                                    "Paused"
+                                } else {
+                                    "Resumed"
+                                },
+                            )))
+                            .unwrap();
+                    }
+                    Action::Step_Simulation => {
+                        let target_fps = self.config.get_var_or::<i32, _>("engine/fps", 60);
+                        let step_delta = Duration::from_nanos(
+                            u64::try_from(1_000_000_000 / i32::from(target_fps)).unwrap(),
+                        );
+                        ui_req_tx
+                            .send(UI_Request::Add_Fadeout_Text(format!(
+                                "Stepping of: {:.2} ms",
+                                time::to_secs_frac(&step_delta) * 1000.0
+                            )))
+                            .unwrap();
+                        self.time.set_paused(true);
+                        self.time.step(&step_delta);
                     }
                     _ => (),
                 }

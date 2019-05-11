@@ -12,16 +12,15 @@ use std::time::Duration;
 use std::vec::Vec;
 
 pub enum UI_Request {
-    Add_Fadeout_Text(String, Duration),
+    Add_Fadeout_Text(String),
 }
 
 struct Fadeout_Text {
     pub texture: Texture_Handle,
     pub time: Duration,
-    pub fadeout_time: Duration,
 }
 
-type Fadeout_Text_Requests = Arc<Mutex<Vec<(String, Duration)>>>;
+type Fadeout_Text_Requests = Arc<Mutex<Vec<String>>>;
 
 fn spawn_req_rx_listen_thread(
     req_rx: Receiver<UI_Request>,
@@ -38,9 +37,7 @@ fn spawn_req_rx_listen_thread(
 fn req_rx_listen(req_rx: Receiver<UI_Request>, fadeout_text_requests: Fadeout_Text_Requests) {
     while let Ok(req) = req_rx.recv() {
         match req {
-            UI_Request::Add_Fadeout_Text(txt, dur) => {
-                fadeout_text_requests.lock().unwrap().push((txt, dur))
-            }
+            UI_Request::Add_Fadeout_Text(txt) => fadeout_text_requests.lock().unwrap().push(txt),
         }
     }
 }
@@ -49,6 +46,7 @@ pub struct UI_System {
     fadeout_text_font: Font_Handle,
     fadeout_texts: Vec<Fadeout_Text>,
     fadeout_text_requests: Fadeout_Text_Requests,
+    fadeout_time: Duration,
     req_tx: Sender<UI_Request>,
 }
 
@@ -57,6 +55,7 @@ impl UI_System {
     const FADEOUT_TEXT_PAD_Y: i32 = 5;
     const FADEOUT_TEXT_FONT_SIZE: u16 = 16;
     const FADEOUT_TEXT_FONT: &'static str = "Hack-Regular.ttf";
+    const DEFAULT_FADEOUT_TIME_MS: u64 = 3000;
 
     pub fn new() -> UI_System {
         let (req_tx, req_rx) = channel();
@@ -68,6 +67,7 @@ impl UI_System {
             fadeout_text_font: None,
             fadeout_texts: vec![],
             fadeout_text_requests,
+            fadeout_time: Duration::from_millis(Self::DEFAULT_FADEOUT_TIME_MS),
             req_tx,
         }
     }
@@ -99,34 +99,39 @@ impl UI_System {
 
     fn handle_ui_requests(&mut self, rsrc: &mut Resources) {
         let reqs = self.fadeout_text_requests.lock().unwrap().clone();
-        for (txt, dur) in reqs.iter() {
-            self.add_fadeout_text(rsrc, &txt, *dur);
+        for txt in reqs.iter() {
+            self.add_fadeout_text(rsrc, &txt);
         }
         self.fadeout_text_requests.lock().unwrap().clear();
     }
 
     fn update_fadeout_texts(&mut self, dt: &Duration) {
-        let mut i = 0;
-        while i < self.fadeout_texts.len() {
-            let text = &mut self.fadeout_texts[i];
-            text.time += *dt;
-            if text.time >= text.fadeout_time {
-                self.fadeout_texts.swap_remove(i);
-            } else {
-                i += 1;
-            }
-        }
+        let fadeout_time = &self.fadeout_time;
+        let n_expired = self
+            .fadeout_texts
+            .iter_mut()
+            .map(|mut t| {
+                t.time += *dt;
+                &t.time
+            })
+            .filter(|&time| time >= fadeout_time)
+            .count();
+        self.fadeout_texts.drain(0..n_expired);
     }
 
     fn draw_fadeout_texts(&mut self, canvas: &mut WindowCanvas, rsrc: &mut Resources) {
+        let fadeout_time = self.fadeout_time;
         let blend_mode = canvas.blend_mode();
         canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
+
         for (i, text) in self.fadeout_texts.iter().enumerate() {
             let texture = rsrc.get_texture_mut(text.texture);
             let TextureQuery { width, height, .. } = texture.query();
-            let alpha =
-                255 - (core::time::duration_ratio(&text.time, &text.fadeout_time) * 255.0) as u8;
+
+            let d = core::time::duration_ratio(&text.time, &fadeout_time);
+            let alpha = 255 - (d * d * 255.0f32) as u8;
             texture.set_alpha_mod(alpha);
+
             let rect = Rect::new(
                 Self::FADEOUT_TEXT_PAD_X,
                 Self::FADEOUT_TEXT_PAD_Y + (i as i32) * (height as i32 + Self::FADEOUT_TEXT_PAD_Y),
@@ -137,21 +142,16 @@ impl UI_System {
                 eprintln!("Error copying texture to window: {}", msg);
             }
         }
+
         canvas.set_blend_mode(blend_mode);
     }
 
-    pub fn add_fadeout_text(
-        &mut self,
-        resources: &mut Resources,
-        txt: &str,
-        fadeout_time: Duration,
-    ) {
+    pub fn add_fadeout_text(&mut self, resources: &mut Resources, txt: &str) {
         let texture =
             resources.create_font_texture(txt, self.fadeout_text_font, Color::RGB(255, 255, 255));
         self.fadeout_texts.push(Fadeout_Text {
             texture,
             time: Duration::new(0, 0),
-            fadeout_time,
         });
     }
 }
