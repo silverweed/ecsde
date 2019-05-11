@@ -63,7 +63,6 @@ impl Config {
             let section = self.sections.get(section_name)?;
             let entry = section.entries.get(entry_name)?;
             if T::is_type(&entry.value) {
-                eprintln!("Found {} with value {:?}", path, entry.value);
                 Some(Cfg_Var::new(T::value(&entry.value)))
             } else {
                 eprintln!("Cfg var {} found, but its type is not the right one!", path);
@@ -75,14 +74,14 @@ impl Config {
         }
     }
 
-    pub fn get_var_or<D, T: Cfg_Var_Type>(&self, path: &str, default: D) -> Option<Cfg_Var<T::Type>>
+    pub fn get_var_or<T: Cfg_Var_Type, D>(&self, path: &str, default: D) -> Cfg_Var<T::Type>
     where
         T::Type: From<D>,
     {
         if let Some(var) = self.get_var::<T>(path) {
-            Some(var)
+            var
         } else {
-            Some(Cfg_Var::new(default.into()))
+            Cfg_Var::new(default.into())
         }
     }
 }

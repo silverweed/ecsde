@@ -1,9 +1,14 @@
 use crate::core::common::transform::C_Transform2D;
 use crate::core::input;
 use crate::core::time;
-use crate::ecs::components::C_Controllable;
 use crate::ecs::entity_manager::Entity_Manager;
 use std::time::Duration;
+use typename::TypeName;
+
+#[derive(Copy, Clone, Default, Debug, TypeName)]
+pub struct C_Controllable {
+    pub speed: f32,
+}
 
 pub fn update(dt: &Duration, actions: &input::Action_List, em: &mut Entity_Manager) {
     let movement = input::get_normalized_movement_from_input(actions);

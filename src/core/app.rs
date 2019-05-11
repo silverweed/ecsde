@@ -141,7 +141,8 @@ impl<'r> App<'r> {
         self.render_system.init(gfx::render::Render_System_Config {
             clear_color: Color::RGB(48, 10, 36),
         })?;
-        self.gameplay_system.init(&self.env, &mut self.resources)?;
+        self.gameplay_system
+            .init(&self.env, &mut self.resources, &self.config)?;
         self.ui_system.init(&self.env, &mut self.resources)?;
 
         // FIXME test

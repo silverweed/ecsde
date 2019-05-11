@@ -1,5 +1,6 @@
 use super::Cfg_Value;
 use std::cmp::PartialEq;
+use std::convert::From;
 use std::mem::discriminant;
 use std::ops::Deref;
 
@@ -114,6 +115,30 @@ impl<T> Deref for Cfg_Var<T> {
     }
 }
 
+impl From<Cfg_Var<bool>> for bool {
+    fn from(v: Cfg_Var<bool>) -> bool {
+        v.value
+    }
+}
+
+impl From<Cfg_Var<i32>> for i32 {
+    fn from(v: Cfg_Var<i32>) -> i32 {
+        v.value
+    }
+}
+
+impl From<Cfg_Var<f32>> for f32 {
+    fn from(v: Cfg_Var<f32>) -> f32 {
+        v.value
+    }
+}
+
+impl From<Cfg_Var<String>> for String {
+    fn from(v: Cfg_Var<String>) -> String {
+        v.value
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,12 +167,10 @@ mod tests {
         assert!(entry_string.is_some(), "Failed to load test/entry_string!");
         assert_eq!(entry_string.unwrap().as_str(), "Fourty Two");
 
-        let entry_nil = config.get_var_or::<_, String>("test/entry_nil", "Nil!");
-        assert!(entry_nil.is_some(), "get_var_or() returned None?!");
-        assert_eq!(entry_nil.unwrap().as_str(), "Nil!");
+        let entry_nil = config.get_var_or::<String, _>("test/entry_nil", "Nil!");
+        assert_eq!(entry_nil.as_str(), "Nil!");
 
-        let entry_int_as_float = config.get_var_or::<_, f32>("test/entry_int", -1.0);
-        assert!(entry_int_as_float.is_some(), "get_var_or() returned None?!");
-        assert_eq!(entry_int_as_float.unwrap(), -1.0);
+        let entry_int_as_float = config.get_var_or::<f32, _>("test/entry_int", -1.0);
+        assert_eq!(entry_int_as_float, -1.0);
     }
 }

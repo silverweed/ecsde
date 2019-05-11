@@ -1,4 +1,5 @@
 use crate::core::common::Maybe_Error;
+use crate::fs::utils;
 use crate::gfx::ui::UI_Request;
 use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
 use std::path::PathBuf;
@@ -30,11 +31,13 @@ fn file_watch_listen(path: PathBuf, mut ui_req_tx: Sender<UI_Request>) -> Maybe_
 
 fn handle_file_event(ui_req_tx: &mut Sender<UI_Request>, event: DebouncedEvent) {
     // @Incomplete
-    eprintln!("Event");
-    ui_req_tx
-        .send(UI_Request::Add_Fadeout_Text(
-            format!("{:?}", event),
-            Duration::from_secs(2),
-        ))
-        .unwrap();
+    match event {
+        DebouncedEvent::Write(ref pathbuf) if !utils::is_hidden(&pathbuf) => ui_req_tx
+            .send(UI_Request::Add_Fadeout_Text(
+                format!("{:?}", event),
+                Duration::from_secs(2),
+            ))
+            .unwrap(),
+        _ => (),
+    }
 }

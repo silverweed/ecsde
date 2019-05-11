@@ -1,3 +1,5 @@
+use super::controllable_system::C_Controllable;
+use crate::cfg;
 use crate::core::common;
 use crate::core::common::transform::C_Transform2D;
 use crate::core::env::Env_Info;
@@ -24,10 +26,15 @@ impl Gameplay_System {
         }
     }
 
-    pub fn init(&mut self, env: &Env_Info, rsrc: &mut Resources) -> common::Maybe_Error {
+    pub fn init(
+        &mut self,
+        env: &Env_Info,
+        rsrc: &mut Resources,
+        cfg: &cfg::Config,
+    ) -> common::Maybe_Error {
         self.register_all_components();
 
-        self.init_demo_sprites(env, rsrc);
+        self.init_demo_sprites(env, rsrc, cfg);
 
         Ok(())
     }
@@ -51,11 +58,11 @@ impl Gameplay_System {
 
         em.register_component::<C_Transform2D>();
         em.register_component::<comp::C_Renderable>();
-        em.register_component::<comp::C_Controllable>();
+        em.register_component::<C_Controllable>();
     }
 
     // #DEMO
-    fn init_demo_sprites(&mut self, env: &Env_Info, rsrc: &mut Resources) {
+    fn init_demo_sprites(&mut self, env: &Env_Info, rsrc: &mut Resources, cfg: &cfg::Config) {
         let em = &mut self.entity_manager;
         let yv = em.new_entity();
         self.entities.push(yv);
@@ -67,7 +74,7 @@ impl Gameplay_System {
         {
             let mut rend = em.add_component::<comp::C_Renderable>(yv);
             rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
-	    assert!(rend.texture.is_some(), "Could not load yv texture!");
+            assert!(rend.texture.is_some(), "Could not load yv texture!");
             rend.rect = Rect::new(0, 0, 148, 125);
         }
 
@@ -80,14 +87,16 @@ impl Gameplay_System {
         {
             let mut rend = em.add_component::<comp::C_Renderable>(plant);
             rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
-	    assert!(rend.texture.is_some(), "Could not load plant texture!");
+            assert!(rend.texture.is_some(), "Could not load plant texture!");
             rend.rect = Rect::new(0, 0, 96, 96);
             rend.n_frames = 4;
             rend.frame_time = 0.1;
         }
         {
-            let mut ctrl = em.add_component::<comp::C_Controllable>(plant);
-            ctrl.speed = 300.0;
+            let mut ctrl = em.add_component::<C_Controllable>(plant);
+            ctrl.speed = cfg
+                .get_var_or::<f32, _>("gameplay/player_speed", 300.0)
+                .into();
         }
     }
 }
