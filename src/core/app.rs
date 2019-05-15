@@ -63,7 +63,6 @@ pub struct App<'r> {
     resources: resources::Resources<'r>,
 
     config: cfg::Config,
-
     ui_req_tx: Option<std::sync::mpsc::Sender<gfx::ui::UI_Request>>,
 
     // Engine Systems
@@ -96,7 +95,7 @@ impl<'r> App<'r> {
         );
 
         let env = Env_Info::gather().unwrap();
-        let config = cfg::Config::new(env.get_cfg_root());
+        let config = cfg::Config::new_from_dir(env.get_cfg_root());
 
         App {
             sdl,
@@ -151,9 +150,10 @@ impl<'r> App<'r> {
 
         self.ui_req_tx = Some(self.ui_system.new_request_sender());
 
+        let config_watcher = Box::new(cfg::sync::Config_Watch_Handler::new(&self.config));
         fs::file_watcher::file_watcher_create(
             self.env.get_cfg_root().to_path_buf(),
-            self.ui_system.new_request_sender(),
+            vec![config_watcher],
         )?;
 
         Ok(())
@@ -182,6 +182,8 @@ impl<'r> App<'r> {
         self.audio_system.update();
 
         self.canvas.present();
+
+        self.config.update();
 
         Ok(())
     }
@@ -224,7 +226,7 @@ impl<'r> App<'r> {
                             .unwrap();
                     }
                     Action::Step_Simulation => {
-                        let target_fps = self.config.get_var_or::<i32, _>("engine/fps", 60);
+                        let target_fps = 60; //self.config.get_var_or::<i32, _>("engine/fps", 60);
                         let step_delta = Duration::from_nanos(
                             u64::try_from(1_000_000_000 / i32::from(target_fps)).unwrap(),
                         );

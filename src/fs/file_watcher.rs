@@ -7,34 +7,40 @@ use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::time::Duration;
 
+pub trait File_Watcher_Event_Handler: Sync + Send {
+    fn handle(&mut self, evt: &DebouncedEvent);
+}
+
 pub fn file_watcher_create(
     path: PathBuf,
-    ui_req_tx: Sender<UI_Request>,
+    event_handlers: Vec<Box<dyn File_Watcher_Event_Handler>>,
 ) -> Result<thread::JoinHandle<()>, std::io::Error> {
     thread::Builder::new()
         .name(format!("file_watcher_{:?}", path))
         .spawn(move || {
-            file_watch_listen(path, ui_req_tx).unwrap();
+            file_watch_listen(path, event_handlers).unwrap();
         })
 }
 
-fn file_watch_listen(path: PathBuf, mut ui_req_tx: Sender<UI_Request>) -> Maybe_Error {
+fn file_watch_listen(
+    path: PathBuf,
+    mut event_handlers: Vec<Box<dyn File_Watcher_Event_Handler>>,
+) -> Maybe_Error {
     let (tx, rx) = channel();
-    let mut watcher = watcher(tx, Duration::from_secs(2)).unwrap();
+    let mut watcher = watcher(tx, Duration::from_secs(1)).unwrap();
     watcher.watch(path.to_str().unwrap(), RecursiveMode::Recursive)?;
     eprintln!("Started watching {:?}", path);
 
     loop {
-        handle_file_event(&mut ui_req_tx, rx.recv()?);
+        notify_handlers(&mut event_handlers, rx.recv()?);
     }
 }
 
-fn handle_file_event(ui_req_tx: &mut Sender<UI_Request>, event: DebouncedEvent) {
-    // @Incomplete
-    match event {
-        DebouncedEvent::Write(ref pathbuf) if !utils::is_hidden(&pathbuf) => ui_req_tx
-            .send(UI_Request::Add_Fadeout_Text(format!("{:?}", event)))
-            .unwrap(),
-        _ => (),
+fn notify_handlers(
+    event_handlers: &mut [Box<dyn File_Watcher_Event_Handler>],
+    event: DebouncedEvent,
+) {
+    for handler in event_handlers.iter_mut() {
+        handler.handle(&event);
     }
 }

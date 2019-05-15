@@ -1,87 +1,210 @@
 // Engine config (mapped from the cfg files)
-mod parsing;
+pub mod sync;
+
+pub mod parsing;
 mod var;
 
-use var::{Cfg_Var, Cfg_Var_Type};
+use parsing::{Cfg_Entry, Cfg_Value, Raw_Config};
 
+use crate::core::common::stringid::String_Id;
 use crate::core::env::Env_Info;
 use crate::resources;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::From;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
+use std::sync::mpsc::{Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::vec::Vec;
 
-#[derive(Debug, PartialEq)]
-// @Cleanup: this type is pub because we need it to expose Cfg_Var_Type. Maybe find a way to expose less.
-pub enum Cfg_Value {
-    Nil,
-    Bool(bool),
-    Int(i32),
-    Float(f32),
-    String(String),
+pub type Cfg_Var<T> = var::Cfg_Var<T>;
+
+struct Config_Change_Interface {
+    pending_changes: Vec<Cfg_Entry>,
 }
 
-/// Contains all configurations from all cfg files.
-/// Conceptually, it's as all cfg sections were in the same file: they're just split
-/// into multiple files for convenience.
-// @Convenience: this means all headers must be unique across files; maybe splitting
-// files logically may become convenient in the long run...we'll see.
+impl Config_Change_Interface {
+    pub fn new() -> Config_Change_Interface {
+        Config_Change_Interface {
+            pending_changes: vec![],
+        }
+    }
+
+    pub fn update(&mut self) -> Vec<Cfg_Entry> {
+        let out = self.pending_changes.clone();
+        self.pending_changes.clear();
+        out
+    }
+
+    pub fn request_entry_change(&mut self, entry_change: Cfg_Entry) {
+        self.pending_changes.push(entry_change);
+    }
+}
+
 pub struct Config {
-    sections: HashMap<String, Cfg_Section>,
-}
-
-/// A Cfg_Section is a section in a cfg file delimited by /header and
-/// consisting of multiple lines of the format:
-/// [#] key [value] [# ...]
-#[derive(Debug)]
-struct Cfg_Section {
-    pub header: String,
-    pub entries: HashMap<String, Cfg_Entry>,
-}
-
-#[derive(Debug)]
-struct Cfg_Entry {
-    pub key: String,
-    pub value: Cfg_Value,
+    bool_vars: HashMap<String_Id, Rc<RefCell<bool>>>,
+    int_vars: HashMap<String_Id, Rc<RefCell<i32>>>,
+    float_vars: HashMap<String_Id, Rc<RefCell<f32>>>,
+    string_vars: HashMap<String_Id, Rc<RefCell<String>>>,
+    change_interface: Arc<Mutex<Config_Change_Interface>>,
 }
 
 impl Config {
-    pub fn new(path: &std::path::Path) -> Config {
-        let sections_list = parsing::parse_config_dir(path).unwrap();
-        let mut sections = HashMap::new();
-        for section in sections_list.into_iter() {
-            sections.insert(String::from(section.header.as_str()), section);
-        }
-        Config { sections }
-    }
+    pub fn new_from_dir(dir_path: &Path) -> Config {
+        let raw = Raw_Config::new_from_dir(dir_path);
 
-    /// Gets a config variable via a path of the form: section/entry.
-    pub fn get_var<T: Cfg_Var_Type>(&self, path: &str) -> Option<Cfg_Var<T::Type>> {
-        let tokens: Vec<&str> = path.split('/').collect();
-        if tokens.len() == 2 {
-            let (section_name, entry_name) = (tokens[0], tokens[1]);
-            let section = self.sections.get(section_name)?;
-            let entry = section.entries.get(entry_name)?;
-            if T::is_type(&entry.value) {
-                Some(Cfg_Var::new(T::value(&entry.value)))
-            } else {
-                eprintln!("Cfg var {} found, but its type is not the right one!", path);
-                None
+        // Flatten section/entries into string ids and convert values to cfg vars
+        let mut bool_vars = HashMap::new();
+        let mut int_vars = HashMap::new();
+        let mut float_vars = HashMap::new();
+        let mut string_vars = HashMap::new();
+        for section in raw.sections.into_iter() {
+            for entry in section.entries.into_iter() {
+                let name = format!("{}/{}", section.header, entry.key);
+                let id = String_Id::from(name.as_str());
+                match entry.value {
+                    Cfg_Value::Bool(v) => {
+                        bool_vars.insert(id, Rc::new(RefCell::new(v)));
+                    }
+                    Cfg_Value::Int(v) => {
+                        int_vars.insert(id, Rc::new(RefCell::new(v)));
+                    }
+                    Cfg_Value::Float(v) => {
+                        float_vars.insert(id, Rc::new(RefCell::new(v)));
+                    }
+                    Cfg_Value::String(v) => {
+                        string_vars.insert(id, Rc::new(RefCell::new(v)));
+                    }
+                    _ => (),
+                }
             }
-        } else {
-            eprintln!("Cfg var not found: {}", path);
-            None
+        }
+
+        Config {
+            bool_vars,
+            int_vars,
+            float_vars,
+            string_vars,
+            change_interface: Arc::new(Mutex::new(Config_Change_Interface::new())),
         }
     }
 
-    pub fn get_var_or<T: Cfg_Var_Type, D>(&self, path: &str, default: D) -> Cfg_Var<T::Type>
-    where
-        T::Type: From<D>,
-    {
-        if let Some(var) = self.get_var::<T>(path) {
+    fn get_change_interface(&self) -> Arc<Mutex<Config_Change_Interface>> {
+        self.change_interface.clone()
+    }
+
+    pub fn get_var_bool(&self, path: &str) -> Option<Cfg_Var<bool>> {
+        let id = String_Id::from(path);
+        self.bool_vars.get(&id).map(|v| Cfg_Var::new(&v))
+    }
+
+    pub fn get_var_int(&self, path: &str) -> Option<Cfg_Var<i32>> {
+        let id = String_Id::from(path);
+        self.int_vars.get(&id).map(|v| Cfg_Var::new(&v))
+    }
+
+    pub fn get_var_float(&self, path: &str) -> Option<Cfg_Var<f32>> {
+        let id = String_Id::from(path);
+        self.float_vars.get(&id).map(|v| Cfg_Var::new(&v))
+    }
+
+    pub fn get_var_string(&self, path: &str) -> Option<Cfg_Var<String>> {
+        let id = String_Id::from(path);
+        self.string_vars.get(&id).map(|v| Cfg_Var::new(&v))
+    }
+
+    pub fn get_var_bool_or(&self, path: &str, default: bool) -> Cfg_Var<bool> {
+        let var = self.get_var_bool(path);
+        if let Some(var) = var {
             var
         } else {
-            Cfg_Var::new(default.into())
+            Cfg_Var::new_from_val(default)
+        }
+    }
+
+    pub fn get_var_int_or(&self, path: &str, default: i32) -> Cfg_Var<i32> {
+        let var = self.get_var_int(path);
+        if let Some(var) = var {
+            var
+        } else {
+            Cfg_Var::new_from_val(default)
+        }
+    }
+
+    pub fn get_var_float_or(&self, path: &str, default: f32) -> Cfg_Var<f32> {
+        let var = self.get_var_float(path);
+        if let Some(var) = var {
+            var
+        } else {
+            Cfg_Var::new_from_val(default)
+        }
+    }
+
+    pub fn get_var_string_or(&self, path: &str, default: &str) -> Cfg_Var<String> {
+        let var = self.get_var_string(path);
+        if let Some(var) = var {
+            var
+        } else {
+            Cfg_Var::new_from_val(String::from(default))
+        }
+    }
+
+    pub fn update(&mut self) {
+        let change_interface = self.change_interface.try_lock();
+        if change_interface.is_ok() {
+            let pending_changes = change_interface.unwrap().update();
+            for change in pending_changes.into_iter() {
+                self.change_entry_value(&change.key, change.value);
+            }
+        }
+    }
+
+    fn change_entry_value(&mut self, var_path: &str, value: Cfg_Value) {
+        let id = String_Id::from(var_path);
+        match value {
+            Cfg_Value::Bool(v) => {
+                if let Some(var) = self.bool_vars.get_mut(&id) {
+                    var.replace(v);
+                    eprintln!("Changed {} to {}", var_path, var.borrow());
+                } else {
+                    eprintln!(
+                        "Notice: tried to update value for inexisting cfg var {}",
+                        var_path
+                    );
+                }
+            }
+            Cfg_Value::Int(v) => {
+                if let Some(var) = self.int_vars.get_mut(&id) {
+                    var.replace(v);
+                } else {
+                    eprintln!(
+                        "Notice: tried to update value for inexisting cfg var {}",
+                        var_path
+                    );
+                }
+            }
+            Cfg_Value::Float(v) => {
+                if let Some(var) = self.float_vars.get_mut(&id) {
+                    var.replace(v);
+                } else {
+                    eprintln!(
+                        "Notice: tried to update value for inexisting cfg var {}",
+                        var_path
+                    );
+                }
+            }
+            Cfg_Value::String(v) => {
+                if let Some(var) = self.string_vars.get_mut(&id) {
+                    var.replace(v);
+                } else {
+                    eprintln!(
+                        "Notice: tried to update value for inexisting cfg var {}",
+                        var_path
+                    );
+                }
+            }
+            _ => (),
         }
     }
 }

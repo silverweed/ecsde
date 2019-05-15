@@ -110,7 +110,7 @@ impl UI_System {
         let n_expired = self
             .fadeout_texts
             .iter_mut()
-            .map(|mut t| {
+            .map(|t| {
                 t.time += *dt;
                 &t.time
             })

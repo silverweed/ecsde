@@ -1,10 +1,17 @@
+use std::convert::From;
+
 #[derive(PartialEq, Hash, Copy, Clone, Debug)]
 pub struct String_Id(u32);
 
 impl Eq for String_Id {}
 
-impl std::convert::From<&str> for String_Id {
-    fn from(s: &str) -> String_Id {
+impl<'a, T> From<T> for String_Id
+where
+    &'a str: From<T>,
+    T: 'a,
+{
+    fn from(s: T) -> String_Id {
+        let s: &str = s.into();
         String_Id(fnv1a(s.as_bytes()))
     }
 }

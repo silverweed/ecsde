@@ -8,6 +8,7 @@ pub struct Env_Info {
     working_dir: Box<Path>,
     assets_root: Box<Path>,
     cfg_root: Box<Path>,
+    #[allow(dead_code)]
     test_paths: Test_Paths,
 }
 
@@ -80,6 +81,7 @@ struct Test_Paths {
 }
 
 #[cfg(not(test))]
+#[allow(dead_code)]
 struct Test_Paths {}
 
 impl Test_Paths {
@@ -91,6 +93,7 @@ impl Test_Paths {
     }
 
     #[cfg(not(test))]
+    #[allow(dead_code)]
     pub fn new(_cfg_root: Option<Box<Path>>) -> Test_Paths {
         Test_Paths {}
     }

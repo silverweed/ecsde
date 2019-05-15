@@ -94,9 +94,7 @@ impl Gameplay_System {
         }
         {
             let mut ctrl = em.add_component::<C_Controllable>(plant);
-            ctrl.speed = cfg
-                .get_var_or::<f32, _>("gameplay/player_speed", 300.0)
-                .into();
+            ctrl.speed = cfg.get_var_float_or("gameplay/player_speed", 300.0);
         }
     }
 }
