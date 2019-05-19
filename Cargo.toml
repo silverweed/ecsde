@@ -4,6 +4,10 @@ name = "ecs"
 version = "0.1.0"
 authors = ["silverweed <silverweed1991@gmail.com>"]
 
+[features]
+# TODO use actual dependencies here
+gfx_sdl = []
+
 [dependencies]
 anymap = "0.12.1"
 typename = "0.1.1"
