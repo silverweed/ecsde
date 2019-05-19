@@ -41,8 +41,7 @@ impl Time {
                 .duration_since(self.prev_real_time)
                 .unwrap_or(Duration::from_secs(0));
 
-            // @Cleanup: use `as_micros()` when the feature becomes stable
-            self.game_time += (to_secs_frac(&real_delta) * self.time_scale * 1_000_000.0) as Time_t;
+            self.game_time += real_delta.as_micros() as Time_t;
         }
     }
 
