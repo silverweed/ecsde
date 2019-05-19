@@ -35,8 +35,8 @@ fn main() -> core::common::Maybe_Error {
         sound_loader: audio::sound_loader::Sound_Loader {},
     };
 
-    let mut app = core::app::App::new(&cfg, event_pump, &mut window, &resource_loaders);
+    let mut app = core::app::App::new(&cfg, event_pump, &resource_loaders);
 
     app.init()?;
-    app.run()
+    app.run(&mut window)
 }

@@ -49,11 +49,7 @@ impl Config {
 pub struct App<'r> {
     event_pump: sdl2::EventPump,
 
-    window_target_size: common::vector::Vec2u,
-    window: &'r mut gfx::window::Window_Handle,
-
     time: time::Time,
-    update_time: Duration,
 
     should_close: bool,
 
@@ -78,12 +74,7 @@ pub struct Resource_Loaders {
 }
 
 impl<'r> App<'r> {
-    pub fn new(
-        cfg: &Config,
-        event_pump: sdl2::EventPump,
-        window: &'r mut gfx::window::Window_Handle,
-        loaders: &'r Resource_Loaders,
-    ) -> Self {
+    pub fn new(cfg: &Config, event_pump: sdl2::EventPump, loaders: &'r Resource_Loaders) -> Self {
         let resources = resources::Resources::new(
             &loaders.texture_creator,
             &loaders.ttf_context,
@@ -95,10 +86,7 @@ impl<'r> App<'r> {
 
         App {
             event_pump,
-            window_target_size: Vec2u::new(cfg.target_win_size.0, cfg.target_win_size.1),
-            window,
             time: time::Time::new(),
-            update_time: Duration::from_millis(10),
             should_close: false,
             env,
             resources,
@@ -124,7 +112,7 @@ impl<'r> App<'r> {
         Ok(())
     }
 
-    pub fn run(&mut self) -> Maybe_Error {
+    pub fn run(&mut self, window: &mut gfx::window::Window_Handle) -> Maybe_Error {
         let mut fps_debug = debug::fps::Fps_Console_Printer::new(&Duration::from_secs(3));
 
         let mut execution_time = Duration::new(0, 0);
@@ -134,7 +122,11 @@ impl<'r> App<'r> {
 
             let dt = self.time.dt();
             let real_dt = self.time.real_dt();
-            let update_time = self.update_time;
+            let update_time = Duration::from_millis(
+                *self
+                    .config
+                    .get_var_int_or("engine/gameplay_update_tick_ms", 10) as u64,
+            );
 
             execution_time += dt;
 
@@ -143,16 +135,16 @@ impl<'r> App<'r> {
             self.input_system.update(&mut self.event_pump);
 
             // Update game systems
-            while execution_time > self.update_time {
+            while execution_time > update_time {
                 self.update_game_systems(update_time)?;
-                execution_time -= self.update_time;
+                execution_time -= update_time;
             }
 
             // Update audio
             self.audio_system.update();
 
             // Render
-            self.update_graphics(real_dt)?;
+            self.update_graphics(window, real_dt)?;
 
             self.config.update();
             fps_debug.tick(&self.time);
@@ -188,17 +180,20 @@ impl<'r> App<'r> {
         Ok(())
     }
 
-    fn update_graphics(&mut self, real_dt: Duration) -> Maybe_Error {
-        gfx::window::set_clear_color(self.window, Color::RGB(0, 0, 0));
-        gfx::window::clear(self.window);
+    fn update_graphics(
+        &mut self,
+        window: &mut gfx::window::Window_Handle,
+        real_dt: Duration,
+    ) -> Maybe_Error {
+        gfx::window::set_clear_color(window, Color::RGB(0, 0, 0));
+        gfx::window::clear(window);
         self.render_system.update(
-            &mut self.window,
+            window,
             &self.resources,
             &self.gameplay_system.get_renderable_entities(),
         );
-        self.ui_system
-            .update(&real_dt, &mut self.window, &mut self.resources);
-        gfx::window::display(self.window);
+        self.ui_system.update(&real_dt, window, &mut self.resources);
+        gfx::window::display(window);
 
         Ok(())
     }
@@ -240,9 +235,9 @@ impl<'r> App<'r> {
                             .unwrap();
                     }
                     Action::Step_Simulation => {
-                        let target_fps = 60; //self.config.get_var_or::<i32, _>("engine/fps", 60);
+                        let target_fps = self.config.get_var_int_or("engine/fps", 60);
                         let step_delta = Duration::from_nanos(
-                            u64::try_from(1_000_000_000 / i32::from(target_fps)).unwrap(),
+                            u64::try_from(1_000_000_000 / *target_fps).unwrap(),
                         );
                         ui_req_tx
                             .send(UI_Request::Add_Fadeout_Text(format!(

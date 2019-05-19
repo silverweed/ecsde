@@ -119,6 +119,10 @@ impl Config {
         if let Some(var) = var {
             var
         } else {
+            eprintln!(
+                "Notice: could not find cfg_var {}: using default {}",
+                path, default
+            );
             Cfg_Var::new_from_val(default)
         }
     }
@@ -128,6 +132,10 @@ impl Config {
         if let Some(var) = var {
             var
         } else {
+            eprintln!(
+                "Notice: could not find cfg_var {}: using default {}",
+                path, default
+            );
             Cfg_Var::new_from_val(default)
         }
     }
@@ -137,6 +145,10 @@ impl Config {
         if let Some(var) = var {
             var
         } else {
+            eprintln!(
+                "Notice: could not find cfg_var {}: using default {}",
+                path, default
+            );
             Cfg_Var::new_from_val(default)
         }
     }
@@ -146,6 +158,10 @@ impl Config {
         if let Some(var) = var {
             var
         } else {
+            eprintln!(
+                "Notice: could not find cfg_var {}: using default {}",
+                path, default
+            );
             Cfg_Var::new_from_val(String::from(default))
         }
     }
@@ -166,7 +182,6 @@ impl Config {
             Cfg_Value::Bool(v) => {
                 if let Some(var) = self.bool_vars.get_mut(&id) {
                     var.replace(v);
-                    eprintln!("Changed {} to {}", var_path, var.borrow());
                 } else {
                     eprintln!(
                         "Notice: tried to update value for inexisting cfg var {}",
