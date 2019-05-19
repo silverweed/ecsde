@@ -12,6 +12,7 @@ use crate::gfx;
 use crate::resources;
 use sdl2::pixels::Color;
 use std::convert::TryFrom;
+use std::time::Duration;
 
 pub struct Config {
     pub title: String,
@@ -56,6 +57,7 @@ pub struct App<'r> {
     canvas: &'r mut sdl2::render::WindowCanvas,
 
     time: time::Time,
+    update_time: Duration,
 
     should_close: bool,
 
@@ -102,6 +104,7 @@ impl<'r> App<'r> {
             window_target_size: Vec2u::new(cfg.target_win_size.0, cfg.target_win_size.1),
             canvas,
             time: time::Time::new(),
+            update_time: Duration::from_millis(10),
             should_close: false,
             env,
             resources,
@@ -129,11 +132,46 @@ impl<'r> App<'r> {
 
     pub fn run(&mut self) -> Maybe_Error {
         let mut fps_debug =
-            debug::fps::Fps_Console_Printer::new(&std::time::Duration::from_secs(3));
+            debug::fps::Fps_Console_Printer::new(&Duration::from_secs(3));
 
+        let mut execution_time = Duration::new(0, 0);
         while !self.should_close {
+            
+            // Update time
             self.time.update();
-            self.update_all_systems()?;
+            
+            let dt = self.time.dt();
+            let real_dt = self.time.real_dt();
+            let update_time = self.update_time;
+
+            execution_time += dt;
+
+            // Update input
+            self.handle_actions()?;
+            self.input_system.update(&mut self.sdl.event_pump);
+
+            // Update game systems
+            while execution_time > self.update_time {
+                self.update_game_systems(update_time)?;
+                execution_time -= self.update_time;
+            }
+
+            // Update audio
+            self.audio_system.update();
+
+            // Render
+            self.canvas.set_draw_color(Color::RGB(0, 0, 0));
+            self.canvas.clear();
+            self.render_system.update(
+                &mut self.canvas,
+                &self.resources,
+                &self.gameplay_system.get_renderable_entities(),
+            );
+            self.ui_system
+                .update(&self.time.real_dt(), &mut self.canvas, &mut self.resources);
+            self.canvas.present();
+
+            self.config.update();
             fps_debug.tick(&self.time);
         }
 
@@ -159,31 +197,10 @@ impl<'r> App<'r> {
         Ok(())
     }
 
-    fn update_all_systems(&mut self) -> Maybe_Error {
-        self.handle_actions()?;
-
-        let dt = self.time.dt();
-        let real_dt = self.time.real_dt();
-
-        self.input_system.update(&mut self.sdl.event_pump);
+    fn update_game_systems(&mut self, dt: Duration) -> Maybe_Error {
         let actions = self.input_system.get_actions();
 
-        self.canvas.set_draw_color(Color::RGB(0, 0, 0));
-        self.canvas.clear();
-
         self.gameplay_system.update(&dt, actions);
-        self.render_system.update(
-            &mut self.canvas,
-            &self.resources,
-            &self.gameplay_system.get_renderable_entities(),
-        );
-        self.ui_system
-            .update(&real_dt, &mut self.canvas, &mut self.resources);
-        self.audio_system.update();
-
-        self.canvas.present();
-
-        self.config.update();
 
         Ok(())
     }
@@ -191,7 +208,6 @@ impl<'r> App<'r> {
     fn handle_actions(&mut self) -> Maybe_Error {
         use gfx::ui::UI_Request;
         use input::Action;
-        use std::time::Duration;
 
         let actions = self.input_system.get_actions();
         let ui_req_tx = self.ui_req_tx.as_ref().unwrap();

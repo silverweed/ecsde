@@ -6,6 +6,7 @@ type Time_t = u64;
 pub struct Time {
     game_time: Time_t, // in microseconds
     prev_game_time: Time_t,
+    start_time: SystemTime,
     real_time: SystemTime,
     prev_real_time: SystemTime,
     time_scale: f32,
@@ -16,11 +17,13 @@ impl Time {
     const MAX_FRAME_TIME: Time_t = 1_000_000 / 30;
 
     pub fn new() -> Time {
+        let now = SystemTime::now();
         Time {
             game_time: 0,
             prev_game_time: 0,
-            real_time: SystemTime::now(),
-            prev_real_time: SystemTime::now(),
+            start_time: now,
+            real_time: now,
+            prev_real_time: now,
             time_scale: 1.0,
             paused: false,
         }
@@ -84,6 +87,14 @@ impl Time {
 
     pub fn set_paused(&mut self, p: bool) {
         self.paused = p;
+    }
+
+    pub fn get_real_time(&self) -> f32 {
+        to_secs_frac(&self.real_time.duration_since(self.start_time).unwrap())
+    }
+
+    pub fn get_game_time(&self) -> f32 {
+        (self.game_time as f32) * 0.00_000_1
     }
 }
 
