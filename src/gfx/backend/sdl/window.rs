@@ -1,6 +1,6 @@
+use crate::core::common::colors::Color;
 use sdl2::rect::Rect;
 use sdl2::render::WindowCanvas;
-use crate::core::common::colors::Color;
 
 pub type Create_Render_Window_Args = sdl2::VideoSubsystem;
 pub type Window_Handle = WindowCanvas;

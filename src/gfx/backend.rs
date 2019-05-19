@@ -1,4 +1,4 @@
-pub mod sdl;
+mod sdl;
 
 use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
@@ -32,11 +32,10 @@ pub fn render_sprite(
     window: &mut Window_Handle,
     sprite: &Sprite<'_>,
     transform: &C_Transform2D,
-    camera: &C_Transform2D) 
-{
+    camera: &C_Transform2D,
+) {
     sdl::render::render_sprite(window, sprite, transform, camera);
 }
-
 
 pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: Rect) {
     sdl::render::render_texture(window, texture, rect);

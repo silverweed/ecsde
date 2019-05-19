@@ -1,20 +1,20 @@
 use crate::core::common::transform::C_Transform2D;
 use crate::core::common::vector::Vec2f;
-use crate::resources::{Resources, Texture_Handle};
 use crate::gfx::render::Sprite;
-use sdl2::render::WindowCanvas;
-use sdl2::rect::Rect;
+use crate::resources::{Resources, Texture_Handle};
 use cgmath::Deg;
+use sdl2::rect::Rect;
+use sdl2::render::WindowCanvas;
 
 pub type Blend_Mode = sdl2::render::BlendMode;
 pub type Texture<'a> = sdl2::render::Texture<'a>;
 
 pub fn render_sprite(
-    window: &mut WindowCanvas, 
+    window: &mut WindowCanvas,
     sprite: &Sprite<'_>,
     transform: &C_Transform2D,
-    camera: &C_Transform2D)
-{
+    camera: &C_Transform2D,
+) {
     let src_rect = sprite.rect;
 
     let pos = transform.position();
@@ -34,7 +34,7 @@ pub fn render_sprite(
         (pos.y - cam_y) as i32,
         (scale.x * (src_rect.width() as f32)) as u32,
         (scale.y * (src_rect.height() as f32)) as u32,
-        );
+    );
 
     if let Err(msg) = window.copy_ex(
         sprite.texture,
@@ -44,7 +44,7 @@ pub fn render_sprite(
         None,
         false,
         false,
-        ) {
+    ) {
         eprintln!("Error copying texture to window: {}", msg);
     }
 }

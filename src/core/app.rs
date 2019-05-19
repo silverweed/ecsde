@@ -125,15 +125,13 @@ impl<'r> App<'r> {
     }
 
     pub fn run(&mut self) -> Maybe_Error {
-        let mut fps_debug =
-            debug::fps::Fps_Console_Printer::new(&Duration::from_secs(3));
+        let mut fps_debug = debug::fps::Fps_Console_Printer::new(&Duration::from_secs(3));
 
         let mut execution_time = Duration::new(0, 0);
         while !self.should_close {
-            
             // Update time
             self.time.update();
-            
+
             let dt = self.time.dt();
             let real_dt = self.time.real_dt();
             let update_time = self.update_time;
@@ -173,9 +171,10 @@ impl<'r> App<'r> {
     }
 
     fn init_all_systems(&mut self) -> Maybe_Error {
-        self.render_system.init(gfx::render_system::Render_System_Config {
-            clear_color: Color::RGB(48, 10, 36),
-        })?;
+        self.render_system
+            .init(gfx::render_system::Render_System_Config {
+                clear_color: Color::RGB(48, 10, 36),
+            })?;
         self.gameplay_system
             .init(&self.env, &mut self.resources, &self.config)?;
         self.ui_system.init(&self.env, &mut self.resources)?;
