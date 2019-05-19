@@ -152,16 +152,7 @@ impl<'r> App<'r> {
             self.audio_system.update();
 
             // Render
-            self.window.set_draw_color(Color::RGB(0, 0, 0));
-            self.window.clear();
-            self.render_system.update(
-                &mut self.window,
-                &self.resources,
-                &self.gameplay_system.get_renderable_entities(),
-            );
-            self.ui_system
-                .update(&self.time.real_dt(), &mut self.window, &mut self.resources);
-            self.window.present();
+            self.update_graphics()?;
 
             self.config.update();
             fps_debug.tick(&self.time);
@@ -192,8 +183,22 @@ impl<'r> App<'r> {
 
     fn update_game_systems(&mut self, dt: Duration) -> Maybe_Error {
         let actions = self.input_system.get_actions();
-
         self.gameplay_system.update(&dt, actions);
+
+        Ok(())
+    }
+
+    fn update_graphics(&mut self) -> Maybe_Error {
+        gfx::window::set_clear_color(self.window, Color::RGB(0, 0, 0));
+        gfx::window::clear(self.window);
+        self.render_system.update(
+            &mut self.window,
+            &self.resources,
+            &self.gameplay_system.get_renderable_entities(),
+        );
+        self.ui_system
+            .update(&self.time.real_dt(), &mut self.window, &mut self.resources);
+        gfx::window::display(self.window);
 
         Ok(())
     }

@@ -28,6 +28,10 @@ pub fn clear(window: &mut Window_Handle) {
     sdl::window::clear(window);
 }
 
+pub fn display(window: &mut Window_Handle) {
+    sdl::window::display(window);
+}
+
 pub fn render_sprite(
     window: &mut Window_Handle,
     sprite: &Sprite<'_>,

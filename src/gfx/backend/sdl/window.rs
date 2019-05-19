@@ -36,3 +36,7 @@ pub fn clear(window: &mut WindowCanvas) {
     let (out_x, out_y) = window.output_size().unwrap();
     window.fill_rect(Rect::new(0, 0, out_x, out_y)).unwrap();
 }
+
+pub fn display(window: &mut WindowCanvas) {
+    window.present();
+}

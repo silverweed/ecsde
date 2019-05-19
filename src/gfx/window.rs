@@ -19,3 +19,7 @@ pub fn set_clear_color(window: &mut Window_Handle, color: Color) {
 pub fn clear(window: &mut Window_Handle) {
     backend::clear(window);
 }
+
+pub fn display(window: &mut Window_Handle) {
+    backend::display(window);
+}
