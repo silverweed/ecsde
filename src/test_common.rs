@@ -10,7 +10,7 @@ pub fn create_resource_loaders() -> (Resource_Loaders, sdl2::Sdl, sdl2::VideoSub
     let sdl_video = sdl.video().unwrap();
     (
         Resource_Loaders {
-            texture_creator: window::create_render_canvas(&sdl_video, (0, 0), "").texture_creator(),
+            texture_creator: window::create_render_window(&sdl_video, (0, 0), "").texture_creator(),
             ttf_context: sdl2::ttf::init().unwrap(),
             sound_loader: Sound_Loader {},
         },
