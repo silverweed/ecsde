@@ -152,7 +152,7 @@ impl<'r> App<'r> {
             self.audio_system.update();
 
             // Render
-            self.update_graphics()?;
+            self.update_graphics(real_dt)?;
 
             self.config.update();
             fps_debug.tick(&self.time);
@@ -188,7 +188,7 @@ impl<'r> App<'r> {
         Ok(())
     }
 
-    fn update_graphics(&mut self) -> Maybe_Error {
+    fn update_graphics(&mut self, real_dt: Duration) -> Maybe_Error {
         gfx::window::set_clear_color(self.window, Color::RGB(0, 0, 0));
         gfx::window::clear(self.window);
         self.render_system.update(
@@ -197,7 +197,7 @@ impl<'r> App<'r> {
             &self.gameplay_system.get_renderable_entities(),
         );
         self.ui_system
-            .update(&self.time.real_dt(), &mut self.window, &mut self.resources);
+            .update(&real_dt, &mut self.window, &mut self.resources);
         gfx::window::display(self.window);
 
         Ok(())
