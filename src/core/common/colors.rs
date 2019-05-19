@@ -1,4 +1,4 @@
-use sdl2::pixels::Color;
+pub type Color = sdl2::pixels::Color;
 
 pub fn color_to_hex(c: Color) -> u32 {
     let mut h = 0u32;

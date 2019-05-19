@@ -1,24 +1,21 @@
-use sdl2::render::WindowCanvas;
+use super::backend;
+use crate::core::common::colors::Color;
 
-pub fn create_render_canvas(
-    video_subsystem: &sdl2::VideoSubsystem,
+pub type Window_Handle = backend::Window_Handle;
+pub type Create_Render_Window_Args = backend::Create_Render_Window_Args;
+
+pub fn create_render_window(
+    args: &Create_Render_Window_Args,
     target_size: (u32, u32),
     title: &str,
-) -> WindowCanvas {
-    let window = video_subsystem
-        .window(title, target_size.0, target_size.1)
-        .resizable()
-        .build()
-        .unwrap();
+) -> Window_Handle {
+    backend::create_render_window(args, target_size, title)
+}
 
-    let mut canvas = window
-        .into_canvas()
-        .accelerated()
-        .present_vsync()
-        .build()
-        .unwrap();
-    canvas
-        .set_logical_size(target_size.0, target_size.1)
-        .unwrap();
-    canvas
+pub fn set_clear_color(window: &mut Window_Handle, color: Color) {
+    backend::set_clear_color(window, color);
+}
+
+pub fn clear(window: &mut Window_Handle) {
+    backend::clear(window);
 }

@@ -11,7 +11,7 @@ pub trait File_Watcher_Event_Handler: Sync + Send {
     fn handle(&mut self, evt: &DebouncedEvent);
 }
 
-pub fn file_watcher_create(
+pub fn start_file_watch(
     path: PathBuf,
     event_handlers: Vec<Box<dyn File_Watcher_Event_Handler>>,
 ) -> Result<thread::JoinHandle<()>, std::io::Error> {

@@ -1,9 +1,9 @@
 use super::loaders::Resource_Loader;
 use crate::audio::sound_loader::Sound_Loader;
 use crate::core::common;
+use crate::core::common::colors::Color;
 use crate::core::common::stringid::String_Id;
 use ears::SoundData;
-use sdl2::pixels::Color;
 use sdl2::render::Texture;
 use sdl2::ttf::{Font, Sdl2TtfContext};
 use std::cell::RefCell;

@@ -1,10 +1,11 @@
 use crate::core;
 use crate::core::common::Maybe_Error;
+use crate::core::common::colors::Color;
+use crate::core::common::rect::Rect;
 use crate::core::env::Env_Info;
+use crate::gfx;
+use crate::gfx::window::Window_Handle;
 use crate::resources::{self, Font_Handle, Resources, Texture_Handle};
-use sdl2::pixels::Color;
-use sdl2::rect::Rect;
-use sdl2::render::{TextureQuery, WindowCanvas};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -87,10 +88,10 @@ impl UI_System {
         Ok(())
     }
 
-    pub fn update(&mut self, dt: &Duration, canvas: &mut WindowCanvas, rsrc: &mut Resources) {
+    pub fn update(&mut self, dt: &Duration, window: &mut Window_Handle, rsrc: &mut Resources) {
         self.handle_ui_requests(rsrc);
         self.update_fadeout_texts(dt);
-        self.draw_fadeout_texts(canvas, rsrc);
+        self.draw_fadeout_texts(window, rsrc);
     }
 
     pub fn new_request_sender(&self) -> Sender<UI_Request> {
@@ -119,14 +120,15 @@ impl UI_System {
         self.fadeout_texts.drain(0..n_expired);
     }
 
-    fn draw_fadeout_texts(&mut self, canvas: &mut WindowCanvas, rsrc: &mut Resources) {
+    fn draw_fadeout_texts(&mut self, window: &mut Window_Handle, rsrc: &mut Resources) {
         let fadeout_time = self.fadeout_time;
-        let blend_mode = canvas.blend_mode();
-        canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
+        let blend_mode = gfx::render::get_blend_mode(window);
+        // @Incomplete use our own Blend_Mode enum
+        gfx::render::set_blend_mode(window, sdl2::render::BlendMode::Blend);
 
         for (i, text) in self.fadeout_texts.iter().enumerate() {
             let texture = rsrc.get_texture_mut(text.texture);
-            let TextureQuery { width, height, .. } = texture.query();
+            let (width, height) = gfx::render::get_texture_size(texture);
 
             let d = core::time::duration_ratio(&text.time, &fadeout_time);
             let alpha = 255 - (d * d * 255.0f32) as u8;
@@ -138,12 +140,11 @@ impl UI_System {
                 width,
                 height,
             );
-            if let Err(msg) = canvas.copy(&texture, None, rect) {
-                eprintln!("Error copying texture to window: {}", msg);
-            }
+            
+            gfx::render::render_texture(window, texture, rect);
         }
 
-        canvas.set_blend_mode(blend_mode);
+        gfx::render::set_blend_mode(window, blend_mode);
     }
 
     pub fn add_fadeout_text(&mut self, resources: &mut Resources, txt: &str) {

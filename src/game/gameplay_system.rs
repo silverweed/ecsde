@@ -1,6 +1,7 @@
 use super::controllable_system::C_Controllable;
 use crate::cfg;
 use crate::core::common;
+use crate::core::common::rect::Rect;
 use crate::core::common::transform::C_Transform2D;
 use crate::core::env::Env_Info;
 use crate::core::input;
@@ -9,7 +10,6 @@ use crate::ecs::entity_manager::{Entity, Entity_Manager};
 use crate::game;
 use crate::gfx;
 use crate::resources::{tex_path, Resources};
-use sdl2::rect::Rect;
 use std::cell::Ref;
 use std::time::Duration;
 

@@ -4,9 +4,9 @@ pub mod loaders;
 use self::cache::{Font_Manager, Sound_Manager, Texture_Manager};
 use self::loaders::Font_Load_Info;
 use crate::audio::sound_loader::Sound_Loader;
+use crate::core::common::colors::Color;
 use crate::core::common::stringid::String_Id;
 use crate::core::env::Env_Info;
-use sdl2::pixels::Color;
 use sdl2::render::Texture;
 use sdl2::ttf::{Font, Sdl2TtfContext};
 use std::path::PathBuf;
@@ -15,7 +15,7 @@ pub type Texture_Handle = Option<String_Id>;
 pub type Sound_Handle = Option<String_Id>;
 pub type Font_Handle = Option<String_Id>;
 pub type Sound_Buffer = cache::Sound_Buffer;
-type Texture_Creator = cache::Texture_Creator;
+pub type Texture_Creator = cache::Texture_Creator;
 
 pub struct Resources<'l> {
     textures: Texture_Manager<'l>,

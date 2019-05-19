@@ -1,6 +1,6 @@
 use super::parsing::Cfg_Value;
 use std::cell::RefCell;
-use std::ops::{Add, Deref, Div, Mul, Sub};
+use std::ops::Deref;
 use std::rc::Rc;
 use typename::TypeName;
 

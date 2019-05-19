@@ -1,3 +1,4 @@
+use super::common::colors::Color;
 use super::common::vector::Vec2u;
 use super::common::{self, Maybe_Error};
 use super::debug;
@@ -10,7 +11,6 @@ use crate::fs;
 use crate::game::gameplay_system;
 use crate::gfx;
 use crate::resources;
-use sdl2::pixels::Color;
 use std::convert::TryFrom;
 use std::time::Duration;
 
@@ -46,15 +46,11 @@ impl Config {
     }
 }
 
-struct Sdl {
-    event_pump: sdl2::EventPump,
-}
-
 pub struct App<'r> {
-    sdl: Sdl,
+    event_pump: sdl2::EventPump,
 
     window_target_size: common::vector::Vec2u,
-    canvas: &'r mut sdl2::render::WindowCanvas,
+    window: &'r mut gfx::window::Window_Handle,
 
     time: time::Time,
     update_time: Duration,
@@ -69,14 +65,14 @@ pub struct App<'r> {
 
     // Engine Systems
     input_system: input::Input_System,
-    render_system: gfx::render::Render_System,
+    render_system: gfx::render_system::Render_System,
     ui_system: gfx::ui::UI_System,
     audio_system: audio::system::Audio_System,
     gameplay_system: gameplay_system::Gameplay_System,
 }
 
 pub struct Resource_Loaders {
-    pub texture_creator: sdl2::render::TextureCreator<sdl2::video::WindowContext>,
+    pub texture_creator: resources::Texture_Creator,
     pub ttf_context: sdl2::ttf::Sdl2TtfContext,
     pub sound_loader: audio::sound_loader::Sound_Loader,
 }
@@ -84,12 +80,10 @@ pub struct Resource_Loaders {
 impl<'r> App<'r> {
     pub fn new(
         cfg: &Config,
-        sdl: &sdl2::Sdl,
-        canvas: &'r mut sdl2::render::WindowCanvas,
+        event_pump: sdl2::EventPump,
+        window: &'r mut gfx::window::Window_Handle,
         loaders: &'r Resource_Loaders,
     ) -> Self {
-        let event_pump = sdl.event_pump().unwrap();
-        let sdl = Sdl { event_pump };
         let resources = resources::Resources::new(
             &loaders.texture_creator,
             &loaders.ttf_context,
@@ -100,9 +94,9 @@ impl<'r> App<'r> {
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
 
         App {
-            sdl,
+            event_pump,
             window_target_size: Vec2u::new(cfg.target_win_size.0, cfg.target_win_size.1),
-            canvas,
+            window,
             time: time::Time::new(),
             update_time: Duration::from_millis(10),
             should_close: false,
@@ -111,7 +105,7 @@ impl<'r> App<'r> {
             config,
             ui_req_tx: None,
             input_system: input::Input_System::new(),
-            render_system: gfx::render::Render_System::new(),
+            render_system: gfx::render_system::Render_System::new(),
             ui_system: gfx::ui::UI_System::new(),
             audio_system: audio::system::Audio_System::new(10),
             gameplay_system: gameplay_system::Gameplay_System::new(),
@@ -148,7 +142,7 @@ impl<'r> App<'r> {
 
             // Update input
             self.handle_actions()?;
-            self.input_system.update(&mut self.sdl.event_pump);
+            self.input_system.update(&mut self.event_pump);
 
             // Update game systems
             while execution_time > self.update_time {
@@ -160,16 +154,16 @@ impl<'r> App<'r> {
             self.audio_system.update();
 
             // Render
-            self.canvas.set_draw_color(Color::RGB(0, 0, 0));
-            self.canvas.clear();
+            self.window.set_draw_color(Color::RGB(0, 0, 0));
+            self.window.clear();
             self.render_system.update(
-                &mut self.canvas,
+                &mut self.window,
                 &self.resources,
                 &self.gameplay_system.get_renderable_entities(),
             );
             self.ui_system
-                .update(&self.time.real_dt(), &mut self.canvas, &mut self.resources);
-            self.canvas.present();
+                .update(&self.time.real_dt(), &mut self.window, &mut self.resources);
+            self.window.present();
 
             self.config.update();
             fps_debug.tick(&self.time);
@@ -179,7 +173,7 @@ impl<'r> App<'r> {
     }
 
     fn init_all_systems(&mut self) -> Maybe_Error {
-        self.render_system.init(gfx::render::Render_System_Config {
+        self.render_system.init(gfx::render_system::Render_System_Config {
             clear_color: Color::RGB(48, 10, 36),
         })?;
         self.gameplay_system
@@ -189,7 +183,7 @@ impl<'r> App<'r> {
         self.ui_req_tx = Some(self.ui_system.new_request_sender());
 
         let config_watcher = Box::new(cfg::sync::Config_Watch_Handler::new(&self.config));
-        fs::file_watcher::file_watcher_create(
+        fs::file_watcher::start_file_watch(
             self.env.get_cfg_root().to_path_buf(),
             vec![config_watcher],
         )?;

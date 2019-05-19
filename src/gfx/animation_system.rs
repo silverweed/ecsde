@@ -27,11 +27,11 @@ pub fn update(dt: &Duration, em: &mut Entity_Manager) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::common::rect::Rect;
     use crate::core::env::Env_Info;
     use crate::gfx;
     use crate::resources::{self, tex_path, Resources};
     use crate::test_common;
-    use sdl2::rect::Rect;
 
     #[test]
     fn animation_system() {

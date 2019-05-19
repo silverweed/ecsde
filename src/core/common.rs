@@ -1,5 +1,6 @@
 pub mod colors;
 pub mod direction;
+pub mod rect;
 pub mod stringid;
 pub mod transform;
 pub mod vector;
