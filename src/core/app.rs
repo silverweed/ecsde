@@ -146,6 +146,9 @@ impl<'r> App<'r> {
             // Render
             self.update_graphics(window, real_dt)?;
 
+            let sleep = *self.config.get_var_int_or("debug/extra_frame_sleep", 0) as u64;
+            std::thread::sleep(Duration::from_millis(sleep));
+
             self.config.update();
             fps_debug.tick(&self.time);
         }

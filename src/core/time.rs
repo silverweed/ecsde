@@ -14,7 +14,7 @@ pub struct Time {
 }
 
 impl Time {
-    const MAX_FRAME_TIME: Time_t = 1_000_000 / 30;
+    const MAX_FRAME_TIME: Time_t = 1_000_000 / 15;
 
     pub fn new() -> Time {
         let now = SystemTime::now();
