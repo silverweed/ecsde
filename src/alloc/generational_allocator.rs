@@ -40,9 +40,7 @@ impl Generational_Allocator {
     }
 
     pub fn live_size(&self) -> usize {
-        self.alive
-            .iter()
-            .fold(0, |acc, &e| if e { acc + 1 } else { acc })
+        self.gens.len() - self.free_slots.len()
     }
 
     pub fn allocate(&mut self) -> Generational_Index {
@@ -211,7 +209,7 @@ mod tests {
     }
 
     #[test]
-    fn reuse_empty_slot() {
+    fn gen_alloc_reuse_empty_slot() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
         let e1 = alloc.allocate();
