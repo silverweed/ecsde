@@ -44,14 +44,18 @@ mod tests {
         let (mut rsrc, env) = test_common::create_test_resources_and_env(&loaders);
         let mut em = Entity_Manager::new();
         em.register_component::<C_Renderable>();
+        em.register_component::<C_Animated_Sprite>();
 
         let e = em.new_entity();
         {
             let mut r = em.add_component::<C_Renderable>(e);
             r.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
             r.rect = Rect::new(0, 0, 96, 96);
-            r.n_frames = 4;
-            r.frame_time = 0.1;
+        }
+        {
+            let mut a = em.add_component::<C_Animated_Sprite>(e);
+            a.n_frames = 4;
+            a.frame_time = 0.1;
         }
 
         let mut dt = Duration::from_millis(16);
