@@ -36,7 +36,7 @@ impl Generational_Allocator {
 
     // Note: this returns the size of internal arrays, not the number of LIVE entities.
     pub fn size(&self) -> usize {
-        self.alive.len()
+        self.gens.len()
     }
 
     pub fn live_size(&self) -> usize {
@@ -45,14 +45,14 @@ impl Generational_Allocator {
 
     pub fn allocate(&mut self) -> Generational_Index {
         let i = self.first_free_slot();
-        if i == self.alive.len() {
+	let cur_size = self.gens.len();
+        if i == cur_size {
             // Grow the vectors
-            let oldsize = self.alive.len();
-            let newsize = self.alive.len() * 2;
-            self.alive.resize(newsize, false);
-            self.gens.resize(newsize, 0);
-            self.free_slots.reserve(newsize);
-            for i in (oldsize + 1..newsize).rev() {
+            let new_size = cur_size * 2;
+            self.alive.resize(new_size, false);
+            self.gens.resize(new_size, 0);
+            self.free_slots.reserve(new_size);
+            for i in (cur_size + 1..new_size).rev() {
                 self.free_slots.push(i);
             }
         }
@@ -70,12 +70,12 @@ impl Generational_Allocator {
     fn first_free_slot(&mut self) -> usize {
         match self.free_slots.pop() {
             Some(slot) => slot,
-            None => self.alive.len(),
+            None => self.gens.len(),
         }
     }
 
     pub fn deallocate(&mut self, idx: Generational_Index) {
-        if idx.index >= self.alive.len() {
+        if idx.index >= self.gens.len() {
             panic!(
                 "Tried to deallocate a Generational_Index whose index is greater than biggest one!"
             );
@@ -96,7 +96,7 @@ impl Generational_Allocator {
     }
 
     pub fn is_valid(&self, idx: Generational_Index) -> bool {
-        (idx.index < self.alive.len()) && (idx.gen == self.gens[idx.index]) && self.alive[idx.index]
+        (idx.index < self.gens.len()) && (idx.gen == self.gens[idx.index]) && self.alive[idx.index]
     }
 }
 
