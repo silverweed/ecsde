@@ -1,25 +1,30 @@
 use crate::core::time;
-use crate::ecs::components::C_Renderable;
+use crate::ecs::components::gfx::{C_Animated_Sprite, C_Renderable};
 use crate::ecs::entity_manager::Entity_Manager;
 use std::time::Duration;
 
 pub fn update(dt: &Duration, em: &mut Entity_Manager) {
     let dt_secs = time::to_secs_frac(&dt);
-    let mut animated_sprites = em.get_components_mut::<C_Renderable>();
+    let mut animated_sprites = em.get_component_tuple_mut::<C_Renderable, C_Animated_Sprite>();
 
-    for sprite in animated_sprites
-        .iter_mut()
-        .filter(|sprite| sprite.frame_time > 0.0 && sprite.n_frames > 1)
-    {
-        sprite.frame_time_elapsed += dt_secs;
+    for (renderable, anim_sprite) in animated_sprites.filter(|(_, sprite)| {
+        let sprite = sprite.borrow();
+        sprite.frame_time > 0.0 && sprite.n_frames > 1
+    }) {
+        anim_sprite.borrow_mut().frame_time_elapsed += dt_secs;
 
-        if sprite.frame_time_elapsed >= sprite.frame_time {
-            sprite.frame_time_elapsed = 0.0;
+        let (frame_time, frame_time_elapsed) = {
+            let sprite = anim_sprite.borrow();
+            (sprite.frame_time, sprite.frame_time_elapsed)
+        };
+        if frame_time_elapsed >= frame_time {
+            anim_sprite.borrow_mut().frame_time_elapsed = 0.0;
 
-            let width = sprite.rect.width();
-            let x = (sprite.rect.x + width as i32) % (width * (sprite.n_frames - 1)) as i32;
+            let rect = renderable.borrow().rect;
+            let width = rect.width();
+            let x = (rect.x + width as i32) % (width * (anim_sprite.borrow().n_frames - 1)) as i32;
 
-            sprite.rect.x = x;
+            renderable.borrow_mut().rect.x = x;
         }
     }
 }

@@ -125,7 +125,8 @@ impl<'r> App<'r> {
             let update_time = Duration::from_millis(
                 *self
                     .config
-                    .get_var_int_or("engine/gameplay_update_tick_ms", 10) as u64,
+                    .get_var_int_or("engine/gameplay/gameplay_update_tick_ms", 10)
+                    as u64,
             );
 
             execution_time += dt;
@@ -144,10 +145,20 @@ impl<'r> App<'r> {
             self.audio_system.update();
 
             // Render
-            self.update_graphics(window, real_dt)?;
+            self.update_graphics(
+                window,
+                real_dt,
+                time::duration_ratio(&execution_time, &update_time) as f32,
+            )?;
 
-            let sleep = *self.config.get_var_int_or("debug/extra_frame_sleep", 0) as u64;
-            std::thread::sleep(Duration::from_millis(sleep));
+            #[cfg(debug_assertions)]
+            {
+                let sleep = *self
+                    .config
+                    .get_var_int_or("engine/debug/extra_frame_sleep_ms", 0)
+                    as u64;
+                std::thread::sleep(Duration::from_millis(sleep));
+            }
 
             self.config.update();
             fps_debug.tick(&self.time);
@@ -187,13 +198,20 @@ impl<'r> App<'r> {
         &mut self,
         window: &mut gfx::window::Window_Handle,
         real_dt: Duration,
+        frame_lag_normalized: f32,
     ) -> Maybe_Error {
+        let smooth_by_extrapolating_velocity = *self
+            .config
+            .get_var_bool_or("engine/rendering/smooth_by_extrapolating_velocity", false);
+
         gfx::window::set_clear_color(window, Color::RGB(0, 0, 0));
         gfx::window::clear(window);
         self.render_system.update(
             window,
             &self.resources,
             &self.gameplay_system.get_renderable_entities(),
+            frame_lag_normalized,
+            smooth_by_extrapolating_velocity,
         );
         self.ui_system.update(&real_dt, window, &mut self.resources);
         gfx::window::display(window);
@@ -238,7 +256,7 @@ impl<'r> App<'r> {
                             .unwrap();
                     }
                     Action::Step_Simulation => {
-                        let target_fps = self.config.get_var_int_or("engine/fps", 60);
+                        let target_fps = self.config.get_var_int_or("engine/rendering/fps", 60);
                         let step_delta = Duration::from_nanos(
                             u64::try_from(1_000_000_000 / *target_fps).unwrap(),
                         );

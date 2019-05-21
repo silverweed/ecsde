@@ -1,6 +1,6 @@
 use super::backend;
-use crate::core::common::transform::C_Transform2D;
 use crate::core::common::rect::Rect;
+use crate::ecs::components::transform::C_Transform2D;
 use crate::gfx;
 use crate::gfx::window::Window_Handle;
 use crate::resources;
@@ -25,8 +25,8 @@ pub fn render_sprite(
     window: &mut Window_Handle,
     sprite: &Sprite<'_>,
     transform: &C_Transform2D,
-    camera: &C_Transform2D)
-{
+    camera: &C_Transform2D,
+) {
     backend::render_sprite(window, sprite, transform, camera);
 }
 

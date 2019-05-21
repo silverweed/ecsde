@@ -1,5 +1,5 @@
-use crate::core::common::transform::C_Transform2D;
 use crate::core::common::vector::Vec2f;
+use crate::ecs::components::transform::C_Transform2D;
 use crate::gfx::render::Sprite;
 use crate::resources::{Resources, Texture_Handle};
 use cgmath::Deg;

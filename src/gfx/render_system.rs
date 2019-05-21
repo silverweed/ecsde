@@ -1,11 +1,11 @@
-use crate::core::common::Maybe_Error;
-use crate::core::common::colors::Color;
-use crate::core::common::transform::C_Transform2D;
-use crate::core::common::vector::Vec2f;
-use crate::core::common::rect::Rect;
 use super::render::Sprite;
+use crate::core::common::colors::Color;
+use crate::core::common::rect::Rect;
+use crate::core::common::vector::Vec2f;
+use crate::core::common::Maybe_Error;
+use crate::ecs::components::base::C_Spatial2D;
+use crate::ecs::components::gfx::C_Renderable;
 use crate::gfx;
-use crate::ecs::components as comp;
 use crate::resources;
 use cgmath::Deg;
 use std::cell::Ref;
@@ -13,19 +13,18 @@ use std::convert::Into;
 
 pub struct Render_System {
     config: Render_System_Config,
-    pub camera: C_Transform2D, // TODO figure out where to put this
+    pub camera: C_Spatial2D, // TODO figure out where to put this
 }
 
 pub struct Render_System_Config {
     pub clear_color: Color,
 }
 
-
 impl Render_System {
     pub fn new() -> Self {
         Render_System {
             config: Self::default_config(),
-            camera: C_Transform2D::default(),
+            camera: C_Spatial2D::default(),
         }
     }
 
@@ -37,7 +36,7 @@ impl Render_System {
 
     pub fn init(&mut self, cfg: Render_System_Config) -> Maybe_Error {
         self.config = cfg;
-        self.camera.translate(150.0, 100.0);
+        self.camera.transform.translate(150.0, 100.0);
         Ok(())
     }
 
@@ -45,14 +44,16 @@ impl Render_System {
         &mut self,
         window: &mut gfx::window::Window_Handle,
         resources: &resources::Resources,
-        renderables: &[(Ref<'_, comp::C_Renderable>, Ref<'_, C_Transform2D>)],
+        renderables: &[(Ref<'_, C_Renderable>, Ref<'_, C_Spatial2D>)],
+        frame_lag_normalized: f32,
+        smooth_by_extrapolating_velocity: bool,
     ) {
         gfx::window::set_clear_color(window, self.config.clear_color);
         gfx::window::clear(window);
 
-        for (rend, transf) in renderables {
-            let rend: &comp::C_Renderable = &*rend;
-            let comp::C_Renderable {
+        for (rend, spatial) in renderables {
+            let rend: &C_Renderable = &*rend;
+            let C_Renderable {
                 texture: tex_id,
                 rect: src_rect,
                 ..
@@ -63,8 +64,14 @@ impl Render_System {
                 texture: texture,
                 rect: *src_rect,
             };
-            gfx::render::render_sprite(window, &sprite, transf, &self.camera);
+
+            let mut rend_transform = spatial.transform;
+            if smooth_by_extrapolating_velocity {
+                let v = spatial.velocity;
+                rend_transform.translate(v.x * frame_lag_normalized, v.y * frame_lag_normalized);
+            }
+
+            gfx::render::render_sprite(window, &sprite, &rend_transform, &self.camera.transform);
         }
     }
 }
-
