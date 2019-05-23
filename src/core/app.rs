@@ -1,6 +1,5 @@
 use super::common::colors::Color;
-use super::common::vector::Vec2u;
-use super::common::{self, Maybe_Error};
+use super::common::Maybe_Error;
 use super::debug;
 use super::env::Env_Info;
 use super::input;
@@ -74,7 +73,7 @@ pub struct Resource_Loaders {
 }
 
 impl<'r> App<'r> {
-    pub fn new(cfg: &Config, event_pump: sdl2::EventPump, loaders: &'r Resource_Loaders) -> Self {
+    pub fn new(event_pump: sdl2::EventPump, loaders: &'r Resource_Loaders) -> Self {
         let resources = resources::Resources::new(
             &loaders.texture_creator,
             &loaders.ttf_context,

@@ -1,6 +1,5 @@
 use crate::resources;
 use sdl2::rect::Rect;
-use std::fmt::Debug;
 use typename::TypeName;
 
 #[derive(Copy, Clone, Debug, TypeName)]

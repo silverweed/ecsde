@@ -5,7 +5,7 @@ use std::time::Duration;
 
 pub fn update(dt: &Duration, em: &mut Entity_Manager) {
     let dt_secs = time::to_secs_frac(&dt);
-    let mut animated_sprites = em.get_component_tuple_mut::<C_Renderable, C_Animated_Sprite>();
+    let animated_sprites = em.get_component_tuple_mut::<C_Renderable, C_Animated_Sprite>();
 
     for (renderable, anim_sprite) in animated_sprites.filter(|(_, sprite)| {
         let sprite = sprite.borrow();

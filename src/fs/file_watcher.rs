@@ -1,9 +1,7 @@
 use crate::core::common::Maybe_Error;
-use crate::fs::utils;
-use crate::gfx::ui::UI_Request;
 use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
 use std::path::PathBuf;
-use std::sync::mpsc::{channel, Sender};
+use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Duration;
 

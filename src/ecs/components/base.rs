@@ -1,6 +1,5 @@
 use super::transform::C_Transform2D;
 use crate::core::common::vector::Vec2f;
-use std::fmt::Debug;
 use typename::TypeName;
 
 #[derive(Copy, Clone, Debug, TypeName, PartialEq, Default)]

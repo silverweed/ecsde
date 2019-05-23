@@ -8,13 +8,11 @@ use parsing::{Cfg_Entry, Cfg_Value, Raw_Config};
 
 use crate::core::common::stringid::String_Id;
 use crate::core::env::Env_Info;
-use crate::resources;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::From;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::vec::Vec;
 

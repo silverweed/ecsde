@@ -1,15 +1,11 @@
 use super::render::Sprite;
 use crate::core::common::colors::Color;
-use crate::core::common::rect::Rect;
-use crate::core::common::vector::Vec2f;
 use crate::core::common::Maybe_Error;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::C_Renderable;
 use crate::gfx;
 use crate::resources;
-use cgmath::Deg;
 use std::cell::Ref;
-use std::convert::Into;
 
 pub struct Render_System {
     config: Render_System_Config,

@@ -1,9 +1,7 @@
 use super::backend;
 use crate::core::common::rect::Rect;
 use crate::ecs::components::transform::C_Transform2D;
-use crate::gfx;
 use crate::gfx::window::Window_Handle;
-use crate::resources;
 
 pub type Blend_Mode = backend::Blend_Mode;
 pub type Texture<'a> = backend::Texture<'a>;

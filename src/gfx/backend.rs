@@ -5,7 +5,6 @@ use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
 use crate::ecs::components::transform::C_Transform2D;
 use crate::gfx::render::Sprite;
-use crate::resources::{Resources, Texture_Handle};
 
 // ------------- Backend: SDL
 #[cfg(feature = "gfx_sdl")]

@@ -1,9 +1,7 @@
-use super::parsing::{self, Cfg_Entry, Cfg_Section, Cfg_Value};
+use super::parsing::{self, Cfg_Entry, Cfg_Section};
 use super::{Config, Config_Change_Interface};
 use crate::fs::{file_watcher, utils};
 use notify::DebouncedEvent;
-use std::cell::RefCell;
-use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 
 pub struct Config_Watch_Handler {

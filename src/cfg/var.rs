@@ -1,8 +1,6 @@
-use super::parsing::Cfg_Value;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
-use typename::TypeName;
 
 #[derive(Debug, Clone)]
 pub struct Cfg_Var<T>

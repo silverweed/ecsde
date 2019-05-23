@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -70,8 +69,8 @@ fn parse_config_dir(dir_path: &Path) -> Result<Vec<Cfg_Section>, std::io::Error>
                     n_parsed += 1;
                     sections.append(&mut parse_config_file(&e.path())?)
                 }
-                _ => (),
                 Err(msg) => eprintln!("{}", msg),
+		_ => (),
             }
         }
         eprintln!("Parsed {} cfg files.", n_parsed);
@@ -89,10 +88,10 @@ fn parse_config_dir(dir_path: &Path) -> Result<Vec<Cfg_Section>, std::io::Error>
 pub(super) fn parse_config_file(path: &Path) -> Result<Vec<Cfg_Section>, std::io::Error> {
     let file = File::open(path)?;
     let lines = BufReader::new(file).lines().filter_map(|l| Some(l.ok()?));
-    Ok(parse_lines(lines, path))
+    Ok(parse_lines(lines))
 }
 
-fn parse_lines(lines: impl std::iter::Iterator<Item = String>, path: &Path) -> Vec<Cfg_Section> {
+fn parse_lines(lines: impl std::iter::Iterator<Item = String>) -> Vec<Cfg_Section> {
     let mut sections = vec![];
     let mut cur_section = Cfg_Section {
         header: String::from(""),
@@ -106,7 +105,7 @@ fn parse_lines(lines: impl std::iter::Iterator<Item = String>, path: &Path) -> V
         line
     });
 
-    for (lineno, line) in lines.enumerate() {
+    for line in lines {
         let line = line.trim();
 
         if line.is_empty() {
@@ -116,7 +115,6 @@ fn parse_lines(lines: impl std::iter::Iterator<Item = String>, path: &Path) -> V
         let first_char = line.chars().next().unwrap();
         if first_char == HEADER_SEPARATOR {
             if !cur_section.header.is_empty() {
-                eprintln!("pushed section {:?}", cur_section);
                 sections.push(cur_section);
                 cur_section = Cfg_Section {
                     header: String::from(""),
@@ -187,7 +185,7 @@ mod tests {
         .iter()
         .map(|&s| String::from(s))
         .collect();
-        let parsed = parse_lines(lines.into_iter(), &std::path::PathBuf::new());
+        let parsed = parse_lines(lines.into_iter());
 
         assert_eq!(parsed.len(), 2);
 

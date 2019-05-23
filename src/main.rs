@@ -1,4 +1,5 @@
 #![allow(non_camel_case_types)]
+#![cfg_attr(debug_assertions, allow(dead_code))]
 
 extern crate anymap;
 extern crate cgmath;
@@ -35,7 +36,7 @@ fn main() -> core::common::Maybe_Error {
         sound_loader: audio::sound_loader::Sound_Loader {},
     };
 
-    let mut app = core::app::App::new(&cfg, event_pump, &resource_loaders);
+    let mut app = core::app::App::new(event_pump, &resource_loaders);
 
     app.init()?;
     app.run(&mut window)
