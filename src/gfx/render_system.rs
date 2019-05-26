@@ -10,18 +10,13 @@ use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::C_Renderable;
 use crate::ecs::components::transform::C_Transform2D;
 use crate::gfx;
-use crate::gfx::ui::UI_Request;
+use crate::gfx::ui::{UI_Request, UI_System};
 use crate::resources;
 use std::cell::Ref;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
-
-pub struct Render_System {
-    config: Render_System_Config,
-    pub camera: C_Spatial2D, // TODO figure out where to put this
-}
 
 pub struct Render_System_Config {
     pub clear_color: Color,
@@ -56,7 +51,7 @@ fn render_loop(
     let mut time = Time::new();
     let mut gres = resources::gfx::Gfx_Resources::new();
     let mut input_system = Input_System::new(input_actions_tx);
-    let mut ui_system = gfx::ui::UI_System::new(ui_req_rx);
+    let mut ui_system = UI_System::new(ui_req_rx);
 
     ui_system.init(&env, &mut gres).unwrap();
 
@@ -88,6 +83,11 @@ fn render_loop(
     }
 }
 
+pub struct Render_System {
+    config: Render_System_Config,
+    pub camera: C_Spatial2D,
+}
+
 impl Render_System {
     pub fn new() -> Self {
         Render_System {
@@ -100,6 +100,12 @@ impl Render_System {
         Render_System_Config {
             clear_color: colors::rgb(0, 0, 0),
         }
+    }
+
+    pub fn init(&mut self, cfg: Render_System_Config) -> Maybe_Error {
+        self.config = cfg;
+        self.camera.transform.translate(150.0, 100.0);
+        Ok(())
     }
 
     pub fn update(
