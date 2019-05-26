@@ -2,14 +2,16 @@ use crate::core::time;
 
 pub struct Fps_Console_Printer {
     pub update_rate: std::time::Duration,
+    tag: String,
     frames_elapsed: u32,
     time_elapsed: std::time::Duration,
 }
 
 impl Fps_Console_Printer {
-    pub fn new(update_rate: &std::time::Duration) -> Fps_Console_Printer {
+    pub fn new(update_rate: &std::time::Duration, tag: &str) -> Fps_Console_Printer {
         Fps_Console_Printer {
             update_rate: *update_rate,
+            tag: String::from(tag),
             frames_elapsed: 0,
             time_elapsed: std::time::Duration::new(0, 0),
         }
@@ -21,7 +23,8 @@ impl Fps_Console_Printer {
 
         if self.time_elapsed >= self.update_rate {
             eprintln!(
-                "FPS: {}",
+                "[{}] FPS: {}",
+                self.tag,
                 self.frames_elapsed as f32 / time::to_secs_frac(&self.update_rate)
             );
             self.frames_elapsed = 0;

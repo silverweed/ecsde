@@ -15,14 +15,14 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-pub struct Config {
+pub struct App_Config {
     pub title: String,
     pub target_win_size: (u32, u32),
 }
 
-impl Config {
-    pub fn new(mut args: std::env::Args) -> Config {
-        let mut cfg = Config {
+impl App_Config {
+    pub fn new(mut args: std::env::Args) -> App_Config {
+        let mut cfg = App_Config {
             title: String::from("Unnamed app"),
             target_win_size: (800, 600),
         };
@@ -60,7 +60,6 @@ pub struct App<'r> {
     ui_req_tx: Option<std::sync::mpsc::Sender<gfx::ui::UI_Request>>,
 
     // Resources
-    gfx_resources: resources::gfx::Gfx_Resources<'r>,
     audio_resources: resources::audio::Audio_Resources<'r>,
 
     // Engine Systems
@@ -73,9 +72,7 @@ pub struct App<'r> {
 impl<'r> App<'r> {
     pub fn new(
         event_pump: sdl2::EventPump,
-        texture_creator: &'r resources::gfx::Texture_Creator,
         sound_loader: &'r audio::sound_loader::Sound_Loader,
-        ttf: &'r sdl2::ttf::Sdl2TtfContext,
     ) -> Self {
         let env = Env_Info::gather().unwrap();
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
@@ -87,7 +84,6 @@ impl<'r> App<'r> {
             env,
             config,
             ui_req_tx: None,
-            gfx_resources: resources::gfx::Gfx_Resources::new(texture_creator, ttf),
             audio_resources: resources::audio::Audio_Resources::new(sound_loader),
             render_thread: None,
             input_system: input::Input_System::new(),
@@ -96,20 +92,40 @@ impl<'r> App<'r> {
         }
     }
 
-    pub fn init(&mut self, window: gfx::window::Window_Handle) -> Maybe_Error {
+    pub fn init(&mut self, sdl: &sdl2::Sdl) -> Maybe_Error {
         println!(
             "Working dir = {:?}\nExe = {:?}",
             self.env.get_cwd(),
             self.env.get_exe()
         );
 
-        self.init_all_systems(window)?;
+        self.init_all_systems(sdl)?;
+
+        Ok(())
+    }
+
+    fn init_all_systems(&mut self, sdl: &sdl2::Sdl) -> Maybe_Error {
+        self.gameplay_system.init(&self.config)?;
+
+        let config_watcher = Box::new(cfg::sync::Config_Watch_Handler::new(&self.config));
+        fs::file_watcher::start_file_watch(
+            self.env.get_cfg_root().to_path_buf(),
+            vec![config_watcher],
+        )?;
+
+        self.render_thread = Some(gfx::render_system::start_render_thread(
+            self.env.clone(),
+            sdl,
+            gfx::render_system::Render_System_Config {
+                clear_color: Color::RGB(48, 10, 36),
+            },
+        ));
 
         Ok(())
     }
 
     pub fn run(&mut self) -> Maybe_Error {
-        let mut fps_debug = debug::fps::Fps_Console_Printer::new(&Duration::from_secs(3));
+        let mut fps_debug = debug::fps::Fps_Console_Printer::new(&Duration::from_secs(3), "mail");
 
         let mut execution_time = Duration::new(0, 0);
         while !self.should_close {
@@ -152,26 +168,6 @@ impl<'r> App<'r> {
             self.config.update();
             fps_debug.tick(&self.time);
         }
-
-        Ok(())
-    }
-
-    fn init_all_systems(&mut self, window: gfx::window::Window_Handle) -> Maybe_Error {
-        self.gameplay_system.init(&self.config)?;
-
-        let config_watcher = Box::new(cfg::sync::Config_Watch_Handler::new(&self.config));
-        fs::file_watcher::start_file_watch(
-            self.env.get_cfg_root().to_path_buf(),
-            vec![config_watcher],
-        )?;
-
-        let mut render_system = gfx::render_system::Render_System::new();
-        self.render_thread = Some(render_system.init(
-            Arc::new(Mutex::new(window)),
-            gfx::render_system::Render_System_Config {
-                clear_color: Color::RGB(48, 10, 36),
-            },
-        ));
 
         Ok(())
     }

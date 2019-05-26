@@ -1,6 +1,10 @@
 use super::render::Sprite;
 use crate::core::common::colors::Color;
+use crate::core::common::rect::Rect;
 use crate::core::common::Maybe_Error;
+use crate::core::debug::fps::Fps_Console_Printer;
+use crate::core::env::Env_Info;
+use crate::core::time::Time;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::C_Renderable;
 use crate::gfx;
@@ -8,8 +12,7 @@ use crate::resources;
 use std::cell::Ref;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
-
-unsafe impl Send for gfx::window::Window_Handle {}
+use std::time::Duration;
 
 pub struct Render_System {
     config: Render_System_Config,
@@ -20,16 +23,45 @@ pub struct Render_System_Config {
     pub clear_color: Color,
 }
 
-fn render_loop(
+pub fn start_render_thread(
+    env: Env_Info,
+    sdl: &sdl2::Sdl,
     cfg: Render_System_Config,
-    window: Arc<Mutex<gfx::window::Window_Handle>>,
-    camera: C_Spatial2D,
-) {
-    let mut window = window.lock().unwrap(); // this window is our forever.
+) -> JoinHandle<()> {
+    let mut camera = C_Spatial2D::default();
+    camera.transform.translate(150.0, 100.0);
+
+    thread::Builder::new()
+        .name(String::from("render_thread"))
+        .spawn(move || {
+            render_loop(cfg, env, sdl, camera);
+        })
+        .unwrap()
+}
+
+fn render_loop(cfg: Render_System_Config, env: Env_Info, sdl: &sdl2::Sdl, camera: C_Spatial2D) {
+    let video_subsystem = sdl.video().unwrap();
+    let window = gfx::window::create_render_window(&video_subsystem, (800, 600), "Unnamed app");
+
+    let mut fps_debug = Fps_Console_Printer::new(&Duration::from_secs(3), "render");
+    let mut time = Time::new();
+
+    let texture_creator = window.texture_creator();
+    let ttf = sdl2::ttf::init().unwrap();
+    let mut gres = resources::gfx::Gfx_Resources::new(&texture_creator, &ttf);
+
+    let yv_tex_h = gres.load_texture(&resources::gfx::tex_path(&env, "yv.png"));
+    let yv_tex = gres.get_texture(yv_tex_h);
+
     gfx::window::set_clear_color(&mut window, cfg.clear_color);
     loop {
+        time.update();
+
         gfx::window::clear(&mut window);
+        gfx::render::render_texture(&mut window, &yv_tex, Rect::new(0, 0, 100, 100));
         gfx::window::display(&mut window);
+
+        fps_debug.tick(&time);
     }
 }
 
@@ -45,22 +77,6 @@ impl Render_System {
         Render_System_Config {
             clear_color: Color::RGB(0, 0, 0),
         }
-    }
-
-    pub fn init(
-        &mut self,
-        window: Arc<Mutex<gfx::window::Window_Handle>>,
-        cfg: Render_System_Config,
-    ) -> JoinHandle<()> {
-        let mut camera = C_Spatial2D::default();
-        camera.transform.translate(150.0, 100.0);
-
-        thread::Builder::new()
-            .name(String::from("render_thread"))
-            .spawn(move || {
-                render_loop(cfg, window, camera);
-            })
-            .unwrap()
     }
 
     pub fn update(

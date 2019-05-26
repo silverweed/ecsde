@@ -22,19 +22,14 @@ pub(crate) mod resources;
 pub(crate) mod test_common;
 
 fn main() -> core::common::Maybe_Error {
-    let cfg = core::app::Config::new(env::args());
+    let cfg = core::app::App_Config::new(env::args());
 
     let sdl = sdl2::init().unwrap();
     let event_pump = sdl.event_pump().unwrap();
-    let video_subsystem = sdl.video().unwrap();
-    let window =
-        gfx::window::create_render_window(&video_subsystem, cfg.target_win_size, &cfg.title);
 
-    let texture_creator = window.texture_creator();
     let sound_loader = audio::sound_loader::Sound_Loader {};
-    let ttf = sdl2::ttf::init().unwrap();
-    let mut app = core::app::App::new(event_pump, &texture_creator, &sound_loader, &ttf);
+    let mut app = core::app::App::new(event_pump, &sound_loader);
 
-    app.init(window)?;
+    app.init(&sdl)?;
     app.run()
 }

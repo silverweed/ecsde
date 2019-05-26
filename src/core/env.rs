@@ -3,11 +3,13 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+#[derive(Clone)]
 pub struct Env_Info {
     full_exe_path: Box<Path>,
     working_dir: Box<Path>,
     assets_root: Box<Path>,
     cfg_root: Box<Path>,
+
     #[allow(dead_code)]
     test_paths: Test_Paths,
 }
@@ -76,12 +78,14 @@ impl Env_Info {
 }
 
 #[cfg(test)]
+#[derive(Clone)]
 struct Test_Paths {
     pub cfg_root: Box<Path>,
 }
 
 #[cfg(not(test))]
 #[allow(dead_code)]
+#[derive(Clone)]
 struct Test_Paths {}
 
 impl Test_Paths {
