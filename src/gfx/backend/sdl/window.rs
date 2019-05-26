@@ -3,7 +3,22 @@ use sdl2::rect::Rect;
 use sdl2::render::WindowCanvas;
 
 pub type Create_Render_Window_Args = sdl2::VideoSubsystem;
-pub type Window_Handle = WindowCanvas;
+
+pub struct Window_Handle(WindowCanvas);
+
+impl std::ops::Deref for Window_Handle {
+    type Target = WindowCanvas;
+
+    fn deref(&self) -> &WindowCanvas {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Window_Handle {
+    fn deref_mut(&mut self) -> &mut WindowCanvas {
+        &mut self.0
+    }
+}
 
 pub fn create_render_window(
     video_subsystem: &Create_Render_Window_Args,
@@ -25,7 +40,7 @@ pub fn create_render_window(
     canvas
         .set_logical_size(target_size.0, target_size.1)
         .unwrap();
-    canvas
+    Window_Handle(canvas)
 }
 
 pub fn set_clear_color(window: &mut WindowCanvas, color: Color) {

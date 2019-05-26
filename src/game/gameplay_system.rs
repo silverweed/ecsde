@@ -9,7 +9,6 @@ use crate::ecs::components::gfx::{C_Animated_Sprite, C_Renderable};
 use crate::ecs::entity_manager::{Entity, Entity_Manager};
 use crate::game;
 use crate::gfx;
-use crate::resources::{tex_path, Resources};
 use std::cell::Ref;
 use std::time::Duration;
 
@@ -26,15 +25,10 @@ impl Gameplay_System {
         }
     }
 
-    pub fn init(
-        &mut self,
-        env: &Env_Info,
-        rsrc: &mut Resources,
-        cfg: &cfg::Config,
-    ) -> common::Maybe_Error {
+    pub fn init(&mut self, cfg: &cfg::Config) -> common::Maybe_Error {
         self.register_all_components();
 
-        self.init_demo_sprites(env, rsrc, cfg);
+        self.init_demo_sprites(cfg);
 
         Ok(())
     }
@@ -61,7 +55,7 @@ impl Gameplay_System {
     }
 
     // #DEMO
-    fn init_demo_sprites(&mut self, env: &Env_Info, rsrc: &mut Resources, cfg: &cfg::Config) {
+    fn init_demo_sprites(&mut self, cfg: &cfg::Config) {
         let em = &mut self.entity_manager;
         let yv = em.new_entity();
         self.entities.push(yv);
@@ -70,12 +64,12 @@ impl Gameplay_System {
             s.transform.set_position(300.0, 200.0);
             s.transform.set_scale(3.0, 3.0);
         }
-        {
-            let mut rend = em.add_component::<C_Renderable>(yv);
-            rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
-            assert!(rend.texture.is_some(), "Could not load yv texture!");
-            rend.rect = Rect::new(0, 0, 148, 125);
-        }
+        //{
+        //let mut rend = em.add_component::<C_Renderable>(yv);
+        //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
+        //assert!(rend.texture.is_some(), "Could not load yv texture!");
+        //rend.rect = Rect::new(0, 0, 148, 125);
+        //}
 
         let plant = em.new_entity();
         self.entities.push(plant);
@@ -83,12 +77,12 @@ impl Gameplay_System {
             let mut s = em.add_component::<C_Spatial2D>(plant);
             s.transform.set_position(400.0, 500.0);
         }
-        {
-            let mut rend = em.add_component::<C_Renderable>(plant);
-            rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
-            assert!(rend.texture.is_some(), "Could not load plant texture!");
-            rend.rect = Rect::new(0, 0, 96, 96);
-        }
+        //{
+        //let mut rend = em.add_component::<C_Renderable>(plant);
+        //rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
+        //assert!(rend.texture.is_some(), "Could not load plant texture!");
+        //rend.rect = Rect::new(0, 0, 96, 96);
+        //}
         {
             let mut asprite = em.add_component::<C_Animated_Sprite>(plant);
             asprite.n_frames = 4;

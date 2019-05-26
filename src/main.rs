@@ -27,17 +27,14 @@ fn main() -> core::common::Maybe_Error {
     let sdl = sdl2::init().unwrap();
     let event_pump = sdl.event_pump().unwrap();
     let video_subsystem = sdl.video().unwrap();
-    let mut window =
+    let window =
         gfx::window::create_render_window(&video_subsystem, cfg.target_win_size, &cfg.title);
 
-    let resource_loaders = core::app::Resource_Loaders {
-        texture_creator: window.texture_creator(),
-        ttf_context: sdl2::ttf::init().unwrap(),
-        sound_loader: audio::sound_loader::Sound_Loader {},
-    };
+    let texture_creator = window.texture_creator();
+    let sound_loader = audio::sound_loader::Sound_Loader {};
+    let ttf = sdl2::ttf::init().unwrap();
+    let mut app = core::app::App::new(event_pump, &texture_creator, &sound_loader, &ttf);
 
-    let mut app = core::app::App::new(event_pump, &resource_loaders);
-
-    app.init()?;
-    app.run(&mut window)
+    app.init(window)?;
+    app.run()
 }

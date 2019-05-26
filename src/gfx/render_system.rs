@@ -6,6 +6,10 @@ use crate::ecs::components::gfx::C_Renderable;
 use crate::gfx;
 use crate::resources;
 use std::cell::Ref;
+use std::sync::{Arc, Mutex};
+use std::thread::{self, JoinHandle};
+
+unsafe impl Send for gfx::window::Window_Handle {}
 
 pub struct Render_System {
     config: Render_System_Config,
@@ -14,6 +18,19 @@ pub struct Render_System {
 
 pub struct Render_System_Config {
     pub clear_color: Color,
+}
+
+fn render_loop(
+    cfg: Render_System_Config,
+    window: Arc<Mutex<gfx::window::Window_Handle>>,
+    camera: C_Spatial2D,
+) {
+    let mut window = window.lock().unwrap(); // this window is our forever.
+    gfx::window::set_clear_color(&mut window, cfg.clear_color);
+    loop {
+        gfx::window::clear(&mut window);
+        gfx::window::display(&mut window);
+    }
 }
 
 impl Render_System {
@@ -30,16 +47,26 @@ impl Render_System {
         }
     }
 
-    pub fn init(&mut self, cfg: Render_System_Config) -> Maybe_Error {
-        self.config = cfg;
-        self.camera.transform.translate(150.0, 100.0);
-        Ok(())
+    pub fn init(
+        &mut self,
+        window: Arc<Mutex<gfx::window::Window_Handle>>,
+        cfg: Render_System_Config,
+    ) -> JoinHandle<()> {
+        let mut camera = C_Spatial2D::default();
+        camera.transform.translate(150.0, 100.0);
+
+        thread::Builder::new()
+            .name(String::from("render_thread"))
+            .spawn(move || {
+                render_loop(cfg, window, camera);
+            })
+            .unwrap()
     }
 
     pub fn update(
         &mut self,
         window: &mut gfx::window::Window_Handle,
-        resources: &resources::Resources,
+        resources: &resources::gfx::Gfx_Resources,
         renderables: &[(Ref<'_, C_Renderable>, Ref<'_, C_Spatial2D>)],
         frame_lag_normalized: f32,
         smooth_by_extrapolating_velocity: bool,

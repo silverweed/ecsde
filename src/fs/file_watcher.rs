@@ -14,7 +14,7 @@ pub fn start_file_watch(
     event_handlers: Vec<Box<dyn File_Watcher_Event_Handler>>,
 ) -> Result<thread::JoinHandle<()>, std::io::Error> {
     thread::Builder::new()
-        .name(format!("file_watcher_{:?}", path))
+        .name(format!("fwch_{:?}", path.as_path().file_name().unwrap()))
         .spawn(move || {
             file_watch_listen(path, event_handlers).unwrap();
         })

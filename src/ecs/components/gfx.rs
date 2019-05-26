@@ -4,14 +4,14 @@ use typename::TypeName;
 
 #[derive(Copy, Clone, Debug, TypeName)]
 pub struct C_Renderable {
-    pub texture: resources::Texture_Handle,
+    pub texture: resources::gfx::Texture_Handle,
     pub rect: Rect,
 }
 
 impl Default for C_Renderable {
     fn default() -> Self {
         C_Renderable {
-            texture: resources::Texture_Handle::default(),
+            texture: resources::gfx::Texture_Handle::default(),
             rect: Rect::new(0, 0, 0, 0),
         }
     }

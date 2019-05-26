@@ -1,5 +1,5 @@
+use crate::resources::audio::Sound_Buffer;
 use crate::resources::loaders::Resource_Loader;
-use crate::resources::Sound_Buffer;
 use ears::SoundData;
 use std::cell::RefCell;
 use std::rc::Rc;

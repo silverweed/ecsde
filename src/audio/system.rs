@@ -1,4 +1,4 @@
-use crate::resources::{Resources, Sound_Handle};
+use crate::resources::audio::{Audio_Resources, Sound_Handle};
 use ears::{AudioController, Sound};
 use std::vec::Vec;
 
@@ -27,7 +27,7 @@ impl Audio_System {
         }
     }
 
-    pub fn play_sound(&mut self, rsrc: &Resources, sound_handle: Sound_Handle) {
+    pub fn play_sound(&mut self, rsrc: &Audio_Resources, sound_handle: Sound_Handle) {
         if self.sounds_playing.len() == self.max_concurrent_sounds {
             // @Incomplete: remove oldest sound
             self.sounds_playing.pop();

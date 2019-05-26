@@ -1,11 +1,12 @@
 use crate::core;
-use crate::core::common::Maybe_Error;
 use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
+use crate::core::common::Maybe_Error;
 use crate::core::env::Env_Info;
 use crate::gfx;
 use crate::gfx::window::Window_Handle;
-use crate::resources::{self, Font_Handle, Resources, Texture_Handle};
+use crate::resources;
+use crate::resources::gfx::{Font_Handle, Gfx_Resources, Texture_Handle};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -73,9 +74,9 @@ impl UI_System {
         }
     }
 
-    pub fn init(&mut self, env: &Env_Info, rsrc: &mut Resources) -> Maybe_Error {
-        self.fadeout_text_font = rsrc.load_font(
-            &resources::font_path(env, Self::FADEOUT_TEXT_FONT),
+    pub fn init(&mut self, env: &Env_Info, gres: &mut Gfx_Resources) -> Maybe_Error {
+        self.fadeout_text_font = gres.load_font(
+            &resources::gfx::font_path(env, Self::FADEOUT_TEXT_FONT),
             Self::FADEOUT_TEXT_FONT_SIZE,
         );
         if self.fadeout_text_font.is_none() {
@@ -88,20 +89,20 @@ impl UI_System {
         Ok(())
     }
 
-    pub fn update(&mut self, dt: &Duration, window: &mut Window_Handle, rsrc: &mut Resources) {
-        self.handle_ui_requests(rsrc);
+    pub fn update(&mut self, dt: &Duration, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
+        self.handle_ui_requests(gres);
         self.update_fadeout_texts(dt);
-        self.draw_fadeout_texts(window, rsrc);
+        self.draw_fadeout_texts(window, gres);
     }
 
     pub fn new_request_sender(&self) -> Sender<UI_Request> {
         self.req_tx.clone()
     }
 
-    fn handle_ui_requests(&mut self, rsrc: &mut Resources) {
+    fn handle_ui_requests(&mut self, gres: &mut Gfx_Resources) {
         let reqs = self.fadeout_text_requests.lock().unwrap().clone();
         for txt in reqs.iter() {
-            self.add_fadeout_text(rsrc, &txt);
+            self.add_fadeout_text(gres, &txt);
         }
         self.fadeout_text_requests.lock().unwrap().clear();
     }
@@ -120,14 +121,14 @@ impl UI_System {
         self.fadeout_texts.drain(0..n_expired);
     }
 
-    fn draw_fadeout_texts(&mut self, window: &mut Window_Handle, rsrc: &mut Resources) {
+    fn draw_fadeout_texts(&mut self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
         let fadeout_time = self.fadeout_time;
         let blend_mode = gfx::render::get_blend_mode(window);
         // @Incomplete use our own Blend_Mode enum
         gfx::render::set_blend_mode(window, sdl2::render::BlendMode::Blend);
 
         for (i, text) in self.fadeout_texts.iter().enumerate() {
-            let texture = rsrc.get_texture_mut(text.texture);
+            let texture = gres.get_texture_mut(text.texture);
             let (width, height) = gfx::render::get_texture_size(texture);
 
             let d = core::time::duration_ratio(&text.time, &fadeout_time);
@@ -140,16 +141,16 @@ impl UI_System {
                 width,
                 height,
             );
-            
+
             gfx::render::render_texture(window, texture, rect);
         }
 
         gfx::render::set_blend_mode(window, blend_mode);
     }
 
-    pub fn add_fadeout_text(&mut self, resources: &mut Resources, txt: &str) {
+    pub fn add_fadeout_text(&mut self, gres: &mut Gfx_Resources, txt: &str) {
         let texture =
-            resources.create_font_texture(txt, self.fadeout_text_font, Color::RGB(255, 255, 255));
+            gres.create_font_texture(txt, self.fadeout_text_font, Color::RGB(255, 255, 255));
         self.fadeout_texts.push(Fadeout_Text {
             texture,
             time: Duration::new(0, 0),

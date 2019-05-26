@@ -11,6 +11,8 @@ use crate::game::gameplay_system;
 use crate::gfx;
 use crate::resources;
 use std::convert::TryFrom;
+use std::sync::{Arc, Mutex};
+use std::thread::JoinHandle;
 use std::time::Duration;
 
 pub struct Config {
@@ -53,33 +55,28 @@ pub struct App<'r> {
     should_close: bool,
 
     env: Env_Info,
-    resources: resources::Resources<'r>,
 
     config: cfg::Config,
     ui_req_tx: Option<std::sync::mpsc::Sender<gfx::ui::UI_Request>>,
 
+    // Resources
+    gfx_resources: resources::gfx::Gfx_Resources<'r>,
+    audio_resources: resources::audio::Audio_Resources<'r>,
+
     // Engine Systems
+    render_thread: Option<JoinHandle<()>>,
     input_system: input::Input_System,
-    render_system: gfx::render_system::Render_System,
-    ui_system: gfx::ui::UI_System,
     audio_system: audio::system::Audio_System,
     gameplay_system: gameplay_system::Gameplay_System,
 }
 
-pub struct Resource_Loaders {
-    pub texture_creator: resources::Texture_Creator,
-    pub ttf_context: sdl2::ttf::Sdl2TtfContext,
-    pub sound_loader: audio::sound_loader::Sound_Loader,
-}
-
 impl<'r> App<'r> {
-    pub fn new(event_pump: sdl2::EventPump, loaders: &'r Resource_Loaders) -> Self {
-        let resources = resources::Resources::new(
-            &loaders.texture_creator,
-            &loaders.ttf_context,
-            &loaders.sound_loader,
-        );
-
+    pub fn new(
+        event_pump: sdl2::EventPump,
+        texture_creator: &'r resources::gfx::Texture_Creator,
+        sound_loader: &'r audio::sound_loader::Sound_Loader,
+        ttf: &'r sdl2::ttf::Sdl2TtfContext,
+    ) -> Self {
         let env = Env_Info::gather().unwrap();
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
 
@@ -88,30 +85,30 @@ impl<'r> App<'r> {
             time: time::Time::new(),
             should_close: false,
             env,
-            resources,
             config,
             ui_req_tx: None,
+            gfx_resources: resources::gfx::Gfx_Resources::new(texture_creator, ttf),
+            audio_resources: resources::audio::Audio_Resources::new(sound_loader),
+            render_thread: None,
             input_system: input::Input_System::new(),
-            render_system: gfx::render_system::Render_System::new(),
-            ui_system: gfx::ui::UI_System::new(),
             audio_system: audio::system::Audio_System::new(10),
             gameplay_system: gameplay_system::Gameplay_System::new(),
         }
     }
 
-    pub fn init(&mut self) -> Maybe_Error {
+    pub fn init(&mut self, window: gfx::window::Window_Handle) -> Maybe_Error {
         println!(
             "Working dir = {:?}\nExe = {:?}",
             self.env.get_cwd(),
             self.env.get_exe()
         );
 
-        self.init_all_systems()?;
+        self.init_all_systems(window)?;
 
         Ok(())
     }
 
-    pub fn run(&mut self, window: &mut gfx::window::Window_Handle) -> Maybe_Error {
+    pub fn run(&mut self) -> Maybe_Error {
         let mut fps_debug = debug::fps::Fps_Console_Printer::new(&Duration::from_secs(3));
 
         let mut execution_time = Duration::new(0, 0);
@@ -143,13 +140,6 @@ impl<'r> App<'r> {
             // Update audio
             self.audio_system.update();
 
-            // Render
-            self.update_graphics(
-                window,
-                real_dt,
-                time::duration_ratio(&execution_time, &update_time) as f32,
-            )?;
-
             #[cfg(debug_assertions)]
             {
                 let sleep = *self
@@ -166,22 +156,22 @@ impl<'r> App<'r> {
         Ok(())
     }
 
-    fn init_all_systems(&mut self) -> Maybe_Error {
-        self.render_system
-            .init(gfx::render_system::Render_System_Config {
-                clear_color: Color::RGB(48, 10, 36),
-            })?;
-        self.gameplay_system
-            .init(&self.env, &mut self.resources, &self.config)?;
-        self.ui_system.init(&self.env, &mut self.resources)?;
-
-        self.ui_req_tx = Some(self.ui_system.new_request_sender());
+    fn init_all_systems(&mut self, window: gfx::window::Window_Handle) -> Maybe_Error {
+        self.gameplay_system.init(&self.config)?;
 
         let config_watcher = Box::new(cfg::sync::Config_Watch_Handler::new(&self.config));
         fs::file_watcher::start_file_watch(
             self.env.get_cfg_root().to_path_buf(),
             vec![config_watcher],
         )?;
+
+        let mut render_system = gfx::render_system::Render_System::new();
+        self.render_thread = Some(render_system.init(
+            Arc::new(Mutex::new(window)),
+            gfx::render_system::Render_System_Config {
+                clear_color: Color::RGB(48, 10, 36),
+            },
+        ));
 
         Ok(())
     }
@@ -193,84 +183,84 @@ impl<'r> App<'r> {
         Ok(())
     }
 
-    fn update_graphics(
-        &mut self,
-        window: &mut gfx::window::Window_Handle,
-        real_dt: Duration,
-        frame_lag_normalized: f32,
-    ) -> Maybe_Error {
-        let smooth_by_extrapolating_velocity = *self
-            .config
-            .get_var_bool_or("engine/rendering/smooth_by_extrapolating_velocity", false);
+    //fn update_graphics(
+    //&mut self,
+    //window: &mut gfx::window::Window_Handle,
+    //real_dt: Duration,
+    //frame_lag_normalized: f32,
+    //) -> Maybe_Error {
+    //let smooth_by_extrapolating_velocity = *self
+    //.config
+    //.get_var_bool_or("engine/rendering/smooth_by_extrapolating_velocity", false);
 
-        gfx::window::set_clear_color(window, Color::RGB(0, 0, 0));
-        gfx::window::clear(window);
-        self.render_system.update(
-            window,
-            &self.resources,
-            &self.gameplay_system.get_renderable_entities(),
-            frame_lag_normalized,
-            smooth_by_extrapolating_velocity,
-        );
-        self.ui_system.update(&real_dt, window, &mut self.resources);
-        gfx::window::display(window);
+    //gfx::window::set_clear_color(window, Color::RGB(0, 0, 0));
+    //gfx::window::clear(window);
+    //self.render_system.update(
+    //window,
+    //&self.resources,
+    //&self.gameplay_system.get_renderable_entities(),
+    //frame_lag_normalized,
+    //smooth_by_extrapolating_velocity,
+    //);
+    //self.ui_system.update(&real_dt, window, &mut self.resources);
+    //gfx::window::display(window);
 
-        Ok(())
-    }
+    //Ok(())
+    //}
 
     fn handle_actions(&mut self) -> Maybe_Error {
         use gfx::ui::UI_Request;
         use input::Action;
 
         let actions = self.input_system.get_actions();
-        let ui_req_tx = self.ui_req_tx.as_ref().unwrap();
+        //let ui_req_tx = self.ui_req_tx.as_ref().unwrap();
 
         if actions.has_action(&Action::Quit) {
             self.should_close = true;
         } else {
-            for action in actions.iter() {
-                match action {
-                    Action::Change_Speed(delta) => {
-                        let ts = self.time.get_time_scale() + *delta as f32 * 0.01;
-                        if ts > 0.0 {
-                            self.time.set_time_scale(ts);
-                        }
-                        ui_req_tx
-                            .send(UI_Request::Add_Fadeout_Text(format!(
-                                "Time scale: {:.2}",
-                                self.time.get_time_scale()
-                            )))
-                            .unwrap();
-                    }
-                    Action::Pause_Toggle => {
-                        self.time.set_paused(!self.time.is_paused());
-                        ui_req_tx
-                            .send(UI_Request::Add_Fadeout_Text(String::from(
-                                if self.time.is_paused() {
-                                    "Paused"
-                                } else {
-                                    "Resumed"
-                                },
-                            )))
-                            .unwrap();
-                    }
-                    Action::Step_Simulation => {
-                        let target_fps = self.config.get_var_int_or("engine/rendering/fps", 60);
-                        let step_delta = Duration::from_nanos(
-                            u64::try_from(1_000_000_000 / *target_fps).unwrap(),
-                        );
-                        ui_req_tx
-                            .send(UI_Request::Add_Fadeout_Text(format!(
-                                "Stepping of: {:.2} ms",
-                                time::to_secs_frac(&step_delta) * 1000.0
-                            )))
-                            .unwrap();
-                        self.time.set_paused(true);
-                        self.time.step(&step_delta);
-                    }
-                    _ => (),
-                }
-            }
+            //for action in actions.iter() {
+            //match action {
+            //Action::Change_Speed(delta) => {
+            //let ts = self.time.get_time_scale() + *delta as f32 * 0.01;
+            //if ts > 0.0 {
+            //self.time.set_time_scale(ts);
+            //}
+            //ui_req_tx
+            //.send(UI_Request::Add_Fadeout_Text(format!(
+            //"Time scale: {:.2}",
+            //self.time.get_time_scale()
+            //)))
+            //.unwrap();
+            //}
+            //Action::Pause_Toggle => {
+            //self.time.set_paused(!self.time.is_paused());
+            //ui_req_tx
+            //.send(UI_Request::Add_Fadeout_Text(String::from(
+            //if self.time.is_paused() {
+            //"Paused"
+            //} else {
+            //"Resumed"
+            //},
+            //)))
+            //.unwrap();
+            //}
+            //Action::Step_Simulation => {
+            //let target_fps = self.config.get_var_int_or("engine/rendering/fps", 60);
+            //let step_delta = Duration::from_nanos(
+            //u64::try_from(1_000_000_000 / *target_fps).unwrap(),
+            //);
+            //ui_req_tx
+            //.send(UI_Request::Add_Fadeout_Text(format!(
+            //"Stepping of: {:.2} ms",
+            //time::to_secs_frac(&step_delta) * 1000.0
+            //)))
+            //.unwrap();
+            //self.time.set_paused(true);
+            //self.time.step(&step_delta);
+            //}
+            //_ => (),
+            //}
+            //}
         }
 
         Ok(())
