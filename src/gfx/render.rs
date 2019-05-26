@@ -5,11 +5,7 @@ use crate::gfx::window::Window_Handle;
 
 pub type Blend_Mode = backend::Blend_Mode;
 pub type Texture<'a> = backend::Texture<'a>;
-
-pub struct Sprite<'a> {
-    pub texture: &'a Texture<'a>,
-    pub rect: Rect,
-}
+pub type Sprite<'a> = backend::Sprite<'a>;
 
 pub fn get_blend_mode(window: &Window_Handle) -> Blend_Mode {
     backend::get_blend_mode(window)
@@ -19,9 +15,13 @@ pub fn set_blend_mode(window: &mut Window_Handle, blend_mode: Blend_Mode) {
     backend::set_blend_mode(window, blend_mode);
 }
 
+pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect) -> Sprite<'a> {
+    backend::create_sprite(texture, rect)
+}
+
 pub fn render_sprite(
     window: &mut Window_Handle,
-    sprite: &Sprite<'_>,
+    sprite: &mut Sprite<'_>,
     transform: &C_Transform2D,
     camera: &C_Transform2D,
 ) {

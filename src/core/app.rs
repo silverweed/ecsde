@@ -1,4 +1,4 @@
-use super::common::colors::Color;
+use super::common::colors::{self, Color};
 use super::common::Maybe_Error;
 use super::debug;
 use super::env::Env_Info;
@@ -117,7 +117,7 @@ impl<'r> App<'r> {
             self.env.clone(),
             sdl,
             gfx::render_system::Render_System_Config {
-                clear_color: Color::RGB(48, 10, 36),
+                clear_color: colors::rgb(48, 10, 36),
             },
         ));
 

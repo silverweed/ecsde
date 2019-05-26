@@ -1,5 +1,5 @@
+use crate::core::common::rect::Rect;
 use crate::resources;
-use sdl2::rect::Rect;
 use typename::TypeName;
 
 #[derive(Copy, Clone, Debug, TypeName)]

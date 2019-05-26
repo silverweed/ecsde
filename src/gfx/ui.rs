@@ -1,5 +1,5 @@
 use crate::core;
-use crate::core::common::colors::Color;
+use crate::core::common::colors::{self, Color};
 use crate::core::common::rect::Rect;
 use crate::core::common::Maybe_Error;
 use crate::core::env::Env_Info;
@@ -125,7 +125,7 @@ impl UI_System {
         let fadeout_time = self.fadeout_time;
         let blend_mode = gfx::render::get_blend_mode(window);
         // @Incomplete use our own Blend_Mode enum
-        gfx::render::set_blend_mode(window, sdl2::render::BlendMode::Blend);
+        gfx::render::set_blend_mode(window, sfml::graphics::blend_mode::BlendMode::ALPHA);
 
         for (i, text) in self.fadeout_texts.iter().enumerate() {
             let texture = gres.get_texture_mut(text.texture);
@@ -150,7 +150,7 @@ impl UI_System {
 
     pub fn add_fadeout_text(&mut self, gres: &mut Gfx_Resources, txt: &str) {
         let texture =
-            gres.create_font_texture(txt, self.fadeout_text_font, Color::RGB(255, 255, 255));
+            gres.create_font_texture(txt, self.fadeout_text_font, colors::rgb(255, 255, 255));
         self.fadeout_texts.push(Fadeout_Text {
             texture,
             time: Duration::new(0, 0),

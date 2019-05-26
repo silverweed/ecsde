@@ -6,6 +6,7 @@ extern crate cgmath;
 extern crate ears;
 extern crate notify;
 extern crate sdl2;
+extern crate sfml;
 
 use std::env;
 

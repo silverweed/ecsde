@@ -1,6 +1,5 @@
 use crate::core::common::vector::Vec2f;
 use crate::ecs::components::transform::C_Transform2D;
-use crate::gfx::render::Sprite;
 use cgmath::Deg;
 use sdl2::rect::Rect;
 use sdl2::render::WindowCanvas;
@@ -8,9 +7,21 @@ use sdl2::render::WindowCanvas;
 pub type Blend_Mode = sdl2::render::BlendMode;
 pub type Texture<'a> = sdl2::render::Texture<'a>;
 
+pub struct Sprite<'a> {
+    pub texture: &'a Texture<'a>,
+    pub rect: Rect,
+}
+
+pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect) -> Sprite<'a> {
+    Sprite {
+        texture: texture,
+        rect: rect,
+    }
+}
+
 pub fn render_sprite(
     window: &mut WindowCanvas,
-    sprite: &Sprite<'_>,
+    sprite: &mut Sprite<'_>,
     transform: &C_Transform2D,
     camera: &C_Transform2D,
 ) {

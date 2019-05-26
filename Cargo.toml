@@ -7,6 +7,7 @@ authors = ["silverweed <silverweed1991@gmail.com>"]
 [features]
 # TODO use actual dependencies here
 gfx_sdl = []
+gfx_sfml = []
 
 [dependencies]
 anymap = "0.12.1"
@@ -15,6 +16,7 @@ cgmath = "0.17.0"
 ears = "0.5.1"
 #lazy_static = "1.3.0"
 notify = "4.0.*"
+sfml = "0.14.0"
 
 [dependencies.sdl2]
 version = "0.32.1"
