@@ -5,7 +5,9 @@ extern crate anymap;
 extern crate cgmath;
 extern crate ears;
 extern crate notify;
+#[cfg(features = "use-sdl")]
 extern crate sdl2;
+#[cfg(features = "use-sfml")]
 extern crate sfml;
 
 use std::env;
@@ -25,12 +27,9 @@ pub(crate) mod test_common;
 fn main() -> core::common::Maybe_Error {
     let cfg = core::app::App_Config::new(env::args());
 
-    let sdl = sdl2::init().unwrap();
-    let event_pump = sdl.event_pump().unwrap();
-
     let sound_loader = audio::sound_loader::Sound_Loader {};
-    let mut app = core::app::App::new(event_pump, &sound_loader);
+    let mut app = core::app::App::new(&sound_loader);
 
-    app.init(&sdl)?;
+    app.init()?;
     app.run()
 }

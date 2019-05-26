@@ -1,10 +1,10 @@
 all: build
 
 run:
-	cargo run --features gfx_sdl
+	cargo run --features use-sfml
 
 build:
-	cargo build --features gfx_sdl
+	cargo build --features use-sfml
 
 test:
-	cargo test --features gfx_sdl -- --test-threads=1
+	cargo test --features use-sfml -- --test-threads=1

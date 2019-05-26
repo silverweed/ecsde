@@ -7,9 +7,19 @@ use sfml::graphics::{RectangleShape, RenderStates, RenderTarget, Transformable};
 use sfml::system::Vector2f;
 
 pub type Blend_Mode = sfml::graphics::blend_mode::BlendMode;
+
 pub struct Texture<'a> {
     texture: sfml::graphics::Texture,
     marker: &'a std::marker::PhantomData<()>,
+}
+
+impl Texture<'_> {
+    pub fn from_file(fname: &str) -> Option<Self> {
+        Some(Texture {
+            texture: sfml::graphics::Texture::from_file(fname)?,
+            marker: &std::marker::PhantomData,
+        })
+    }
 }
 
 impl std::ops::Deref for Texture<'_> {
@@ -26,6 +36,36 @@ impl std::ops::DerefMut for Texture<'_> {
     }
 }
 
+pub type Text<'a> = sfml::graphics::Text<'a>;
+
+pub struct Font<'a> {
+    font: sfml::graphics::Font,
+    marker: &'a std::marker::PhantomData<()>,
+}
+
+impl Font<'_> {
+    pub fn from_file(fname: &str) -> Option<Self> {
+        Some(Font {
+            font: sfml::graphics::Font::from_file(fname)?,
+            marker: &std::marker::PhantomData,
+        })
+    }
+}
+
+impl std::ops::Deref for Font<'_> {
+    type Target = sfml::graphics::Font;
+
+    fn deref(&self) -> &sfml::graphics::Font {
+        &self.font
+    }
+}
+
+impl std::ops::DerefMut for Font<'_> {
+    fn deref_mut(&mut self) -> &mut sfml::graphics::Font {
+        &mut self.font
+    }
+}
+
 pub type Sprite<'a> = sfml::graphics::Sprite<'a>;
 
 pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect) -> Sprite<'a> {
@@ -36,12 +76,12 @@ pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect) -> Sprite<'a> {
 
 pub fn render_sprite(
     window: &mut Window_Handle,
-    sprite: &mut Sprite<'_>,
+    sprite: &Sprite<'_>,
     transform: &C_Transform2D,
     camera: &C_Transform2D,
 ) {
     let render_transform = {
-        let t = sfml::graphics::Transform::IDENTITY;
+        let mut t = sfml::graphics::Transform::IDENTITY;
         let pos = transform.position();
         t.translate(pos.x, pos.y);
         let cpos = camera.position();
@@ -50,6 +90,8 @@ pub fn render_sprite(
         let Deg(cam_angle) = camera.rotation().into();
         t.rotate(angle);
         t.rotate(-cam_angle);
+        let scale = transform.scale();
+        t.scale(scale.x, scale.y);
         t
     };
     let render_states = RenderStates {
@@ -71,6 +113,10 @@ pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: R
     window
         .handle
         .draw_rectangle_shape(&rectangle_shape, render_states);
+}
+
+pub fn render_text(window: &mut Window_Handle, text: &Text<'_>) {
+    window.handle.draw(text);
 }
 
 pub fn get_blend_mode(window: &Window_Handle) -> Blend_Mode {

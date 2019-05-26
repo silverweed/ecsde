@@ -13,6 +13,20 @@ pub struct Window_Handle {
     pub(super) blend_mode: gfx::render::Blend_Mode,
 }
 
+impl std::ops::Deref for Window_Handle {
+    type Target = RenderWindow;
+
+    fn deref(&self) -> &RenderWindow {
+        &self.handle
+    }
+}
+
+impl std::ops::DerefMut for Window_Handle {
+    fn deref_mut(&mut self) -> &mut RenderWindow {
+        &mut self.handle
+    }
+}
+
 pub fn create_render_window(
     _: &Create_Render_Window_Args,
     target_size: (u32, u32),
@@ -28,7 +42,7 @@ pub fn create_render_window(
     Window_Handle {
         handle: window,
         clear_color: colors::rgb(0, 0, 0),
-        blend_mode: BlendMode::NONE,
+        blend_mode: BlendMode::ALPHA,
     }
 }
 

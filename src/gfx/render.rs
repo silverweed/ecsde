@@ -6,6 +6,8 @@ use crate::gfx::window::Window_Handle;
 pub type Blend_Mode = backend::Blend_Mode;
 pub type Texture<'a> = backend::Texture<'a>;
 pub type Sprite<'a> = backend::Sprite<'a>;
+pub type Text<'a> = backend::Text<'a>;
+pub type Font<'a> = backend::Font<'a>;
 
 pub fn get_blend_mode(window: &Window_Handle) -> Blend_Mode {
     backend::get_blend_mode(window)
@@ -21,7 +23,7 @@ pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect) -> Sprite<'a> {
 
 pub fn render_sprite(
     window: &mut Window_Handle,
-    sprite: &mut Sprite<'_>,
+    sprite: &Sprite<'_>,
     transform: &C_Transform2D,
     camera: &C_Transform2D,
 ) {
@@ -34,4 +36,8 @@ pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: R
 
 pub fn get_texture_size(texture: &Texture<'_>) -> (u32, u32) {
     backend::get_texture_size(texture)
+}
+
+pub fn render_text(window: &mut Window_Handle, text: &Text) {
+    backend::render_text(window, text);
 }

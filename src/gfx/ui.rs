@@ -1,12 +1,15 @@
 use crate::core;
 use crate::core::common::colors::{self, Color};
 use crate::core::common::rect::Rect;
+use crate::core::common::vector::{to_framework_vec, Vec2f};
 use crate::core::common::Maybe_Error;
 use crate::core::env::Env_Info;
 use crate::gfx;
 use crate::gfx::window::Window_Handle;
 use crate::resources;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources, Texture_Handle};
+use sfml::graphics::Text;
+use sfml::graphics::Transformable;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -18,7 +21,7 @@ pub enum UI_Request {
 }
 
 struct Fadeout_Text {
-    pub texture: Texture_Handle,
+    pub text: String,
     pub time: Duration,
 }
 
@@ -49,18 +52,17 @@ pub struct UI_System {
     fadeout_texts: Vec<Fadeout_Text>,
     fadeout_text_requests: Fadeout_Text_Requests,
     fadeout_time: Duration,
-    req_tx: Sender<UI_Request>,
 }
 
 impl UI_System {
     const FADEOUT_TEXT_PAD_X: i32 = 5;
     const FADEOUT_TEXT_PAD_Y: i32 = 5;
+    const FADEOUT_TEXT_ROW_HEIGHT: usize = 20;
     const FADEOUT_TEXT_FONT_SIZE: u16 = 16;
     const FADEOUT_TEXT_FONT: &'static str = "Hack-Regular.ttf";
     const DEFAULT_FADEOUT_TIME_MS: u64 = 3000;
 
-    pub fn new() -> UI_System {
-        let (req_tx, req_rx) = channel();
+    pub fn new(req_rx: Receiver<UI_Request>) -> UI_System {
         let fadeout_text_requests = Arc::new(Mutex::new(vec![]));
 
         spawn_req_rx_listen_thread(req_rx, fadeout_text_requests.clone());
@@ -70,15 +72,12 @@ impl UI_System {
             fadeout_texts: vec![],
             fadeout_text_requests,
             fadeout_time: Duration::from_millis(Self::DEFAULT_FADEOUT_TIME_MS),
-            req_tx,
         }
     }
 
     pub fn init(&mut self, env: &Env_Info, gres: &mut Gfx_Resources) -> Maybe_Error {
-        self.fadeout_text_font = gres.load_font(
-            &resources::gfx::font_path(env, Self::FADEOUT_TEXT_FONT),
-            Self::FADEOUT_TEXT_FONT_SIZE,
-        );
+        self.fadeout_text_font =
+            gres.load_font(&resources::gfx::font_path(env, Self::FADEOUT_TEXT_FONT));
         if self.fadeout_text_font.is_none() {
             return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
@@ -90,19 +89,15 @@ impl UI_System {
     }
 
     pub fn update(&mut self, dt: &Duration, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
-        self.handle_ui_requests(gres);
+        self.handle_ui_requests();
         self.update_fadeout_texts(dt);
         self.draw_fadeout_texts(window, gres);
     }
 
-    pub fn new_request_sender(&self) -> Sender<UI_Request> {
-        self.req_tx.clone()
-    }
-
-    fn handle_ui_requests(&mut self, gres: &mut Gfx_Resources) {
+    fn handle_ui_requests(&mut self) {
         let reqs = self.fadeout_text_requests.lock().unwrap().clone();
         for txt in reqs.iter() {
-            self.add_fadeout_text(gres, &txt);
+            self.add_fadeout_text(&txt);
         }
         self.fadeout_text_requests.lock().unwrap().clear();
     }
@@ -123,36 +118,31 @@ impl UI_System {
 
     fn draw_fadeout_texts(&mut self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
         let fadeout_time = self.fadeout_time;
-        let blend_mode = gfx::render::get_blend_mode(window);
-        // @Incomplete use our own Blend_Mode enum
-        gfx::render::set_blend_mode(window, sfml::graphics::blend_mode::BlendMode::ALPHA);
 
-        for (i, text) in self.fadeout_texts.iter().enumerate() {
-            let texture = gres.get_texture_mut(text.texture);
-            let (width, height) = gfx::render::get_texture_size(texture);
-
-            let d = core::time::duration_ratio(&text.time, &fadeout_time);
+        for (i, fadeout_text) in self.fadeout_texts.iter().enumerate() {
+            let d = core::time::duration_ratio(&fadeout_text.time, &fadeout_time);
             let alpha = 255 - (d * d * 255.0f32) as u8;
-            texture.set_alpha_mod(alpha);
+            let text = {
+                let mut text = Text::new(
+                    &fadeout_text.text,
+                    gres.get_font(self.fadeout_text_font),
+                    Self::FADEOUT_TEXT_FONT_SIZE.into(),
+                );
+                text.set_fill_color(&colors::rgba(255, 255, 255, alpha));
+                text.set_position(to_framework_vec(Vec2f::new(
+                    Self::FADEOUT_TEXT_PAD_X as f32,
+                    Self::FADEOUT_TEXT_PAD_Y as f32 + (i * Self::FADEOUT_TEXT_ROW_HEIGHT) as f32,
+                )));
+                text
+            };
 
-            let rect = Rect::new(
-                Self::FADEOUT_TEXT_PAD_X,
-                Self::FADEOUT_TEXT_PAD_Y + (i as i32) * (height as i32 + Self::FADEOUT_TEXT_PAD_Y),
-                width,
-                height,
-            );
-
-            gfx::render::render_texture(window, texture, rect);
+            gfx::render::render_text(window, &text);
         }
-
-        gfx::render::set_blend_mode(window, blend_mode);
     }
 
-    pub fn add_fadeout_text(&mut self, gres: &mut Gfx_Resources, txt: &str) {
-        let texture =
-            gres.create_font_texture(txt, self.fadeout_text_font, colors::rgb(255, 255, 255));
+    pub fn add_fadeout_text(&mut self, txt: &str) {
         self.fadeout_texts.push(Fadeout_Text {
-            texture,
+            text: String::from(txt),
             time: Duration::new(0, 0),
         });
     }

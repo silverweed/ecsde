@@ -12,6 +12,9 @@ pub struct Sprite<'a> {
     pub rect: Rect,
 }
 
+// @Incomplete
+pub struct Text {};
+
 pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect) -> Sprite<'a> {
     Sprite {
         texture: texture,
@@ -63,6 +66,10 @@ pub fn render_texture(window: &mut WindowCanvas, texture: &Texture<'_>, rect: Re
     if let Err(msg) = window.copy(&texture, None, rect) {
         eprintln!("Error copying texture to window: {}", msg);
     }
+}
+
+pub fn render_text(window: &mut Window_Handle, text: &Text) {
+    eprintln!("[ WARNING ] render_text is not implemented yet on SDL backend!");
 }
 
 pub fn get_blend_mode(window: &WindowCanvas) -> Blend_Mode {

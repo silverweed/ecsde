@@ -1,4 +1,4 @@
-#[derive(PartialEq, Hash)]
+#[derive(PartialEq, Hash, Copy, Clone)]
 pub enum Direction {
     None,
     Up,

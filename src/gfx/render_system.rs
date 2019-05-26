@@ -4,12 +4,16 @@ use crate::core::common::rect::Rect;
 use crate::core::common::Maybe_Error;
 use crate::core::debug::fps::Fps_Console_Printer;
 use crate::core::env::Env_Info;
+use crate::core::input::{Action_List, Input_System};
 use crate::core::time::Time;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::C_Renderable;
+use crate::ecs::components::transform::C_Transform2D;
 use crate::gfx;
+use crate::gfx::ui::UI_Request;
 use crate::resources;
 use std::cell::Ref;
+use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -25,7 +29,8 @@ pub struct Render_System_Config {
 
 pub fn start_render_thread(
     env: Env_Info,
-    sdl: &sdl2::Sdl,
+    input_actions_tx: Sender<Action_List>,
+    ui_req_rx: Receiver<UI_Request>,
     cfg: Render_System_Config,
 ) -> JoinHandle<()> {
     let mut camera = C_Spatial2D::default();
@@ -34,34 +39,52 @@ pub fn start_render_thread(
     thread::Builder::new()
         .name(String::from("render_thread"))
         .spawn(move || {
-            render_loop(cfg, env, sdl, camera);
+            render_loop(cfg, env, input_actions_tx, ui_req_rx, camera);
         })
         .unwrap()
 }
 
-fn render_loop(cfg: Render_System_Config, env: Env_Info, sdl: &sdl2::Sdl, camera: C_Spatial2D) {
-    let video_subsystem = sdl.video().unwrap();
-    let window = gfx::window::create_render_window(&(), (800, 600), "Unnamed app");
-
+fn render_loop(
+    cfg: Render_System_Config,
+    env: Env_Info,
+    input_actions_tx: Sender<Action_List>,
+    ui_req_rx: Receiver<UI_Request>,
+    camera: C_Spatial2D,
+) {
+    let mut window = gfx::window::create_render_window(&(), (800, 600), "Unnamed app");
     let mut fps_debug = Fps_Console_Printer::new(&Duration::from_secs(3), "render");
     let mut time = Time::new();
+    let mut gres = resources::gfx::Gfx_Resources::new();
+    let mut input_system = Input_System::new(input_actions_tx);
+    let mut ui_system = gfx::ui::UI_System::new(ui_req_rx);
 
-    let texture_creator = window.texture_creator();
-    let ttf = sdl2::ttf::init().unwrap();
-    let mut gres = resources::gfx::Gfx_Resources::new(&texture_creator, &ttf);
+    ui_system.init(&env, &mut gres).unwrap();
 
     let yv_tex_h = gres.load_texture(&resources::gfx::tex_path(&env, "yv.png"));
-    let yv_tex = gres.get_texture(yv_tex_h);
 
     gfx::window::set_clear_color(&mut window, cfg.clear_color);
+
     loop {
         time.update();
+        let dt = time.real_dt(); // Note: here dt == real_dt.
+
+        input_system.update(&mut window);
 
         gfx::window::clear(&mut window);
-        gfx::render::render_texture(&mut window, &yv_tex, Rect::new(0, 0, 100, 100));
+
+        {
+            let yv_tex = gres.get_texture(yv_tex_h);
+            let sprite = gfx::render::create_sprite(&yv_tex, Rect::new(0, 0, 100, 100));
+            let mut transform = C_Transform2D::default();
+            transform.set_scale(3.0, 3.0);
+            let camera = C_Transform2D::default();
+            gfx::render::render_sprite(&mut window, &sprite, &transform, &camera);
+        }
+        ui_system.update(&dt, &mut window, &mut gres);
+
         gfx::window::display(&mut window);
 
-        fps_debug.tick(&time);
+        fps_debug.tick(&dt);
     }
 }
 
