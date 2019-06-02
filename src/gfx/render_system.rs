@@ -19,6 +19,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
+use std::time::SystemTime;
 
 pub struct Render_System_Config {
     pub clear_color: Color,
@@ -74,6 +75,8 @@ fn render_loop(
     gfx::window::set_clear_color(&mut window, cfg.clear_color);
 
     while quit_message.try_recv().is_err() {
+        let start_t = SystemTime::now();
+
         time.update();
         let dt = time.real_dt(); // Note: here dt == real_dt.
 
@@ -106,6 +109,14 @@ fn render_loop(
         gfx::window::display(&mut window);
 
         fps_debug.tick(&dt);
+
+        println!(
+            "Render: {} ms",
+            SystemTime::now()
+                .duration_since(start_t)
+                .unwrap()
+                .as_millis()
+        );
     }
 }
 

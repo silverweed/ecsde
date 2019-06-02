@@ -18,6 +18,7 @@ use std::convert::TryFrom;
 use std::sync::mpsc;
 use std::thread::JoinHandle;
 use std::time::Duration;
+use std::time::SystemTime;
 
 pub struct App_Config {
     pub title: String,
@@ -183,11 +184,19 @@ impl<'r> App<'r> {
 
             execution_time += dt;
 
+            let gameplay_start_t = SystemTime::now();
             while execution_time > update_time {
                 // Update game systems
                 self.update_game_systems(update_time, &actions)?;
                 execution_time -= update_time;
             }
+            println!(
+                "Gameplay: {} ms",
+                SystemTime::now()
+                    .duration_since(gameplay_start_t)
+                    .unwrap()
+                    .as_millis()
+            );
 
             // Update audio
             self.audio_system.update();
