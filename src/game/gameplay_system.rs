@@ -19,7 +19,7 @@ use std::time::Duration;
 pub struct Gameplay_System {
     entity_manager: Entity_Manager,
     entities: Vec<Entity>,
-    entity_transform_tx: Option<Sender<(Entity, C_Transform2D)>>,
+    entity_transform_tx: Option<Sender<Vec<(Entity, C_Transform2D)>>>,
     camera: Entity,
     camera_transform_tx: Option<Sender<C_Camera2D>>,
 }
@@ -38,7 +38,7 @@ impl Gameplay_System {
     pub fn init(
         &mut self,
         cfg: &cfg::Config,
-        entity_transform_tx: Sender<(Entity, C_Transform2D)>,
+        entity_transform_tx: Sender<Vec<(Entity, C_Transform2D)>>,
         camera_transform_tx: Sender<C_Camera2D>,
     ) -> common::Maybe_Error {
         self.register_all_components();
@@ -143,12 +143,10 @@ impl Gameplay_System {
         }
 
         let n = 30;
-        for i in 0..5000 {
+        for i in 0..12000 {
             let entity = em.new_entity();
             let mut t = em.add_component::<C_Transform2D>(entity);
-            t.set_origin(50.0, 50.0);
             t.set_position(n as f32 * (i % n) as f32, n as f32 * (i / n) as f32);
-            etx.send((entity, *t)).unwrap();
             self.entities.push(entity);
         }
     }
@@ -163,12 +161,14 @@ impl Gameplay_System {
         ctx.send(*em.get_component::<C_Camera2D>(self.camera).unwrap())
             .unwrap();
 
+        let mut modified_entities = Vec::with_capacity(self.entities.len());
         for (i, &e) in self.entities.iter().enumerate() {
             let speed = i as f32 * 0.1;
             if let Some(mut t) = em.get_component_mut::<C_Transform2D>(e) {
                 t.rotate(Deg(dt_secs * speed));
-                etx.send((e, *t)).unwrap();
+                modified_entities.push((e, *t));
             }
         }
+        etx.send(modified_entities).unwrap();
     }
 }

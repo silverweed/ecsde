@@ -14,7 +14,6 @@ use crate::gfx;
 use crate::gfx::ui::{UI_Request, UI_System};
 use crate::resources;
 use std::cell::Ref;
-use std::collections::HashMap;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -29,7 +28,7 @@ pub fn start_render_thread(
     env: Env_Info,
     input_actions_tx: Sender<Action_List>,
     ui_req_rx: Receiver<UI_Request>,
-    entity_transform_rx: Receiver<(Entity, C_Transform2D)>,
+    entity_transform_rx: Receiver<Vec<(Entity, C_Transform2D)>>,
     camera_transform_rx: Receiver<C_Camera2D>,
     quit_message: Receiver<()>,
     cfg: Render_System_Config,
@@ -55,7 +54,7 @@ fn render_loop(
     env: Env_Info,
     input_actions_tx: Sender<Action_List>,
     ui_req_rx: Receiver<UI_Request>,
-    entity_transform_rx: Receiver<(Entity, C_Transform2D)>,
+    entity_transform_rx: Receiver<Vec<(Entity, C_Transform2D)>>,
     camera_transform_rx: Receiver<C_Camera2D>,
     quit_message: Receiver<()>,
 ) {
@@ -65,7 +64,7 @@ fn render_loop(
     let mut gres = resources::gfx::Gfx_Resources::new();
     let mut input_system = Input_System::new(input_actions_tx);
     let mut ui_system = UI_System::new(ui_req_rx);
-    let mut entity_map: HashMap<Entity, C_Transform2D> = HashMap::new();
+    let mut entity_map: Vec<C_Transform2D> = vec![];
     let mut camera_transform = C_Transform2D::default();
 
     ui_system.init(&env, &mut gres).unwrap();
@@ -86,8 +85,16 @@ fn render_loop(
             camera_transform = camera.transform;
         }
 
-        while let Some((entity, transform)) = entity_transform_rx.try_iter().next() {
-            entity_map.insert(entity, transform);
+        let mut modified_entities = vec![];
+        while let Some(entities) = entity_transform_rx.try_iter().next() {
+            modified_entities = entities;
+        }
+
+        for (entity, transform) in modified_entities {
+            if entity.index >= entity_map.len() {
+                entity_map.resize(entity.index + 1, C_Transform2D::default());
+            }
+            entity_map[entity.index] = transform;
         }
 
         gfx::window::clear(&mut window);
@@ -98,7 +105,7 @@ fn render_loop(
             let sprite = gfx::render::create_sprite(&yv_tex, Rect::new(0, 0, sw, sh));
             let camera = C_Transform2D::default();
 
-            for (_, transform) in entity_map.iter_mut() {
+            for transform in entity_map.iter_mut() {
                 transform.set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
                 gfx::render::render_sprite(&mut window, &sprite, transform, &camera_transform);
             }

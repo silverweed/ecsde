@@ -117,7 +117,7 @@ impl<'r> App<'r> {
 
     fn start_render_thread(
         &mut self,
-        entity_transform_rx: mpsc::Receiver<(Entity, C_Transform2D)>,
+        entity_transform_rx: mpsc::Receiver<Vec<(Entity, C_Transform2D)>>,
         camera_transform_rx: mpsc::Receiver<C_Camera2D>,
     ) {
         let (input_tx, input_rx) = mpsc::channel();

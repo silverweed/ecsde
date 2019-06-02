@@ -5,6 +5,7 @@ extern crate anymap;
 extern crate cgmath;
 extern crate ears;
 extern crate notify;
+extern crate rand;
 #[cfg(features = "use-sdl")]
 extern crate sdl2;
 #[cfg(features = "use-sfml")]
