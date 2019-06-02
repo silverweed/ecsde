@@ -1,10 +1,12 @@
 use std::vec::Vec;
 
-#[derive(Default, Copy, Clone, Debug, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Hash)]
 pub struct Generational_Index {
     pub index: usize,
     pub gen: u64,
 }
+
+impl Eq for Generational_Index {}
 
 /// Generational_Allocator provides an interface to allocate/deallocate
 /// Generational Indices and check if an index is valid.
@@ -45,7 +47,7 @@ impl Generational_Allocator {
 
     pub fn allocate(&mut self) -> Generational_Index {
         let i = self.first_free_slot();
-	let cur_size = self.gens.len();
+        let cur_size = self.gens.len();
         if i == cur_size {
             // Grow the vectors
             let new_size = cur_size * 2;

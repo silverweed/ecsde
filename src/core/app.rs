@@ -6,10 +6,14 @@ use super::input;
 use super::time;
 use crate::audio;
 use crate::cfg;
+use crate::ecs::components::gfx::C_Camera2D;
+use crate::ecs::components::transform::C_Transform2D;
+use crate::ecs::entity_manager::Entity;
 use crate::fs;
 use crate::game::gameplay_system;
 use crate::gfx;
 use crate::resources;
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::mpsc;
 use std::thread::JoinHandle;
@@ -55,13 +59,14 @@ pub struct App<'r> {
     env: Env_Info,
 
     config: cfg::Config,
-    ui_req_tx: Option<std::sync::mpsc::Sender<gfx::ui::UI_Request>>,
+    ui_req_tx: Option<mpsc::Sender<gfx::ui::UI_Request>>,
 
     // Resources
     audio_resources: resources::audio::Audio_Resources<'r>,
 
     // Engine Systems
     render_thread: Option<JoinHandle<()>>,
+    render_thread_quit: Option<mpsc::Sender<()>>,
     input_actions_rx: Option<mpsc::Receiver<input::Action_List>>,
     audio_system: audio::system::Audio_System,
     gameplay_system: gameplay_system::Gameplay_System,
@@ -80,6 +85,7 @@ impl<'r> App<'r> {
             ui_req_tx: None,
             audio_resources: resources::audio::Audio_Resources::new(sound_loader),
             render_thread: None,
+            render_thread_quit: None,
             input_actions_rx: None,
             audio_system: audio::system::Audio_System::new(10),
             gameplay_system: gameplay_system::Gameplay_System::new(),
@@ -99,8 +105,6 @@ impl<'r> App<'r> {
     }
 
     fn init_all_systems(&mut self) -> Maybe_Error {
-        self.gameplay_system.init(&self.config)?;
-
         let config_watcher = Box::new(cfg::sync::Config_Watch_Handler::new(&self.config));
         fs::file_watcher::start_file_watch(
             self.env.get_cfg_root().to_path_buf(),
@@ -110,17 +114,27 @@ impl<'r> App<'r> {
         Ok(())
     }
 
-    fn start_render_thread(&mut self) {
+    fn start_render_thread(
+        &mut self,
+        entity_transform_rx: mpsc::Receiver<(Entity, C_Transform2D)>,
+        camera_transform_rx: mpsc::Receiver<C_Camera2D>,
+    ) {
         let (input_tx, input_rx) = mpsc::channel();
         self.input_actions_rx = Some(input_rx);
 
         let (ui_tx, ui_rx) = mpsc::channel();
         self.ui_req_tx = Some(ui_tx);
 
+        let (quit_tx, quit_rx) = mpsc::channel();
+        self.render_thread_quit = Some(quit_tx);
+
         self.render_thread = Some(gfx::render_system::start_render_thread(
             self.env.clone(),
             input_tx,
             ui_rx,
+            entity_transform_rx,
+            camera_transform_rx,
+            quit_rx,
             gfx::render_system::Render_System_Config {
                 clear_color: colors::rgb(48, 10, 36),
             },
@@ -128,7 +142,11 @@ impl<'r> App<'r> {
     }
 
     pub fn run(&mut self) -> Maybe_Error {
-        self.start_render_thread();
+        let (et_tx, et_rx) = mpsc::channel();
+        let (cam_tx, cam_rx) = mpsc::channel();
+        self.gameplay_system.init(&self.config, et_tx, cam_tx)?; // @Temporary workaround
+        self.start_render_thread(et_rx, cam_rx);
+
         self.start_game_loop()?;
         Ok(())
     }
@@ -192,6 +210,17 @@ impl<'r> App<'r> {
                 );
             }
         }
+
+        self.render_thread_quit
+            .as_mut()
+            .unwrap()
+            .send(())
+            .expect("[ ERR ] Failed to send quit message to render thread!");
+        self.render_thread
+            .take()
+            .unwrap()
+            .join()
+            .expect("[ ERR ] Failed to join render thread!");
 
         Ok(())
     }

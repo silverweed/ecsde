@@ -1,5 +1,5 @@
 use crate::core::common::vector::Vec2f;
-use cgmath::Rad;
+use cgmath::{Matrix3, Rad};
 use std::convert::Into;
 use typename::TypeName;
 
@@ -8,6 +8,7 @@ pub struct C_Transform2D {
     position: Vec2f,
     rotation: Rad<f32>,
     scale: Vec2f,
+    origin: Vec2f,
 }
 
 impl Default for C_Transform2D {
@@ -16,6 +17,7 @@ impl Default for C_Transform2D {
             position: Vec2f::new(0.0, 0.0),
             rotation: Rad(0.0),
             scale: Vec2f::new(1.0, 1.0),
+            origin: Vec2f::new(0.0, 0.0),
         }
     }
 }
@@ -68,6 +70,40 @@ impl C_Transform2D {
 
     pub fn rotation(&self) -> Rad<f32> {
         self.rotation
+    }
+
+    pub fn set_origin(&mut self, x: f32, y: f32) {
+        self.origin = Vec2f::new(x, y);
+    }
+
+    pub fn get_matrix(&self) -> Matrix3<f32> {
+        let Rad(angle) = self.rotation.into();
+        let angle = -angle;
+        let cosine = angle.cos();
+        let sine = angle.sin();
+        let sxc = self.scale.x * cosine;
+        let syc = self.scale.y * cosine;
+        let sxs = self.scale.x * sine;
+        let sys = self.scale.y * sine;
+        let tx = -self.origin.x * sxc - self.origin.y * sys + self.position.x;
+        let ty = self.origin.x * sxs - self.origin.y * syc + self.position.y;
+
+        Matrix3::new(sxc, sys, tx, -sxs, syc, ty, 0.0, 0.0, 1.0)
+    }
+
+    pub fn get_matrix_sfml(&self) -> sfml::graphics::Transform {
+        let Rad(angle) = self.rotation.into();
+        let angle = -angle;
+        let cosine = angle.cos();
+        let sine = angle.sin();
+        let sxc = self.scale.x * cosine;
+        let syc = self.scale.y * cosine;
+        let sxs = self.scale.x * sine;
+        let sys = self.scale.y * sine;
+        let tx = -self.origin.x * sxc - self.origin.y * sys + self.position.x;
+        let ty = self.origin.x * sxs - self.origin.y * syc + self.position.y;
+
+        sfml::graphics::Transform::new(sxc, sys, tx, -sxs, syc, ty, 0.0, 0.0, 1.0)
     }
 }
 

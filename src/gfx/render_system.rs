@@ -7,12 +7,14 @@ use crate::core::env::Env_Info;
 use crate::core::input::{Action_List, Input_System};
 use crate::core::time::Time;
 use crate::ecs::components::base::C_Spatial2D;
-use crate::ecs::components::gfx::C_Renderable;
+use crate::ecs::components::gfx::{C_Camera2D, C_Renderable};
 use crate::ecs::components::transform::C_Transform2D;
+use crate::ecs::entity_manager::Entity;
 use crate::gfx;
 use crate::gfx::ui::{UI_Request, UI_System};
 use crate::resources;
 use std::cell::Ref;
+use std::collections::HashMap;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -26,15 +28,23 @@ pub fn start_render_thread(
     env: Env_Info,
     input_actions_tx: Sender<Action_List>,
     ui_req_rx: Receiver<UI_Request>,
+    entity_transform_rx: Receiver<(Entity, C_Transform2D)>,
+    camera_transform_rx: Receiver<C_Camera2D>,
+    quit_message: Receiver<()>,
     cfg: Render_System_Config,
 ) -> JoinHandle<()> {
-    let mut camera = C_Spatial2D::default();
-    camera.transform.translate(150.0, 100.0);
-
     thread::Builder::new()
         .name(String::from("render_thread"))
         .spawn(move || {
-            render_loop(cfg, env, input_actions_tx, ui_req_rx, camera);
+            render_loop(
+                cfg,
+                env,
+                input_actions_tx,
+                ui_req_rx,
+                entity_transform_rx,
+                camera_transform_rx,
+                quit_message,
+            );
         })
         .unwrap()
 }
@@ -44,7 +54,9 @@ fn render_loop(
     env: Env_Info,
     input_actions_tx: Sender<Action_List>,
     ui_req_rx: Receiver<UI_Request>,
-    camera: C_Spatial2D,
+    entity_transform_rx: Receiver<(Entity, C_Transform2D)>,
+    camera_transform_rx: Receiver<C_Camera2D>,
+    quit_message: Receiver<()>,
 ) {
     let mut window = gfx::window::create_render_window(&(), (800, 600), "Unnamed app");
     let mut fps_debug = Fps_Console_Printer::new(&Duration::from_secs(3), "render");
@@ -52,6 +64,8 @@ fn render_loop(
     let mut gres = resources::gfx::Gfx_Resources::new();
     let mut input_system = Input_System::new(input_actions_tx);
     let mut ui_system = UI_System::new(ui_req_rx);
+    let mut entity_map: HashMap<Entity, C_Transform2D> = HashMap::new();
+    let mut camera_transform = C_Transform2D::default();
 
     ui_system.init(&env, &mut gres).unwrap();
 
@@ -59,22 +73,34 @@ fn render_loop(
 
     gfx::window::set_clear_color(&mut window, cfg.clear_color);
 
-    loop {
+    while quit_message.try_recv().is_err() {
         time.update();
         let dt = time.real_dt(); // Note: here dt == real_dt.
 
         input_system.update(&mut window);
 
+        while let Some(camera) = camera_transform_rx.try_iter().next() {
+            camera_transform = camera.transform;
+        }
+
+        while let Some((entity, transform)) = entity_transform_rx.try_iter().next() {
+            entity_map.insert(entity, transform);
+        }
+
         gfx::window::clear(&mut window);
 
         {
             let yv_tex = gres.get_texture(yv_tex_h);
-            let sprite = gfx::render::create_sprite(&yv_tex, Rect::new(0, 0, 100, 100));
-            let mut transform = C_Transform2D::default();
-            transform.set_scale(3.0, 3.0);
+            let (sw, sh) = gfx::render::get_texture_size(&yv_tex);
+            let sprite = gfx::render::create_sprite(&yv_tex, Rect::new(0, 0, sw, sh));
             let camera = C_Transform2D::default();
-            gfx::render::render_sprite(&mut window, &sprite, &transform, &camera);
+
+            for (_, transform) in entity_map.iter_mut() {
+                transform.set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
+                gfx::render::render_sprite(&mut window, &sprite, transform, &camera_transform);
+            }
         }
+
         ui_system.update(&dt, &mut window, &mut gres);
 
         gfx::window::display(&mut window);

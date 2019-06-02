@@ -20,6 +20,13 @@ pub struct Entity_Manager {
 pub type Entity = Generational_Index;
 type VecOpt<T> = Vec<Option<RefCell<T>>>;
 
+impl Entity {
+    pub const INVALID: Entity = Entity {
+        gen: u64::max_value(),
+        index: usize::max_value(),
+    };
+}
+
 impl Entity_Manager {
     pub fn new() -> Entity_Manager {
         Entity_Manager {
