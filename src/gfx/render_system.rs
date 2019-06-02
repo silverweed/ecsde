@@ -111,14 +111,12 @@ fn render_loop(
 
 pub struct Render_System {
     config: Render_System_Config,
-    pub camera: C_Spatial2D,
 }
 
 impl Render_System {
     pub fn new() -> Self {
         Render_System {
             config: Self::default_config(),
-            camera: C_Spatial2D::default(),
         }
     }
 
@@ -130,7 +128,6 @@ impl Render_System {
 
     pub fn init(&mut self, cfg: Render_System_Config) -> Maybe_Error {
         self.config = cfg;
-        self.camera.transform.translate(150.0, 100.0);
         Ok(())
     }
 
@@ -138,6 +135,7 @@ impl Render_System {
         &mut self,
         window: &mut gfx::window::Window_Handle,
         resources: &resources::gfx::Gfx_Resources,
+        camera: &C_Camera2D,
         renderables: &[(Ref<'_, C_Renderable>, Ref<'_, C_Spatial2D>)],
         frame_lag_normalized: f32,
         smooth_by_extrapolating_velocity: bool,
@@ -162,12 +160,7 @@ impl Render_System {
                 rend_transform.translate(v.x * frame_lag_normalized, v.y * frame_lag_normalized);
             }
 
-            gfx::render::render_sprite(
-                window,
-                &mut sprite,
-                &rend_transform,
-                &self.camera.transform,
-            );
+            gfx::render::render_sprite(window, &mut sprite, &rend_transform, &camera.transform);
         }
     }
 }

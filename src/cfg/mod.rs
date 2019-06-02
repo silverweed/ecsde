@@ -61,6 +61,7 @@ impl Config {
             for entry in section.entries.into_iter() {
                 let name = format!("{}/{}", section.header, entry.key);
                 let id = String_Id::from(name.as_str());
+                eprintln!("Loading cfg var {} = {:?}", name, entry.value);
                 match entry.value {
                     Cfg_Value::Bool(v) => {
                         bool_vars.insert(id, Rc::new(RefCell::new(v)));
@@ -118,7 +119,7 @@ impl Config {
             var
         } else {
             eprintln!(
-                "Notice: could not find cfg_var {}: using default {}",
+                "Notice: could not find bool cfg_var {}: using default {}",
                 path, default
             );
             Cfg_Var::new_from_val(default)
@@ -131,7 +132,7 @@ impl Config {
             var
         } else {
             eprintln!(
-                "Notice: could not find cfg_var {}: using default {}",
+                "Notice: could not find int cfg_var {}: using default {}",
                 path, default
             );
             Cfg_Var::new_from_val(default)
@@ -144,7 +145,7 @@ impl Config {
             var
         } else {
             eprintln!(
-                "Notice: could not find cfg_var {}: using default {}",
+                "Notice: could not find float cfg_var {}: using default {}",
                 path, default
             );
             Cfg_Var::new_from_val(default)
@@ -157,7 +158,7 @@ impl Config {
             var
         } else {
             eprintln!(
-                "Notice: could not find cfg_var {}: using default {}",
+                "Notice: could not find string cfg_var {}: using default {}",
                 path, default
             );
             Cfg_Var::new_from_val(String::from(default))

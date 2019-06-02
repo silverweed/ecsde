@@ -18,6 +18,7 @@ use std::convert::TryFrom;
 use std::sync::mpsc;
 use std::thread::JoinHandle;
 use std::time::Duration;
+use std::time::SystemTime;
 
 pub struct App_Config {
     pub title: String,
@@ -59,15 +60,17 @@ pub struct App<'r> {
     env: Env_Info,
 
     config: cfg::Config,
-    ui_req_tx: Option<mpsc::Sender<gfx::ui::UI_Request>>,
+    ui_req_tx: mpsc::Sender<gfx::ui::UI_Request>,
 
     // Resources
+    gfx_resources: resources::gfx::Gfx_Resources<'r>,
     audio_resources: resources::audio::Audio_Resources<'r>,
 
     // Engine Systems
-    render_thread: Option<JoinHandle<()>>,
-    render_thread_quit: Option<mpsc::Sender<()>>,
-    input_actions_rx: Option<mpsc::Receiver<input::Action_List>>,
+    input_system: input::Input_System,
+    input_actions_rx: mpsc::Receiver<input::Action_List>,
+    render_system: gfx::render_system::Render_System,
+    ui_system: gfx::ui::UI_System,
     audio_system: audio::system::Audio_System,
     gameplay_system: gameplay_system::Gameplay_System,
 }
@@ -77,16 +80,21 @@ impl<'r> App<'r> {
         let env = Env_Info::gather().unwrap();
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
 
+        let (input_tx, input_rx) = mpsc::channel();
+        let (ui_tx, ui_rx) = mpsc::channel();
+
         App {
             time: time::Time::new(),
             should_close: false,
             env,
             config,
-            ui_req_tx: None,
+            ui_req_tx: ui_tx,
+            input_system: input::Input_System::new(input_tx),
+            input_actions_rx: input_rx,
+            gfx_resources: resources::gfx::Gfx_Resources::new(),
             audio_resources: resources::audio::Audio_Resources::new(sound_loader),
-            render_thread: None,
-            render_thread_quit: None,
-            input_actions_rx: None,
+            render_system: gfx::render_system::Render_System::new(),
+            ui_system: gfx::ui::UI_System::new(ui_rx),
             audio_system: audio::system::Audio_System::new(10),
             gameplay_system: gameplay_system::Gameplay_System::new(),
         }
@@ -111,116 +119,89 @@ impl<'r> App<'r> {
             vec![config_watcher],
         )?;
 
+        self.gameplay_system
+            .init(&mut self.gfx_resources, &self.env, &self.config)?;
+        self.render_system
+            .init(gfx::render_system::Render_System_Config {
+                clear_color: colors::rgb(22, 0, 22),
+            })?;
+
         Ok(())
     }
 
-    fn start_render_thread(
-        &mut self,
-        entity_transform_rx: mpsc::Receiver<(Entity, C_Transform2D)>,
-        camera_transform_rx: mpsc::Receiver<C_Camera2D>,
-    ) {
-        let (input_tx, input_rx) = mpsc::channel();
-        self.input_actions_rx = Some(input_rx);
-
-        let (ui_tx, ui_rx) = mpsc::channel();
-        self.ui_req_tx = Some(ui_tx);
-
-        let (quit_tx, quit_rx) = mpsc::channel();
-        self.render_thread_quit = Some(quit_tx);
-
-        self.render_thread = Some(gfx::render_system::start_render_thread(
-            self.env.clone(),
-            input_tx,
-            ui_rx,
-            entity_transform_rx,
-            camera_transform_rx,
-            quit_rx,
-            gfx::render_system::Render_System_Config {
-                clear_color: colors::rgb(48, 10, 36),
-            },
-        ));
-    }
-
-    pub fn run(&mut self) -> Maybe_Error {
-        let (et_tx, et_rx) = mpsc::channel();
-        let (cam_tx, cam_rx) = mpsc::channel();
-        self.gameplay_system.init(&self.config, et_tx, cam_tx)?; // @Temporary workaround
-        self.start_render_thread(et_rx, cam_rx);
-
-        self.start_game_loop()?;
+    pub fn run(&mut self, window: &mut gfx::window::Window_Handle) -> Maybe_Error {
+        self.start_game_loop(window)?;
         Ok(())
     }
 
-    fn start_game_loop(&mut self) -> Maybe_Error {
+    fn start_game_loop(&mut self, window: &mut gfx::window::Window_Handle) -> Maybe_Error {
         let mut fps_debug = debug::fps::Fps_Console_Printer::new(&Duration::from_secs(3), "main");
-        let input_actions_rx = self.input_actions_rx.take().unwrap();
         let mut execution_time = Duration::new(0, 0);
 
         while !self.should_close {
-            let frame_start_t = std::time::SystemTime::now();
-
             // Update time
             self.time.update();
 
             let dt = self.time.dt();
-
-            let update_time = Duration::from_nanos(
-                (*self
+            let real_dt = self.time.real_dt();
+            let update_time = Duration::from_millis(
+                *self
                     .config
-                    .get_var_float_or("engine/gameplay/gameplay_update_tick_ms", 10.0)
-                    * 1_000_000.0) as u64,
+                    .get_var_int_or("engine/gameplay/gameplay_update_tick_ms", 10)
+                    as u64,
             );
-
-            // Update input
-            // Note: due to SFML limitations, the event loop is run on the render thread.
-            let actions = if let Ok(new_actions) = input_actions_rx.try_recv() {
-                new_actions
-            } else {
-                input::Action_List::default()
-            };
-
-            self.handle_actions(&actions)?;
 
             execution_time += dt;
 
+            // Update input
+            self.input_system.update(window);
+            let actions = self.input_system.get_action_list();
+            self.handle_actions(&actions)?;
+
+            // Update game systems
+            let gameplay_start_t = SystemTime::now();
             while execution_time > update_time {
-                // Update game systems
                 self.update_game_systems(update_time, &actions)?;
                 execution_time -= update_time;
             }
+            println!(
+                "Gameplay: {} ms",
+                SystemTime::now()
+                    .duration_since(gameplay_start_t)
+                    .unwrap()
+                    .as_millis()
+            );
 
             // Update audio
             self.audio_system.update();
 
-            self.config.update();
+            // Render
+            let render_start_t = SystemTime::now();
+            self.update_graphics(
+                window,
+                real_dt,
+                time::duration_ratio(&execution_time, &update_time) as f32,
+            )?;
+            println!(
+                "Render: {} ms",
+                SystemTime::now()
+                    .duration_since(render_start_t)
+                    .unwrap()
+                    .as_millis()
+            );
 
-            let frame_duration = std::time::SystemTime::now()
-                .duration_since(frame_start_t)
-                .unwrap();
-
-            fps_debug.tick(&self.time.real_dt());
-
-            if frame_duration < update_time {
-                std::thread::sleep(update_time - frame_duration);
-            } else {
-                eprintln!(
-                    "[ WARNING ] Game loop took {} ms, which is more than the requested {} ms.",
-                    frame_duration.as_millis(),
-                    update_time.as_millis()
-                );
+            #[cfg(debug_assertions)]
+            {
+                let sleep = *self
+                    .config
+                    .get_var_int_or("engine/debug/extra_frame_sleep_ms", 0)
+                    as u64;
+                std::thread::sleep(Duration::from_millis(sleep));
             }
-        }
 
-        self.render_thread_quit
-            .as_mut()
-            .unwrap()
-            .send(())
-            .expect("[ ERR ] Failed to send quit message to render thread!");
-        self.render_thread
-            .take()
-            .unwrap()
-            .join()
-            .expect("[ ERR ] Failed to join render thread!");
+            self.config.update();
+            fps_debug.tick(&dt);
+        }
 
         Ok(())
     }
@@ -231,11 +212,36 @@ impl<'r> App<'r> {
         Ok(())
     }
 
+    fn update_graphics(
+        &mut self,
+        window: &mut gfx::window::Window_Handle,
+        real_dt: Duration,
+        frame_lag_normalized: f32,
+    ) -> Maybe_Error {
+        let smooth_by_extrapolating_velocity = *self
+            .config
+            .get_var_bool_or("engine/rendering/smooth_by_extrapolating_velocity", false);
+
+        gfx::window::set_clear_color(window, colors::rgb(0, 0, 0));
+        gfx::window::clear(window);
+        self.render_system.update(
+            window,
+            &self.gfx_resources,
+            &self.gameplay_system.get_camera(),
+            &self.gameplay_system.get_renderable_entities(),
+            frame_lag_normalized,
+            smooth_by_extrapolating_velocity,
+        );
+        self.ui_system
+            .update(&real_dt, window, &mut self.gfx_resources);
+        gfx::window::display(window);
+
+        Ok(())
+    }
+
     fn handle_actions(&mut self, actions: &input::Action_List) -> Maybe_Error {
         use gfx::ui::UI_Request;
         use input::Action;
-
-        let ui_req_tx = self.ui_req_tx.as_ref().unwrap();
 
         if actions.has_action(&Action::Quit) {
             self.should_close = true;
@@ -247,7 +253,7 @@ impl<'r> App<'r> {
                         if ts > 0.0 {
                             self.time.set_time_scale(ts);
                         }
-                        ui_req_tx
+                        self.ui_req_tx
                             .send(UI_Request::Add_Fadeout_Text(format!(
                                 "Time scale: {:.2}",
                                 self.time.get_time_scale()
@@ -256,7 +262,7 @@ impl<'r> App<'r> {
                     }
                     Action::Pause_Toggle => {
                         self.time.set_paused(!self.time.is_paused());
-                        ui_req_tx
+                        self.ui_req_tx
                             .send(UI_Request::Add_Fadeout_Text(String::from(
                                 if self.time.is_paused() {
                                     "Paused"
@@ -271,7 +277,7 @@ impl<'r> App<'r> {
                         let step_delta = Duration::from_nanos(
                             u64::try_from(1_000_000_000 / *target_fps).unwrap(),
                         );
-                        ui_req_tx
+                        self.ui_req_tx
                             .send(UI_Request::Add_Fadeout_Text(format!(
                                 "Stepping of: {:.2} ms",
                                 time::to_secs_frac(&step_delta) * 1000.0

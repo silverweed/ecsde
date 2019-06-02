@@ -30,6 +30,8 @@ fn main() -> core::common::Maybe_Error {
     let sound_loader = audio::sound_loader::Sound_Loader {};
     let mut app = core::app::App::new(&sound_loader);
 
+    let mut window = gfx::window::create_render_window(&(), (800, 600), "Unnamed app");
+
     app.init()?;
-    app.run()
+    app.run(&mut window)
 }

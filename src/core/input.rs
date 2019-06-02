@@ -49,27 +49,27 @@ impl std::ops::Deref for Action_List {
 
 pub struct Input_System {
     actions: Action_List,
-    actions_tx: Sender<Action_List>,
 }
 
 impl Input_System {
     pub fn new(actions_tx: Sender<Action_List>) -> Input_System {
         Input_System {
             actions: Action_List::default(),
-            actions_tx,
         }
+    }
+
+    pub fn get_action_list(&self) -> Action_List {
+        self.actions.clone()
     }
 
     #[cfg(feature = "use-sdl")]
     pub fn update(&mut self, event_pump: &mut sdl2::EventPump) {
         poll_events(&mut self.actions, event_pump);
-        self.actions_tx.send(self.actions.clone()).unwrap();
     }
 
     #[cfg(feature = "use-sfml")]
     pub fn update(&mut self, window: &mut sfml::graphics::RenderWindow) {
         poll_events(&mut self.actions, window);
-        self.actions_tx.send(self.actions.clone()).unwrap();
     }
 }
 

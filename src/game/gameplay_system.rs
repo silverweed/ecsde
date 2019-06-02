@@ -11,6 +11,7 @@ use crate::ecs::components::transform::C_Transform2D;
 use crate::ecs::entity_manager::{Entity, Entity_Manager};
 use crate::game;
 use crate::gfx;
+use crate::resources::gfx::{tex_path, Gfx_Resources};
 use cgmath::Deg;
 use std::cell::Ref;
 use std::sync::mpsc::Sender;
@@ -19,9 +20,7 @@ use std::time::Duration;
 pub struct Gameplay_System {
     entity_manager: Entity_Manager,
     entities: Vec<Entity>,
-    entity_transform_tx: Option<Sender<(Entity, C_Transform2D)>>,
     camera: Entity,
-    camera_transform_tx: Option<Sender<C_Camera2D>>,
 }
 
 impl Gameplay_System {
@@ -29,23 +28,19 @@ impl Gameplay_System {
         Gameplay_System {
             entity_manager: Entity_Manager::new(),
             entities: vec![],
-            entity_transform_tx: None,
             camera: Entity::INVALID,
-            camera_transform_tx: None,
         }
     }
 
     pub fn init(
         &mut self,
+        gres: &mut Gfx_Resources,
+        env: &Env_Info,
         cfg: &cfg::Config,
-        entity_transform_tx: Sender<(Entity, C_Transform2D)>,
-        camera_transform_tx: Sender<C_Camera2D>,
     ) -> common::Maybe_Error {
         self.register_all_components();
 
-        self.entity_transform_tx = Some(entity_transform_tx);
-        self.camera_transform_tx = Some(camera_transform_tx);
-        self.init_demo_entities(cfg);
+        self.init_demo_entities(gres, env, cfg);
         //self.init_demo_sprites(cfg);
 
         Ok(())
@@ -64,6 +59,14 @@ impl Gameplay_System {
         self.entity_manager
             .get_component_tuple::<C_Renderable, C_Spatial2D>()
             .collect()
+    }
+
+    pub fn get_camera(&self) -> C_Camera2D {
+        **self
+            .entity_manager
+            .get_components::<C_Camera2D>()
+            .first()
+            .unwrap()
     }
 
     fn register_all_components(&mut self) {
@@ -130,10 +133,9 @@ impl Gameplay_System {
         }
     }
 
-    fn init_demo_entities(&mut self, cfg: &cfg::Config) {
+    fn init_demo_entities(&mut self, rsrc: &mut Gfx_Resources, env: &Env_Info, cfg: &cfg::Config) {
         // #DEMO
         let em = &mut self.entity_manager;
-        let etx = self.entity_transform_tx.as_mut().unwrap();
 
         self.camera = em.new_entity();
         em.add_component::<C_Camera2D>(self.camera);
@@ -143,12 +145,22 @@ impl Gameplay_System {
         }
 
         let n = 30;
-        for i in 0..5000 {
+        for i in 0..10000 {
             let entity = em.new_entity();
-            let mut t = em.add_component::<C_Transform2D>(entity);
-            t.set_origin(50.0, 50.0);
-            t.set_position(n as f32 * (i % n) as f32, n as f32 * (i / n) as f32);
-            etx.send((entity, *t)).unwrap();
+            let (sw, sh) = {
+                let mut rend = em.add_component::<C_Renderable>(entity);
+                rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
+                assert!(rend.texture.is_some(), "Could not load yv texture!");
+                let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
+                rend.rect = Rect::new(0, 0, sw, sh);
+                (sw, sh)
+            };
+            {
+                let mut t = em.add_component::<C_Spatial2D>(entity);
+                t.transform.set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
+                t.transform
+                    .set_position(n as f32 * (i % n) as f32, n as f32 * (i / n) as f32);
+            }
             self.entities.push(entity);
         }
     }
@@ -157,18 +169,14 @@ impl Gameplay_System {
         // #DEMO
         let em = &mut self.entity_manager;
         let dt_secs = time::to_secs_frac(dt);
-        let etx = self.entity_transform_tx.as_mut().unwrap();
-        let ctx = self.camera_transform_tx.as_mut().unwrap();
 
-        ctx.send(*em.get_component::<C_Camera2D>(self.camera).unwrap())
-            .unwrap();
-
-        for (i, &e) in self.entities.iter().enumerate() {
+        for (i, t) in em
+            .get_components_mut::<C_Spatial2D>()
+            .iter_mut()
+            .enumerate()
+        {
             let speed = i as f32 * 0.1;
-            if let Some(mut t) = em.get_component_mut::<C_Transform2D>(e) {
-                t.rotate(Deg(dt_secs * speed));
-                etx.send((e, *t)).unwrap();
-            }
+            t.transform.rotate(Deg(dt_secs * speed));
         }
     }
 }
