@@ -25,32 +25,10 @@ struct Fadeout_Text {
     pub time: Duration,
 }
 
-type Fadeout_Text_Requests = Arc<Mutex<Vec<String>>>;
-
-fn spawn_req_rx_listen_thread(
-    req_rx: Receiver<UI_Request>,
-    fadeout_text_requests: Fadeout_Text_Requests,
-) -> JoinHandle<()> {
-    thread::spawn(move || {
-        req_rx_listen(req_rx, fadeout_text_requests);
-    })
-}
-
-/// Worker thread that listens to incoming UI_Requests and appends them to the shared array
-/// `fadeout_text_requests`. This array is used by the UI in its `update()` method to accomplish
-/// the requests.
-fn req_rx_listen(req_rx: Receiver<UI_Request>, fadeout_text_requests: Fadeout_Text_Requests) {
-    while let Ok(req) = req_rx.recv() {
-        match req {
-            UI_Request::Add_Fadeout_Text(txt) => fadeout_text_requests.lock().unwrap().push(txt),
-        }
-    }
-}
-
 pub struct UI_System {
     fadeout_text_font: Font_Handle,
     fadeout_texts: Vec<Fadeout_Text>,
-    fadeout_text_requests: Fadeout_Text_Requests,
+    ui_requests_rx: Receiver<UI_Request>,
     fadeout_time: Duration,
 }
 
@@ -63,14 +41,10 @@ impl UI_System {
     const DEFAULT_FADEOUT_TIME_MS: u64 = 3000;
 
     pub fn new(req_rx: Receiver<UI_Request>) -> UI_System {
-        let fadeout_text_requests = Arc::new(Mutex::new(vec![]));
-
-        spawn_req_rx_listen_thread(req_rx, fadeout_text_requests.clone());
-
         UI_System {
             fadeout_text_font: None,
             fadeout_texts: vec![],
-            fadeout_text_requests,
+            ui_requests_rx: req_rx,
             fadeout_time: Duration::from_millis(Self::DEFAULT_FADEOUT_TIME_MS),
         }
     }
@@ -95,11 +69,13 @@ impl UI_System {
     }
 
     fn handle_ui_requests(&mut self) {
-        let reqs = self.fadeout_text_requests.lock().unwrap().clone();
-        for txt in reqs.iter() {
-            self.add_fadeout_text(&txt);
+        let iter = self.ui_requests_rx.try_iter().collect::<Vec<UI_Request>>();
+        for req in iter {
+            match req {
+                UI_Request::Add_Fadeout_Text(txt) => self.add_fadeout_text(txt),
+                _ => unreachable!(),
+            }
         }
-        self.fadeout_text_requests.lock().unwrap().clear();
     }
 
     fn update_fadeout_texts(&mut self, dt: &Duration) {
@@ -140,9 +116,9 @@ impl UI_System {
         }
     }
 
-    pub fn add_fadeout_text(&mut self, txt: &str) {
+    pub fn add_fadeout_text(&mut self, txt: String) {
         self.fadeout_texts.push(Fadeout_Text {
-            text: String::from(txt),
+            text: txt,
             time: Duration::new(0, 0),
         });
     }
