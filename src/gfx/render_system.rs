@@ -1,24 +1,10 @@
-use super::render::Sprite;
 use crate::core::common::colors::{self, Color};
-use crate::core::common::rect::Rect;
 use crate::core::common::Maybe_Error;
-use crate::core::debug::fps::Fps_Console_Printer;
-use crate::core::env::Env_Info;
-use crate::core::input::{Action_List, Input_System};
-use crate::core::time::Time;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Camera2D, C_Renderable};
-use crate::ecs::components::transform::C_Transform2D;
-use crate::ecs::entity_manager::Entity;
 use crate::gfx;
-use crate::gfx::ui::{UI_Request, UI_System};
 use crate::resources;
 use std::cell::Ref;
-use std::collections::HashMap;
-use std::sync::mpsc::{Receiver, Sender};
-use std::sync::{Arc, Mutex};
-use std::thread::{self, JoinHandle};
-use std::time::Duration;
 
 pub struct Render_System_Config {
     pub clear_color: Color,

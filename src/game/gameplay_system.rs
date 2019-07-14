@@ -14,7 +14,6 @@ use crate::gfx;
 use crate::resources::gfx::{tex_path, Gfx_Resources};
 use cgmath::Deg;
 use std::cell::Ref;
-use std::sync::mpsc::Sender;
 use std::time::Duration;
 
 pub struct Gameplay_System {

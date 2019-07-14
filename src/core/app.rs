@@ -6,17 +6,11 @@ use super::input;
 use super::time;
 use crate::audio;
 use crate::cfg;
-use crate::ecs::components::gfx::C_Camera2D;
-use crate::ecs::components::transform::C_Transform2D;
-use crate::ecs::entity_manager::Entity;
 use crate::fs;
 use crate::game::gameplay_system;
 use crate::gfx;
 use crate::resources;
-use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::sync::mpsc;
-use std::thread::JoinHandle;
 use std::time::Duration;
 use std::time::SystemTime;
 

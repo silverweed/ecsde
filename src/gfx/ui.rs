@@ -1,19 +1,16 @@
 use crate::core;
-use crate::core::common::colors::{self, Color};
-use crate::core::common::rect::Rect;
+use crate::core::common::colors;
 use crate::core::common::vector::{to_framework_vec, Vec2f};
 use crate::core::common::Maybe_Error;
 use crate::core::env::Env_Info;
 use crate::gfx;
 use crate::gfx::window::Window_Handle;
 use crate::resources;
-use crate::resources::gfx::{Font_Handle, Gfx_Resources, Texture_Handle};
+use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use sfml::graphics::Text;
 use sfml::graphics::Transformable;
 use std::sync::mpsc;
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::sync::{Arc, Mutex};
-use std::thread::{self, JoinHandle};
+use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 use std::vec::Vec;
 
@@ -77,7 +74,6 @@ impl UI_System {
         for req in iter {
             match req {
                 UI_Request::Add_Fadeout_Text(txt) => self.add_fadeout_text(txt),
-                _ => unreachable!(),
             }
         }
     }

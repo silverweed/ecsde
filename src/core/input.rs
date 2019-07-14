@@ -1,7 +1,6 @@
 use crate::core::common::direction::Direction;
 use crate::core::common::vector::Vec2f;
 use cgmath::InnerSpace;
-use std::sync::mpsc::{channel, Sender};
 use std::vec::Vec;
 
 #[derive(PartialEq, Hash, Copy, Clone)]

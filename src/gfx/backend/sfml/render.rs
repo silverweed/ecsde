@@ -1,8 +1,8 @@
 use crate::core::common::rect::Rect;
-use crate::core::common::vector::{self, Vec2f};
+use crate::core::common::vector::Vec2f;
 use crate::ecs::components::transform::C_Transform2D;
 use crate::gfx::window::Window_Handle;
-use cgmath::{Deg, Rad};
+use cgmath::Rad;
 use sfml::graphics::{RectangleShape, RenderStates, RenderTarget, Transform, Transformable};
 use sfml::system::Vector2f;
 
@@ -128,7 +128,6 @@ fn calc_render_transform(
     rot_origin: Vec2f,
     scale_origin: Vec2f,
 ) -> Transform {
-    let mut t = Transform::IDENTITY;
     let epsilon = 0.0001;
 
     let spos = transform.position();
@@ -163,7 +162,7 @@ fn calc_render_transform(
     rotation.combine(&mut translation.inverse());
     println!("rotation = {:?}", rotation);
     translation.combine(&mut rotation);
-    t = translation;
+    let mut t = translation;
     //}
     println!("t = {:?}", t);
 

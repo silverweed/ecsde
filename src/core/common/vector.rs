@@ -1,5 +1,4 @@
 use cgmath::Vector2;
-use std::convert::From;
 
 pub type Vec2u = Vector2<u32>;
 pub type Vec2f = Vector2<f32>;
