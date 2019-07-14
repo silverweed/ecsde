@@ -24,7 +24,8 @@ impl State_Manager {
         }
     }
 
-    pub fn with_initial_state(state: Box<dyn Game_State>) -> State_Manager {
+    pub fn with_initial_state(mut state: Box<dyn Game_State>) -> State_Manager {
+        state.on_start();
         State_Manager {
             state_stack: vec![state],
             persistent_states: vec![],
@@ -106,5 +107,102 @@ impl State_Manager {
 
         state.on_start();
         self.state_stack.push(state);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    #[derive(Default)]
+    struct Test_State_Data {
+        pub started: bool,
+        pub paused: bool,
+        pub resumed: bool,
+        pub ended: bool,
+        pub updated: i32,
+        pub handled_actions: i32,
+    }
+
+    #[derive(Default)]
+    struct Test_State_1 {
+        pub data: Rc<RefCell<Test_State_Data>>,
+    }
+
+    impl Game_State for Test_State_1 {
+        fn on_start(&mut self) {
+            self.data.borrow_mut().started = true;
+        }
+        fn on_end(&mut self) {
+            self.data.borrow_mut().ended = true;
+        }
+        fn on_pause(&mut self) {
+            self.data.borrow_mut().paused = true;
+        }
+        fn on_resume(&mut self) {
+            self.data.borrow_mut().resumed = true;
+        }
+        fn update(&mut self, _dt: &Duration) -> State_Transition {
+            self.data.borrow_mut().updated += 1;
+            if self.data.borrow().updated < 2 {
+                State_Transition::None
+            } else {
+                State_Transition::Pop
+            }
+        }
+        fn handle_actions(
+            &mut self,
+            _actions: &Action_List,
+            _dispatcher: &msg::Msg_Dispatcher,
+            _config: &cfg::Config,
+        ) -> bool {
+            self.data.borrow_mut().handled_actions += 1;
+            false
+        }
+    }
+
+    // @Incomplete: pause/resume and persistent states are not covered
+    #[test]
+    fn state_manager() {
+        let data = Rc::new(RefCell::new(Test_State_Data::default()));
+        let state = Box::new(Test_State_1 { data: data.clone() });
+        let mut smgr = State_Manager::with_initial_state(state);
+
+        assert!(data.borrow().started, "State was not started");
+        assert!(!data.borrow().ended, "State was ended");
+        assert!(!data.borrow().resumed, "State was resumed");
+        assert!(!data.borrow().paused, "State was paused");
+        assert_eq!(data.borrow().updated, 0);
+        assert_eq!(data.borrow().handled_actions, 0);
+
+        smgr.update(&Duration::from_millis(0));
+        assert_eq!(data.borrow().updated, 1);
+        assert_eq!(data.borrow().handled_actions, 0);
+
+        let actions = Action_List::default();
+        let disp = msg::Msg_Dispatcher::new();
+        let cfg = cfg::Config::new_empty();
+        smgr.handle_actions(&actions, &disp, &cfg);
+        assert_eq!(data.borrow().handled_actions, 1);
+
+        smgr.update(&Duration::from_millis(0)); // this pops the state
+        assert_eq!(data.borrow().updated, 2, "State was not updated");
+        assert!(data.borrow().ended, "State was not ended");
+
+        smgr.handle_actions(&actions, &disp, &cfg);
+        assert_eq!(
+            data.borrow().handled_actions,
+            1,
+            "State was handled but should have been popped"
+        );
+
+        smgr.update(&Duration::from_millis(0));
+        assert_eq!(
+            data.borrow().updated,
+            2,
+            "State was updated but should have been popped"
+        );
     }
 }

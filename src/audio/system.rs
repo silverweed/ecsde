@@ -57,7 +57,9 @@ mod tests {
     #[test]
     fn max_concurrent_sounds() {
         let max_conc_sounds = 5;
-        let mut a_sys = Audio_System::new(max_conc_sounds);
+        let mut a_sys = Audio_System::new(&Audio_System_Config {
+            max_concurrent_sounds: max_conc_sounds,
+        });
         let sound_loader = audio::sound_loader::Sound_Loader {};
         let (_, mut ares, env) = test_common::create_test_resources_and_env(&sound_loader);
         let snd_handle = ares.load_sound(&sound_path(&env, "coin.ogg"));

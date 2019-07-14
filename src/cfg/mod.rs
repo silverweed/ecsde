@@ -49,6 +49,17 @@ pub struct Config {
 }
 
 impl Config {
+    #[cfg(test)]
+    pub fn new_empty() -> Config {
+        Config {
+            bool_vars: HashMap::new(),
+            int_vars: HashMap::new(),
+            float_vars: HashMap::new(),
+            string_vars: HashMap::new(),
+            change_interface: Arc::new(Mutex::new(Config_Change_Interface::new())),
+        }
+    }
+
     pub fn new_from_dir(dir_path: &Path) -> Config {
         let raw = Raw_Config::new_from_dir(dir_path);
 
