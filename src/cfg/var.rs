@@ -64,7 +64,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::audio;
     use crate::cfg;
     use crate::test_common::*;

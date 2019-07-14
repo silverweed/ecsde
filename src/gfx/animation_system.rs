@@ -35,9 +35,7 @@ mod tests {
     use super::*;
     use crate::audio;
     use crate::core::common::rect::Rect;
-    use crate::core::env::Env_Info;
-    use crate::gfx;
-    use crate::resources::gfx::{tex_path, Gfx_Resources};
+    use crate::resources::gfx::tex_path;
     use crate::test_common;
 
     #[test]

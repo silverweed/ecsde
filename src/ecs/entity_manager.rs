@@ -705,7 +705,7 @@ mod tests {
         em.add_component::<C_Test>(e);
         em.add_component::<C_Test2>(e);
 
-        for (test, test2) in em.get_component_tuple_mut::<C_Test, C_Test2>() {
+        for (test, _) in em.get_component_tuple_mut::<C_Test, C_Test2>() {
             test.borrow_mut().foo = 42;
         }
 
