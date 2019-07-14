@@ -5,6 +5,7 @@ extern crate anymap;
 extern crate cgmath;
 extern crate ears;
 extern crate notify;
+
 #[cfg(features = "use-sdl")]
 extern crate sdl2;
 #[cfg(features = "use-sfml")]
@@ -21,6 +22,7 @@ pub(crate) mod fs;
 pub(crate) mod game;
 pub(crate) mod gfx;
 pub(crate) mod resources;
+pub(crate) mod states;
 #[cfg(test)]
 pub(crate) mod test_common;
 

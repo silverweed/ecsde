@@ -41,7 +41,7 @@ impl Time {
                 .duration_since(self.prev_real_time)
                 .unwrap_or(Duration::from_secs(0));
 
-            self.game_time += real_delta.as_micros() as Time_t;
+            self.game_time += (self.time_scale * real_delta.as_micros() as f32) as Time_t;
         }
     }
 

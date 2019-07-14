@@ -3,12 +3,14 @@ use crate::core::common::colors;
 use crate::core::common::vector::{to_framework_vec, Vec2f};
 use crate::core::common::Maybe_Error;
 use crate::core::env::Env_Info;
+use crate::core::msg::Msg_Responder;
 use crate::gfx;
 use crate::gfx::window::Window_Handle;
 use crate::resources;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use sfml::graphics::Text;
 use sfml::graphics::Transformable;
+use std::collections::VecDeque;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
@@ -25,10 +27,20 @@ struct Fadeout_Text {
 
 pub struct UI_System {
     fadeout_text_font: Font_Handle,
-    fadeout_texts: Vec<Fadeout_Text>,
+    fadeout_texts: VecDeque<Fadeout_Text>,
     ui_requests_rx: Receiver<UI_Request>,
     ui_requests_tx: Sender<UI_Request>,
     fadeout_time: Duration,
+}
+
+impl Msg_Responder for UI_System {
+    type Msg_Data = UI_Request;
+    type Resp_Data = ();
+
+    fn send_message(&mut self, msg: UI_Request) -> () {
+        self.ui_requests_tx.send(msg).unwrap();
+        ()
+    }
 }
 
 impl UI_System {
@@ -38,12 +50,13 @@ impl UI_System {
     const FADEOUT_TEXT_FONT_SIZE: u16 = 16;
     const FADEOUT_TEXT_FONT: &'static str = "Hack-Regular.ttf";
     const DEFAULT_FADEOUT_TIME_MS: u64 = 3000;
+    const MAX_ROWS: usize = 20;
 
     pub fn new() -> UI_System {
         let (req_tx, req_rx) = mpsc::channel();
         UI_System {
             fadeout_text_font: None,
-            fadeout_texts: vec![],
+            fadeout_texts: VecDeque::with_capacity(Self::MAX_ROWS),
             ui_requests_rx: req_rx,
             ui_requests_tx: req_tx,
             fadeout_time: Duration::from_millis(Self::DEFAULT_FADEOUT_TIME_MS),
@@ -89,7 +102,10 @@ impl UI_System {
             })
             .filter(|&time| time >= fadeout_time)
             .count();
-        self.fadeout_texts.drain(0..n_expired);
+
+        for _ in 0..n_expired {
+            self.fadeout_texts.pop_back();
+        }
     }
 
     fn draw_fadeout_texts(&mut self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
@@ -117,13 +133,12 @@ impl UI_System {
     }
 
     pub fn add_fadeout_text(&mut self, txt: String) {
-        self.fadeout_texts.push(Fadeout_Text {
+        if self.fadeout_texts.len() == Self::MAX_ROWS {
+            self.fadeout_texts.pop_front();
+        }
+        self.fadeout_texts.push_back(Fadeout_Text {
             text: txt,
             time: Duration::new(0, 0),
         });
-    }
-
-    pub fn send_request(&mut self, req: UI_Request) -> Result<(), mpsc::SendError<UI_Request>> {
-        self.ui_requests_tx.send(req)
     }
 }

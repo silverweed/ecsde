@@ -2,16 +2,20 @@ use crate::resources::audio::{Audio_Resources, Sound_Handle};
 use ears::{AudioController, Sound};
 use std::vec::Vec;
 
+pub struct Audio_System_Config {
+    pub max_concurrent_sounds: usize,
+}
+
 pub struct Audio_System {
     sounds_playing: Vec<Sound>,
     max_concurrent_sounds: usize,
 }
 
 impl Audio_System {
-    pub fn new(max_concurrent_sounds: usize) -> Audio_System {
+    pub fn new(cfg: &Audio_System_Config) -> Audio_System {
         Audio_System {
-            sounds_playing: Vec::with_capacity(max_concurrent_sounds),
-            max_concurrent_sounds,
+            sounds_playing: Vec::with_capacity(cfg.max_concurrent_sounds),
+            max_concurrent_sounds: cfg.max_concurrent_sounds,
         }
     }
 

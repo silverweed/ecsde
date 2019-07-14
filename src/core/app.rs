@@ -3,14 +3,18 @@ use super::common::Maybe_Error;
 use super::debug;
 use super::env::Env_Info;
 use super::input;
+use super::msg;
+use super::systems;
 use super::time;
+use super::time_manager;
 use crate::audio;
 use crate::cfg;
 use crate::fs;
-use crate::game::gameplay_system;
 use crate::gfx;
 use crate::resources;
-use std::convert::TryFrom;
+use crate::states;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 use std::time::SystemTime;
 
@@ -47,7 +51,7 @@ impl App_Config {
 }
 
 pub struct App<'r> {
-    time: time::Time,
+    time: Rc<RefCell<time_manager::Time_Manager>>,
 
     should_close: bool,
 
@@ -55,16 +59,14 @@ pub struct App<'r> {
 
     config: cfg::Config,
 
+    state_mgr: states::state_manager::State_Manager,
+
     // Resources
     gfx_resources: resources::gfx::Gfx_Resources<'r>,
     audio_resources: resources::audio::Audio_Resources<'r>,
 
-    // Engine Systems
-    input_system: input::Input_System,
-    render_system: gfx::render_system::Render_System,
-    ui_system: gfx::ui::UI_System,
-    audio_system: audio::system::Audio_System,
-    gameplay_system: gameplay_system::Gameplay_System,
+    systems: systems::Core_Systems,
+    dispatcher: msg::Msg_Dispatcher,
 }
 
 impl<'r> App<'r> {
@@ -73,17 +75,15 @@ impl<'r> App<'r> {
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
 
         App {
-            time: time::Time::new(),
+            time: Rc::new(RefCell::new(time_manager::Time_Manager::new())),
             should_close: false,
             env,
             config,
-            input_system: input::Input_System::new(),
+            state_mgr: states::state_manager::State_Manager::new(),
             gfx_resources: resources::gfx::Gfx_Resources::new(),
             audio_resources: resources::audio::Audio_Resources::new(sound_loader),
-            render_system: gfx::render_system::Render_System::new(),
-            ui_system: gfx::ui::UI_System::new(),
-            audio_system: audio::system::Audio_System::new(10),
-            gameplay_system: gameplay_system::Gameplay_System::new(),
+            systems: systems::Core_Systems::new(),
+            dispatcher: msg::Msg_Dispatcher::new(),
         }
     }
 
@@ -94,8 +94,16 @@ impl<'r> App<'r> {
             self.env.get_exe()
         );
 
+        self.init_states()?;
         self.init_all_systems()?;
+        self.init_dispatcher()?;
 
+        Ok(())
+    }
+
+    fn init_states(&mut self) -> Maybe_Error {
+        let base_state = Box::new(states::debug_base_state::Debug_Base_State {});
+        self.state_mgr.add_persistent_state(base_state);
         Ok(())
     }
 
@@ -106,13 +114,30 @@ impl<'r> App<'r> {
             vec![config_watcher],
         )?;
 
-        self.gameplay_system
-            .init(&mut self.gfx_resources, &self.env, &self.config)?;
-        self.render_system
+        self.systems.gameplay_system.borrow_mut().init(
+            &mut self.gfx_resources,
+            &self.env,
+            &self.config,
+        )?;
+        self.systems
+            .render_system
+            .borrow_mut()
             .init(gfx::render_system::Render_System_Config {
                 clear_color: colors::rgb(22, 0, 22),
             })?;
+        self.systems
+            .ui_system
+            .borrow_mut()
+            .init(&self.env, &mut self.gfx_resources)?;
 
+        Ok(())
+    }
+
+    fn init_dispatcher(&mut self) -> Maybe_Error {
+        let disp = &mut self.dispatcher;
+        disp.register(self.time.clone());
+        disp.register(self.systems.ui_system.clone());
+        disp.register(self.systems.gameplay_system.clone());
         Ok(())
     }
 
@@ -127,10 +152,12 @@ impl<'r> App<'r> {
 
         while !self.should_close {
             // Update time
-            self.time.update();
+            self.time.borrow_mut().time.update();
 
-            let dt = self.time.dt();
-            let real_dt = self.time.real_dt();
+            let (dt, real_dt) = {
+                let time = &self.time.borrow().time;
+                (time.dt(), time.real_dt())
+            };
             let update_time = Duration::from_millis(
                 *self
                     .config
@@ -141,34 +168,54 @@ impl<'r> App<'r> {
             execution_time += dt;
 
             // Update input
-            self.input_system.update(window);
-            let actions = self.input_system.get_action_list();
-            self.handle_actions(&actions)?;
+            self.systems.input_system.borrow_mut().update(window);
+            let actions = self.systems.input_system.borrow().get_action_list();
+
+            if self
+                .state_mgr
+                .handle_actions(&actions, &self.dispatcher, &self.config)
+            {
+                self.should_close = true;
+                break;
+            }
 
             // Update game systems
-            let gameplay_start_t = SystemTime::now();
-            while execution_time > update_time {
-                self.update_game_systems(update_time, &actions)?;
-                execution_time -= update_time;
+            {
+                #[cfg(prof_t)]
+                let gameplay_start_t = SystemTime::now();
+
+                let mut gameplay_system = self.systems.gameplay_system.borrow_mut();
+
+                gameplay_system.realtime_update(&real_dt, &actions);
+                while execution_time > update_time {
+                    gameplay_system.update(&update_time, &actions);
+                    execution_time -= update_time;
+                }
+
+                #[cfg(prof_t)]
+                println!(
+                    "Gameplay: {} ms",
+                    SystemTime::now()
+                        .duration_since(gameplay_start_t)
+                        .unwrap()
+                        .as_millis()
+                );
             }
-            println!(
-                "Gameplay: {} ms",
-                SystemTime::now()
-                    .duration_since(gameplay_start_t)
-                    .unwrap()
-                    .as_millis()
-            );
 
             // Update audio
-            self.audio_system.update();
+            self.systems.audio_system.borrow_mut().update();
 
             // Render
+            #[cfg(prof_t)]
             let render_start_t = SystemTime::now();
+
             self.update_graphics(
                 window,
                 real_dt,
                 time::duration_ratio(&execution_time, &update_time) as f32,
             )?;
+
+            #[cfg(prof_t)]
             println!(
                 "Render: {} ms",
                 SystemTime::now()
@@ -187,14 +234,8 @@ impl<'r> App<'r> {
             }
 
             self.config.update();
-            fps_debug.tick(&dt);
+            fps_debug.tick(&real_dt);
         }
-
-        Ok(())
-    }
-
-    fn update_game_systems(&mut self, dt: Duration, actions: &input::Action_List) -> Maybe_Error {
-        self.gameplay_system.update(&dt, actions);
 
         Ok(())
     }
@@ -211,72 +252,23 @@ impl<'r> App<'r> {
 
         gfx::window::set_clear_color(window, colors::rgb(0, 0, 0));
         gfx::window::clear(window);
-        self.render_system.update(
+        self.systems.render_system.borrow_mut().update(
             window,
             &self.gfx_resources,
-            &self.gameplay_system.get_camera(),
-            &self.gameplay_system.get_renderable_entities(),
+            &self.systems.gameplay_system.borrow().get_camera(),
+            &self
+                .systems
+                .gameplay_system
+                .borrow()
+                .get_renderable_entities(),
             frame_lag_normalized,
             smooth_by_extrapolating_velocity,
         );
-        self.ui_system
+        self.systems
+            .ui_system
+            .borrow_mut()
             .update(&real_dt, window, &mut self.gfx_resources);
         gfx::window::display(window);
-
-        Ok(())
-    }
-
-    fn handle_actions(&mut self, actions: &input::Action_List) -> Maybe_Error {
-        use gfx::ui::UI_Request;
-        use input::Action;
-
-        if actions.has_action(&Action::Quit) {
-            self.should_close = true;
-        } else {
-            for action in actions.iter() {
-                match action {
-                    Action::Change_Speed(delta) => {
-                        let ts = self.time.get_time_scale() + *delta as f32 * 0.01;
-                        if ts > 0.0 {
-                            self.time.set_time_scale(ts);
-                        }
-                        self.ui_system
-                            .send_request(UI_Request::Add_Fadeout_Text(format!(
-                                "Time scale: {:.2}",
-                                self.time.get_time_scale()
-                            )))
-                            .unwrap();
-                    }
-                    Action::Pause_Toggle => {
-                        self.time.set_paused(!self.time.is_paused());
-                        self.ui_system
-                            .send_request(UI_Request::Add_Fadeout_Text(String::from(
-                                if self.time.is_paused() {
-                                    "Paused"
-                                } else {
-                                    "Resumed"
-                                },
-                            )))
-                            .unwrap();
-                    }
-                    Action::Step_Simulation => {
-                        let target_fps = self.config.get_var_int_or("engine/rendering/fps", 60);
-                        let step_delta = Duration::from_nanos(
-                            u64::try_from(1_000_000_000 / *target_fps).unwrap(),
-                        );
-                        self.ui_system
-                            .send_request(UI_Request::Add_Fadeout_Text(format!(
-                                "Stepping of: {:.2} ms",
-                                time::to_secs_frac(&step_delta) * 1000.0
-                            )))
-                            .unwrap();
-                        self.time.set_paused(true);
-                        self.time.step(&step_delta);
-                    }
-                    _ => (),
-                }
-            }
-        }
 
         Ok(())
     }

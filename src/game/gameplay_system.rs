@@ -2,8 +2,10 @@ use super::controllable_system::C_Controllable;
 use crate::cfg;
 use crate::core::common;
 use crate::core::common::rect::Rect;
+use crate::core::common::vector::Vec2f;
 use crate::core::env::Env_Info;
 use crate::core::input;
+use crate::core::msg;
 use crate::core::time;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
@@ -20,6 +22,23 @@ pub struct Gameplay_System {
     entity_manager: Entity_Manager,
     entities: Vec<Entity>,
     camera: Entity,
+    latest_frame_actions: input::Action_List,
+}
+
+pub enum Gameplay_System_Msg {
+    Step(Duration),
+}
+
+impl msg::Msg_Responder for Gameplay_System {
+    type Msg_Data = Gameplay_System_Msg;
+    type Resp_Data = ();
+
+    fn send_message(&mut self, msg: Gameplay_System_Msg) -> () {
+        match msg {
+            Gameplay_System_Msg::Step(dt) => self.update_with_latest_frame_actions(&dt),
+        }
+        ()
+    }
 }
 
 impl Gameplay_System {
@@ -28,6 +47,7 @@ impl Gameplay_System {
             entity_manager: Entity_Manager::new(),
             entities: vec![],
             camera: Entity::INVALID,
+            latest_frame_actions: input::Action_List::default(),
         }
     }
 
@@ -46,12 +66,24 @@ impl Gameplay_System {
     }
 
     pub fn update(&mut self, dt: &Duration, actions: &input::Action_List) {
+        // Used for stepping
+        self.latest_frame_actions = actions.clone();
+
         ///// Update all game systems /////
         gfx::animation_system::update(&dt, &mut self.entity_manager);
         game::controllable_system::update(&dt, actions, &mut self.entity_manager);
-        self.apply_camera_translation();
 
         self.update_demo_entites(&dt);
+    }
+
+    pub fn realtime_update(&mut self, real_dt: &Duration, actions: &input::Action_List) {
+        self.update_camera(real_dt, actions);
+    }
+
+    fn update_with_latest_frame_actions(&mut self, dt: &Duration) {
+        let mut actions = input::Action_List::default();
+        std::mem::swap(&mut self.latest_frame_actions, &mut actions);
+        self.update(&dt, &actions);
     }
 
     pub fn get_renderable_entities(&self) -> Vec<(Ref<'_, C_Renderable>, Ref<'_, C_Spatial2D>)> {
@@ -79,12 +111,29 @@ impl Gameplay_System {
         em.register_component::<C_Controllable>();
     }
 
-    fn apply_camera_translation(&mut self) {
-        let delta = self
+    fn update_camera(&mut self, real_dt: &Duration, actions: &input::Action_List) {
+        let movement = input::get_normalized_movement_from_input(actions);
+        let camera_ctrl = self
             .entity_manager
-            .get_component::<C_Controllable>(self.camera)
-            .unwrap()
-            .translation_this_frame;
+            .get_component_mut::<C_Controllable>(self.camera);
+        if camera_ctrl.is_none() {
+            return;
+        }
+
+        let v = {
+            let real_dt_secs = time::to_secs_frac(real_dt);
+            let mut camera_ctrl = camera_ctrl.unwrap();
+            let speed = *camera_ctrl.speed;
+            let velocity = movement * speed;
+            let v = velocity * real_dt_secs;
+            camera_ctrl.translation_this_frame = v;
+            v
+        };
+
+        self.apply_camera_translation(v);
+    }
+
+    fn apply_camera_translation(&mut self, delta: Vec2f) {
         let mut camera = self
             .entity_manager
             .get_component_mut::<C_Camera2D>(self.camera)
@@ -144,7 +193,7 @@ impl Gameplay_System {
         }
 
         let n = 30;
-        for i in 0..10000 {
+        for i in 0..200 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
@@ -160,6 +209,10 @@ impl Gameplay_System {
                 t.transform
                     .set_position(n as f32 * (i % n) as f32, n as f32 * (i / n) as f32);
             }
+            //{
+            //let mut ctrl = em.add_component::<C_Controllable>(entity);
+            //ctrl.speed = cfg.get_var_float_or("gameplay/player/player_speed", 300.0);
+            //}
             self.entities.push(entity);
         }
     }
@@ -169,12 +222,20 @@ impl Gameplay_System {
         let em = &mut self.entity_manager;
         let dt_secs = time::to_secs_frac(dt);
 
+        for (ctrl, spat) in em.get_component_tuple_mut::<C_Controllable, C_Spatial2D>() {
+            let transl = ctrl.borrow().translation_this_frame;
+            let mut spat = spat.borrow_mut();
+            spat.transform.translate_v(transl);
+            spat.velocity.x = transl.x;
+            spat.velocity.y = transl.y;
+        }
+
         for (i, t) in em
             .get_components_mut::<C_Spatial2D>()
             .iter_mut()
             .enumerate()
         {
-            let speed = i as f32 * 0.1;
+            let speed = i as f32 * 2.1;
             t.transform.rotate(Deg(dt_secs * speed));
         }
     }

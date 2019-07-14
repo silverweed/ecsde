@@ -41,6 +41,7 @@ impl<'l> Gfx_Resources<'l> {
     }
 
     pub fn get_font(&self, handle: Font_Handle) -> &Font<'_> {
+        assert!(handle != None, "Invalid Font_Handle in get_font!");
         self.fonts.must_get(handle)
     }
 }
