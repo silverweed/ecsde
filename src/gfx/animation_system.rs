@@ -33,16 +33,17 @@ pub fn update(dt: &Duration, em: &mut Entity_Manager) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::audio;
     use crate::core::common::rect::Rect;
     use crate::core::env::Env_Info;
     use crate::gfx;
-    use crate::resources::{self, tex_path, Resources};
+    use crate::resources::gfx::{tex_path, Gfx_Resources};
     use crate::test_common;
 
     #[test]
     fn animation_system() {
-        let (loaders, _, _) = test_common::create_resource_loaders();
-        let (mut rsrc, env) = test_common::create_test_resources_and_env(&loaders);
+        let sound_loader = audio::sound_loader::Sound_Loader {};
+        let (mut gres, _, env) = test_common::create_test_resources_and_env(&sound_loader);
         let mut em = Entity_Manager::new();
         em.register_component::<C_Renderable>();
         em.register_component::<C_Animated_Sprite>();
@@ -50,7 +51,7 @@ mod tests {
         let e = em.new_entity();
         {
             let mut r = em.add_component::<C_Renderable>(e);
-            r.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
+            r.texture = gres.load_texture(&tex_path(&env, "plant.png"));
             r.rect = Rect::new(0, 0, 96, 96);
         }
         {

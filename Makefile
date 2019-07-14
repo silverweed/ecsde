@@ -7,4 +7,4 @@ build:
 	cargo build --features use-sfml
 
 test:
-	cargo test --features use-sfml -- --test-threads=1
+	cargo test --features use-sfml

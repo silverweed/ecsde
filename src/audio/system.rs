@@ -46,26 +46,27 @@ impl Audio_System {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::resources;
+    use crate::audio;
+    use crate::resources::audio::sound_path;
     use crate::test_common;
 
     #[test]
     fn max_concurrent_sounds() {
         let max_conc_sounds = 5;
         let mut a_sys = Audio_System::new(max_conc_sounds);
-        let (loaders, _, _) = test_common::create_resource_loaders();
-        let (mut rsrc, env) = test_common::create_test_resources_and_env(&loaders);
-        let snd_handle = rsrc.load_sound(&resources::sound_path(&env, "coin.ogg"));
+        let sound_loader = audio::sound_loader::Sound_Loader {};
+        let (_, mut ares, env) = test_common::create_test_resources_and_env(&sound_loader);
+        let snd_handle = ares.load_sound(&sound_path(&env, "coin.ogg"));
 
-        a_sys.play_sound(&rsrc, snd_handle);
+        a_sys.play_sound(&ares, snd_handle);
         assert_eq!(a_sys.n_sounds_playing(), 1);
 
-        a_sys.play_sound(&rsrc, snd_handle);
-        a_sys.play_sound(&rsrc, snd_handle);
-        a_sys.play_sound(&rsrc, snd_handle);
-        a_sys.play_sound(&rsrc, snd_handle);
-        a_sys.play_sound(&rsrc, snd_handle);
-        a_sys.play_sound(&rsrc, snd_handle);
+        a_sys.play_sound(&ares, snd_handle);
+        a_sys.play_sound(&ares, snd_handle);
+        a_sys.play_sound(&ares, snd_handle);
+        a_sys.play_sound(&ares, snd_handle);
+        a_sys.play_sound(&ares, snd_handle);
+        a_sys.play_sound(&ares, snd_handle);
         assert_eq!(a_sys.n_sounds_playing(), max_conc_sounds);
     }
 }

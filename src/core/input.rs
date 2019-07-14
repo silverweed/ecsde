@@ -52,7 +52,7 @@ pub struct Input_System {
 }
 
 impl Input_System {
-    pub fn new(actions_tx: Sender<Action_List>) -> Input_System {
+    pub fn new() -> Input_System {
         Input_System {
             actions: Action_List::default(),
         }

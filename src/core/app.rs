@@ -60,7 +60,6 @@ pub struct App<'r> {
     env: Env_Info,
 
     config: cfg::Config,
-    ui_req_tx: mpsc::Sender<gfx::ui::UI_Request>,
 
     // Resources
     gfx_resources: resources::gfx::Gfx_Resources<'r>,
@@ -68,7 +67,6 @@ pub struct App<'r> {
 
     // Engine Systems
     input_system: input::Input_System,
-    input_actions_rx: mpsc::Receiver<input::Action_List>,
     render_system: gfx::render_system::Render_System,
     ui_system: gfx::ui::UI_System,
     audio_system: audio::system::Audio_System,
@@ -80,21 +78,16 @@ impl<'r> App<'r> {
         let env = Env_Info::gather().unwrap();
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
 
-        let (input_tx, input_rx) = mpsc::channel();
-        let (ui_tx, ui_rx) = mpsc::channel();
-
         App {
             time: time::Time::new(),
             should_close: false,
             env,
             config,
-            ui_req_tx: ui_tx,
-            input_system: input::Input_System::new(input_tx),
-            input_actions_rx: input_rx,
+            input_system: input::Input_System::new(),
             gfx_resources: resources::gfx::Gfx_Resources::new(),
             audio_resources: resources::audio::Audio_Resources::new(sound_loader),
             render_system: gfx::render_system::Render_System::new(),
-            ui_system: gfx::ui::UI_System::new(ui_rx),
+            ui_system: gfx::ui::UI_System::new(),
             audio_system: audio::system::Audio_System::new(10),
             gameplay_system: gameplay_system::Gameplay_System::new(),
         }
@@ -253,8 +246,8 @@ impl<'r> App<'r> {
                         if ts > 0.0 {
                             self.time.set_time_scale(ts);
                         }
-                        self.ui_req_tx
-                            .send(UI_Request::Add_Fadeout_Text(format!(
+                        self.ui_system
+                            .send_request(UI_Request::Add_Fadeout_Text(format!(
                                 "Time scale: {:.2}",
                                 self.time.get_time_scale()
                             )))
@@ -262,8 +255,8 @@ impl<'r> App<'r> {
                     }
                     Action::Pause_Toggle => {
                         self.time.set_paused(!self.time.is_paused());
-                        self.ui_req_tx
-                            .send(UI_Request::Add_Fadeout_Text(String::from(
+                        self.ui_system
+                            .send_request(UI_Request::Add_Fadeout_Text(String::from(
                                 if self.time.is_paused() {
                                     "Paused"
                                 } else {
@@ -277,8 +270,8 @@ impl<'r> App<'r> {
                         let step_delta = Duration::from_nanos(
                             u64::try_from(1_000_000_000 / *target_fps).unwrap(),
                         );
-                        self.ui_req_tx
-                            .send(UI_Request::Add_Fadeout_Text(format!(
+                        self.ui_system
+                            .send_request(UI_Request::Add_Fadeout_Text(format!(
                                 "Stepping of: {:.2} ms",
                                 time::to_secs_frac(&step_delta) * 1000.0
                             )))

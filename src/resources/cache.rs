@@ -9,6 +9,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+// @Incomplete: all this file will eventually disappear, as soon as we rework the Sound_Manager
+
 pub type Sound_Buffer = Rc<RefCell<SoundData>>;
 
 pub struct Resource_Manager<'l, Res, Loader>

@@ -10,6 +10,7 @@ use crate::resources;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources, Texture_Handle};
 use sfml::graphics::Text;
 use sfml::graphics::Transformable;
+use std::sync::mpsc;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -29,6 +30,7 @@ pub struct UI_System {
     fadeout_text_font: Font_Handle,
     fadeout_texts: Vec<Fadeout_Text>,
     ui_requests_rx: Receiver<UI_Request>,
+    ui_requests_tx: Sender<UI_Request>,
     fadeout_time: Duration,
 }
 
@@ -40,11 +42,13 @@ impl UI_System {
     const FADEOUT_TEXT_FONT: &'static str = "Hack-Regular.ttf";
     const DEFAULT_FADEOUT_TIME_MS: u64 = 3000;
 
-    pub fn new(req_rx: Receiver<UI_Request>) -> UI_System {
+    pub fn new() -> UI_System {
+        let (req_tx, req_rx) = mpsc::channel();
         UI_System {
             fadeout_text_font: None,
             fadeout_texts: vec![],
             ui_requests_rx: req_rx,
+            ui_requests_tx: req_tx,
             fadeout_time: Duration::from_millis(Self::DEFAULT_FADEOUT_TIME_MS),
         }
     }
@@ -121,5 +125,9 @@ impl UI_System {
             text: txt,
             time: Duration::new(0, 0),
         });
+    }
+
+    pub fn send_request(&mut self, req: UI_Request) -> Result<(), mpsc::SendError<UI_Request>> {
+        self.ui_requests_tx.send(req)
     }
 }
