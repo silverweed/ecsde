@@ -75,6 +75,11 @@ impl Persistent_Game_State for Debug_Base_State {
                         dispatcher
                             .send_message::<Gameplay_System>(Gameplay_System_Msg::Step(step_delta));
                     }
+                    Action::Print_Entity_Manager_Debug_Info => {
+                        dispatcher.send_message::<Gameplay_System>(
+                            Gameplay_System_Msg::Print_Entity_Manager_Debug_Info,
+                        );
+                    }
                     _ => (),
                 }
             }

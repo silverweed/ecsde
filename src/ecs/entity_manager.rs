@@ -15,6 +15,46 @@ pub struct Entity_Manager {
     allocator: Generational_Allocator,
     // map { CompType => Vec<CompType> }
     components: AnyMap,
+    #[cfg(debug_assertions)]
+    debug_info: Entity_Manager_Debug_Info,
+}
+
+#[cfg(debug_assertions)]
+pub struct Entity_Manager_Debug_Info {
+    /// Number of bytes used by "live" components
+    pub components_used_bytes: usize,
+    pub components_total_bytes: usize,
+    pub n_component_types_registered: u16,
+    pub n_components_currently_instantiated: usize,
+    pub max_n_components_ever_instantiated: usize,
+    pub n_entities_currently_instantiated: usize,
+    pub max_n_entities_ever_instantiated: usize,
+}
+
+#[cfg(debug_assertions)]
+impl std::fmt::Display for Entity_Manager_Debug_Info {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "
+Component used bytes:                {} B ({:.2}% occupancy)
+Component total bytes:               {} B
+# Component types registered:        {}
+# Components currently instantiated: {}
+Max # Components ever instantiated:  {}
+# Entities currently instantiated:   {}
+Max # Entities ever instantiated:    {}
+",
+            self.components_used_bytes,
+            100.0 * (self.components_used_bytes as f32) / (self.components_total_bytes as f32),
+            self.components_total_bytes,
+            self.n_component_types_registered,
+            self.n_components_currently_instantiated,
+            self.max_n_components_ever_instantiated,
+            self.n_entities_currently_instantiated,
+            self.max_n_entities_ever_instantiated
+        )
+    }
 }
 
 pub type Entity = Generational_Index;
@@ -28,10 +68,30 @@ impl Entity {
 }
 
 impl Entity_Manager {
+    const INITIAL_SIZE: usize = 64;
+
+    #[cfg(not(debug_assertions))]
     pub fn new() -> Entity_Manager {
         Entity_Manager {
-            allocator: Generational_Allocator::new(4),
+            allocator: Generational_Allocator::new(Self::INITIAL_SIZE),
             components: AnyMap::new(),
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn new() -> Entity_Manager {
+        Entity_Manager {
+            allocator: Generational_Allocator::new(Self::INITIAL_SIZE),
+            components: AnyMap::new(),
+            debug_info: Entity_Manager_Debug_Info {
+                components_used_bytes: 0,
+                components_total_bytes: 0,
+                n_component_types_registered: 0,
+                n_components_currently_instantiated: 0,
+                max_n_components_ever_instantiated: 0,
+                n_entities_currently_instantiated: 0,
+                max_n_entities_ever_instantiated: 0,
+            },
         }
     }
 
@@ -82,6 +142,14 @@ impl Entity_Manager {
     }
 
     pub fn new_entity(&mut self) -> Entity {
+        #[cfg(debug_assertions)]
+        {
+            self.debug_info.n_entities_currently_instantiated += 1;
+            self.debug_info.max_n_entities_ever_instantiated = self
+                .debug_info
+                .max_n_entities_ever_instantiated
+                .max(self.debug_info.n_entities_currently_instantiated);
+        }
         self.allocator.allocate()
     }
 
@@ -90,6 +158,10 @@ impl Entity_Manager {
     }
 
     pub fn destroy_entity(&mut self, e: Entity) {
+        #[cfg(debug_assertions)]
+        {
+            self.debug_info.n_entities_currently_instantiated -= 1;
+        }
         self.allocator.deallocate(e);
     }
 
@@ -104,6 +176,10 @@ impl Entity_Manager {
             );
         }
         let v: VecOpt<C> = Vec::new();
+        #[cfg(debug_assertions)]
+        {
+            self.debug_info.n_component_types_registered += 1;
+        }
         self.components.insert(v);
     }
 
@@ -120,10 +196,30 @@ impl Entity_Manager {
             );
         }
 
+        // @Hack: this is to work around the borrow checker
+        #[cfg(debug_assertions)]
+        let mut dbg = &mut self.debug_info as *mut Entity_Manager_Debug_Info;
+
         let alloc_size = self.allocator.size();
         match self.get_comp_storage_mut::<C>() {
             Some(vec) => {
+                #[cfg(debug_assertions)]
+                let old_size = std::mem::size_of::<C>() * vec.len();
+
                 vec.resize(alloc_size, None);
+
+                #[cfg(debug_assertions)]
+                let delta_size = std::mem::size_of::<C>() * vec.len() - old_size;
+
+                #[cfg(debug_assertions)]
+                unsafe {
+                    (*dbg).n_components_currently_instantiated += 1;
+                    (*dbg).max_n_components_ever_instantiated = (*dbg)
+                        .max_n_components_ever_instantiated
+                        .max((*dbg).n_components_currently_instantiated);
+                    (*dbg).components_used_bytes += std::mem::size_of::<C>();
+                    (*dbg).components_total_bytes += delta_size;
+                }
                 vec[e.index] = Some(RefCell::new(C::default()));
                 vec[e.index].as_ref().unwrap().borrow_mut()
             }
@@ -146,8 +242,17 @@ impl Entity_Manager {
             );
         }
 
+        // @Hack: this is to work around the borrow checker
+        #[cfg(debug_assertions)]
+        let mut dbg = &mut self.debug_info as *mut Entity_Manager_Debug_Info;
+
         match self.get_comp_storage_mut::<C>() {
             Some(vec) => {
+                #[cfg(debug_assertions)]
+                unsafe {
+                    (*dbg).n_components_currently_instantiated -= 1;
+                    (*dbg).components_used_bytes -= std::mem::size_of::<C>();
+                }
                 vec[e.index] = None;
             } // We don't assert if component is already None.
             None => panic!(
@@ -251,6 +356,11 @@ impl Entity_Manager {
             let c2 = c2.as_ref()?;
             Some((c1, c2))
         })
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn print_debug_info(&self) {
+        eprintln!("{}", self.debug_info);
     }
 }
 

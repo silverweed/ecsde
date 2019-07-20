@@ -13,6 +13,7 @@ pub enum Action {
     Change_Speed(i32),
     Pause_Toggle,
     Step_Simulation,
+    Print_Entity_Manager_Debug_Info,
 }
 
 #[derive(Default, Clone)]
@@ -129,6 +130,7 @@ fn poll_events(action_list: &mut Action_List, event_pump: &mut sdl2::EventPump) 
                 Keycode::Num2 | Keycode::Equals => actions.push(Action::Change_Speed(10)),
                 Keycode::Period => actions.push(Action::Pause_Toggle),
                 Keycode::Slash => actions.push(Action::Step_Simulation),
+                Keycode::M => actions.push(Action::Print_Entity_Manager_Debug_Info),
                 _ => (),
             },
             Event::KeyUp {
@@ -173,6 +175,7 @@ fn poll_events(action_list: &mut Action_List, window: &mut sfml::graphics::Rende
                 Key::Num2 | Key::Equal => actions.push(Action::Change_Speed(10)),
                 Key::Period => actions.push(Action::Pause_Toggle),
                 Key::Slash => actions.push(Action::Step_Simulation),
+                Key::M => actions.push(Action::Print_Entity_Manager_Debug_Info),
                 _ => (),
             },
             Event::KeyReleased { code, .. } => match code {

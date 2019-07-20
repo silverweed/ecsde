@@ -27,6 +27,7 @@ pub struct Gameplay_System {
 
 pub enum Gameplay_System_Msg {
     Step(Duration),
+    Print_Entity_Manager_Debug_Info,
 }
 
 impl msg::Msg_Responder for Gameplay_System {
@@ -36,6 +37,10 @@ impl msg::Msg_Responder for Gameplay_System {
     fn send_message(&mut self, msg: Gameplay_System_Msg) -> () {
         match msg {
             Gameplay_System_Msg::Step(dt) => self.update_with_latest_frame_actions(&dt),
+            Gameplay_System_Msg::Print_Entity_Manager_Debug_Info => {
+                #[cfg(debug_assertions)]
+                self.entity_manager.print_debug_info()
+            }
         }
         ()
     }
