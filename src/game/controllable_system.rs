@@ -2,7 +2,6 @@ use crate::cfg::Cfg_Var;
 use crate::core::common::vector::Vec2f;
 use crate::core::input;
 use crate::core::time;
-use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::entity_manager::Entity_Manager;
 use std::time::Duration;
 use typename::TypeName;

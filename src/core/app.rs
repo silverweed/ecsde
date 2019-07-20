@@ -2,21 +2,15 @@ use super::common::colors;
 use super::common::Maybe_Error;
 use super::debug;
 use super::env::Env_Info;
-use super::input;
-use super::msg;
-use super::systems;
 use super::time;
-use super::time_manager;
+use super::world;
 use crate::audio;
 use crate::cfg;
 use crate::fs;
 use crate::gfx;
 use crate::resources;
 use crate::states;
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::time::Duration;
-use std::time::SystemTime;
 
 pub struct App_Config {
     pub title: String,
@@ -51,22 +45,17 @@ impl App_Config {
 }
 
 pub struct App<'r> {
-    time: Rc<RefCell<time_manager::Time_Manager>>,
-
     should_close: bool,
 
     env: Env_Info,
-
     config: cfg::Config,
 
     state_mgr: states::state_manager::State_Manager,
 
-    // Resources
     gfx_resources: resources::gfx::Gfx_Resources<'r>,
     audio_resources: resources::audio::Audio_Resources<'r>,
 
-    systems: systems::Core_Systems,
-    dispatcher: msg::Msg_Dispatcher,
+    world: world::World,
 }
 
 impl<'r> App<'r> {
@@ -75,15 +64,13 @@ impl<'r> App<'r> {
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
 
         App {
-            time: Rc::new(RefCell::new(time_manager::Time_Manager::new())),
             should_close: false,
             env,
             config,
             state_mgr: states::state_manager::State_Manager::new(),
             gfx_resources: resources::gfx::Gfx_Resources::new(),
             audio_resources: resources::audio::Audio_Resources::new(sound_loader),
-            systems: systems::Core_Systems::new(),
-            dispatcher: msg::Msg_Dispatcher::new(),
+            world: world::World::new(),
         }
     }
 
@@ -96,14 +83,14 @@ impl<'r> App<'r> {
 
         self.init_states()?;
         self.init_all_systems()?;
-        self.init_dispatcher()?;
+        self.world.init();
 
         Ok(())
     }
 
     fn init_states(&mut self) -> Maybe_Error {
         let base_state = Box::new(states::debug_base_state::Debug_Base_State {});
-        self.state_mgr.add_persistent_state(base_state);
+        self.state_mgr.add_persistent_state(&self.world, base_state);
         Ok(())
     }
 
@@ -114,30 +101,23 @@ impl<'r> App<'r> {
             vec![config_watcher],
         )?;
 
-        self.systems.gameplay_system.borrow_mut().init(
+        let systems = self.world.get_systems();
+        systems.gameplay_system.borrow_mut().init(
             &mut self.gfx_resources,
             &self.env,
             &self.config,
         )?;
-        self.systems
+        systems
             .render_system
             .borrow_mut()
             .init(gfx::render_system::Render_System_Config {
                 clear_color: colors::rgb(22, 0, 22),
             })?;
-        self.systems
+        systems
             .ui_system
             .borrow_mut()
             .init(&self.env, &mut self.gfx_resources)?;
 
-        Ok(())
-    }
-
-    fn init_dispatcher(&mut self) -> Maybe_Error {
-        let disp = &mut self.dispatcher;
-        disp.register(self.time.clone());
-        disp.register(self.systems.ui_system.clone());
-        disp.register(self.systems.gameplay_system.clone());
         Ok(())
     }
 
@@ -151,13 +131,10 @@ impl<'r> App<'r> {
         let mut execution_time = Duration::new(0, 0);
 
         while !self.should_close {
-            // Update time
-            self.time.borrow_mut().time.update();
+            self.world.update();
+            let (dt, real_dt) = (self.world.dt(), self.world.real_dt());
+            let systems = self.world.get_systems();
 
-            let (dt, real_dt) = {
-                let time = &self.time.borrow().time;
-                (time.dt(), time.real_dt())
-            };
             let update_time = Duration::from_millis(
                 *self
                     .config
@@ -168,12 +145,12 @@ impl<'r> App<'r> {
             execution_time += dt;
 
             // Update input
-            self.systems.input_system.borrow_mut().update(window);
-            let actions = self.systems.input_system.borrow().get_action_list();
+            systems.input_system.borrow_mut().update(window);
+            let actions = systems.input_system.borrow().get_action_list();
 
             if self
                 .state_mgr
-                .handle_actions(&actions, &self.dispatcher, &self.config)
+                .handle_actions(&actions, &self.world, &self.config)
             {
                 self.should_close = true;
                 break;
@@ -184,7 +161,7 @@ impl<'r> App<'r> {
                 #[cfg(prof_t)]
                 let gameplay_start_t = SystemTime::now();
 
-                let mut gameplay_system = self.systems.gameplay_system.borrow_mut();
+                let mut gameplay_system = systems.gameplay_system.borrow_mut();
 
                 gameplay_system.realtime_update(&real_dt, &actions);
                 while execution_time > update_time {
@@ -203,7 +180,7 @@ impl<'r> App<'r> {
             }
 
             // Update audio
-            self.systems.audio_system.borrow_mut().update();
+            systems.audio_system.borrow_mut().update();
 
             // Render
             #[cfg(prof_t)]
@@ -250,21 +227,19 @@ impl<'r> App<'r> {
             .config
             .get_var_bool_or("engine/rendering/smooth_by_extrapolating_velocity", false);
 
+        let systems = self.world.get_systems();
+
         gfx::window::set_clear_color(window, colors::rgb(0, 0, 0));
         gfx::window::clear(window);
-        self.systems.render_system.borrow_mut().update(
+        systems.render_system.borrow_mut().update(
             window,
             &self.gfx_resources,
-            &self.systems.gameplay_system.borrow().get_camera(),
-            &self
-                .systems
-                .gameplay_system
-                .borrow()
-                .get_renderable_entities(),
+            &systems.gameplay_system.borrow().get_camera(),
+            &systems.gameplay_system.borrow().get_renderable_entities(),
             frame_lag_normalized,
             smooth_by_extrapolating_velocity,
         );
-        self.systems
+        systems
             .ui_system
             .borrow_mut()
             .update(&real_dt, window, &mut self.gfx_resources);

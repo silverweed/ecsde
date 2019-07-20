@@ -1,7 +1,6 @@
 use crate::cfg;
 use crate::core::input::Action_List;
-use crate::core::msg;
-use std::time::Duration;
+use crate::core::world::World;
 
 pub enum State_Transition {
     None,
@@ -11,18 +10,18 @@ pub enum State_Transition {
 }
 
 pub trait Game_State {
-    fn on_start(&mut self) {}
-    fn on_pause(&mut self) {}
-    fn on_resume(&mut self) {}
-    fn on_end(&mut self) {}
-    fn update(&mut self, _dt: &Duration) -> State_Transition {
+    fn on_start(&mut self, _world: &World) {}
+    fn on_pause(&mut self, _world: &World) {}
+    fn on_resume(&mut self, _world: &World) {}
+    fn on_end(&mut self, _world: &World) {}
+    fn update(&mut self, _world: &World) -> State_Transition {
         State_Transition::None
     }
     /// Returns true if should quit
     fn handle_actions(
         &mut self,
         _actions: &Action_List,
-        _dispatcher: &msg::Msg_Dispatcher,
+        _world: &World,
         _config: &cfg::Config,
     ) -> bool {
         false
@@ -30,14 +29,14 @@ pub trait Game_State {
 }
 
 pub trait Persistent_Game_State {
-    fn on_start(&mut self) {}
-    fn on_end(&mut self) {}
-    fn update(&mut self, _dt: &Duration) {}
+    fn on_start(&mut self, _world: &World) {}
+    fn on_end(&mut self, _world: &World) {}
+    fn update(&mut self, _world: &World) {}
     /// Returns true if should quit
     fn handle_actions(
         &mut self,
         _actions: &Action_List,
-        _dispatcher: &msg::Msg_Dispatcher,
+        _world: &World,
         _config: &cfg::Config,
     ) -> bool {
         false

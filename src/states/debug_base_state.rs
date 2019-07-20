@@ -1,9 +1,10 @@
 use super::state::Persistent_Game_State;
 use crate::cfg;
 use crate::core::input::{Action, Action_List};
-use crate::core::msg::{self, Msg_Responder};
+use crate::core::msg::Msg_Responder;
 use crate::core::time;
 use crate::core::time_manager::{Time_Manager, Time_Msg, Time_Resp};
+use crate::core::world::World;
 use crate::game::gameplay_system::{Gameplay_System, Gameplay_System_Msg};
 use crate::gfx::ui::{UI_Request, UI_System};
 use std::convert::TryFrom;
@@ -15,12 +16,13 @@ impl Persistent_Game_State for Debug_Base_State {
     fn handle_actions(
         &mut self,
         actions: &Action_List,
-        dispatcher: &msg::Msg_Dispatcher,
+        world: &World,
         config: &cfg::Config,
     ) -> bool {
         if actions.has_action(&Action::Quit) {
             true
         } else {
+            let dispatcher = world.get_dispatcher();
             let mut time_mgr = dispatcher.borrow_mut::<Time_Manager>().unwrap();
             let mut ui_system = dispatcher.borrow_mut::<UI_System>().unwrap();
             for action in actions.iter() {

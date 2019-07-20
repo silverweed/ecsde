@@ -1,8 +1,7 @@
 use super::state::{Game_State, Persistent_Game_State, State_Transition};
 use crate::cfg;
 use crate::core::input::Action_List;
-use crate::core::msg;
-use std::time::Duration;
+use crate::core::world::World;
 use std::vec::Vec;
 
 /// Manages a PDA of Game_States.
@@ -24,25 +23,25 @@ impl State_Manager {
         }
     }
 
-    pub fn with_initial_state(mut state: Box<dyn Game_State>) -> State_Manager {
-        state.on_start();
+    pub fn with_initial_state(world: &World, mut state: Box<dyn Game_State>) -> State_Manager {
+        state.on_start(world);
         State_Manager {
             state_stack: vec![state],
             persistent_states: vec![],
         }
     }
 
-    pub fn update(&mut self, dt: &Duration) {
+    pub fn update(&mut self, world: &World) {
         for state in &mut self.persistent_states {
-            state.update(dt);
+            state.update(world);
         }
 
         if let Some(state) = self.current_state() {
-            match state.update(dt) {
+            match state.update(world) {
                 State_Transition::None => {}
-                State_Transition::Push(new_state) => self.push_state(new_state),
-                State_Transition::Replace(new_state) => self.replace_state(new_state),
-                State_Transition::Pop => self.pop_state(),
+                State_Transition::Push(new_state) => self.push_state(world, new_state),
+                State_Transition::Replace(new_state) => self.replace_state(world, new_state),
+                State_Transition::Pop => self.pop_state(world),
             }
         }
     }
@@ -51,24 +50,28 @@ impl State_Manager {
     pub fn handle_actions(
         &mut self,
         actions: &Action_List,
-        dispatcher: &msg::Msg_Dispatcher,
+        world: &World,
         config: &cfg::Config,
     ) -> bool {
         let mut should_quit = false;
 
         if let Some(state) = self.current_state() {
-            should_quit |= state.handle_actions(actions, dispatcher, config);
+            should_quit |= state.handle_actions(actions, world, config);
         }
 
         for state in &mut self.persistent_states {
-            should_quit |= state.handle_actions(actions, dispatcher, config);
+            should_quit |= state.handle_actions(actions, world, config);
         }
 
         should_quit
     }
 
-    pub fn add_persistent_state(&mut self, mut state: Box<dyn Persistent_Game_State>) {
-        state.on_start();
+    pub fn add_persistent_state(
+        &mut self,
+        world: &World,
+        mut state: Box<dyn Persistent_Game_State>,
+    ) {
+        state.on_start(world);
         self.persistent_states.push(state);
     }
 
@@ -82,30 +85,30 @@ impl State_Manager {
         }
     }
 
-    fn push_state(&mut self, mut state: Box<dyn Game_State>) {
-        self.current_state().map(|s| s.on_pause());
-        state.on_start();
+    fn push_state(&mut self, world: &World, mut state: Box<dyn Game_State>) {
+        self.current_state().map(|s| s.on_pause(world));
+        state.on_start(world);
         self.state_stack.push(state);
     }
 
-    fn pop_state(&mut self) {
+    fn pop_state(&mut self, world: &World) {
         if let Some(mut prev_state) = self.state_stack.pop() {
-            prev_state.on_end();
+            prev_state.on_end(world);
         } else {
             eprintln!("[ ERROR ] Tried to pop state, but state stack is empty!");
         }
 
         if let Some(state) = self.current_state() {
-            state.on_resume();
+            state.on_resume(world);
         }
     }
 
-    fn replace_state(&mut self, mut state: Box<dyn Game_State>) {
+    fn replace_state(&mut self, world: &World, mut state: Box<dyn Game_State>) {
         if let Some(mut prev_state) = self.state_stack.pop() {
-            prev_state.on_end();
+            prev_state.on_end(world);
         }
 
-        state.on_start();
+        state.on_start(world);
         self.state_stack.push(state);
     }
 }
