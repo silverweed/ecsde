@@ -27,7 +27,7 @@ impl Msg_Dispatcher {
         self.responders.insert::<Rc<RefCell<T>>>(responder);
     }
 
-    pub fn borrow_mut<'a, T>(&'a self) -> Option<RefMut<'a, T>>
+    pub fn borrow_mut<T>(&self) -> Option<RefMut<'_, T>>
     where
         T: Msg_Responder + 'static,
     {

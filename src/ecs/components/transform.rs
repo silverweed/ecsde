@@ -77,7 +77,7 @@ impl C_Transform2D {
     }
 
     pub fn get_matrix(&self) -> Matrix3<f32> {
-        let Rad(angle) = self.rotation.into();
+        let Rad(angle) = self.rotation;
         let angle = -angle;
         let cosine = angle.cos();
         let sine = angle.sin();
@@ -92,7 +92,7 @@ impl C_Transform2D {
     }
 
     pub fn get_matrix_sfml(&self) -> sfml::graphics::Transform {
-        let Rad(angle) = self.rotation.into();
+        let Rad(angle) = self.rotation;
         let angle = -angle;
         let cosine = angle.cos();
         let sine = angle.sin();

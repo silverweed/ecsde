@@ -37,9 +37,8 @@ impl Msg_Responder for UI_System {
     type Msg_Data = UI_Request;
     type Resp_Data = ();
 
-    fn send_message(&mut self, msg: UI_Request) -> () {
+    fn send_message(&mut self, msg: UI_Request) {
         self.ui_requests_tx.send(msg).unwrap();
-        ()
     }
 }
 

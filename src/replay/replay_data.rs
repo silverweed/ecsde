@@ -82,7 +82,7 @@ impl Replay_Data {
         s
     }
 
-    pub fn iter<'a>(&'a self) -> Replay_Data_Iter<'a> {
+    pub fn iter(&self) -> Replay_Data_Iter<'_> {
         Replay_Data_Iter {
             replay: self,
             idx: 0,

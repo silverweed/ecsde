@@ -67,6 +67,6 @@ impl Font_Cache<'_> {
     }
 
     pub fn must_get(&self, handle: Font_Handle) -> &Font<'_> {
-        &self.fonts[&handle.expect(format!("must_get() failed for handle {:?}!", handle).as_str())]
+        &self.fonts[&handle.unwrap_or_else(|| panic!("must_get() failed for handle {:?}!", handle))]
     }
 }

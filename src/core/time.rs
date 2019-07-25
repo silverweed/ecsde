@@ -93,7 +93,7 @@ impl Time {
     }
 
     pub fn get_game_time(&self) -> f32 {
-        (self.game_time as f32) * 0.00_000_1
+        (self.game_time as f32) * 0.000_001
     }
 }
 

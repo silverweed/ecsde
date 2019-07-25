@@ -53,7 +53,7 @@ impl Render_System {
             } = rend;
 
             let texture = resources.get_texture(*tex_id);
-            let mut sprite = gfx::render::create_sprite(texture, *src_rect);
+            let sprite = gfx::render::create_sprite(texture, *src_rect);
 
             let mut rend_transform = spatial.transform;
             if smooth_by_extrapolating_velocity {
@@ -61,7 +61,7 @@ impl Render_System {
                 rend_transform.translate(v.x * frame_lag_normalized, v.y * frame_lag_normalized);
             }
 
-            gfx::render::render_sprite(window, &mut sprite, &rend_transform, &camera.transform);
+            gfx::render::render_sprite(window, &sprite, &rend_transform, &camera.transform);
         }
     }
 }

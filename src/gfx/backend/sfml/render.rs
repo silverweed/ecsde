@@ -135,8 +135,8 @@ fn calc_render_transform(
     let pos = spos - cpos;
 
     // Apply rotation
-    let Rad(srot) = transform.rotation().into();
-    let Rad(crot) = camera.rotation().into();
+    let Rad(srot) = transform.rotation();
+    let Rad(crot) = camera.rotation();
     let rot = srot - crot;
     let rel_rot_origin = rot_origin;
     println!(

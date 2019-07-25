@@ -86,7 +86,9 @@ impl State_Manager {
     }
 
     fn push_state(&mut self, world: &World, mut state: Box<dyn Game_State>) {
-        self.current_state().map(|s| s.on_pause(world));
+        if let Some(s) = self.current_state() {
+            s.on_pause(world);
+        }
         state.on_start(world);
         self.state_stack.push(state);
     }
