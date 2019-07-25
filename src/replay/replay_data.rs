@@ -108,3 +108,13 @@ impl std::iter::Iterator for Replay_Data_Iter<'_> {
         }
     }
 }
+
+impl Replay_Data_Iter<'_> {
+    pub fn cur(&self) -> Option<&Replay_Data_Point> {
+        if self.idx == self.replay.data.len() {
+            None
+        } else {
+            Some(&self.replay.data[self.idx])
+        }
+    }
+}

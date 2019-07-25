@@ -3,6 +3,7 @@ use super::common::colors;
 use super::common::Maybe_Error;
 use super::debug;
 use super::env::Env_Info;
+use super::msg::Msg_Responder;
 use super::time;
 use super::world;
 use crate::audio;
@@ -122,6 +123,7 @@ impl<'r> App<'r> {
         } else {
             None
         };
+        let mut notified_replay_ended = false;
 
         while !self.should_close {
             cur_frame += 1;
@@ -141,10 +143,17 @@ impl<'r> App<'r> {
 
             // Update input
             if let Some(mut iter) = replay_data_iter.as_mut() {
-                systems
+                let replay_will_continue = systems
                     .input_system
                     .borrow_mut()
                     .update_from_replay(cur_frame, &mut iter);
+
+                if !replay_will_continue && !notified_replay_ended {
+                    systems.ui_system.borrow_mut().send_message(
+                        gfx::ui::UI_Request::Add_Fadeout_Text(String::from("REPLAY HAS ENDED.")),
+                    );
+                    notified_replay_ended = true;
+                }
             } else {
                 systems.input_system.borrow_mut().update(window);
             }

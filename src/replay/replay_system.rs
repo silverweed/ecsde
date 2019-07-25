@@ -26,9 +26,8 @@ impl Replay_System {
         let new_directions = list.get_directions();
         if new_directions != self.prev_action_list.get_directions() {
             self.data.add_point(self.cur_frame, new_directions);
+            self.prev_action_list = list.clone();
         }
-
-        self.prev_action_list = list.clone();
     }
 
     pub fn serialize(&self, file_path: &Path) -> Maybe_Error {

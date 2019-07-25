@@ -4,7 +4,7 @@ use crate::replay::replay_data::Replay_Data_Iter;
 use cgmath::InnerSpace;
 use std::vec::Vec;
 
-#[derive(PartialEq, Hash, Copy, Clone)]
+#[derive(PartialEq, Hash, Copy, Clone, Debug)]
 pub enum Action {
     Quit,
     Resize(u32, u32),
@@ -18,7 +18,7 @@ pub enum Action {
     Print_Entity_Manager_Debug_Info,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct Action_List {
     quit: bool,
     directions: Direction_Flags,
@@ -75,15 +75,21 @@ impl Input_System {
         poll_events(&mut self.actions, window);
     }
 
+    /// Returns true as long as the replay isn't over
     pub fn update_from_replay(
         &mut self,
         cur_frame: u64,
         replay_data_iter: &mut Replay_Data_Iter<'_>,
-    ) {
-        if let Some(datum) = replay_data_iter.next() {
-            if datum.frame_number() >= cur_frame {
+    ) -> bool {
+        if let Some(datum) = replay_data_iter.cur() {
+            if cur_frame >= datum.frame_number() {
                 self.actions.directions = datum.directions();
+                replay_data_iter.next().is_some()
+            } else {
+                true
             }
+        } else {
+            false
         }
     }
 }
