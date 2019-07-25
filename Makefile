@@ -1,10 +1,16 @@
 all: build
 
-run:
+run: 
 	cargo run --features use-sfml
 
-build:
+build: 
 	cargo build --features use-sfml
 
-test:
+test: 
 	cargo test --features use-sfml
+
+link: 
+	@exec &>/dev/null; \
+	pushd target/debug && ln -s ../../cfg && ln -s ../../assets; \
+	pushd deps && ln -s ../../../cfg && ln -s ../../../assets && ln -s ../../../test_resources; \
+	popd 

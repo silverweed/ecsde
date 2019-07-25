@@ -250,8 +250,10 @@ impl Entity_Manager {
             Some(vec) => {
                 #[cfg(debug_assertions)]
                 unsafe {
-                    (*dbg).n_components_currently_instantiated -= 1;
-                    (*dbg).components_used_bytes -= std::mem::size_of::<C>();
+                    if vec[e.index].is_some() {
+                        (*dbg).n_components_currently_instantiated -= 1;
+                        (*dbg).components_used_bytes -= std::mem::size_of::<C>();
+                    }
                 }
                 vec[e.index] = None;
             } // We don't assert if component is already None.
