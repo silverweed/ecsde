@@ -135,19 +135,19 @@ mod tests {
     }
 
     impl Game_State for Test_State_1 {
-        fn on_start(&mut self) {
+        fn on_start(&mut self, _world: &World) {
             self.data.borrow_mut().started = true;
         }
-        fn on_end(&mut self) {
+        fn on_end(&mut self, _world: &World) {
             self.data.borrow_mut().ended = true;
         }
-        fn on_pause(&mut self) {
+        fn on_pause(&mut self, _world: &World) {
             self.data.borrow_mut().paused = true;
         }
-        fn on_resume(&mut self) {
+        fn on_resume(&mut self, _world: &World) {
             self.data.borrow_mut().resumed = true;
         }
-        fn update(&mut self, _dt: &Duration) -> State_Transition {
+        fn update(&mut self, _world: &World) -> State_Transition {
             self.data.borrow_mut().updated += 1;
             if self.data.borrow().updated < 2 {
                 State_Transition::None
@@ -158,7 +158,7 @@ mod tests {
         fn handle_actions(
             &mut self,
             _actions: &Action_List,
-            _dispatcher: &msg::Msg_Dispatcher,
+            _world: &World,
             _config: &cfg::Config,
         ) -> bool {
             self.data.borrow_mut().handled_actions += 1;
@@ -171,7 +171,8 @@ mod tests {
     fn state_manager() {
         let data = Rc::new(RefCell::new(Test_State_Data::default()));
         let state = Box::new(Test_State_1 { data: data.clone() });
-        let mut smgr = State_Manager::with_initial_state(state);
+        let world = World::new();
+        let mut smgr = State_Manager::with_initial_state(&world, state);
 
         assert!(data.borrow().started, "State was not started");
         assert!(!data.borrow().ended, "State was ended");
@@ -180,28 +181,27 @@ mod tests {
         assert_eq!(data.borrow().updated, 0);
         assert_eq!(data.borrow().handled_actions, 0);
 
-        smgr.update(&Duration::from_millis(0));
+        smgr.update(&world);
         assert_eq!(data.borrow().updated, 1);
         assert_eq!(data.borrow().handled_actions, 0);
 
         let actions = Action_List::default();
-        let disp = msg::Msg_Dispatcher::new();
         let cfg = cfg::Config::new_empty();
-        smgr.handle_actions(&actions, &disp, &cfg);
+        smgr.handle_actions(&actions, &world, &cfg);
         assert_eq!(data.borrow().handled_actions, 1);
 
-        smgr.update(&Duration::from_millis(0)); // this pops the state
+        smgr.update(&world); // this pops the state
         assert_eq!(data.borrow().updated, 2, "State was not updated");
         assert!(data.borrow().ended, "State was not ended");
 
-        smgr.handle_actions(&actions, &disp, &cfg);
+        smgr.handle_actions(&actions, &world, &cfg);
         assert_eq!(
             data.borrow().handled_actions,
             1,
             "State was handled but should have been popped"
         );
 
-        smgr.update(&Duration::from_millis(0));
+        smgr.update(&world);
         assert_eq!(
             data.borrow().updated,
             2,
