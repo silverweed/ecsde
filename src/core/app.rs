@@ -1,3 +1,4 @@
+use super::app_config::App_Config;
 use super::common::colors;
 use super::common::Maybe_Error;
 use super::debug;
@@ -8,41 +9,11 @@ use crate::audio;
 use crate::cfg;
 use crate::fs;
 use crate::gfx;
+use crate::replay::{replay_data, replay_system};
 use crate::resources;
 use crate::states;
+use std::path;
 use std::time::Duration;
-
-pub struct App_Config {
-    pub title: String,
-    pub target_win_size: (u32, u32),
-}
-
-impl App_Config {
-    pub fn new(mut args: std::env::Args) -> App_Config {
-        let mut cfg = App_Config {
-            title: String::from("Unnamed app"),
-            target_win_size: (800, 600),
-        };
-
-        // Consume program name
-        args.next();
-
-        while let Some(arg) = args.next() {
-            match arg.as_ref() {
-                "--title" => {
-                    if let Some(title) = args.next() {
-                        cfg.title = title;
-                    } else {
-                        eprintln!("Expected an argument after --title flag.");
-                    }
-                }
-                _ => eprintln!("Unknown argument {}", arg),
-            }
-        }
-
-        cfg
-    }
-}
 
 pub struct App<'r> {
     should_close: bool,
@@ -56,12 +27,23 @@ pub struct App<'r> {
     audio_resources: resources::audio::Audio_Resources<'r>,
 
     world: world::World,
+
+    replay_system: replay_system::Replay_System,
+    replay_data: Option<replay_data::Replay_Data>,
 }
 
 impl<'r> App<'r> {
-    pub fn new(sound_loader: &'r audio::sound_loader::Sound_Loader) -> Self {
+    pub fn new(cfg: &App_Config, sound_loader: &'r audio::sound_loader::Sound_Loader) -> Self {
         let env = Env_Info::gather().unwrap();
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
+        let replay_data = if let Some(path) = &cfg.replay_file {
+            Some(
+                replay_data::Replay_Data::from_serialized(&path)
+                    .expect("Failed to load replay data!"),
+            )
+        } else {
+            None
+        };
 
         App {
             should_close: false,
@@ -71,6 +53,8 @@ impl<'r> App<'r> {
             gfx_resources: resources::gfx::Gfx_Resources::new(),
             audio_resources: resources::audio::Audio_Resources::new(sound_loader),
             world: world::World::new(),
+            replay_system: replay_system::Replay_System::new(),
+            replay_data,
         }
     }
 
@@ -129,8 +113,19 @@ impl<'r> App<'r> {
     fn start_game_loop(&mut self, window: &mut gfx::window::Window_Handle) -> Maybe_Error {
         let mut fps_debug = debug::fps::Fps_Console_Printer::new(&Duration::from_secs(3), "main");
         let mut execution_time = Duration::new(0, 0);
+        let mut cur_frame = 0u64;
+
+        // Consumes self.replay_data!
+        let replay_data = self.replay_data.take();
+        let mut replay_data_iter = if let Some(replay_data) = &replay_data {
+            Some(replay_data.iter())
+        } else {
+            None
+        };
 
         while !self.should_close {
+            cur_frame += 1;
+
             self.world.update();
             let (dt, real_dt) = (self.world.dt(), self.world.real_dt());
             let systems = self.world.get_systems();
@@ -145,8 +140,19 @@ impl<'r> App<'r> {
             execution_time += dt;
 
             // Update input
-            systems.input_system.borrow_mut().update(window);
+            if let Some(mut iter) = replay_data_iter.as_mut() {
+                systems
+                    .input_system
+                    .borrow_mut()
+                    .update_from_replay(cur_frame, &mut iter);
+            } else {
+                systems.input_system.borrow_mut().update(window);
+            }
             let actions = systems.input_system.borrow().get_action_list();
+
+            if replay_data_iter.is_none() {
+                self.replay_system.update(&actions);
+            }
 
             if self
                 .state_mgr
@@ -214,6 +220,8 @@ impl<'r> App<'r> {
             fps_debug.tick(&real_dt);
         }
 
+        self.on_close()?;
+
         Ok(())
     }
 
@@ -246,5 +254,11 @@ impl<'r> App<'r> {
         gfx::window::display(window);
 
         Ok(())
+    }
+
+    fn on_close(&self) -> Maybe_Error {
+        let mut path = path::PathBuf::from(self.env.get_cwd());
+        path.push("replay.dat");
+        self.replay_system.serialize(&path)
     }
 }

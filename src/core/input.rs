@@ -1,5 +1,6 @@
-use crate::core::common::direction::Direction;
+use crate::core::common::direction::{Direction, Direction_Flags};
 use crate::core::common::vector::Vec2f;
+use crate::replay::replay_data::Replay_Data_Iter;
 use cgmath::InnerSpace;
 use std::vec::Vec;
 
@@ -8,8 +9,9 @@ pub enum Action {
     Quit,
     Resize(u32, u32),
     Move(Direction),
-    Zoom(i32), // Note: the zoom factor is an integer rather than a float as it can be hashed.
+    // Note: the zoom factor is an integer rather than a float as it can be hashed.
     // This integer must be divided by 100 to obtain the actual scaling factor.
+    Zoom(i32),
     Change_Speed(i32),
     Pause_Toggle,
     Step_Simulation,
@@ -19,10 +21,7 @@ pub enum Action {
 #[derive(Default, Clone)]
 pub struct Action_List {
     quit: bool,
-    move_up: bool,
-    move_left: bool,
-    move_down: bool,
-    move_right: bool,
+    directions: Direction_Flags,
     actions: Vec<Action>,
 }
 
@@ -30,12 +29,16 @@ impl Action_List {
     pub fn has_action(&self, action: &Action) -> bool {
         match action {
             Action::Quit => self.quit,
-            Action::Move(Direction::Up) => self.move_up,
-            Action::Move(Direction::Left) => self.move_left,
-            Action::Move(Direction::Down) => self.move_down,
-            Action::Move(Direction::Right) => self.move_right,
+            Action::Move(Direction::Up) => self.directions.contains(Direction_Flags::UP),
+            Action::Move(Direction::Left) => self.directions.contains(Direction_Flags::LEFT),
+            Action::Move(Direction::Down) => self.directions.contains(Direction_Flags::DOWN),
+            Action::Move(Direction::Right) => self.directions.contains(Direction_Flags::RIGHT),
             _ => self.actions.contains(&action),
         }
+    }
+
+    pub fn get_directions(&self) -> Direction_Flags {
+        self.directions
     }
 }
 
@@ -71,6 +74,18 @@ impl Input_System {
     pub fn update(&mut self, window: &mut sfml::graphics::RenderWindow) {
         poll_events(&mut self.actions, window);
     }
+
+    pub fn update_from_replay(
+        &mut self,
+        cur_frame: u64,
+        replay_data_iter: &mut Replay_Data_Iter<'_>,
+    ) {
+        if let Some(datum) = replay_data_iter.next() {
+            if datum.frame_number() >= cur_frame {
+                self.actions.directions = datum.directions();
+            }
+        }
+    }
 }
 
 pub fn get_movement_from_input(actions: &Action_List) -> Vec2f {
@@ -98,6 +113,45 @@ pub fn get_normalized_movement_from_input(actions: &Action_List) -> Vec2f {
         m
     } else {
         m.normalize()
+    }
+}
+
+#[cfg(feature = "use-sfml")]
+fn poll_events(action_list: &mut Action_List, window: &mut sfml::graphics::RenderWindow) {
+    use sfml::window::{Event, Key};
+
+    let actions = &mut action_list.actions;
+    actions.clear();
+
+    while let Some(event) = window.poll_event() {
+        match event {
+            Event::Closed { .. } | Event::KeyPressed { code: Key::Q, .. } => {
+                action_list.quit = true
+            }
+            Event::KeyPressed { code, .. } => match code {
+                Key::W => action_list.directions.insert(Direction_Flags::UP),
+                Key::A => action_list.directions.insert(Direction_Flags::LEFT),
+                Key::S => action_list.directions.insert(Direction_Flags::DOWN),
+                Key::D => action_list.directions.insert(Direction_Flags::RIGHT),
+                //Key::KpPlus => actions.push(Action::Zoom(10)),
+                //Key::KpMinus => actions.push(Action::Zoom(-10)),
+                Key::Num1 | Key::Dash => actions.push(Action::Change_Speed(-10)),
+                Key::Num2 | Key::Equal => actions.push(Action::Change_Speed(10)),
+                Key::Period => actions.push(Action::Pause_Toggle),
+                Key::Slash => actions.push(Action::Step_Simulation),
+                Key::M => actions.push(Action::Print_Entity_Manager_Debug_Info),
+                _ => (),
+            },
+            Event::KeyReleased { code, .. } => match code {
+                Key::W => action_list.directions.remove(Direction_Flags::UP),
+                Key::A => action_list.directions.remove(Direction_Flags::LEFT),
+                Key::S => action_list.directions.remove(Direction_Flags::DOWN),
+                Key::D => action_list.directions.remove(Direction_Flags::RIGHT),
+                _ => (),
+            },
+            Event::Resized { width, height } => actions.push(Action::Resize(width, height)),
+            _ => (),
+        }
     }
 }
 
@@ -147,45 +201,6 @@ fn poll_events(action_list: &mut Action_List, event_pump: &mut sdl2::EventPump) 
                 win_event: WindowEvent::Resized(width, height),
                 ..
             } => actions.push(Action::Resize(width as u32, height as u32)),
-            _ => (),
-        }
-    }
-}
-
-#[cfg(feature = "use-sfml")]
-fn poll_events(action_list: &mut Action_List, window: &mut sfml::graphics::RenderWindow) {
-    use sfml::window::{Event, Key};
-
-    let actions = &mut action_list.actions;
-    actions.clear();
-
-    while let Some(event) = window.poll_event() {
-        match event {
-            Event::Closed { .. } | Event::KeyPressed { code: Key::Q, .. } => {
-                action_list.quit = true
-            }
-            Event::KeyPressed { code, .. } => match code {
-                Key::W => action_list.move_up = true,
-                Key::A => action_list.move_left = true,
-                Key::S => action_list.move_down = true,
-                Key::D => action_list.move_right = true,
-                //Key::KpPlus => actions.push(Action::Zoom(10)),
-                //Key::KpMinus => actions.push(Action::Zoom(-10)),
-                Key::Num1 | Key::Dash => actions.push(Action::Change_Speed(-10)),
-                Key::Num2 | Key::Equal => actions.push(Action::Change_Speed(10)),
-                Key::Period => actions.push(Action::Pause_Toggle),
-                Key::Slash => actions.push(Action::Step_Simulation),
-                Key::M => actions.push(Action::Print_Entity_Manager_Debug_Info),
-                _ => (),
-            },
-            Event::KeyReleased { code, .. } => match code {
-                Key::W => action_list.move_up = false,
-                Key::A => action_list.move_left = false,
-                Key::S => action_list.move_down = false,
-                Key::D => action_list.move_right = false,
-                _ => (),
-            },
-            Event::Resized { width, height } => actions.push(Action::Resize(width, height)),
             _ => (),
         }
     }

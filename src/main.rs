@@ -6,6 +6,9 @@ extern crate cgmath;
 extern crate ears;
 extern crate notify;
 
+#[macro_use]
+extern crate bitflags;
+
 #[cfg(features = "use-sdl")]
 extern crate sdl2;
 #[cfg(features = "use-sfml")]
@@ -21,16 +24,17 @@ pub(crate) mod ecs;
 pub(crate) mod fs;
 pub(crate) mod game;
 pub(crate) mod gfx;
+pub(crate) mod replay;
 pub(crate) mod resources;
 pub(crate) mod states;
 #[cfg(test)]
 pub(crate) mod test_common;
 
 fn main() -> core::common::Maybe_Error {
-    let cfg = core::app::App_Config::new(env::args());
+    let cfg = core::app_config::App_Config::new(env::args());
 
     let sound_loader = audio::sound_loader::Sound_Loader {};
-    let mut app = core::app::App::new(&sound_loader);
+    let mut app = core::app::App::new(&cfg, &sound_loader);
 
     let mut window = gfx::window::create_render_window(&(), cfg.target_win_size, &cfg.title);
 

@@ -70,7 +70,7 @@ fn parse_config_dir(dir_path: &Path) -> Result<Vec<Cfg_Section>, std::io::Error>
                     sections.append(&mut parse_config_file(&e.path())?)
                 }
                 Err(msg) => eprintln!("{}", msg),
-		_ => (),
+                _ => (),
             }
         }
         eprintln!("Parsed {} cfg files.", n_parsed);
