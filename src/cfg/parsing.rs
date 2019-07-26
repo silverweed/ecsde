@@ -84,13 +84,13 @@ fn parse_config_dir(dir_path: &Path) -> Result<Vec<Cfg_Section>, std::io::Error>
     }
 }
 
-// @Speed: this function can likely be optimized quite a lot.
 pub(super) fn parse_config_file(path: &Path) -> Result<Vec<Cfg_Section>, std::io::Error> {
     let file = File::open(path)?;
     let lines = BufReader::new(file).lines().filter_map(|l| Some(l.ok()?));
     Ok(parse_lines(lines))
 }
 
+// @Speed: this function can likely be optimized quite a lot.
 fn parse_lines(lines: impl std::iter::Iterator<Item = String>) -> Vec<Cfg_Section> {
     let mut sections = vec![];
     let mut cur_section = Cfg_Section {
@@ -98,6 +98,7 @@ fn parse_lines(lines: impl std::iter::Iterator<Item = String>) -> Vec<Cfg_Sectio
         entries: vec![],
     };
 
+    // Strip comments
     let lines = lines.map(|mut line| {
         if let Some(comment_start) = line.find(COMMENT_START) {
             line.truncate(comment_start);
@@ -137,7 +138,6 @@ fn parse_lines(lines: impl std::iter::Iterator<Item = String>) -> Vec<Cfg_Sectio
         }
     }
     if !cur_section.header.is_empty() {
-        eprintln!("pushed section {:?}", cur_section);
         sections.push(cur_section);
     }
 

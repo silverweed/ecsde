@@ -1,6 +1,11 @@
 use std::convert::From;
 
-#[derive(PartialEq, Hash, Copy, Clone, Debug)]
+#[cfg(debug_assertions)]
+use std::collections::HashMap;
+#[cfg(debug_assertions)]
+use std::sync::Mutex;
+
+#[derive(PartialEq, Hash, Copy, Clone)]
 pub struct String_Id(u32);
 
 impl Eq for String_Id {}
@@ -12,18 +17,57 @@ where
 {
     fn from(s: T) -> String_Id {
         let s: &str = s.into();
-        String_Id(fnv1a(s.as_bytes()))
+        let this = String_Id(fnv1a(s.as_bytes()));
+        #[cfg(debug_assertions)]
+        STRING_ID_MAP
+            .lock()
+            .expect("[ ERROR ] Failed to lock STRING_ID_MAP")
+            .insert(this, String::from(s));
+        this
     }
 }
 
 impl std::fmt::Display for String_Id {
+    #[cfg(not(debug_assertions))]
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+
+    #[cfg(debug_assertions)]
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "{} (orig = \"{}\")",
+            self.0,
+            STRING_ID_MAP
+                .lock()
+                .expect("[ ERROR ] Failed to lock STRING_ID_MAP")[self]
+        )
+    }
+}
+
+impl std::fmt::Debug for String_Id {
+    #[cfg(not(debug_assertions))]
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "String_Id({})", self.0)
+    }
+
+    #[cfg(debug_assertions)]
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "String_Id({}, \"{}\")",
+            self.0,
+            STRING_ID_MAP
+                .lock()
+                .expect("[ ERROR ] Failed to lock STRING_ID_MAP")[self]
+        )
     }
 }
 
 const FNV_PRIME32: u32 = 16_777_619;
 
+#[inline]
 fn fnv1a(bytes: &[u8]) -> u32 {
     let mut result = 2_166_136_261;
     for &b in bytes {
@@ -31,6 +75,11 @@ fn fnv1a(bytes: &[u8]) -> u32 {
         result = result.wrapping_mul(FNV_PRIME32);
     }
     result
+}
+
+#[cfg(debug_assertions)]
+lazy_static! {
+    static ref STRING_ID_MAP: Mutex<HashMap<String_Id, String>> = Mutex::new(HashMap::new());
 }
 
 #[cfg(test)]
@@ -52,12 +101,5 @@ mod tests {
     fn stringid_from_str() {
         assert_eq!(String_Id::from("A test string"), String_Id(943117577));
         assert_eq!(String_Id::from("A test string").0, fnv1a(b"A test string"));
-    }
-
-    #[test]
-    fn fmt_stringid() {
-        let sid = String_Id::from("A test string");
-        let fmtd = format!("{}", sid);
-        assert_eq!(fmtd, "943117577");
     }
 }

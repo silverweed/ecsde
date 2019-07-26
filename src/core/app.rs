@@ -45,6 +45,7 @@ impl<'r> App<'r> {
         } else {
             None
         };
+        let world = world::World::new(&env);
 
         App {
             should_close: false,
@@ -53,7 +54,7 @@ impl<'r> App<'r> {
             state_mgr: states::state_manager::State_Manager::new(),
             gfx_resources: resources::gfx::Gfx_Resources::new(),
             audio_resources: resources::audio::Audio_Resources::new(sound_loader),
-            world: world::World::new(),
+            world,
             replay_system: replay_system::Replay_System::new(),
             replay_data,
         }

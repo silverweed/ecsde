@@ -1,7 +1,7 @@
 use super::state::{Game_State, Persistent_Game_State, State_Transition};
 use crate::cfg;
-use crate::core::input::Action_List;
 use crate::core::world::World;
+use crate::input::input_system::Action_List;
 use std::vec::Vec;
 
 /// Manages a PDA of Game_States.
@@ -173,7 +173,8 @@ mod tests {
     fn state_manager() {
         let data = Rc::new(RefCell::new(Test_State_Data::default()));
         let state = Box::new(Test_State_1 { data: data.clone() });
-        let world = World::new();
+        let world =
+            World::new(&crate::core::env::Env_Info::gather().expect("Failed to gather Env_Info"));
         let mut smgr = State_Manager::with_initial_state(&world, state);
 
         assert!(data.borrow().started, "State was not started");

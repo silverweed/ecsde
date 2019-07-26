@@ -1,3 +1,4 @@
+use super::env::Env_Info;
 use super::msg;
 use super::systems;
 use super::time_manager;
@@ -16,10 +17,10 @@ pub struct World {
 }
 
 impl World {
-    pub fn new() -> World {
+    pub fn new(env: &Env_Info) -> World {
         World {
             time: Rc::new(RefCell::new(time_manager::Time_Manager::new())),
-            systems: systems::Core_Systems::new(),
+            systems: systems::Core_Systems::new(env),
             dispatcher: msg::Msg_Dispatcher::new(),
             dt: Duration::new(0, 0),
             real_dt: Duration::new(0, 0),

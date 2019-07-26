@@ -1,5 +1,7 @@
+use super::bindings::Input_Bindings;
 use crate::core::common::direction::{Direction, Direction_Flags};
 use crate::core::common::vector::Vec2f;
+use crate::core::env::Env_Info;
 use crate::replay::replay_data::Replay_Data_Iter;
 use cgmath::InnerSpace;
 use std::vec::Vec;
@@ -52,12 +54,14 @@ impl std::ops::Deref for Action_List {
 
 pub struct Input_System {
     actions: Action_List,
+    bindings: Input_Bindings,
 }
 
 impl Input_System {
-    pub fn new() -> Input_System {
+    pub fn new(env: &Env_Info) -> Input_System {
         Input_System {
             actions: Action_List::default(),
+            bindings: create_bindings(env),
         }
     }
 
@@ -120,6 +124,15 @@ pub fn get_normalized_movement_from_input(actions: &Action_List) -> Vec2f {
     } else {
         m.normalize()
     }
+}
+
+// @Incomplete: allow selecting file path
+fn create_bindings(env: &Env_Info) -> Input_Bindings {
+    let mut keybinding_path = std::path::PathBuf::new();
+    keybinding_path.push(env.get_cfg_root());
+    keybinding_path.push("input");
+    keybinding_path.set_extension("keys");
+    crate::input::bindings::Input_Bindings::create_from_config(&keybinding_path).unwrap()
 }
 
 #[cfg(feature = "use-sfml")]

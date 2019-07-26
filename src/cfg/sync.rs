@@ -1,5 +1,5 @@
+use super::config::{Config, Config_Change_Interface};
 use super::parsing::{self, Cfg_Entry, Cfg_Section};
-use super::{Config, Config_Change_Interface};
 use crate::fs::{file_watcher, utils};
 use notify::DebouncedEvent;
 use std::sync::{Arc, Mutex};

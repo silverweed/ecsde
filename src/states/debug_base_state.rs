@@ -1,12 +1,12 @@
 use super::state::Persistent_Game_State;
 use crate::cfg;
-use crate::core::input::{Action, Action_List};
 use crate::core::msg::Msg_Responder;
 use crate::core::time;
 use crate::core::time_manager::{Time_Manager, Time_Msg, Time_Resp};
 use crate::core::world::World;
 use crate::game::gameplay_system::{Gameplay_System, Gameplay_System_Msg};
 use crate::gfx::ui::{UI_Request, UI_System};
+use crate::input::input_system::{Action, Action_List};
 use std::convert::TryFrom;
 use std::time::Duration;
 

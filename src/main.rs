@@ -6,6 +6,10 @@ extern crate cgmath;
 extern crate ears;
 extern crate notify;
 
+#[cfg(debug_assertions)]
+#[macro_use]
+extern crate lazy_static; // used for String_Id
+
 #[macro_use]
 extern crate bitflags;
 
@@ -24,6 +28,7 @@ pub(crate) mod ecs;
 pub(crate) mod fs;
 pub(crate) mod game;
 pub(crate) mod gfx;
+pub(crate) mod input;
 pub(crate) mod replay;
 pub(crate) mod resources;
 pub(crate) mod states;
