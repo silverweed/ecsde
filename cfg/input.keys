@@ -1,0 +1,15 @@
+# General
+quit: Q
+game_speed_up: Num2, Equal
+game_speed_down: Num1, Dash
+pause_toggle: Period
+step_sim: Slash
+
+# Movement
+move_up: W
+move_left: A
+move_down: S
+move_right: D
+
+# Other
+print_em_debug_info: M
