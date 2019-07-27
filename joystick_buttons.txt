@@ -1,0 +1,1 @@
+windows: like linux, but Special_Middle does not exist (so the two later ones are shifted left)
