@@ -17,7 +17,6 @@ pub enum Action {
 
 #[derive(Default, Clone, Debug)]
 pub struct Action_List {
-    pub(super) quit: bool,
     pub(super) directions: Direction_Flags,
     pub(super) actions: Vec<Action>,
 }
@@ -25,7 +24,6 @@ pub struct Action_List {
 impl Action_List {
     pub fn has_action(&self, action: &Action) -> bool {
         match action {
-            Action::Quit => self.quit,
             Action::Move(Direction::Up) => self.directions.contains(Direction_Flags::UP),
             Action::Move(Direction::Left) => self.directions.contains(Direction_Flags::LEFT),
             Action::Move(Direction::Down) => self.directions.contains(Direction_Flags::DOWN),

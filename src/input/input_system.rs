@@ -28,7 +28,7 @@ impl Input_System {
 
     #[cfg(feature = "use-sfml")]
     pub fn update(&mut self, window: &mut sfml::graphics::RenderWindow) {
-        poll_events(&mut self.actions, window);
+        poll_events(&mut self.actions, &self.bindings, window);
     }
 
     /// Returns true as long as the replay isn't over
@@ -51,7 +51,11 @@ impl Input_System {
 }
 
 #[cfg(feature = "use-sfml")]
-fn poll_events(action_list: &mut Action_List, window: &mut sfml::graphics::RenderWindow) {
+fn poll_events(
+    action_list: &mut Action_List,
+    bindings: &Input_Bindings,
+    window: &mut sfml::graphics::RenderWindow,
+) {
     use sfml::window::{Event, Key};
 
     let actions = &mut action_list.actions;
@@ -59,31 +63,48 @@ fn poll_events(action_list: &mut Action_List, window: &mut sfml::graphics::Rende
 
     while let Some(event) = window.poll_event() {
         match event {
-            Event::Closed { .. } | Event::KeyPressed { code: Key::Q, .. } => {
-                action_list.quit = true
+            Event::Closed { .. } => actions.push(Action::Quit),
+            Event::KeyPressed { code, .. } => {
+                if let Some(action_name) = bindings.get_key_action(code) {
+                    // TODO: call mapped action (Pressed)
+                }
             }
-            Event::KeyPressed { code, .. } => match code {
-                Key::W => action_list.directions.insert(Direction_Flags::UP),
-                Key::A => action_list.directions.insert(Direction_Flags::LEFT),
-                Key::S => action_list.directions.insert(Direction_Flags::DOWN),
-                Key::D => action_list.directions.insert(Direction_Flags::RIGHT),
-                //Key::KpPlus => actions.push(Action::Zoom(10)),
-                //Key::KpMinus => actions.push(Action::Zoom(-10)),
-                Key::Num1 | Key::Dash => actions.push(Action::Change_Speed(-10)),
-                Key::Num2 | Key::Equal => actions.push(Action::Change_Speed(10)),
-                Key::Period => actions.push(Action::Pause_Toggle),
-                Key::Slash => actions.push(Action::Step_Simulation),
-                Key::M => actions.push(Action::Print_Entity_Manager_Debug_Info),
-                _ => (),
-            },
-            Event::KeyReleased { code, .. } => match code {
-                Key::W => action_list.directions.remove(Direction_Flags::UP),
-                Key::A => action_list.directions.remove(Direction_Flags::LEFT),
-                Key::S => action_list.directions.remove(Direction_Flags::DOWN),
-                Key::D => action_list.directions.remove(Direction_Flags::RIGHT),
-                _ => (),
-            },
-            Event::Resized { width, height } => actions.push(Action::Resize(width, height)),
+            Event::KeyReleased { code, .. } => {
+                if let Some(action_name) = bindings.get_key_action(code) {
+                    // TODO: call mapped action (Released)
+                }
+            }
+            Event::JoystickButtonPressed { joystickid, button } => {
+                if let Some(action_name) = bindings.get_joystick_action(joystickid, button) {
+                    // TODO: call mapped action (Pressed)
+                }
+            }
+            Event::JoystickButtonReleased { joystickid, button } => {
+                if let Some(action_name) = bindings.get_joystick_action(joystickid, button) {
+                    // TODO: call mapped action (Released)
+                }
+            }
+
+            //Key::W => action_list.directions.insert(Direction_Flags::UP),
+            //Key::A => action_list.directions.insert(Direction_Flags::LEFT),
+            //Key::S => action_list.directions.insert(Direction_Flags::DOWN),
+            //Key::D => action_list.directions.insert(Direction_Flags::RIGHT),
+            ////Key::KpPlus => actions.push(Action::Zoom(10)),
+            ////Key::KpMinus => actions.push(Action::Zoom(-10)),
+            //Key::Num1 | Key::Dash => actions.push(Action::Change_Speed(-10)),
+            //Key::Num2 | Key::Equal => actions.push(Action::Change_Speed(10)),
+            //Key::Period => actions.push(Action::Pause_Toggle),
+            //Key::Slash => actions.push(Action::Step_Simulation),
+            //Key::M => actions.push(Action::Print_Entity_Manager_Debug_Info),
+            //_ => (),
+            //},
+            //Event::KeyReleased { code, .. } => match code {
+            //Key::W => action_list.directions.remove(Direction_Flags::UP),
+            //Key::A => action_list.directions.remove(Direction_Flags::LEFT),
+            //Key::S => action_list.directions.remove(Direction_Flags::DOWN),
+            //Key::D => action_list.directions.remove(Direction_Flags::RIGHT),
+            //_ => (),
+            //},
             _ => (),
         }
     }
@@ -103,7 +124,7 @@ fn poll_events(action_list: &mut Action_List, event_pump: &mut sdl2::EventPump) 
             | Event::KeyDown {
                 keycode: Some(Keycode::Q),
                 ..
-            } => action_list.quit = true,
+            } => actions.push(Action::Quit),
             Event::KeyDown {
                 keycode: Some(keycode),
                 ..

@@ -178,6 +178,7 @@ impl<'r> App<'r> {
                 }
             }
 
+            // Handle actions
             if Self::handle_core_actions(&actions, window) {
                 self.should_close = true;
                 break;
@@ -249,7 +250,7 @@ impl<'r> App<'r> {
             fps_debug.tick(&real_dt);
         }
 
-        self.on_close()?;
+        self.on_game_loop_end()?;
 
         Ok(())
     }
@@ -304,7 +305,7 @@ impl<'r> App<'r> {
         Ok(())
     }
 
-    fn on_close(&self) -> Maybe_Error {
+    fn on_game_loop_end(&self) -> Maybe_Error {
         if self.replay_system.has_data() {
             let mut path = path::PathBuf::from(self.env.get_cwd());
             path.push("replay.dat");

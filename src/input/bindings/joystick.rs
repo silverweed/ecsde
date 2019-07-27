@@ -11,7 +11,7 @@ pub struct Joystick {
 
 // Don't change the order of these!
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum Joystick_Button {
     /// Triangle
     Face_Top,
@@ -69,8 +69,14 @@ pub fn get_joy_btn_id(joystick: Joystick, button: Joystick_Button) -> Option<u32
     }
 }
 
+pub fn get_joy_btn_from_id(joystick: Joystick, id: u32) -> Option<Joystick_Button> {
+    match joystick.joy_type {
+        Joystick_Type::XBox360 => get_joy_btn_from_id_xbox360(id),
+    }
+}
+
 // Map (Joystick_Button as u8) => (button id)
-const BUTTONS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = [
+const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = [
     Some(3),  // Face_Top
     Some(1),  // Face_Right
     Some(0),  // Face_Bottom
@@ -88,8 +94,33 @@ const BUTTONS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = [
     None,     // Dpad_Left
 ];
 
+// @Incomplete: button mapping on OSX may not range from 0 to 11: in that case we'll probably need
+// a hash map or something...
+const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 11] = [
+    Joystick_Button::Face_Bottom,
+    Joystick_Button::Face_Right,
+    Joystick_Button::Face_Left,
+    Joystick_Button::Face_Top,
+    Joystick_Button::Shoulder_Left,
+    Joystick_Button::Shoulder_Right,
+    Joystick_Button::Special_Left,
+    Joystick_Button::Special_Right,
+    Joystick_Button::Special_Middle,
+    Joystick_Button::Stick_Left,
+    Joystick_Button::Stick_Right,
+];
+
 #[inline]
 fn get_joy_btn_id_xbox360(button: Joystick_Button) -> Option<u32> {
-    assert!((button as usize) < BUTTONS_XBOX360.len());
-    BUTTONS_XBOX360[button as usize]
+    assert!((button as usize) < BUTTONS_TO_IDS_XBOX360.len());
+    BUTTONS_TO_IDS_XBOX360[button as usize]
+}
+
+#[inline]
+fn get_joy_btn_from_id_xbox360(id: u32) -> Option<Joystick_Button> {
+    if (id as usize) < IDS_TO_BUTTONS_XBOX360.len() {
+        Some(IDS_TO_BUTTONS_XBOX360[id as usize])
+    } else {
+        None
+    }
 }
