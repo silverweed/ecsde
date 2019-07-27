@@ -70,7 +70,7 @@ fn parse_bindings_lines(
         }
 
         let (action_name, action_values_raw) = {
-            let tokens: Vec<_> = line.splitn(2, ':').map(|tok| tok.trim()).collect();
+            let tokens: Vec<_> = line.splitn(2, ':').map(str::trim).collect();
             if tokens.len() != 2 {
                 eprintln!(
                     "[ WARNING ] Invalid line {} while parsing key bindings: '{}'.",
@@ -96,11 +96,11 @@ fn parse_bindings_lines(
 
 fn parse_action(s: &str) -> Option<Input_Action> {
     if s.starts_with("Joy_") {
-        joystick::string_to_joy_btn(&s["Joy_".len()..]).map(|btn| Input_Action::Joystick(btn))
+        joystick::string_to_joy_btn(&s["Joy_".len()..]).map(Input_Action::Joystick)
     } else if s.starts_with("Mouse_") {
-        mouse::string_to_mouse_btn(&s["Mouse_".len()..]).map(|btn| Input_Action::Mouse(btn))
+        mouse::string_to_mouse_btn(&s["Mouse_".len()..]).map(Input_Action::Mouse)
     } else {
-        keymap::string_to_key(s).map(|key| Input_Action::Key(key))
+        keymap::string_to_key(s).map(Input_Action::Key)
     }
 }
 

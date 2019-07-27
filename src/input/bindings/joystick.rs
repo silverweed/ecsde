@@ -63,7 +63,7 @@ pub fn string_to_joy_btn(s: &str) -> Option<Joystick_Button> {
     }
 }
 
-pub fn get_joy_btn_id(joystick: &Joystick, button: Joystick_Button) -> Option<u32> {
+pub fn get_joy_btn_id(joystick: Joystick, button: Joystick_Button) -> Option<u32> {
     match joystick.joy_type {
         Joystick_Type::XBox360 => get_joy_btn_id_xbox360(button),
     }

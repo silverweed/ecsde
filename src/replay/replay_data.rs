@@ -82,7 +82,7 @@ impl Replay_Data {
         }
 
         let last_frame_number = replay.data[replay.data.len() - 1].frame_number();
-        replay.duration = Duration::from_millis(last_frame_number * replay.ms_per_frame as u64);
+        replay.duration = Duration::from_millis(last_frame_number * u64::from(replay.ms_per_frame));
 
         eprintln!(
             "[ OK ] Loaded replay data from {:?}. Duration = {} s.",
