@@ -7,12 +7,21 @@ use std::vec::Vec;
 
 mod joystick;
 mod keymap;
+mod mouse;
 
-use keymap::Key;
+use joystick::Joystick_Button;
+use mouse::Mouse_Button;
+
+#[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
+pub enum Input_Action {
+    Key(keymap::Key),
+    Joystick(Joystick_Button),
+    Mouse(Mouse_Button),
+}
 
 pub struct Input_Bindings {
     /// { action_name => [keys] }
-    action_bindings: HashMap<String_Id, Vec<Key>>,
+    action_bindings: HashMap<String_Id, Vec<Input_Action>>,
 }
 
 impl Input_Bindings {
@@ -23,7 +32,9 @@ impl Input_Bindings {
     }
 }
 
-pub(super) fn parse_bindings_file(path: &Path) -> Result<HashMap<String_Id, Vec<Key>>, String> {
+pub(super) fn parse_bindings_file(
+    path: &Path,
+) -> Result<HashMap<String_Id, Vec<Input_Action>>, String> {
     let file = File::open(path).or_else(|_| Err(format!("Failed to open file {:?}!", path)))?;
     let lines = BufReader::new(file).lines().filter_map(|l| Some(l.ok()?));
     eprintln!("[ OK ] Parsed bindings file {:?}", path);
@@ -40,7 +51,7 @@ const COMMENT_START: char = '#';
 // @Cutnpaste from cfg/parsing.rs
 fn parse_bindings_lines(
     lines: impl std::iter::Iterator<Item = String>,
-) -> HashMap<String_Id, Vec<Key>> {
+) -> HashMap<String_Id, Vec<Input_Action>> {
     let mut bindings = HashMap::new();
 
     // Strip comments
@@ -71,9 +82,9 @@ fn parse_bindings_lines(
             }
         };
 
-        let mut keys: Vec<Key> = action_values_raw
+        let mut keys: Vec<Input_Action> = action_values_raw
             .split(',')
-            .filter_map(|tok| keymap::string_to_key(tok.trim()))
+            .filter_map(|tok| parse_action(tok.trim()))
             .collect();
         keys.sort_unstable();
         keys.dedup();
@@ -83,9 +94,41 @@ fn parse_bindings_lines(
     bindings
 }
 
+fn parse_action(s: &str) -> Option<Input_Action> {
+    if s.starts_with("Joy_") {
+        joystick::string_to_joy_btn(&s["Joy_".len()..]).map(|btn| Input_Action::Joystick(btn))
+    } else if s.starts_with("Mouse_") {
+        mouse::string_to_mouse_btn(&s["Mouse_".len()..]).map(|btn| Input_Action::Mouse(btn))
+    } else {
+        keymap::string_to_key(s).map(|key| Input_Action::Key(key))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    // @Temporary since enum variants on type aliases are experimental
+    #[cfg(feature = "use-sfml")]
+    use sfml::window::Key;
+
+    #[test]
+    fn test_parse_action() {
+        assert_eq!(parse_action("Space"), Some(Input_Action::Key(Key::Space)));
+        assert_eq!(parse_action("Spacex"), None);
+        assert_eq!(parse_action("Dash"), Some(Input_Action::Key(Key::Dash)));
+        assert_eq!(parse_action("  Dash  "), None);
+        assert_eq!(parse_action("Joy_"), None);
+        assert_eq!(
+            parse_action("Joy_Shoulder_Right"),
+            Some(Input_Action::Joystick(Joystick_Button::Shoulder_Right))
+        );
+        assert_eq!(parse_action("Mouse_"), None);
+        assert_eq!(
+            parse_action("Mouse_Left"),
+            Some(Input_Action::Mouse(Mouse_Button::Left))
+        );
+        assert_eq!(parse_action(""), None);
+    }
 
     #[test]
     fn test_parse_bindings_lines() {
@@ -99,24 +142,70 @@ mod tests {
             "##############",
             "action5:Num4,Num5,Num6 # Num7",
             "action6:Num0,Num0,Num0,Num0,   Num0,       Num0",
+            "action7: Nummmmmm0",
+            "action8: Mouse_Left, Mouse_Right, Mouse_MIDDLE",
+            "action9: Num1",
+            "action9: Num2",
+            "action10: Joy_Face_Bottom, Joy_Special_Left",
+            "action11: J, Joy_Stick_Right, Mouse_Middle",
         ]
         .iter()
         .map(|&s| String::from(s))
         .collect();
         let parsed = parse_bindings_lines(lines.into_iter());
 
-        assert_eq!(parsed.len(), 6);
-        assert_eq!(parsed[&String_Id::from("action1")], vec![Key::Num0]);
+        assert_eq!(parsed.len(), 11);
+        assert_eq!(
+            parsed[&String_Id::from("action1")],
+            vec![Input_Action::Key(Key::Num0)]
+        );
         assert_eq!(
             parsed[&String_Id::from("action2")],
-            vec![Key::Num1, Key::Num2]
+            vec![Input_Action::Key(Key::Num1), Input_Action::Key(Key::Num2)]
         );
-        assert_eq!(parsed[&String_Id::from("action3")], vec![Key::Num3]);
+        assert_eq!(
+            parsed[&String_Id::from("action3")],
+            vec![Input_Action::Key(Key::Num3)]
+        );
         assert_eq!(parsed[&String_Id::from("action4")], vec![]);
         assert_eq!(
             parsed[&String_Id::from("action5")],
-            vec![Key::Num4, Key::Num5, Key::Num6]
+            vec![
+                Input_Action::Key(Key::Num4),
+                Input_Action::Key(Key::Num5),
+                Input_Action::Key(Key::Num6)
+            ]
         );
-        assert_eq!(parsed[&String_Id::from("action6")], vec![Key::Num0]);
+        assert_eq!(
+            parsed[&String_Id::from("action6")],
+            vec![Input_Action::Key(Key::Num0)]
+        );
+        assert_eq!(parsed[&String_Id::from("action7")], vec![]);
+        assert_eq!(
+            parsed[&String_Id::from("action8")],
+            vec![
+                Input_Action::Mouse(Mouse_Button::Left),
+                Input_Action::Mouse(Mouse_Button::Right)
+            ]
+        );
+        assert_eq!(
+            parsed[&String_Id::from("action9")],
+            vec![Input_Action::Key(Key::Num2)]
+        );
+        assert_eq!(
+            parsed[&String_Id::from("action10")],
+            vec![
+                Input_Action::Joystick(Joystick_Button::Face_Bottom),
+                Input_Action::Joystick(Joystick_Button::Special_Left)
+            ]
+        );
+        assert_eq!(
+            parsed[&String_Id::from("action11")],
+            vec![
+                Input_Action::Key(Key::J),
+                Input_Action::Joystick(Joystick_Button::Stick_Right),
+                Input_Action::Mouse(Mouse_Button::Middle)
+            ]
+        );
     }
 }
