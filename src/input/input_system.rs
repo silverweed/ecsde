@@ -1,57 +1,8 @@
+use super::actions::{Action, Action_List};
 use super::bindings::Input_Bindings;
-use crate::core::common::direction::{Direction, Direction_Flags};
-use crate::core::common::vector::Vec2f;
+use crate::core::common::direction::Direction_Flags;
 use crate::core::env::Env_Info;
-use crate::input;
 use crate::replay::replay_data::Replay_Data_Iter;
-use cgmath::InnerSpace;
-use std::vec::Vec;
-
-#[derive(PartialEq, Hash, Copy, Clone, Debug)]
-pub enum Action {
-    Quit,
-    Resize(u32, u32),
-    Move(Direction),
-    // Note: the zoom factor is an integer rather than a float as it can be hashed.
-    // This integer must be divided by 100 to obtain the actual scaling factor.
-    Zoom(i32),
-    Change_Speed(i32),
-    Pause_Toggle,
-    Step_Simulation,
-    Print_Entity_Manager_Debug_Info,
-}
-
-#[derive(Default, Clone, Debug)]
-pub struct Action_List {
-    quit: bool,
-    directions: Direction_Flags,
-    actions: Vec<Action>,
-}
-
-impl Action_List {
-    pub fn has_action(&self, action: &Action) -> bool {
-        match action {
-            Action::Quit => self.quit,
-            Action::Move(Direction::Up) => self.directions.contains(Direction_Flags::UP),
-            Action::Move(Direction::Left) => self.directions.contains(Direction_Flags::LEFT),
-            Action::Move(Direction::Down) => self.directions.contains(Direction_Flags::DOWN),
-            Action::Move(Direction::Right) => self.directions.contains(Direction_Flags::RIGHT),
-            _ => self.actions.contains(&action),
-        }
-    }
-
-    pub fn get_directions(&self) -> Direction_Flags {
-        self.directions
-    }
-}
-
-impl std::ops::Deref for Action_List {
-    type Target = <std::vec::Vec<Action> as std::ops::Deref>::Target;
-
-    fn deref(&self) -> &Self::Target {
-        self.actions.deref()
-    }
-}
 
 pub struct Input_System {
     actions: Action_List,
@@ -62,7 +13,7 @@ impl Input_System {
     pub fn new(env: &Env_Info) -> Input_System {
         Input_System {
             actions: Action_List::default(),
-            bindings: create_bindings(env),
+            bindings: super::create_bindings(env),
         }
     }
 
@@ -97,41 +48,6 @@ impl Input_System {
             false
         }
     }
-}
-
-pub fn get_movement_from_input(actions: &Action_List) -> Vec2f {
-    let mut movement = Vec2f::new(0.0, 0.0);
-    if actions.has_action(&Action::Move(Direction::Left)) {
-        movement.x -= 1.0;
-    }
-    if actions.has_action(&Action::Move(Direction::Right)) {
-        movement.x += 1.0;
-    }
-    if actions.has_action(&Action::Move(Direction::Up)) {
-        movement.y -= 1.0;
-    }
-    if actions.has_action(&Action::Move(Direction::Down)) {
-        movement.y += 1.0;
-    }
-    movement
-}
-
-pub fn get_normalized_movement_from_input(actions: &Action_List) -> Vec2f {
-    let m = get_movement_from_input(actions);
-    if m.magnitude2() == 0.0 {
-        m
-    } else {
-        m.normalize()
-    }
-}
-
-// @Incomplete: allow selecting file path
-fn create_bindings(env: &Env_Info) -> Input_Bindings {
-    let mut keybinding_path = std::path::PathBuf::new();
-    keybinding_path.push(env.get_cfg_root());
-    keybinding_path.push("input");
-    keybinding_path.set_extension("keys");
-    input::bindings::Input_Bindings::create_from_config(&keybinding_path).unwrap()
 }
 
 #[cfg(feature = "use-sfml")]

@@ -11,6 +11,7 @@ pub struct Window_Handle {
     pub(super) handle: RenderWindow,
     clear_color: Color,
     pub(super) blend_mode: gfx::render::Blend_Mode,
+    target_size: (u32, u32),
 }
 
 impl std::ops::Deref for Window_Handle {
@@ -43,6 +44,7 @@ pub fn create_render_window(
         handle: window,
         clear_color: colors::rgb(0, 0, 0),
         blend_mode: BlendMode::ALPHA,
+        target_size,
     }
 }
 
@@ -57,4 +59,29 @@ pub fn clear(window: &mut Window_Handle) {
 
 pub fn display(window: &mut Window_Handle) {
     window.handle.display();
+}
+
+pub fn resize_keep_ratio(window: &mut Window_Handle, new_width: u32, new_height: u32) {
+    use sfml::graphics as sfgfx;
+
+    let (target_width, target_height) = window.target_size;
+    let screen_width = new_width as f32 / target_width as f32;
+    let screen_height = new_height as f32 / target_height as f32;
+
+    let mut viewport = sfgfx::FloatRect::new(0.0, 0.0, 1.0, 1.0);
+    if screen_width > screen_height {
+        viewport.width = screen_height / screen_width;
+        viewport.left = 0.5 * (1.0 - viewport.width);
+    } else if screen_width < screen_height {
+        viewport.height = screen_width / screen_height;
+        viewport.top = 0.5 * (1.0 - viewport.height);
+    };
+    let mut view = sfgfx::View::from_rect(&sfgfx::FloatRect::new(
+        0.0,
+        0.0,
+        target_width as f32,
+        target_width as f32,
+    ));
+    view.set_viewport(&viewport);
+    window.set_view(&view);
 }

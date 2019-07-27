@@ -130,6 +130,10 @@ pub fn clear(window: &mut Window_Handle) {
 pub fn display(window: &mut Window_Handle) {
     sfml::window::display(window);
 }
+#[cfg(feature = "use-sfml")]
+pub fn resize_keep_ratio(window: &mut Window_Handle, new_width: u32, new_height: u32) {
+    sfml::window::resize_keep_ratio(window, new_width, new_height);
+}
 
 #[cfg(feature = "use-sfml")]
 pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect) -> Sprite<'a> {

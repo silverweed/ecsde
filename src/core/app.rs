@@ -10,6 +10,7 @@ use crate::audio;
 use crate::cfg;
 use crate::fs;
 use crate::gfx;
+use crate::input;
 use crate::replay::{replay_data, replay_system};
 use crate::resources;
 use crate::states;
@@ -77,8 +78,11 @@ impl<'r> App<'r> {
     }
 
     fn init_states(&mut self) -> Maybe_Error {
-        let base_state = Box::new(states::debug_base_state::Debug_Base_State {});
+        let base_state = Box::new(states::persistent::engine_base_state::Engine_Base_State {});
         self.state_mgr.add_persistent_state(&self.world, base_state);
+        let debug_base_state = Box::new(states::persistent::debug_base_state::Debug_Base_State {});
+        self.state_mgr
+            .add_persistent_state(&self.world, debug_base_state);
         Ok(())
     }
 
@@ -174,6 +178,11 @@ impl<'r> App<'r> {
                 }
             }
 
+            if Self::handle_core_actions(&actions, window) {
+                self.should_close = true;
+                break;
+            }
+
             if self
                 .state_mgr
                 .handle_actions(&actions, &self.world, &self.config)
@@ -243,6 +252,25 @@ impl<'r> App<'r> {
         self.on_close()?;
 
         Ok(())
+    }
+
+    fn handle_core_actions(
+        actions: &input::actions::Action_List,
+        window: &mut gfx::window::Window_Handle,
+    ) -> bool {
+        use input::actions::Action;
+
+        for action in actions.iter() {
+            match action {
+                Action::Quit => return true,
+                Action::Resize(new_width, new_height) => {
+                    gfx::window::resize_keep_ratio(window, *new_width, *new_height)
+                }
+                _ => (),
+            }
+        }
+
+        false
     }
 
     fn update_graphics(

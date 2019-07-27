@@ -1,7 +1,7 @@
 use super::state::{Game_State, Persistent_Game_State, State_Transition};
 use crate::cfg;
 use crate::core::world::World;
-use crate::input::input_system::Action_List;
+use crate::input::actions::Action_List;
 use std::vec::Vec;
 
 /// Manages a PDA of Game_States.

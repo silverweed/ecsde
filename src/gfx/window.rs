@@ -23,3 +23,7 @@ pub fn clear(window: &mut Window_Handle) {
 pub fn display(window: &mut Window_Handle) {
     backend::display(window);
 }
+
+pub fn resize_keep_ratio(window: &mut Window_Handle, new_width: u32, new_height: u32) {
+    backend::resize_keep_ratio(window, new_width, new_height);
+}

@@ -12,7 +12,8 @@ use crate::ecs::components::transform::C_Transform2D;
 use crate::ecs::entity_manager::{Entity, Entity_Manager};
 use crate::game;
 use crate::gfx;
-use crate::input::input_system;
+use crate::input;
+use crate::input::actions::Action_List;
 use crate::resources::gfx::{tex_path, Gfx_Resources};
 use cgmath::Deg;
 use std::cell::Ref;
@@ -22,7 +23,7 @@ pub struct Gameplay_System {
     entity_manager: Entity_Manager,
     entities: Vec<Entity>,
     camera: Entity,
-    latest_frame_actions: input_system::Action_List,
+    latest_frame_actions: Action_List,
 }
 
 pub enum Gameplay_System_Msg {
@@ -51,7 +52,7 @@ impl Gameplay_System {
             entity_manager: Entity_Manager::new(),
             entities: vec![],
             camera: Entity::INVALID,
-            latest_frame_actions: input_system::Action_List::default(),
+            latest_frame_actions: Action_List::default(),
         }
     }
 
@@ -69,7 +70,7 @@ impl Gameplay_System {
         Ok(())
     }
 
-    pub fn update(&mut self, dt: &Duration, actions: &input_system::Action_List) {
+    pub fn update(&mut self, dt: &Duration, actions: &Action_List) {
         // Used for stepping
         self.latest_frame_actions = actions.clone();
 
@@ -80,12 +81,12 @@ impl Gameplay_System {
         self.update_demo_entites(&dt);
     }
 
-    pub fn realtime_update(&mut self, real_dt: &Duration, actions: &input_system::Action_List) {
+    pub fn realtime_update(&mut self, real_dt: &Duration, actions: &Action_List) {
         self.update_camera(real_dt, actions);
     }
 
     fn update_with_latest_frame_actions(&mut self, dt: &Duration) {
-        let mut actions = input_system::Action_List::default();
+        let mut actions = Action_List::default();
         std::mem::swap(&mut self.latest_frame_actions, &mut actions);
         self.update(&dt, &actions);
     }
@@ -115,8 +116,8 @@ impl Gameplay_System {
         em.register_component::<C_Controllable>();
     }
 
-    fn update_camera(&mut self, real_dt: &Duration, actions: &input_system::Action_List) {
-        let movement = input_system::get_normalized_movement_from_input(actions);
+    fn update_camera(&mut self, real_dt: &Duration, actions: &Action_List) {
+        let movement = input::get_normalized_movement_from_input(actions);
         let camera_ctrl = self
             .entity_manager
             .get_component_mut::<C_Controllable>(self.camera);
