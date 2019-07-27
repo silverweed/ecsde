@@ -1,7 +1,9 @@
 use crate::core::common::direction::Direction_Flags;
+use crate::core::time;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
+use std::time::Duration;
 use std::vec::Vec;
 
 /// Contains the replay data for a single frame. It consists in time information (a frame number)
@@ -32,11 +34,26 @@ impl Replay_Data_Point {
 
 pub struct Replay_Data {
     pub(self) data: Vec<Replay_Data_Point>,
+    /// Note: for the replay to work correctly, the game tick time should not be changed while recording
+    ms_per_frame: u16,
+    duration: Duration,
 }
 
 impl Replay_Data {
     pub fn new() -> Replay_Data {
-        Replay_Data { data: vec![] }
+        Replay_Data {
+            data: vec![],
+            ms_per_frame: 0,
+            duration: Duration::new(0, 0),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn duration(&self) -> Duration {
+        self.duration
     }
 
     pub fn from_serialized(path: &Path) -> Result<Replay_Data, Box<dyn std::error::Error>> {
@@ -46,7 +63,13 @@ impl Replay_Data {
 
         let mut replay = Replay_Data::new();
 
-        for line in content.lines() {
+        // First line should contains the ms per frame
+        let mut lines = content.lines();
+        if let Some(line) = lines.next() {
+            replay.ms_per_frame = line.trim().parse::<u16>()?;
+        }
+
+        for line in lines {
             let tokens: Vec<_> = line.splitn(2, ' ').collect();
             if tokens.len() == 2 {
                 replay.data.push(Replay_Data_Point::new(
@@ -58,7 +81,14 @@ impl Replay_Data {
             }
         }
 
-        eprintln!("REPLAY_DATA: {:?}", replay.data);
+        let last_frame_number = replay.data[replay.data.len() - 1].frame_number();
+        replay.duration = Duration::from_millis(last_frame_number * replay.ms_per_frame as u64);
+
+        eprintln!(
+            "[ OK ] Loaded replay data from {:?}. Duration = {} s.",
+            path,
+            time::to_secs_frac(&replay.duration)
+        );
 
         Ok(replay)
     }

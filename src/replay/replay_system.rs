@@ -20,6 +20,10 @@ impl Replay_System {
         }
     }
 
+    pub fn has_data(&self) -> bool {
+        self.data.len() > 0
+    }
+
     pub fn update(&mut self, list: &Action_List) {
         self.cur_frame += 1;
 

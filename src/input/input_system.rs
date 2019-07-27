@@ -2,6 +2,7 @@ use super::bindings::Input_Bindings;
 use crate::core::common::direction::{Direction, Direction_Flags};
 use crate::core::common::vector::Vec2f;
 use crate::core::env::Env_Info;
+use crate::input;
 use crate::replay::replay_data::Replay_Data_Iter;
 use cgmath::InnerSpace;
 use std::vec::Vec;
@@ -99,8 +100,6 @@ impl Input_System {
 }
 
 pub fn get_movement_from_input(actions: &Action_List) -> Vec2f {
-    use crate::core::common::direction::Direction;
-
     let mut movement = Vec2f::new(0.0, 0.0);
     if actions.has_action(&Action::Move(Direction::Left)) {
         movement.x -= 1.0;
@@ -132,7 +131,7 @@ fn create_bindings(env: &Env_Info) -> Input_Bindings {
     keybinding_path.push(env.get_cfg_root());
     keybinding_path.push("input");
     keybinding_path.set_extension("keys");
-    crate::input::bindings::Input_Bindings::create_from_config(&keybinding_path).unwrap()
+    input::bindings::Input_Bindings::create_from_config(&keybinding_path).unwrap()
 }
 
 #[cfg(feature = "use-sfml")]

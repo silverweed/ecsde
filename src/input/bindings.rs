@@ -5,12 +5,10 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::vec::Vec;
 
-#[cfg(feature = "use-sfml")]
-mod keymap_sfml;
-#[cfg(feature = "use-sfml")]
-use keymap_sfml as keymap;
-#[cfg(feature = "use-sfml")]
-use sfml::window::Key;
+mod joystick;
+mod keymap;
+
+use keymap::Key;
 
 pub struct Input_Bindings {
     /// { action_name => [keys] }

@@ -1,4 +1,4 @@
-use sfml::window::Key;
+pub(super) use sfml::window::Key;
 
 pub(super) fn string_to_key(s: &str) -> Option<Key> {
     match s {

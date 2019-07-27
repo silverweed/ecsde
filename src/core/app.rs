@@ -38,10 +38,12 @@ impl<'r> App<'r> {
         let env = Env_Info::gather().unwrap();
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
         let replay_data = if let Some(path) = &cfg.replay_file {
-            Some(
-                replay_data::Replay_Data::from_serialized(&path)
-                    .expect("Failed to load replay data!"),
-            )
+            if let Ok(data) = replay_data::Replay_Data::from_serialized(&path) {
+                Some(data)
+            } else {
+                eprintln!("[ ERROR ] Failed to load replay data from {:?}", path);
+                None
+            }
         } else {
             None
         };
@@ -136,7 +138,8 @@ impl<'r> App<'r> {
             let update_time = Duration::from_millis(
                 *self
                     .config
-                    .get_var_int_or("engine/gameplay/gameplay_update_tick_ms", 10)
+                    .get_var_int("engine/gameplay/gameplay_update_tick_ms")
+                    .expect("[ FATAL ] engine/gameplay/gameplay_update_tick_ms not found in config file!")
                     as u64,
             );
 
@@ -154,14 +157,21 @@ impl<'r> App<'r> {
                         gfx::ui::UI_Request::Add_Fadeout_Text(String::from("REPLAY HAS ENDED.")),
                     );
                     notified_replay_ended = true;
+                    replay_data_iter.take();
                 }
             } else {
                 systems.input_system.borrow_mut().update(window);
             }
             let actions = systems.input_system.borrow().get_action_list();
 
+            // Only record replay data if we're not already playing back a replay.
             if replay_data_iter.is_none() {
-                self.replay_system.update(&actions);
+                let record_replay_data = *self
+                    .config
+                    .get_var_bool_or("engine/debug/record_replay", false);
+                if record_replay_data {
+                    self.replay_system.update(&actions);
+                }
             }
 
             if self
@@ -267,8 +277,12 @@ impl<'r> App<'r> {
     }
 
     fn on_close(&self) -> Maybe_Error {
-        let mut path = path::PathBuf::from(self.env.get_cwd());
-        path.push("replay.dat");
-        self.replay_system.serialize(&path)
+        if self.replay_system.has_data() {
+            let mut path = path::PathBuf::from(self.env.get_cwd());
+            path.push("replay.dat");
+            self.replay_system.serialize(&path)
+        } else {
+            Ok(())
+        }
     }
 }
