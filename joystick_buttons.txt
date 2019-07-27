@@ -1,1 +1,16 @@
 windows: like linux, but Special_Middle does not exist (so the two later ones are shifted left)
+
+osx:
+0: Face Left
+1: Face Bot
+2: Face Right
+3: Face Top
+4: Should Left
+5: Should Right
+6: Trigger Left
+7: Trigger Right
+8: Special Left
+9: Special Right
+10: Thumb Left
+11: Thumb Right
+12: Special Mid
