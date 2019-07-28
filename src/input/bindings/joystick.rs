@@ -39,6 +39,10 @@ pub enum Joystick_Button {
     Dpad_Right,
     Dpad_Bottom,
     Dpad_Left,
+    // L2
+    Trigger_Left,
+    // R2
+    Trigger_Right,
     _Count,
 }
 
@@ -59,6 +63,8 @@ pub fn string_to_joy_btn(s: &str) -> Option<Joystick_Button> {
         "Dpad_Right" => Some(Joystick_Button::Dpad_Right),
         "Dpad_Bottom" => Some(Joystick_Button::Dpad_Bottom),
         "Dpad_Left" => Some(Joystick_Button::Dpad_Left),
+        "Trigger_Left" => Some(Joystick_Button::Trigger_Left),
+        "Trigger_Right" => Some(Joystick_Button::Trigger_Right),
         _ => None,
     }
 }
@@ -69,13 +75,29 @@ pub fn get_joy_btn_id(joystick: Joystick, button: Joystick_Button) -> Option<u32
     }
 }
 
+#[inline]
+fn get_joy_btn_id_xbox360(button: Joystick_Button) -> Option<u32> {
+    assert!((button as usize) < BUTTONS_TO_IDS_XBOX360.len());
+    BUTTONS_TO_IDS_XBOX360[button as usize]
+}
+
 pub fn get_joy_btn_from_id(joystick: Joystick, id: u32) -> Option<Joystick_Button> {
     match joystick.joy_type {
         Joystick_Type::XBox360 => get_joy_btn_from_id_xbox360(id),
     }
 }
 
+#[inline]
+fn get_joy_btn_from_id_xbox360(id: u32) -> Option<Joystick_Button> {
+    if (id as usize) < IDS_TO_BUTTONS_XBOX360.len() {
+        Some(IDS_TO_BUTTONS_XBOX360[id as usize])
+    } else {
+        None
+    }
+}
+
 // Map (Joystick_Button as u8) => (button id)
+#[cfg(target_os = "linux")]
 const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = [
     Some(3),  // Face_Top
     Some(1),  // Face_Right
@@ -92,10 +114,55 @@ const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = 
     None,     // Dpad_Right
     None,     // Dpad_Bottom
     None,     // Dpad_Left
+    None,     // Trigger_Left
+    None,     // Trigger_Right
+];
+
+#[cfg(target_os = "windows")]
+const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = [
+    Some(3),  // Face_Top
+    Some(1),  // Face_Right
+    Some(0),  // Face_Bottom
+    Some(2),  // Face_Left
+    Some(6),  // Special_Left
+    Some(7),  // Special_Right
+    None,     // Special_Middle
+    Some(9),  // Stick_Left
+    Some(10), // Stick_Right
+    Some(4),  // Shoulder_Left
+    Some(5),  // Shoulder_Right
+    None,     // Dpad_Top
+    None,     // Dpad_Right
+    None,     // Dpad_Bottom
+    None,     // Dpad_Left
+    None,     // Trigger_Left
+    None,     // Trigger_Right
+];
+
+#[cfg(target_os = "osx")]
+const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = [
+    Some(3),  // Face_Top
+    Some(2),  // Face_Right
+    Some(1),  // Face_Bottom
+    Some(0),  // Face_Left
+    Some(8),  // Special_Left
+    Some(9),  // Special_Right
+    Some(12), // Special_Middle
+    Some(10), // Stick_Left
+    Some(11), // Stick_Right
+    Some(4),  // Shoulder_Left
+    Some(5),  // Shoulder_Right
+    None,     // Dpad_Top
+    None,     // Dpad_Right
+    None,     // Dpad_Bottom
+    None,     // Dpad_Left
+    Some(6),  // Trigger_Left
+    Some(7),  // Trigger_Right
 ];
 
 // @Incomplete: button mapping on OSX may not range from 0 to 11: in that case we'll probably need
 // a hash map or something...
+#[cfg(target_os = "linux")]
 const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 11] = [
     Joystick_Button::Face_Bottom,
     Joystick_Button::Face_Right,
@@ -110,17 +177,33 @@ const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 11] = [
     Joystick_Button::Stick_Right,
 ];
 
-#[inline]
-fn get_joy_btn_id_xbox360(button: Joystick_Button) -> Option<u32> {
-    assert!((button as usize) < BUTTONS_TO_IDS_XBOX360.len());
-    BUTTONS_TO_IDS_XBOX360[button as usize]
-}
+#[cfg(target_os = "windows")]
+const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 10] = [
+    Joystick_Button::Face_Bottom,
+    Joystick_Button::Face_Right,
+    Joystick_Button::Face_Left,
+    Joystick_Button::Face_Top,
+    Joystick_Button::Shoulder_Left,
+    Joystick_Button::Shoulder_Right,
+    Joystick_Button::Special_Left,
+    Joystick_Button::Special_Right,
+    Joystick_Button::Stick_Left,
+    Joystick_Button::Stick_Right,
+];
 
-#[inline]
-fn get_joy_btn_from_id_xbox360(id: u32) -> Option<Joystick_Button> {
-    if (id as usize) < IDS_TO_BUTTONS_XBOX360.len() {
-        Some(IDS_TO_BUTTONS_XBOX360[id as usize])
-    } else {
-        None
-    }
-}
+#[cfg(target_os = "osx")]
+const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 13] = [
+    Joystick_Button::Face_Left,
+    Joystick_Button::Face_Bottom,
+    Joystick_Button::Face_Right,
+    Joystick_Button::Face_Top,
+    Joystick_Button::Shoulder_Left,
+    Joystick_Button::Shoulder_Right,
+    Joystick_Button::Trigger_Left,
+    Joystick_Button::Trigger_Right,
+    Joystick_Button::Special_Left,
+    Joystick_Button::Special_Right,
+    Joystick_Button::Stick_Left,
+    Joystick_Button::Stick_Right,
+    Joystick_Button::Special_Middle,
+];
