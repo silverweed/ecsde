@@ -96,6 +96,8 @@ mod tests {
     // @Temporary since enum variants on type aliases are experimental
     #[cfg(feature = "use-sfml")]
     use sfml::window::Key;
+    use super::joystick::Joystick_Button;
+    use super::mouse::Mouse_Button;
 
     #[test]
     fn test_parse_action() {
@@ -140,58 +142,62 @@ mod tests {
         .collect();
         let parsed = parse_bindings_lines(lines.into_iter());
 
-        assert_eq!(parsed.len(), 11);
+        assert_eq!(parsed.len(), 14);
         assert_eq!(
-            parsed[&String_Id::from("action1")],
-            vec![Input_Action::Key(Key::Num0)]
+            parsed[&Input_Action::Key(Key::Num0)],
+            vec![String_Id::from("action1"), String_Id::from("action6")]
         );
         assert_eq!(
-            parsed[&String_Id::from("action2")],
-            vec![Input_Action::Key(Key::Num1), Input_Action::Key(Key::Num2)]
+            parsed[&Input_Action::Key(Key::Num1)],
+            vec![String_Id::from("action2"), String_Id::from("action9")]
         );
         assert_eq!(
-            parsed[&String_Id::from("action3")],
-            vec![Input_Action::Key(Key::Num3)]
-        );
-        assert_eq!(parsed[&String_Id::from("action4")], vec![]);
-        assert_eq!(
-            parsed[&String_Id::from("action5")],
-            vec![
-                Input_Action::Key(Key::Num4),
-                Input_Action::Key(Key::Num5),
-                Input_Action::Key(Key::Num6)
-            ]
+            parsed[&Input_Action::Key(Key::Num2)],
+            vec![String_Id::from("action2"), String_Id::from("action9")]
         );
         assert_eq!(
-            parsed[&String_Id::from("action6")],
-            vec![Input_Action::Key(Key::Num0)]
-        );
-        assert_eq!(parsed[&String_Id::from("action7")], vec![]);
-        assert_eq!(
-            parsed[&String_Id::from("action8")],
-            vec![
-                Input_Action::Mouse(Mouse_Button::Left),
-                Input_Action::Mouse(Mouse_Button::Right)
-            ]
+            parsed[&Input_Action::Key(Key::Num3)],
+            vec![String_Id::from("action3")]
         );
         assert_eq!(
-            parsed[&String_Id::from("action9")],
-            vec![Input_Action::Key(Key::Num2)]
+            parsed[&Input_Action::Key(Key::Num4)],
+            vec![String_Id::from("action5")],
         );
         assert_eq!(
-            parsed[&String_Id::from("action10")],
-            vec![
-                Input_Action::Joystick(Joystick_Button::Face_Bottom),
-                Input_Action::Joystick(Joystick_Button::Special_Left)
-            ]
+            parsed[&Input_Action::Key(Key::Num5)],
+            vec![String_Id::from("action5")],
         );
         assert_eq!(
-            parsed[&String_Id::from("action11")],
-            vec![
-                Input_Action::Key(Key::J),
-                Input_Action::Joystick(Joystick_Button::Stick_Right),
-                Input_Action::Mouse(Mouse_Button::Middle)
-            ]
+            parsed[&Input_Action::Key(Key::Num6)],
+            vec![String_Id::from("action5")],
+        );
+        assert_eq!(
+            parsed[&Input_Action::Mouse(Mouse_Button::Left)],
+            vec![String_Id::from("action8")],
+        );
+        assert_eq!(
+            parsed[&Input_Action::Mouse(Mouse_Button::Right)],
+            vec![String_Id::from("action8")],
+        );
+        assert_eq!(
+            parsed[&Input_Action::Joystick(Joystick_Button::Face_Bottom)],
+            vec![String_Id::from("action10")],
+        );
+        assert_eq!(
+            parsed[&Input_Action::Joystick(Joystick_Button::Special_Left)],
+            vec![String_Id::from("action10")],
+        );
+        assert_eq!(
+            parsed[&Input_Action::Key(Key::J)],
+            vec![String_Id::from("action11")],
+        );
+        assert_eq!(
+            parsed[&Input_Action::Joystick(Joystick_Button::Stick_Right)],
+            vec![String_Id::from("action11")],
+        );
+        assert_eq!(
+            parsed[&Input_Action::Mouse(Mouse_Button::Middle)],
+            vec![String_Id::from("action11")],
         );
     }
 }
