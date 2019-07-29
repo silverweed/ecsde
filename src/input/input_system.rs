@@ -104,11 +104,6 @@ impl Input_System {
         self.actions.clone()
     }
 
-    #[cfg(feature = "use-sdl")]
-    pub fn update(&mut self, event_pump: &mut sdl2::EventPump) {
-        poll_events(&mut self.actions, event_pump);
-    }
-
     #[cfg(feature = "use-sfml")]
     pub fn update(&mut self, window: &mut sfml::graphics::RenderWindow) {
         self.poll_events(window);
@@ -217,57 +212,6 @@ impl Input_System {
                 }
                 _ => (),
             }
-        }
-    }
-}
-
-#[cfg(feature = "use-sdl")]
-fn poll_events(action_list: &mut Action_List, event_pump: &mut sdl2::EventPump) {
-    use sdl2::event::{Event, WindowEvent};
-    use sdl2::keyboard::Keycode;
-
-    let actions = &mut action_list.actions;
-    actions.clear();
-
-    for event in event_pump.poll_iter() {
-        match event {
-            Event::Quit { .. }
-            | Event::KeyDown {
-                keycode: Some(Keycode::Q),
-                ..
-            } => actions.push(Action::Quit),
-            Event::KeyDown {
-                keycode: Some(keycode),
-                ..
-            } => match keycode {
-                Keycode::W => action_list.move_up = true,
-                Keycode::A => action_list.move_left = true,
-                Keycode::S => action_list.move_down = true,
-                Keycode::D => action_list.move_right = true,
-                Keycode::KpPlus => actions.push(Action::Zoom(10)),
-                Keycode::KpMinus => actions.push(Action::Zoom(-10)),
-                Keycode::Num1 | Keycode::Minus => actions.push(Action::Change_Speed(-10)),
-                Keycode::Num2 | Keycode::Equals => actions.push(Action::Change_Speed(10)),
-                Keycode::Period => actions.push(Action::Pause_Toggle),
-                Keycode::Slash => actions.push(Action::Step_Simulation),
-                Keycode::M => actions.push(Action::Print_Entity_Manager_Debug_Info),
-                _ => (),
-            },
-            Event::KeyUp {
-                keycode: Some(keycode),
-                ..
-            } => match keycode {
-                Keycode::W => action_list.move_up = false,
-                Keycode::A => action_list.move_left = false,
-                Keycode::S => action_list.move_down = false,
-                Keycode::D => action_list.move_right = false,
-                _ => (),
-            },
-            Event::Window {
-                win_event: WindowEvent::Resized(width, height),
-                ..
-            } => actions.push(Action::Resize(width as u32, height as u32)),
-            _ => (),
         }
     }
 }
