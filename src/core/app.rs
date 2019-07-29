@@ -94,6 +94,7 @@ impl<'r> App<'r> {
         )?;
 
         let systems = self.world.get_systems();
+        systems.input_system.borrow_mut().init();
         systems.gameplay_system.borrow_mut().init(
             &mut self.gfx_resources,
             &self.env,

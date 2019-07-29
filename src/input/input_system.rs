@@ -1,5 +1,5 @@
 use super::actions::{Action, Action_List};
-use super::bindings::{Input_Bindings, Action_Mappings, Action_Kind};
+use super::bindings::{Action_Kind, Action_Mappings, Input_Bindings};
 use crate::core::common::direction::Direction_Flags;
 use crate::core::common::stringid::String_Id;
 use crate::core::env::Env_Info;
@@ -20,10 +20,84 @@ impl Input_System {
         }
     }
 
-    pub fn add_action_mappings(&mut self) {
-        self.action_mappings.register_mapping(String_Id::from("quit"), Action_Kind::Pressed, Box::new(|actions: &mut Action_List| 
-            actions.actions.push(Action::Quit)
-        ));
+    pub fn init(&mut self) {
+        // @Temporary: move most of these bindings somewhere else.
+        // We certainly don't want things like "print_em_debug_info" or "move_up" in such a
+        // core part of the engine!
+        self.action_mappings.register_mapping(
+            String_Id::from("quit"),
+            Action_Kind::Pressed,
+            Box::new(|actions| actions.actions.push(Action::Quit)),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("game_speed_up"),
+            Action_Kind::Pressed,
+            Box::new(|actions| actions.actions.push(Action::Change_Speed(10))),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("game_speed_down"),
+            Action_Kind::Pressed,
+            Box::new(|actions| actions.actions.push(Action::Change_Speed(-10))),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("pause_toggle"),
+            Action_Kind::Pressed,
+            Box::new(|actions| actions.actions.push(Action::Pause_Toggle)),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("print_em_debug_info"),
+            Action_Kind::Pressed,
+            Box::new(|actions| {
+                actions
+                    .actions
+                    .push(Action::Print_Entity_Manager_Debug_Info)
+            }),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("step_sim"),
+            Action_Kind::Pressed,
+            Box::new(|actions| actions.actions.push(Action::Step_Simulation)),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("move_up"),
+            Action_Kind::Pressed,
+            Box::new(|actions| actions.directions.insert(Direction_Flags::UP)),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("move_left"),
+            Action_Kind::Pressed,
+            Box::new(|actions| actions.directions.insert(Direction_Flags::LEFT)),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("move_down"),
+            Action_Kind::Pressed,
+            Box::new(|actions| actions.directions.insert(Direction_Flags::DOWN)),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("move_right"),
+            Action_Kind::Pressed,
+            Box::new(|actions| actions.directions.insert(Direction_Flags::RIGHT)),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("move_up"),
+            Action_Kind::Released,
+            Box::new(|actions| actions.directions.remove(Direction_Flags::UP)),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("move_left"),
+            Action_Kind::Released,
+            Box::new(|actions| actions.directions.remove(Direction_Flags::LEFT)),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("move_down"),
+            Action_Kind::Released,
+            Box::new(|actions| actions.directions.remove(Direction_Flags::DOWN)),
+        );
+        self.action_mappings.register_mapping(
+            String_Id::from("move_right"),
+            Action_Kind::Released,
+            Box::new(|actions| actions.directions.remove(Direction_Flags::RIGHT)),
+        );
     }
 
     pub fn get_action_list(&self) -> Action_List {
@@ -59,16 +133,16 @@ impl Input_System {
     }
 
     #[cfg(feature = "use-sfml")]
-    fn poll_events(
-        &mut self,
-        window: &mut sfml::graphics::RenderWindow,
-    ) {
+    fn poll_events(&mut self, window: &mut sfml::graphics::RenderWindow) {
         use sfml::window::Event;
 
         let bindings = &self.bindings;
         self.actions.actions.clear();
 
-        let handle_actions = |actions: &mut Action_List, kind: Action_Kind, names: &Vec<_>, mappings: &Action_Mappings| {
+        let handle_actions = |actions: &mut Action_List,
+                              kind: Action_Kind,
+                              names: &Vec<_>,
+                              mappings: &Action_Mappings| {
             for name in names.iter() {
                 if let Some(callbacks) = mappings.get_callbacks_for_action(*name, kind) {
                     for callback in callbacks.iter() {
@@ -83,55 +157,64 @@ impl Input_System {
                 Event::Closed { .. } => self.actions.actions.push(Action::Quit),
                 Event::KeyPressed { code, .. } => {
                     if let Some(action_names) = bindings.get_key_action(code) {
-                        handle_actions(&mut self.actions, Action_Kind::Pressed, action_names, &self.action_mappings);
+                        handle_actions(
+                            &mut self.actions,
+                            Action_Kind::Pressed,
+                            action_names,
+                            &self.action_mappings,
+                        );
                     }
                 }
                 Event::KeyReleased { code, .. } => {
                     if let Some(action_names) = bindings.get_key_action(code) {
-                        handle_actions(&mut self.actions, Action_Kind::Released, action_names, &self.action_mappings);
+                        handle_actions(
+                            &mut self.actions,
+                            Action_Kind::Released,
+                            action_names,
+                            &self.action_mappings,
+                        );
                     }
                 }
                 Event::JoystickButtonPressed { joystickid, button } => {
                     if let Some(action_names) = bindings.get_joystick_action(joystickid, button) {
-                        handle_actions(&mut self.actions, Action_Kind::Pressed, action_names, &self.action_mappings);
+                        handle_actions(
+                            &mut self.actions,
+                            Action_Kind::Pressed,
+                            action_names,
+                            &self.action_mappings,
+                        );
                     }
                 }
                 Event::JoystickButtonReleased { joystickid, button } => {
                     if let Some(action_names) = bindings.get_joystick_action(joystickid, button) {
-                        handle_actions(&mut self.actions, Action_Kind::Released, action_names, &self.action_mappings);
+                        handle_actions(
+                            &mut self.actions,
+                            Action_Kind::Released,
+                            action_names,
+                            &self.action_mappings,
+                        );
                     }
                 }
                 Event::MouseButtonPressed { button, .. } => {
                     if let Some(action_names) = bindings.get_mouse_action(button) {
-                        handle_actions(&mut self.actions, Action_Kind::Pressed, action_names, &self.action_mappings);
+                        handle_actions(
+                            &mut self.actions,
+                            Action_Kind::Pressed,
+                            action_names,
+                            &self.action_mappings,
+                        );
                     }
                 }
                 Event::MouseButtonReleased { button, .. } => {
                     if let Some(action_names) = bindings.get_mouse_action(button) {
-                        handle_actions(&mut self.actions, Action_Kind::Released, action_names, &self.action_mappings);
+                        handle_actions(
+                            &mut self.actions,
+                            Action_Kind::Released,
+                            action_names,
+                            &self.action_mappings,
+                        );
                     }
                 }
-
-                //Key::W => action_list.directions.insert(Direction_Flags::UP),
-                //Key::A => action_list.directions.insert(Direction_Flags::LEFT),
-                //Key::S => action_list.directions.insert(Direction_Flags::DOWN),
-                //Key::D => action_list.directions.insert(Direction_Flags::RIGHT),
-                ////Key::KpPlus => actions.push(Action::Zoom(10)),
-                ////Key::KpMinus => actions.push(Action::Zoom(-10)),
-                //Key::Num1 | Key::Dash => actions.push(Action::Change_Speed(-10)),
-                //Key::Num2 | Key::Equal => actions.push(Action::Change_Speed(10)),
-                //Key::Period => actions.push(Action::Pause_Toggle),
-                //Key::Slash => actions.push(Action::Step_Simulation),
-                //Key::M => actions.push(Action::Print_Entity_Manager_Debug_Info),
-                //_ => (),
-                //},
-                //Event::KeyReleased { code, .. } => match code {
-                //Key::W => action_list.directions.remove(Direction_Flags::UP),
-                //Key::A => action_list.directions.remove(Direction_Flags::LEFT),
-                //Key::S => action_list.directions.remove(Direction_Flags::DOWN),
-                //Key::D => action_list.directions.remove(Direction_Flags::RIGHT),
-                //_ => (),
-                //},
                 _ => (),
             }
         }
