@@ -4,6 +4,7 @@ use crate::core::common::colors::Color;
 pub type Window_Handle = backend::Window_Handle;
 pub type Create_Render_Window_Args = backend::Create_Render_Window_Args;
 
+#[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn create_render_window(
     args: &Create_Render_Window_Args,
     target_size: (u32, u32),

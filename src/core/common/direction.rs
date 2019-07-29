@@ -9,6 +9,7 @@ pub enum Direction {
 
 bitflags! {
     pub struct Direction_Flags: u8 {
+        #[allow(clippy::identity_op)]
         const UP    = 1 << 0;
         const RIGHT = 1 << 1;
         const DOWN  = 1 << 2;

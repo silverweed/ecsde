@@ -26,6 +26,7 @@ pub type Text<'a> = sdl::render::Text<'a>;
 pub type Font<'a> = sdl::render::Font<'a>;
 
 #[cfg(feature = "use-sdl")]
+#[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn create_render_window(
     video_subsystem: &Create_Render_Window_Args,
     target_size: (u32, u32),
@@ -108,6 +109,7 @@ pub type Text<'a> = sfml::render::Text<'a>;
 pub type Font<'a> = sfml::render::Font<'a>;
 
 #[cfg(feature = "use-sfml")]
+#[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn create_render_window(
     video_subsystem: &Create_Render_Window_Args,
     target_size: (u32, u32),

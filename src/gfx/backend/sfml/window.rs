@@ -28,6 +28,7 @@ impl std::ops::DerefMut for Window_Handle {
     }
 }
 
+#[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn create_render_window(
     _: &Create_Render_Window_Args,
     target_size: (u32, u32),
