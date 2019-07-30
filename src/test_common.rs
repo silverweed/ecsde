@@ -3,10 +3,10 @@ use crate::core::env::Env_Info;
 use crate::resources::audio::Audio_Resources;
 use crate::resources::gfx::Gfx_Resources;
 
-#[cfg(use_sdl)]
+#[cfg(feature = "use-sdl")]
 use sdl2::ttf::Sdl2TtfContext;
 
-#[cfg(use_sdl)]
+#[cfg(feature = "use-sdl")]
 pub fn create_resource_loaders() -> (Resource_Loaders, sdl2::Sdl, sdl2::VideoSubsystem) {
     let sdl = sdl2::init().unwrap();
     let sdl_video = sdl.video().unwrap();

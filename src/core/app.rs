@@ -11,7 +11,7 @@ use crate::cfg;
 use crate::fs;
 use crate::gfx;
 use crate::input;
-use crate::replay::{replay_data, replay_system};
+use crate::replay::{recording, replay_data, replay_input_provider};
 use crate::resources;
 use crate::states;
 use std::path;
@@ -30,7 +30,7 @@ pub struct App<'r> {
 
     world: world::World,
 
-    replay_system: replay_system::Replay_System,
+    replay_recording_system: recording::Replay_Recording_System,
     replay_data: Option<replay_data::Replay_Data>,
 }
 
@@ -39,16 +39,24 @@ impl<'r> App<'r> {
         let env = Env_Info::gather().unwrap();
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
         let replay_data = if let Some(path) = &cfg.replay_file {
-            if let Ok(data) = replay_data::Replay_Data::from_serialized(&path) {
-                Some(data)
-            } else {
-                eprintln!("[ ERROR ] Failed to load replay data from {:?}", path);
-                None
+            match replay_data::Replay_Data::from_serialized(&path) {
+                Ok(data) => Some(data),
+                Err(err) => {
+                    eprintln!(
+                        "[ ERROR ] Failed to load replay data from {:?}: {}",
+                        path, err
+                    );
+                    None
+                }
             }
         } else {
             None
         };
         let world = world::World::new(&env);
+        let ms_per_frame = *config
+            .get_var_int("engine/gameplay/gameplay_update_tick_ms")
+            .expect("[ FATAL ] engine/gameplay/gameplay_update_tick_ms not found in config file!")
+            as u16;
 
         App {
             should_close: false,
@@ -58,7 +66,9 @@ impl<'r> App<'r> {
             gfx_resources: resources::gfx::Gfx_Resources::new(),
             audio_resources: resources::audio::Audio_Resources::new(sound_loader),
             world,
-            replay_system: replay_system::Replay_System::new(),
+            replay_recording_system: recording::Replay_Recording_System::new(
+                &recording::Replay_Recording_System_Config { ms_per_frame },
+            ),
             replay_data,
         }
     }
@@ -119,23 +129,25 @@ impl<'r> App<'r> {
         Ok(())
     }
 
+    fn create_input_provider(&mut self) -> Box<dyn input::provider::Input_Provider> {
+        // Consumes self.replay_data!
+        let replay_data = self.replay_data.take();
+        if let Some(replay_data) = replay_data {
+            Box::new(replay_input_provider::Replay_Input_Provider::new(
+                replay_data,
+            ))
+        } else {
+            Box::new(input::input_system::Default_Input_Provider {})
+        }
+    }
+
     fn start_game_loop(&mut self, window: &mut gfx::window::Window_Handle) -> Maybe_Error {
         let mut fps_debug = debug::fps::Fps_Console_Printer::new(&Duration::from_secs(3), "main");
         let mut execution_time = Duration::new(0, 0);
-        let mut cur_frame = 0u64;
-
-        // Consumes self.replay_data!
-        let replay_data = self.replay_data.take();
-        let mut replay_data_iter = if let Some(replay_data) = &replay_data {
-            Some(replay_data.iter())
-        } else {
-            None
-        };
-        let mut notified_replay_ended = false;
+        let mut input_provider = self.create_input_provider();
+        let mut is_replaying = !input_provider.is_realtime_player_input();
 
         while !self.should_close {
-            cur_frame += 1;
-
             self.world.update();
             let (dt, real_dt) = (self.world.dt(), self.world.real_dt());
             let systems = self.world.get_systems();
@@ -151,31 +163,30 @@ impl<'r> App<'r> {
             execution_time += dt;
 
             // Update input
-            if let Some(mut iter) = replay_data_iter.as_mut() {
-                let replay_will_continue = systems
-                    .input_system
+            if is_replaying && input_provider.is_realtime_player_input() {
+                systems
+                    .ui_system
                     .borrow_mut()
-                    .update_from_replay(cur_frame, &mut iter);
-
-                if !replay_will_continue && !notified_replay_ended {
-                    systems.ui_system.borrow_mut().send_message(
-                        gfx::ui::UI_Request::Add_Fadeout_Text(String::from("REPLAY HAS ENDED.")),
-                    );
-                    notified_replay_ended = true;
-                    replay_data_iter.take();
-                }
-            } else {
-                systems.input_system.borrow_mut().update(window);
+                    .send_message(gfx::ui::UI_Request::Add_Fadeout_Text(String::from(
+                        "REPLAY HAS ENDED.",
+                    )));
+                is_replaying = false;
             }
+
+            systems
+                .input_system
+                .borrow_mut()
+                .update(window, &mut *input_provider);
+
             let actions = systems.input_system.borrow().get_action_list();
 
             // Only record replay data if we're not already playing back a replay.
-            if replay_data_iter.is_none() {
+            if input_provider.is_realtime_player_input() {
                 let record_replay_data = *self
                     .config
                     .get_var_bool_or("engine/debug/record_replay", false);
                 if record_replay_data {
-                    self.replay_system.update(&actions);
+                    self.replay_recording_system.update(&actions);
                 }
             }
 
@@ -307,10 +318,10 @@ impl<'r> App<'r> {
     }
 
     fn on_game_loop_end(&self) -> Maybe_Error {
-        if self.replay_system.has_data() {
+        if self.replay_recording_system.has_data() {
             let mut path = path::PathBuf::from(self.env.get_cwd());
             path.push("replay.dat");
-            self.replay_system.serialize(&path)
+            self.replay_recording_system.serialize(&path)
         } else {
             Ok(())
         }

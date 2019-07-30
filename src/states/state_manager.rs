@@ -76,10 +76,10 @@ impl State_Manager {
     }
 
     #[inline]
-    fn current_state(&mut self) -> Option<&mut Box<dyn Game_State>> {
+    fn current_state(&mut self) -> Option<&mut dyn Game_State> {
         let len = self.state_stack.len();
         if len > 0 {
-            Some(&mut self.state_stack[len - 1])
+            Some(&mut *self.state_stack[len - 1])
         } else {
             None
         }

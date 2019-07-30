@@ -1,6 +1,7 @@
 pub mod actions;
 pub mod bindings;
 pub mod input_system;
+pub mod provider;
 
 use crate::core::common::direction::Direction;
 use crate::core::common::vector::Vec2f;

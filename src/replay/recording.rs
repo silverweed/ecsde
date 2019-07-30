@@ -5,18 +5,22 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 
-pub struct Replay_System {
+pub struct Replay_Recording_System_Config {
+    pub ms_per_frame: u16,
+}
+
+pub struct Replay_Recording_System {
     cur_frame: u64,
     prev_action_list: Action_List,
     data: Replay_Data,
 }
 
-impl Replay_System {
-    pub fn new() -> Replay_System {
-        Replay_System {
+impl Replay_Recording_System {
+    pub fn new(cfg: &Replay_Recording_System_Config) -> Replay_Recording_System {
+        Replay_Recording_System {
             cur_frame: 0,
             prev_action_list: Action_List::default(),
-            data: Replay_Data::new(),
+            data: Replay_Data::new(cfg.ms_per_frame),
         }
     }
 
@@ -29,7 +33,7 @@ impl Replay_System {
 
         let new_directions = list.get_directions();
         if new_directions != self.prev_action_list.get_directions() {
-            self.data.add_point(self.cur_frame, new_directions);
+            self.data.add_point(self.cur_frame, new_directions, &vec![]); // @Incomplete :replay_actions:
             self.prev_action_list = list.clone();
         }
     }

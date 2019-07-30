@@ -1,9 +1,25 @@
 use super::actions::{Action, Action_List};
 use super::bindings::{Action_Kind, Action_Mappings, Input_Bindings};
+use super::provider::{Input_Provider, Input_Provider_Input, Input_Provider_Output};
 use crate::core::common::direction::Direction_Flags;
 use crate::core::common::stringid::String_Id;
 use crate::core::env::Env_Info;
-use crate::replay::replay_data::Replay_Data_Iter;
+
+pub struct Default_Input_Provider {}
+
+impl Input_Provider for Default_Input_Provider {
+    fn poll_events(&mut self, window: &mut Input_Provider_Input) -> Vec<Input_Provider_Output> {
+        let mut events = vec![];
+        while let Some(evt) = window.poll_event() {
+            events.push(evt);
+        }
+        events
+    }
+
+    fn is_realtime_player_input(&self) -> bool {
+        true
+    }
+}
 
 pub struct Input_System {
     actions: Action_List,
@@ -27,76 +43,76 @@ impl Input_System {
         self.action_mappings.register_mapping(
             String_Id::from("quit"),
             Action_Kind::Pressed,
-            Box::new(|actions| actions.actions.push(Action::Quit)),
+            |actions| actions.actions.push(Action::Quit),
         );
         self.action_mappings.register_mapping(
             String_Id::from("game_speed_up"),
             Action_Kind::Pressed,
-            Box::new(|actions| actions.actions.push(Action::Change_Speed(10))),
+            |actions| actions.actions.push(Action::Change_Speed(10)),
         );
         self.action_mappings.register_mapping(
             String_Id::from("game_speed_down"),
             Action_Kind::Pressed,
-            Box::new(|actions| actions.actions.push(Action::Change_Speed(-10))),
+            |actions| actions.actions.push(Action::Change_Speed(-10)),
         );
         self.action_mappings.register_mapping(
             String_Id::from("pause_toggle"),
             Action_Kind::Pressed,
-            Box::new(|actions| actions.actions.push(Action::Pause_Toggle)),
+            |actions| actions.actions.push(Action::Pause_Toggle),
         );
         self.action_mappings.register_mapping(
             String_Id::from("print_em_debug_info"),
             Action_Kind::Pressed,
-            Box::new(|actions| {
+            |actions| {
                 actions
                     .actions
                     .push(Action::Print_Entity_Manager_Debug_Info)
-            }),
+            },
         );
         self.action_mappings.register_mapping(
             String_Id::from("step_sim"),
             Action_Kind::Pressed,
-            Box::new(|actions| actions.actions.push(Action::Step_Simulation)),
+            |actions| actions.actions.push(Action::Step_Simulation),
         );
         self.action_mappings.register_mapping(
             String_Id::from("move_up"),
             Action_Kind::Pressed,
-            Box::new(|actions| actions.directions.insert(Direction_Flags::UP)),
+            |actions| actions.directions.insert(Direction_Flags::UP),
         );
         self.action_mappings.register_mapping(
             String_Id::from("move_left"),
             Action_Kind::Pressed,
-            Box::new(|actions| actions.directions.insert(Direction_Flags::LEFT)),
+            |actions| actions.directions.insert(Direction_Flags::LEFT),
         );
         self.action_mappings.register_mapping(
             String_Id::from("move_down"),
             Action_Kind::Pressed,
-            Box::new(|actions| actions.directions.insert(Direction_Flags::DOWN)),
+            |actions| actions.directions.insert(Direction_Flags::DOWN),
         );
         self.action_mappings.register_mapping(
             String_Id::from("move_right"),
             Action_Kind::Pressed,
-            Box::new(|actions| actions.directions.insert(Direction_Flags::RIGHT)),
+            |actions| actions.directions.insert(Direction_Flags::RIGHT),
         );
         self.action_mappings.register_mapping(
             String_Id::from("move_up"),
             Action_Kind::Released,
-            Box::new(|actions| actions.directions.remove(Direction_Flags::UP)),
+            |actions| actions.directions.remove(Direction_Flags::UP),
         );
         self.action_mappings.register_mapping(
             String_Id::from("move_left"),
             Action_Kind::Released,
-            Box::new(|actions| actions.directions.remove(Direction_Flags::LEFT)),
+            |actions| actions.directions.remove(Direction_Flags::LEFT),
         );
         self.action_mappings.register_mapping(
             String_Id::from("move_down"),
             Action_Kind::Released,
-            Box::new(|actions| actions.directions.remove(Direction_Flags::DOWN)),
+            |actions| actions.directions.remove(Direction_Flags::DOWN),
         );
         self.action_mappings.register_mapping(
             String_Id::from("move_right"),
             Action_Kind::Released,
-            Box::new(|actions| actions.directions.remove(Direction_Flags::RIGHT)),
+            |actions| actions.directions.remove(Direction_Flags::RIGHT),
         );
     }
 
@@ -105,30 +121,17 @@ impl Input_System {
     }
 
     #[cfg(feature = "use-sfml")]
-    pub fn update(&mut self, window: &mut sfml::graphics::RenderWindow) {
-        self.poll_events(window);
-    }
-
-    /// Returns true as long as the replay isn't over
-    pub fn update_from_replay(
+    pub fn update(
         &mut self,
-        cur_frame: u64,
-        replay_data_iter: &mut Replay_Data_Iter<'_>,
-    ) -> bool {
-        if let Some(datum) = replay_data_iter.cur() {
-            if cur_frame >= datum.frame_number() {
-                self.actions.directions = datum.directions();
-                replay_data_iter.next().is_some()
-            } else {
-                true
-            }
-        } else {
-            false
-        }
+        window: &mut sfml::graphics::RenderWindow,
+        provider: &mut dyn Input_Provider,
+    ) {
+        let events = provider.poll_events(window);
+        self.read_events_to_actions(&events);
     }
 
     #[cfg(feature = "use-sfml")]
-    fn poll_events(&mut self, window: &mut sfml::graphics::RenderWindow) {
+    fn read_events_to_actions(&mut self, events: &[sfml::window::Event]) {
         use sfml::window::Event;
 
         let bindings = &self.bindings;
@@ -147,7 +150,7 @@ impl Input_System {
             }
         };
 
-        while let Some(event) = window.poll_event() {
+        for &event in events.iter() {
             match event {
                 Event::Closed { .. } => self.actions.actions.push(Action::Quit),
                 Event::KeyPressed { code, .. } => {
