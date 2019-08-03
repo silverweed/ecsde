@@ -58,7 +58,7 @@ impl Input_Bindings {
 
 pub(super) type Action_Callback = Box<dyn Fn(&mut Action_List)>;
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub(super) enum Action_Kind {
     Pressed,
     Released,

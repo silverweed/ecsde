@@ -1,3 +1,6 @@
+#[cfg(feature = "use-sfml")]
+mod sfml;
+
 #[derive(Copy, Clone, Debug)]
 pub enum Joystick_Type {
     XBox360,
@@ -46,6 +49,20 @@ pub enum Joystick_Button {
     _Count,
 }
 
+#[repr(C)]
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+pub enum Joystick_Axis {
+    Stick_Left_H,
+    Stick_Left_V,
+    Stick_Right_H,
+    Stick_Right_V,
+    Trigger_Left,
+    Trigger_Right,
+    Dpad_H,
+    Dpad_V,
+    _Count,
+}
+
 pub fn string_to_joy_btn(s: &str) -> Option<Joystick_Button> {
     match s {
         "Face_Top" => Some(Joystick_Button::Face_Top),
@@ -65,6 +82,20 @@ pub fn string_to_joy_btn(s: &str) -> Option<Joystick_Button> {
         "Dpad_Left" => Some(Joystick_Button::Dpad_Left),
         "Trigger_Left" => Some(Joystick_Button::Trigger_Left),
         "Trigger_Right" => Some(Joystick_Button::Trigger_Right),
+        _ => None,
+    }
+}
+
+pub fn string_to_joy_axis(s: &str) -> Option<Joystick_Axis> {
+    match s {
+        "Stick_Left_H" => Some(Joystick_Axis::Stick_Left_H),
+        "Stick_Left_V" => Some(Joystick_Axis::Stick_Left_V),
+        "Stick_Right_H" => Some(Joystick_Axis::Stick_Right_H),
+        "Stick_Right_V" => Some(Joystick_Axis::Stick_Right_V),
+        "Trigger_Left" => Some(Joystick_Axis::Trigger_Left),
+        "Trigger_Right" => Some(Joystick_Axis::Trigger_Right),
+        "Dpad_H" => Some(Joystick_Axis::Dpad_H),
+        "Dpad_V" => Some(Joystick_Axis::Dpad_V),
         _ => None,
     }
 }
@@ -94,6 +125,18 @@ fn get_joy_btn_from_id_xbox360(id: u32) -> Option<Joystick_Button> {
     } else {
         None
     }
+}
+
+pub fn get_joy_axis_id(joystick: Joystick, axis: Joystick_Axis) -> Option<u32> {
+    match joystick.joy_type {
+        Joystick_Type::XBox360 => get_joy_axis_id_xbox360(axis),
+    }
+}
+
+#[inline]
+pub fn get_joy_axis_id_xbox360(axis: Joystick_Axis) -> Option<u32> {
+    assert!((axis as usize) < AXES_TO_IDS_XBOX360.len());
+    AXES_TO_IDS_XBOX360[axis as usize]
 }
 
 // Map (Joystick_Button as u8) => (button id)
@@ -207,3 +250,10 @@ const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 13] = [
     Joystick_Button::Stick_Right,
     Joystick_Button::Special_Middle,
 ];
+
+#[cfg(feature = "use-sfml")]
+type Framework_Joy_Axis = sfml::Framework_Joy_Axis;
+
+#[cfg(target_os = "linux")]
+const AXES_TO_IDS_XBOX360: [Option<u32>; Joystick_Axis::_Count as usize] =
+    sfml::AXES_TO_IDS_XBOX360;
