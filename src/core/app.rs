@@ -90,7 +90,8 @@ impl<'r> App<'r> {
     fn init_states(&mut self) -> Maybe_Error {
         let base_state = Box::new(states::persistent::engine_base_state::Engine_Base_State {});
         self.state_mgr.add_persistent_state(&self.world, base_state);
-        let debug_base_state = Box::new(states::persistent::debug_base_state::Debug_Base_State {});
+        let debug_base_state =
+            Box::new(states::persistent::debug_base_state::Debug_Base_State::new());
         self.state_mgr
             .add_persistent_state(&self.world, debug_base_state);
         Ok(())
@@ -104,7 +105,6 @@ impl<'r> App<'r> {
         )?;
 
         let systems = self.world.get_systems();
-        systems.input_system.borrow_mut().init();
         systems.gameplay_system.borrow_mut().init(
             &mut self.gfx_resources,
             &self.env,
@@ -178,7 +178,13 @@ impl<'r> App<'r> {
                 .borrow_mut()
                 .update(window, &mut *input_provider);
 
-            let actions = systems.input_system.borrow().get_action_list();
+            // Handle actions
+            if Self::handle_core_actions(systems.input_system.borrow().get_core_actions(), window) {
+                self.should_close = true;
+                break;
+            }
+
+            let actions = systems.input_system.borrow().get_game_actions().to_vec(); // @Speed is this copy necessary?
 
             // Only record replay data if we're not already playing back a replay.
             if input_provider.is_realtime_player_input() {
@@ -188,12 +194,6 @@ impl<'r> App<'r> {
                 if record_replay_data {
                     self.replay_recording_system.update(&actions);
                 }
-            }
-
-            // Handle actions
-            if Self::handle_core_actions(&actions, window) {
-                self.should_close = true;
-                break;
             }
 
             if self
@@ -210,10 +210,11 @@ impl<'r> App<'r> {
                 let gameplay_start_t = SystemTime::now();
 
                 let mut gameplay_system = systems.gameplay_system.borrow_mut();
+                let axes = systems.input_system.borrow().get_axes().clone(); // @Speed is this copy necessary?
 
-                gameplay_system.realtime_update(&real_dt, &actions);
+                gameplay_system.realtime_update(&real_dt, &actions, &axes);
                 while execution_time > update_time {
-                    gameplay_system.update(&update_time, &actions);
+                    gameplay_system.update(&update_time, &actions, &axes);
                     execution_time -= update_time;
                 }
 
@@ -268,18 +269,17 @@ impl<'r> App<'r> {
     }
 
     fn handle_core_actions(
-        actions: &input::actions::Action_List,
+        actions: &[input::core_actions::Core_Action],
         window: &mut gfx::window::Window_Handle,
     ) -> bool {
-        use input::actions::Action;
+        use input::core_actions::Core_Action;
 
         for action in actions.iter() {
             match action {
-                Action::Quit => return true,
-                Action::Resize(new_width, new_height) => {
+                Core_Action::Quit => return true,
+                Core_Action::Resize(new_width, new_height) => {
                     gfx::window::resize_keep_ratio(window, *new_width, *new_height)
                 }
-                _ => (),
             }
         }
 

@@ -1,7 +1,7 @@
 use super::state::{Game_State, Persistent_Game_State, State_Transition};
 use crate::cfg;
 use crate::core::world::World;
-use crate::input::actions::Action_List;
+use crate::input::input_system::Game_Action;
 use std::vec::Vec;
 
 /// Manages a PDA of Game_States.
@@ -49,7 +49,7 @@ impl State_Manager {
     /// Returns true if should quit
     pub fn handle_actions(
         &mut self,
-        actions: &Action_List,
+        actions: &[Game_Action],
         world: &World,
         config: &cfg::Config,
     ) -> bool {
@@ -159,7 +159,7 @@ mod tests {
         }
         fn handle_actions(
             &mut self,
-            _actions: &Action_List,
+            _actions: &[Game_Action],
             _world: &World,
             _config: &cfg::Config,
         ) -> bool {
@@ -188,7 +188,7 @@ mod tests {
         assert_eq!(data.borrow().updated, 1);
         assert_eq!(data.borrow().handled_actions, 0);
 
-        let actions = Action_List::default();
+        let actions = [];
         let cfg = cfg::Config::new_empty();
         smgr.handle_actions(&actions, &world, &cfg);
         assert_eq!(data.borrow().handled_actions, 1);

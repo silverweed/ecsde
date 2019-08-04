@@ -5,10 +5,8 @@ use std::collections::HashMap;
 #[cfg(debug_assertions)]
 use std::sync::Mutex;
 
-#[derive(PartialEq, Hash, Copy, Clone)]
+#[derive(PartialEq, Hash, Copy, Clone, PartialOrd, Eq, Ord)]
 pub struct String_Id(u32);
-
-impl Eq for String_Id {}
 
 impl<'a, T> From<T> for String_Id
 where

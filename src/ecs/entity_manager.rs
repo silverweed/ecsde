@@ -34,7 +34,7 @@ pub struct Entity_Manager_Debug_Info {
 #[cfg(debug_assertions)]
 impl std::fmt::Display for Entity_Manager_Debug_Info {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
+        writeln!(
             f,
             "
 Component used bytes:                {} B ({:.2}% occupancy)
@@ -43,8 +43,7 @@ Component total bytes:               {} B
 # Components currently instantiated: {}
 Max # Components ever instantiated:  {}
 # Entities currently instantiated:   {}
-Max # Entities ever instantiated:    {}
-",
+Max # Entities ever instantiated:    {}",
             self.components_used_bytes,
             100.0 * (self.components_used_bytes as f32) / (self.components_total_bytes as f32),
             self.components_total_bytes,

@@ -1,4 +1,3 @@
-use super::axes::Virtual_Axis_Mapping;
 use crate::core::common::stringid::String_Id;
 use std::collections::HashMap;
 use std::path::Path;
@@ -20,13 +19,23 @@ pub enum Input_Action {
     Mouse(Mouse_Button),
 }
 
+pub(super) enum Axis_Emulation_Type {
+    Min,
+    Max,
+}
+
+pub(super) struct Axis_Bindings {
+    pub(self) axes_names: Vec<String_Id>,
+    pub(self) real: [Vec<String_Id>; joystick::Joystick_Axis::_Count as usize],
+    pub(self) emulated: HashMap<Input_Action, Vec<(String_Id, Axis_Emulation_Type)>>,
+}
+
 /// Struct containing the mappings between input and user-defined actions and axes_mappings.
 /// e.g. "Key::Q => action_quit".
 pub struct Input_Bindings {
     /// { input_action => [action_name] }
     action_bindings: HashMap<Input_Action, Vec<String_Id>>,
-    /// { input_axis_mapping => [axis_name] }
-    axis_bindings: HashMap<Virtual_Axis_Mapping, Vec<String_Id>>,
+    axis_bindings: Axis_Bindings,
 }
 
 impl Input_Bindings {
@@ -40,11 +49,19 @@ impl Input_Bindings {
         })
     }
 
-    pub fn get_key_action(&self, code: keymap::Key) -> Option<&Vec<String_Id>> {
+    pub fn get_all_virtual_axes_names(&self) -> &[String_Id] {
+        &self.axis_bindings.axes_names
+    }
+
+    pub(super) fn get_key_actions(&self, code: keymap::Key) -> Option<&Vec<String_Id>> {
         self.action_bindings.get(&Input_Action::Key(code))
     }
 
-    pub fn get_joystick_action(&self, joystick_id: u32, button: u32) -> Option<&Vec<String_Id>> {
+    pub(super) fn get_joystick_actions(
+        &self,
+        joystick_id: u32,
+        button: u32,
+    ) -> Option<&Vec<String_Id>> {
         // @Incomplete: retrieve the correct joystick from a joystick manager or something.
         let joystick = joystick::Joystick {
             id: 0,
@@ -56,8 +73,42 @@ impl Input_Bindings {
             )?))
     }
 
-    pub fn get_mouse_action(&self, button: mouse::Button) -> Option<&Vec<String_Id>> {
+    pub(super) fn get_mouse_actions(&self, button: mouse::Button) -> Option<&Vec<String_Id>> {
         let button = mouse::get_mouse_btn(button)?;
         self.action_bindings.get(&Input_Action::Mouse(button))
+    }
+
+    pub(super) fn get_key_emulated_axes(
+        &self,
+        code: keymap::Key,
+    ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
+        self.axis_bindings.emulated.get(&Input_Action::Key(code))
+    }
+
+    pub(super) fn get_joystick_emulated_axes(
+        &self,
+        joystick_id: u32,
+        button: u32,
+    ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
+        // @Incomplete: retrieve the correct joystick from a joystick manager or something.
+        let joystick = joystick::Joystick {
+            id: 0,
+            joy_type: joystick::Joystick_Type::XBox360,
+        };
+        self.axis_bindings
+            .emulated
+            .get(&Input_Action::Joystick(joystick::get_joy_btn_from_id(
+                joystick, button,
+            )?))
+    }
+
+    pub(super) fn get_mouse_emulated_axes(
+        &self,
+        button: mouse::Button,
+    ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
+        let button = mouse::get_mouse_btn(button)?;
+        self.axis_bindings
+            .emulated
+            .get(&Input_Action::Mouse(button))
     }
 }

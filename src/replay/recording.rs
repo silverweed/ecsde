@@ -1,6 +1,6 @@
 use super::replay_data::Replay_Data;
 use crate::core::common::Maybe_Error;
-use crate::input::actions::Action_List;
+use crate::input::input_system::Game_Action;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
@@ -11,7 +11,7 @@ pub struct Replay_Recording_System_Config {
 
 pub struct Replay_Recording_System {
     cur_frame: u64,
-    prev_action_list: Action_List,
+    prev_action_list: Vec<Game_Action>,
     data: Replay_Data,
 }
 
@@ -19,7 +19,7 @@ impl Replay_Recording_System {
     pub fn new(cfg: &Replay_Recording_System_Config) -> Replay_Recording_System {
         Replay_Recording_System {
             cur_frame: 0,
-            prev_action_list: Action_List::default(),
+            prev_action_list: vec![],
             data: Replay_Data::new(cfg.ms_per_frame),
         }
     }
@@ -28,14 +28,14 @@ impl Replay_Recording_System {
         self.data.len() > 0
     }
 
-    pub fn update(&mut self, list: &Action_List) {
+    pub fn update(&mut self, list: &[Game_Action]) {
         self.cur_frame += 1;
 
-        let new_directions = list.get_directions();
-        if new_directions != self.prev_action_list.get_directions() {
-            self.data.add_point(self.cur_frame, new_directions, &vec![]); // @Incomplete :replay_actions:
-            self.prev_action_list = list.clone();
-        }
+        //let new_directions = list.get_directions();
+        //if new_directions != self.prev_action_list.get_directions() {
+        //self.data.add_point(self.cur_frame, new_directions, &vec![]); // @Incomplete :replay_actions:
+        //self.prev_action_list = list.clone();
+        //}
     }
 
     pub fn serialize(&self, file_path: &Path) -> Maybe_Error {

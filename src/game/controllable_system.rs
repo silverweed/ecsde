@@ -2,7 +2,8 @@ use crate::cfg::Cfg_Var;
 use crate::core::common::vector::Vec2f;
 use crate::core::time;
 use crate::ecs::entity_manager::Entity_Manager;
-use crate::input::{self, actions};
+use crate::input::axes::Virtual_Axes;
+use crate::input::input_system::Game_Action;
 use std::time::Duration;
 use typename::TypeName;
 
@@ -21,8 +22,13 @@ impl Default for C_Controllable {
     }
 }
 
-pub fn update(dt: &Duration, actions: &actions::Action_List, em: &mut Entity_Manager) {
-    let movement = input::get_normalized_movement_from_input(actions);
+pub fn update(
+    dt: &Duration,
+    _actions: &[Game_Action],
+    axes: &Virtual_Axes,
+    em: &mut Entity_Manager,
+) {
+    let movement = super::gameplay_system::get_normalized_movement_from_input(axes);
     let dt_secs = time::to_secs_frac(&dt);
     let controllables = em.get_components_mut::<C_Controllable>();
 

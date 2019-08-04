@@ -1,6 +1,6 @@
 use crate::cfg;
 use crate::core::world::World;
-use crate::input::actions::Action_List;
+use crate::input::input_system::Game_Action;
 
 pub enum State_Transition {
     None,
@@ -20,7 +20,7 @@ pub trait Game_State {
     /// Returns true if should quit
     fn handle_actions(
         &mut self,
-        _actions: &Action_List,
+        _actions: &[Game_Action],
         _world: &World,
         _config: &cfg::Config,
     ) -> bool {
@@ -35,7 +35,7 @@ pub trait Persistent_Game_State {
     /// Returns true if should quit
     fn handle_actions(
         &mut self,
-        _actions: &Action_List,
+        _actions: &[Game_Action],
         _world: &World,
         _config: &cfg::Config,
     ) -> bool {

@@ -3,7 +3,8 @@ use super::keymap;
 use super::mouse;
 use super::Input_Action;
 use crate::core::common::stringid::String_Id;
-use crate::input::axes::Virtual_Axis_Mapping;
+use crate::input::bindings::Axis_Bindings;
+use crate::input::bindings::Axis_Emulation_Type;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fs::File;
@@ -20,9 +21,7 @@ pub(super) fn parse_action_bindings_file(
     Ok(parse_action_bindings_lines(lines))
 }
 
-pub(super) fn parse_axis_bindings_file(
-    path: &Path,
-) -> Result<HashMap<Virtual_Axis_Mapping, Vec<String_Id>>, String> {
+pub(super) fn parse_axis_bindings_file(path: &Path) -> Result<Axis_Bindings, String> {
     // @Cutnpaste from above
     let file = File::open(path).or_else(|_| Err(format!("Failed to open file {:?}!", path)))?;
     let lines = BufReader::new(file).lines().filter_map(|l| Some(l.ok()?));
@@ -106,6 +105,13 @@ fn parse_action(s: &str) -> Option<Input_Action> {
     }
 }
 
+#[derive(Debug, PartialOrd, PartialEq, Eq, Ord, Hash)]
+enum Virtual_Axis_Mapping {
+    Axis(joystick::Joystick_Axis),
+    Action_Emulate_Min(Input_Action),
+    Action_Emulate_Max(Input_Action),
+}
+
 /// File format:
 /// -------------
 /// # this is a comment
@@ -114,10 +120,12 @@ fn parse_action(s: &str) -> Option<Input_Action> {
 /// # note that +Key1 means that Key1 yields the max value for that axis, and -Key2
 /// # means Key2 yields the min value.
 // @Cutnpaste from cfg/parsing.rs
-fn parse_axis_bindings_lines(
-    lines: impl std::iter::Iterator<Item = String>,
-) -> HashMap<Virtual_Axis_Mapping, Vec<String_Id>> {
-    let mut bindings: HashMap<Virtual_Axis_Mapping, Vec<String_Id>> = HashMap::new();
+fn parse_axis_bindings_lines(lines: impl std::iter::Iterator<Item = String>) -> Axis_Bindings {
+    let mut bindings = Axis_Bindings {
+        real: std::default::Default::default(),
+        emulated: HashMap::new(),
+        axes_names: vec![],
+    };
 
     let lines = strip_comments(lines);
 
@@ -149,14 +157,35 @@ fn parse_axis_bindings_lines(
         keys.dedup();
         for key in keys.into_iter() {
             let axis_id = String_Id::from(axis_name);
-            match bindings.entry(key) {
-                Entry::Occupied(mut o) => o.get_mut().push(axis_id),
-                Entry::Vacant(v) => {
-                    v.insert(vec![axis_id]);
+            bindings.axes_names.push(axis_id);
+            match key {
+                Virtual_Axis_Mapping::Axis(axis) => {
+                    bindings.real[axis as usize].push(axis_id);
                 }
+                Virtual_Axis_Mapping::Action_Emulate_Min(action) => match bindings
+                    .emulated
+                    .entry(action)
+                {
+                    Entry::Occupied(mut o) => o.get_mut().push((axis_id, Axis_Emulation_Type::Min)),
+                    Entry::Vacant(v) => {
+                        v.insert(vec![(axis_id, Axis_Emulation_Type::Min)]);
+                    }
+                },
+                Virtual_Axis_Mapping::Action_Emulate_Max(action) => match bindings
+                    .emulated
+                    .entry(action)
+                {
+                    Entry::Occupied(mut o) => o.get_mut().push((axis_id, Axis_Emulation_Type::Max)),
+                    Entry::Vacant(v) => {
+                        v.insert(vec![(axis_id, Axis_Emulation_Type::Max)]);
+                    }
+                },
             }
         }
     }
+
+    bindings.axes_names.sort_unstable();
+    bindings.axes_names.dedup();
 
     bindings
 }
@@ -321,35 +350,39 @@ mod tests {
             " axis4:",
             "",
             "##############",
+            "axis5:-D",
         ]
         .iter()
         .map(|&s| String::from(s))
         .collect();
-        let parsed = parse_axis_bindings_lines(lines.into_iter());
+        let Axis_Bindings { real, emulated } = parse_axis_bindings_lines(lines.into_iter());
 
         use joystick::Joystick_Axis as J;
         use Input_Action as I;
         use Virtual_Axis_Mapping as V;
 
-        assert_eq!(parsed.len(), 5);
+        assert_eq!(emulated.len(), 3);
         assert_eq!(
-            parsed[&V::Axis(J::Stick_Right_V)],
+            real[J::Stick_Right_V as usize],
             vec![String_Id::from("axis1")]
         );
         assert_eq!(
-            parsed[&V::Axis(J::Stick_Left_H)],
+            real[J::Stick_Left_H as usize],
             vec![String_Id::from("axis1"), String_Id::from("axis3")]
         );
         assert_eq!(
-            parsed[&V::Action_Emulate_Max(I::Key(Key::D))],
-            vec![String_Id::from("axis2")]
+            emulated[&I::Key(Key::D)],
+            vec![
+                (String_Id::from("axis2"), Axis_Emulation_Type::Max),
+                (String_Id::from("axis5"), Axis_Emulation_Type::Min)
+            ]
         );
         assert_eq!(
-            parsed[&V::Action_Emulate_Max(I::Joystick(Joystick_Button::Stick_Right))],
-            vec![String_Id::from("axis3")]
+            emulated[&I::Joystick(Joystick_Button::Stick_Right)],
+            vec![(String_Id::from("axis3"), Axis_Emulation_Type::Max)]
         );
         assert_eq!(
-            parsed[&V::Axis(J::Trigger_Right)],
+            real[J::Trigger_Right as usize],
             vec![String_Id::from("axis3")]
         );
     }

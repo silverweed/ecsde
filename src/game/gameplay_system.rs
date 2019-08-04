@@ -2,6 +2,7 @@ use super::controllable_system::C_Controllable;
 use crate::cfg;
 use crate::core::common;
 use crate::core::common::rect::Rect;
+use crate::core::common::stringid::String_Id;
 use crate::core::common::vector::Vec2f;
 use crate::core::env::Env_Info;
 use crate::core::msg;
@@ -12,10 +13,11 @@ use crate::ecs::components::transform::C_Transform2D;
 use crate::ecs::entity_manager::{Entity, Entity_Manager};
 use crate::game;
 use crate::gfx;
-use crate::input;
-use crate::input::actions::Action_List;
+use crate::input::axes::Virtual_Axes;
+use crate::input::input_system::Game_Action;
 use crate::resources::gfx::{tex_path, Gfx_Resources};
 use cgmath::Deg;
+use cgmath::InnerSpace;
 use std::cell::Ref;
 use std::time::Duration;
 
@@ -23,7 +25,8 @@ pub struct Gameplay_System {
     entity_manager: Entity_Manager,
     entities: Vec<Entity>,
     camera: Entity,
-    latest_frame_actions: Action_List,
+    latest_frame_actions: Vec<Game_Action>,
+    latest_frame_axes: Virtual_Axes,
 }
 
 pub enum Gameplay_System_Msg {
@@ -38,7 +41,8 @@ impl msg::Msg_Responder for Gameplay_System {
     fn send_message(&mut self, msg: Gameplay_System_Msg) {
         match msg {
             Gameplay_System_Msg::Step(dt) => self.update_with_latest_frame_actions(&dt),
-            Gameplay_System_Msg::Print_Entity_Manager_Debug_Info => {
+            Gameplay_System_Msg::Print_Entity_Manager_Debug_Info =>
+            {
                 #[cfg(debug_assertions)]
                 self.entity_manager.print_debug_info()
             }
@@ -52,7 +56,8 @@ impl Gameplay_System {
             entity_manager: Entity_Manager::new(),
             entities: vec![],
             camera: Entity::INVALID,
-            latest_frame_actions: Action_List::default(),
+            latest_frame_actions: vec![],
+            latest_frame_axes: Virtual_Axes::default(),
         }
     }
 
@@ -70,25 +75,32 @@ impl Gameplay_System {
         Ok(())
     }
 
-    pub fn update(&mut self, dt: &Duration, actions: &Action_List) {
+    pub fn update(&mut self, dt: &Duration, actions: &[Game_Action], axes: &Virtual_Axes) {
         // Used for stepping
-        self.latest_frame_actions = actions.clone();
+        self.latest_frame_actions = actions.to_vec();
 
         ///// Update all game systems /////
         gfx::animation_system::update(&dt, &mut self.entity_manager);
-        game::controllable_system::update(&dt, actions, &mut self.entity_manager);
+        game::controllable_system::update(&dt, actions, axes, &mut self.entity_manager);
 
         self.update_demo_entites(&dt);
     }
 
-    pub fn realtime_update(&mut self, real_dt: &Duration, actions: &Action_List) {
-        self.update_camera(real_dt, actions);
+    pub fn realtime_update(
+        &mut self,
+        real_dt: &Duration,
+        actions: &[Game_Action],
+        axes: &Virtual_Axes,
+    ) {
+        self.update_camera(real_dt, actions, axes);
     }
 
     fn update_with_latest_frame_actions(&mut self, dt: &Duration) {
-        let mut actions = Action_List::default();
+        let mut actions = vec![];
         std::mem::swap(&mut self.latest_frame_actions, &mut actions);
-        self.update(&dt, &actions);
+        let mut axes = Virtual_Axes::default();
+        std::mem::swap(&mut self.latest_frame_axes, &mut axes);
+        self.update(&dt, &actions, &axes);
     }
 
     pub fn get_renderable_entities(&self) -> Vec<(Ref<'_, C_Renderable>, Ref<'_, C_Spatial2D>)> {
@@ -116,8 +128,9 @@ impl Gameplay_System {
         em.register_component::<C_Controllable>();
     }
 
-    fn update_camera(&mut self, real_dt: &Duration, actions: &Action_List) {
-        let movement = input::get_normalized_movement_from_input(actions);
+    fn update_camera(&mut self, real_dt: &Duration, _actions: &[Game_Action], axes: &Virtual_Axes) {
+        // @Incomplete
+        let movement = get_normalized_movement_from_input(axes);
         let camera_ctrl = self
             .entity_manager
             .get_component_mut::<C_Controllable>(self.camera);
@@ -243,5 +256,21 @@ impl Gameplay_System {
             let speed = i as f32 * 2.1;
             t.transform.rotate(Deg(dt_secs * speed));
         }
+    }
+}
+
+pub fn get_movement_from_input(axes: &Virtual_Axes) -> Vec2f {
+    Vec2f::new(
+        axes.get_axis_value(String_Id::from("horizontal")),
+        axes.get_axis_value(String_Id::from("vertical")),
+    )
+}
+
+pub fn get_normalized_movement_from_input(axes: &Virtual_Axes) -> Vec2f {
+    let m = get_movement_from_input(axes);
+    if m.magnitude2() == 0.0 {
+        m
+    } else {
+        m.normalize()
     }
 }
