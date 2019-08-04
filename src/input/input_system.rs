@@ -1,5 +1,6 @@
 use super::actions::{Action, Action_List};
-use super::bindings::{Action_Kind, Action_Mappings, Input_Bindings};
+use super::bindings::Input_Bindings;
+use super::callbacks::{Action_Callbacks, Action_Kind};
 use super::provider::{Input_Provider, Input_Provider_Input, Input_Provider_Output};
 use crate::core::common::direction::Direction_Flags;
 use crate::core::common::stringid::String_Id;
@@ -22,9 +23,10 @@ impl Input_Provider for Default_Input_Provider {
 }
 
 pub struct Input_System {
+    // @Incomplete: refactor me!
     actions: Action_List,
     bindings: Input_Bindings,
-    action_mappings: Action_Mappings,
+    action_callbacks: Action_Callbacks,
 }
 
 impl Input_System {
@@ -32,7 +34,7 @@ impl Input_System {
         Input_System {
             actions: Action_List::default(),
             bindings: super::create_bindings(env),
-            action_mappings: Action_Mappings::new(),
+            action_callbacks: Action_Callbacks::new(),
         }
     }
 
@@ -40,27 +42,27 @@ impl Input_System {
         // @Temporary: move most of these bindings somewhere else.
         // We certainly don't want things like "print_em_debug_info" or "move_up" in such a
         // core part of the engine!
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("quit"),
             Action_Kind::Pressed,
             |actions| actions.actions.push(Action::Quit),
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("game_speed_up"),
             Action_Kind::Pressed,
             |actions| actions.actions.push(Action::Change_Speed(10)),
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("game_speed_down"),
             Action_Kind::Pressed,
             |actions| actions.actions.push(Action::Change_Speed(-10)),
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("pause_toggle"),
             Action_Kind::Pressed,
             |actions| actions.actions.push(Action::Pause_Toggle),
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("print_em_debug_info"),
             Action_Kind::Pressed,
             |actions| {
@@ -69,47 +71,47 @@ impl Input_System {
                     .push(Action::Print_Entity_Manager_Debug_Info)
             },
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("step_sim"),
             Action_Kind::Pressed,
             |actions| actions.actions.push(Action::Step_Simulation),
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("move_up"),
             Action_Kind::Pressed,
             |actions| actions.directions.insert(Direction_Flags::UP),
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("move_left"),
             Action_Kind::Pressed,
             |actions| actions.directions.insert(Direction_Flags::LEFT),
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("move_down"),
             Action_Kind::Pressed,
             |actions| actions.directions.insert(Direction_Flags::DOWN),
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("move_right"),
             Action_Kind::Pressed,
             |actions| actions.directions.insert(Direction_Flags::RIGHT),
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("move_up"),
             Action_Kind::Released,
             |actions| actions.directions.remove(Direction_Flags::UP),
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("move_left"),
             Action_Kind::Released,
             |actions| actions.directions.remove(Direction_Flags::LEFT),
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("move_down"),
             Action_Kind::Released,
             |actions| actions.directions.remove(Direction_Flags::DOWN),
         );
-        self.action_mappings.register_mapping(
+        self.action_callbacks.register_mapping(
             String_Id::from("move_right"),
             Action_Kind::Released,
             |actions| actions.directions.remove(Direction_Flags::RIGHT),
@@ -140,7 +142,7 @@ impl Input_System {
         let handle_actions = |actions: &mut Action_List,
                               kind: Action_Kind,
                               names: &Vec<_>,
-                              mappings: &Action_Mappings| {
+                              mappings: &Action_Callbacks| {
             for name in names.iter() {
                 if let Some(callbacks) = mappings.get_callbacks_for_action(*name, kind) {
                     for callback in callbacks.iter() {
@@ -159,7 +161,7 @@ impl Input_System {
                             &mut self.actions,
                             Action_Kind::Pressed,
                             action_names,
-                            &self.action_mappings,
+                            &self.action_callbacks,
                         );
                     }
                 }
@@ -169,7 +171,7 @@ impl Input_System {
                             &mut self.actions,
                             Action_Kind::Released,
                             action_names,
-                            &self.action_mappings,
+                            &self.action_callbacks,
                         );
                     }
                 }
@@ -179,7 +181,7 @@ impl Input_System {
                             &mut self.actions,
                             Action_Kind::Pressed,
                             action_names,
-                            &self.action_mappings,
+                            &self.action_callbacks,
                         );
                     }
                 }
@@ -189,7 +191,7 @@ impl Input_System {
                             &mut self.actions,
                             Action_Kind::Released,
                             action_names,
-                            &self.action_mappings,
+                            &self.action_callbacks,
                         );
                     }
                 }
@@ -199,7 +201,7 @@ impl Input_System {
                             &mut self.actions,
                             Action_Kind::Pressed,
                             action_names,
-                            &self.action_mappings,
+                            &self.action_callbacks,
                         );
                     }
                 }
@@ -209,7 +211,7 @@ impl Input_System {
                             &mut self.actions,
                             Action_Kind::Released,
                             action_names,
-                            &self.action_mappings,
+                            &self.action_callbacks,
                         );
                     }
                 }

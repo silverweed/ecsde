@@ -1,5 +1,7 @@
 pub mod actions;
+pub mod axes;
 pub mod bindings;
+pub mod callbacks;
 pub mod input_system;
 pub mod provider;
 

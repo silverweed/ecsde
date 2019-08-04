@@ -1,14 +1,12 @@
 use crate::core::common::stringid::String_Id;
-use crate::input::actions::Action_List;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::path::Path;
 use std::vec::Vec;
 
-mod joystick;
-mod keymap;
-mod mouse;
+pub mod joystick;
+pub mod keymap;
+pub mod mouse;
+
 mod parsing;
 
 use joystick::Joystick_Button;
@@ -21,6 +19,8 @@ pub enum Input_Action {
     Mouse(Mouse_Button),
 }
 
+/// Struct containing the mappings between input and user-defined actions.
+/// e.g. "Key::Q => action_quit".
 pub struct Input_Bindings {
     /// { input_action => [action_name] }
     action_bindings: HashMap<Input_Action, Vec<String_Id>>,
@@ -49,51 +49,8 @@ impl Input_Bindings {
             )?))
     }
 
-    #[cfg(feature = "use-sfml")]
-    pub fn get_mouse_action(&self, button: sfml::window::mouse::Button) -> Option<&Vec<String_Id>> {
-        let button = Mouse_Button::try_from(button).ok()?;
+    pub fn get_mouse_action(&self, button: mouse::Button) -> Option<&Vec<String_Id>> {
+        let button = mouse::get_mouse_btn(button)?;
         self.action_bindings.get(&Input_Action::Mouse(button))
-    }
-}
-
-pub(super) type Action_Callback = Box<dyn Fn(&mut Action_List)>;
-
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
-pub(super) enum Action_Kind {
-    Pressed,
-    Released,
-}
-
-pub(super) struct Action_Mappings {
-    mappings: HashMap<(String_Id, Action_Kind), Vec<Action_Callback>>,
-}
-
-impl Action_Mappings {
-    pub fn new() -> Action_Mappings {
-        Action_Mappings {
-            mappings: HashMap::new(),
-        }
-    }
-
-    pub fn register_mapping(
-        &mut self,
-        action_name: String_Id,
-        action_kind: Action_Kind,
-        callback: impl Fn(&mut Action_List) + 'static,
-    ) {
-        match self.mappings.entry((action_name, action_kind)) {
-            Entry::Occupied(mut o) => o.get_mut().push(Box::new(callback)),
-            Entry::Vacant(v) => {
-                v.insert(vec![Box::new(callback)]);
-            }
-        }
-    }
-
-    pub fn get_callbacks_for_action(
-        &self,
-        action_name: String_Id,
-        action_kind: Action_Kind,
-    ) -> Option<&Vec<Action_Callback>> {
-        self.mappings.get(&(action_name, action_kind))
     }
 }

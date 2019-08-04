@@ -1,3 +1,11 @@
+#[cfg(feature = "use-sfml")]
+mod sfml;
+
+#[cfg(feature = "use-sfml")]
+use self::sfml as backend;
+
+pub type Button = backend::Button;
+
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum Mouse_Button {
     Left,
@@ -14,19 +22,6 @@ pub fn string_to_mouse_btn(s: &str) -> Option<Mouse_Button> {
     }
 }
 
-#[cfg(feature = "use-sfml")]
-use sfml::window::mouse::Button as SfButton;
-
-#[cfg(feature = "use-sfml")]
-impl std::convert::TryFrom<SfButton> for Mouse_Button {
-    type Error = &'static str;
-
-    fn try_from(btn: SfButton) -> Result<Self, Self::Error> {
-        match btn {
-            SfButton::Left => Ok(Mouse_Button::Left),
-            SfButton::Right => Ok(Mouse_Button::Right),
-            SfButton::Middle => Ok(Mouse_Button::Middle),
-            _ => Err("Invalid mouse button"),
-        }
-    }
+pub fn get_mouse_btn(button: backend::Button) -> Option<Mouse_Button> {
+    backend::get_mouse_btn(button)
 }

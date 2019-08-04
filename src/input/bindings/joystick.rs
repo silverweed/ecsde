@@ -1,6 +1,9 @@
 #[cfg(feature = "use-sfml")]
 mod sfml;
 
+#[cfg(feature = "use-sfml")]
+use self::sfml as backend;
+
 #[derive(Copy, Clone, Debug)]
 pub enum Joystick_Type {
     XBox360,
@@ -127,16 +130,15 @@ fn get_joy_btn_from_id_xbox360(id: u32) -> Option<Joystick_Button> {
     }
 }
 
-pub fn get_joy_axis_id(joystick: Joystick, axis: Joystick_Axis) -> Option<u32> {
+/// Returns the normalized value [-1, 1] of the given axis
+pub fn get_joy_axis_value(joystick: Joystick, axis: Joystick_Axis) -> f32 {
     match joystick.joy_type {
-        Joystick_Type::XBox360 => get_joy_axis_id_xbox360(axis),
+        Joystick_Type::XBox360 => get_joy_axis_value_xbox360(joystick.id, axis),
     }
 }
 
-#[inline]
-pub fn get_joy_axis_id_xbox360(axis: Joystick_Axis) -> Option<u32> {
-    assert!((axis as usize) < AXES_TO_IDS_XBOX360.len());
-    AXES_TO_IDS_XBOX360[axis as usize]
+fn get_joy_axis_value_xbox360(joystick_id: u32, axis: Joystick_Axis) -> f32 {
+    backend::get_axis_value_xbox360(joystick_id, axis)
 }
 
 // Map (Joystick_Button as u8) => (button id)
@@ -250,10 +252,3 @@ const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 13] = [
     Joystick_Button::Stick_Right,
     Joystick_Button::Special_Middle,
 ];
-
-#[cfg(feature = "use-sfml")]
-type Framework_Joy_Axis = sfml::Framework_Joy_Axis;
-
-#[cfg(target_os = "linux")]
-const AXES_TO_IDS_XBOX360: [Option<u32>; Joystick_Axis::_Count as usize] =
-    sfml::AXES_TO_IDS_XBOX360;

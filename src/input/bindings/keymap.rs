@@ -2,9 +2,10 @@
 mod sfml;
 
 #[cfg(feature = "use-sfml")]
-pub type Key = sfml::Key;
+use self::sfml as backend;
 
-#[cfg(feature = "use-sfml")]
+pub type Key = backend::Key;
+
 pub(super) fn string_to_key(s: &str) -> Option<Key> {
-    self::sfml::string_to_key(s)
+    backend::string_to_key(s)
 }
