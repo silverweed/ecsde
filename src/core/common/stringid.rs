@@ -3,6 +3,8 @@ use std::convert::From;
 #[cfg(debug_assertions)]
 use std::collections::HashMap;
 #[cfg(debug_assertions)]
+use std::collections::hash_map::Entry;
+#[cfg(debug_assertions)]
 use std::sync::Mutex;
 
 #[derive(PartialEq, Hash, Copy, Clone, PartialOrd, Eq, Ord)]
@@ -16,11 +18,20 @@ where
     fn from(s: T) -> String_Id {
         let s: &str = s.into();
         let this = String_Id(fnv1a(s.as_bytes()));
-        #[cfg(debug_assertions)]
-        STRING_ID_MAP
-            .lock()
-            .expect("[ ERROR ] Failed to lock STRING_ID_MAP")
-            .insert(this, String::from(s));
+        #[cfg(debug_assertions)] {
+            match STRING_ID_MAP
+                .lock()
+                .expect("[ ERROR ] Failed to lock STRING_ID_MAP")
+                .entry(this) {
+	       Entry::Occupied(o) => {
+	           let old = o.get().as_str();
+	           assert_eq!(old, s, "Two strings map to the same SID: {} and {}!", old, s);
+	       }
+	       Entry::Vacant(v) => {
+	           v.insert(String::from(s));
+	       }
+	    }
+	}
         this
     }
 }

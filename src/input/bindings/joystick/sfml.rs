@@ -1,7 +1,7 @@
 use super::Joystick_Axis;
 use sfml::window::joystick::{self, Axis};
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "windows"))]
 pub(super) const AXES_ENGINE_TO_FRAMEWORK_XBOX360: [Option<Axis>; Joystick_Axis::_Count as usize] = [
     Some(Axis::X),    // Stick_Left_H
     Some(Axis::Y),    // Stick_Left_V,
@@ -13,7 +13,7 @@ pub(super) const AXES_ENGINE_TO_FRAMEWORK_XBOX360: [Option<Axis>; Joystick_Axis:
     Some(Axis::PovY), // Dpad_V,
 ];
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "windows"))]
 pub(super) const AXES_RANGES_XBOX360: [(f32, f32); Joystick_Axis::_Count as usize] = [
     (-100.0, 100.0),
     (-100.0, 100.0),
