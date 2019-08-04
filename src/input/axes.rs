@@ -4,14 +4,17 @@ use crate::core::common::stringid::String_Id;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
-enum Virtual_Axis_Mapping {
+#[derive(Debug, PartialOrd, PartialEq, Eq, Ord, Hash)]
+pub enum Virtual_Axis_Mapping {
     Axis(Joystick_Axis),
-    Action_Pair(Input_Action, Input_Action),
+    Action_Emulate_Min(Input_Action),
+    Action_Emulate_Max(Input_Action),
 }
 
 /// A "Virtual Axis" is a user-defined axis with an arbitrary name.
 /// A Virtual Axis can be mapped to any number of real joystick axes (e.g. Joystick_Axis::Stick_Left)
-/// or to a pair of Input_Actions: one sets the virtual axis value to -1, the other one to +1 (e.g. Key::W and Key::S)
+/// or to a set of Input_Actions: those can either set the axis value to max or to min (e.g.
+/// Key::W may set the value to +1 and Key::S to -1).
 pub struct Virtual_Axes {
     /// Map virtual_axis_name => real_axes_or_keys
     axes_mappings: HashMap<String_Id, Vec<Virtual_Axis_Mapping>>,

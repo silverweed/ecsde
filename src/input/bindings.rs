@@ -1,3 +1,4 @@
+use super::axes::Virtual_Axis_Mapping;
 use crate::core::common::stringid::String_Id;
 use std::collections::HashMap;
 use std::path::Path;
@@ -19,17 +20,23 @@ pub enum Input_Action {
     Mouse(Mouse_Button),
 }
 
-/// Struct containing the mappings between input and user-defined actions.
+/// Struct containing the mappings between input and user-defined actions and axes_mappings.
 /// e.g. "Key::Q => action_quit".
 pub struct Input_Bindings {
     /// { input_action => [action_name] }
     action_bindings: HashMap<Input_Action, Vec<String_Id>>,
+    /// { input_axis_mapping => [axis_name] }
+    axis_bindings: HashMap<Virtual_Axis_Mapping, Vec<String_Id>>,
 }
 
 impl Input_Bindings {
-    pub fn create_from_config(bindings_file_path: &Path) -> Result<Input_Bindings, String> {
+    pub fn create_from_config(
+        action_bindings_file: &Path,
+        axis_bindings_file: &Path,
+    ) -> Result<Input_Bindings, String> {
         Ok(Input_Bindings {
-            action_bindings: parsing::parse_bindings_file(bindings_file_path)?,
+            action_bindings: parsing::parse_action_bindings_file(action_bindings_file)?,
+            axis_bindings: parsing::parse_axis_bindings_file(axis_bindings_file)?,
         })
     }
 

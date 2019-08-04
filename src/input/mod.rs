@@ -38,9 +38,14 @@ pub fn get_normalized_movement_from_input(actions: &actions::Action_List) -> Vec
 
 // @Incomplete: allow selecting file path
 fn create_bindings(env: &Env_Info) -> bindings::Input_Bindings {
-    let mut keybinding_path = std::path::PathBuf::new();
-    keybinding_path.push(env.get_cfg_root());
-    keybinding_path.push("input");
-    keybinding_path.set_extension("keys");
-    bindings::Input_Bindings::create_from_config(&keybinding_path).unwrap()
+    let mut action_bindings_path = std::path::PathBuf::new();
+    action_bindings_path.push(env.get_cfg_root());
+    action_bindings_path.push("input");
+    action_bindings_path.set_extension("actions");
+    let mut axis_bindings_path = std::path::PathBuf::new();
+    axis_bindings_path.push(env.get_cfg_root());
+    axis_bindings_path.push("input");
+    axis_bindings_path.set_extension("axes");
+    bindings::Input_Bindings::create_from_config(&action_bindings_path, &axis_bindings_path)
+        .unwrap()
 }
