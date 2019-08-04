@@ -355,13 +355,17 @@ mod tests {
         .iter()
         .map(|&s| String::from(s))
         .collect();
-        let Axis_Bindings { real, emulated } = parse_axis_bindings_lines(lines.into_iter());
+        let Axis_Bindings {
+            real,
+            emulated,
+            axes_names,
+        } = parse_axis_bindings_lines(lines.into_iter());
 
         use joystick::Joystick_Axis as J;
         use Input_Action as I;
-        use Virtual_Axis_Mapping as V;
 
-        assert_eq!(emulated.len(), 3);
+        assert_eq!(emulated.len(), 2);
+        assert_eq!(axes_names.len(), 4);
         assert_eq!(
             real[J::Stick_Right_V as usize],
             vec![String_Id::from("axis1")]

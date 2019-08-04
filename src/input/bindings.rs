@@ -19,6 +19,7 @@ pub enum Input_Action {
     Mouse(Mouse_Button),
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(super) enum Axis_Emulation_Type {
     Min,
     Max,
