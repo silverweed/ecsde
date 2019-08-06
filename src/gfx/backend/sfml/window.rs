@@ -41,6 +41,7 @@ pub fn create_render_window(
         &window::ContextSettings::default(), // @Incomplete
     );
     window.set_vertical_sync_enabled(true);
+    window.set_key_repeat_enabled(false);
     Window_Handle {
         handle: window,
         clear_color: colors::rgb(0, 0, 0),

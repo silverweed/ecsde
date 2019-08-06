@@ -1,3 +1,5 @@
+use num_enum::TryFromPrimitive;
+
 #[cfg(feature = "use-sfml")]
 mod sfml;
 
@@ -52,8 +54,8 @@ pub enum Joystick_Button {
     _Count,
 }
 
-#[repr(C)]
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash, TryFromPrimitive)]
 pub enum Joystick_Axis {
     Stick_Left_H,
     Stick_Left_V,

@@ -5,6 +5,7 @@ extern crate anymap;
 extern crate cgmath;
 extern crate ears;
 extern crate notify;
+extern crate num_enum;
 
 #[cfg(debug_assertions)]
 #[macro_use]

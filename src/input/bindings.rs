@@ -25,6 +25,16 @@ pub(super) enum Axis_Emulation_Type {
     Max,
 }
 
+impl Axis_Emulation_Type {
+    #[inline]
+    pub fn assoc_value(&self) -> f32 {
+        match self {
+            Axis_Emulation_Type::Min => -1.0,
+            Axis_Emulation_Type::Max => 1.0,
+        }
+    }
+}
+
 pub(super) struct Axis_Bindings {
     pub(self) axes_names: Vec<String_Id>,
     pub(self) real: [Vec<String_Id>; joystick::Joystick_Axis::_Count as usize],
@@ -54,6 +64,13 @@ impl Input_Bindings {
         &self.axis_bindings.axes_names
     }
 
+    pub fn get_virtual_axes_from_real_axis(
+        &self,
+        real_axis: joystick::Joystick_Axis,
+    ) -> &[String_Id] {
+        &self.axis_bindings.real[real_axis as usize]
+    }
+
     pub(super) fn get_key_actions(&self, code: keymap::Key) -> Option<&Vec<String_Id>> {
         self.action_bindings.get(&Input_Action::Key(code))
     }
@@ -63,7 +80,7 @@ impl Input_Bindings {
         joystick_id: u32,
         button: u32,
     ) -> Option<&Vec<String_Id>> {
-        // @Incomplete: retrieve the correct joystick from a joystick manager or something.
+        // @Incomplete :multiple_joysticks: retrieve the correct joystick from a joystick manager or something.
         let joystick = joystick::Joystick {
             id: 0,
             joy_type: joystick::Joystick_Type::XBox360,
@@ -91,7 +108,7 @@ impl Input_Bindings {
         joystick_id: u32,
         button: u32,
     ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
-        // @Incomplete: retrieve the correct joystick from a joystick manager or something.
+        // @Incomplete :multiple_joysticks: retrieve the correct joystick from a joystick manager or something.
         let joystick = joystick::Joystick {
             id: 0,
             joy_type: joystick::Joystick_Type::XBox360,

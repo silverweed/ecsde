@@ -1,10 +1,11 @@
 use super::axes;
+use super::bindings::joystick;
 use super::bindings::{Axis_Emulation_Type, Input_Bindings};
 use super::core_actions::Core_Action;
 use super::provider::{Input_Provider, Input_Provider_Input, Input_Provider_Output};
 use crate::core::common::stringid::String_Id;
 use crate::core::env::Env_Info;
-use std::collections::HashSet;
+use std::convert::TryInto;
 
 pub struct Default_Input_Provider {}
 
@@ -84,13 +85,6 @@ impl Input_System {
         self.core_actions.clear();
         self.game_actions.clear();
 
-        fn axis_value_emu(emu: &Axis_Emulation_Type) -> f32 {
-            match emu {
-                Axis_Emulation_Type::Min => -1.0,
-                Axis_Emulation_Type::Max => 1.0,
-            }
-        }
-
         let handle_actions =
             |actions: &mut Vec<Game_Action>, kind: Action_Kind, names: &[String_Id]| {
                 for name in names.iter() {
@@ -101,14 +95,14 @@ impl Input_System {
         let handle_axis_pressed =
             |axes: &mut axes::Virtual_Axes, names: &[(String_Id, Axis_Emulation_Type)]| {
                 for (axis_name, emu_kind) in names.iter() {
-                    axes.set_emulated_value(*axis_name, axis_value_emu(emu_kind));
+                    axes.set_emulated_value(*axis_name, *emu_kind);
                 }
             };
 
         let handle_axis_released =
             |axes: &mut axes::Virtual_Axes, names: &[(String_Id, Axis_Emulation_Type)]| {
-                for (axis_name, _) in names.iter() {
-                    axes.reset_emulated_value(*axis_name);
+                for (axis_name, emu_kind) in names.iter() {
+                    axes.reset_emulated_value(*axis_name, *emu_kind);
                 }
             };
 
@@ -171,11 +165,37 @@ impl Input_System {
         }
     }
 
+    // @Speed: we can probably do better than all these map reads
     fn update_real_axes(&mut self) {
-        let emulated: HashSet<String_Id> = self.axes.value_comes_from_emulation.clone();
-        for (name, val) in self.axes.values.iter_mut() {
-            if !emulated.contains(name) {
-                *val = 0.0;
+        let axes = &mut self.axes;
+        for (name, val) in axes.values.iter_mut() {
+            if let Some((min, max)) = axes.value_comes_from_emulation.get(name) {
+                if *min || *max {
+                    continue;
+                }
+            }
+            *val = 0.0;
+        }
+
+        let bindings = &self.bindings;
+        for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
+            let axis = i
+                .try_into()
+                .unwrap_or_else(|_| panic!("Failed to convert {} to a valid Joystick_Axis!", i));
+            for virtual_axis_name in bindings.get_virtual_axes_from_real_axis(axis) {
+                if let Some((min, max)) = axes.value_comes_from_emulation.get(virtual_axis_name) {
+                    if *min || *max {
+                        continue;
+                    }
+                }
+                // @Incomplete :multiple_joysticks:
+                *axes.values.get_mut(&virtual_axis_name).unwrap() = joystick::get_joy_axis_value(
+                    joystick::Joystick {
+                        id: 0,
+                        joy_type: joystick::Joystick_Type::XBox360,
+                    },
+                    axis,
+                );
             }
         }
     }
