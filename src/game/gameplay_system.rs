@@ -130,7 +130,7 @@ impl Gameplay_System {
 
     fn update_camera(&mut self, real_dt: &Duration, _actions: &[Game_Action], axes: &Virtual_Axes) {
         // @Incomplete
-        let movement = get_normalized_movement_from_input(axes);
+        let movement = get_movement_from_input(axes);
         let camera_ctrl = self
             .entity_manager
             .get_component_mut::<C_Controllable>(self.camera);
