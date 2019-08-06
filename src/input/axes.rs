@@ -63,26 +63,21 @@ impl Virtual_Axes {
     }
 
     pub(super) fn reset_emulated_value(&mut self, name: String_Id, emu_kind: Axis_Emulation_Type) {
-        let (min, max) = self
-            .value_comes_from_emulation
-            .get_mut(&name)
-            .unwrap_or_else(|| {
-                panic!(
-                    "Tried to reset emulated value {:?} but that value was never set!",
-                    name
-                )
-            });
-        match emu_kind {
-            Axis_Emulation_Type::Min => {
-                *min = false;
-                if *max {
-                    *self.values.get_mut(&name).unwrap() = Axis_Emulation_Type::Max.assoc_value();
+        if let Some((min, max)) = self.value_comes_from_emulation.get_mut(&name) {
+            match emu_kind {
+                Axis_Emulation_Type::Min => {
+                    *min = false;
+                    if *max {
+                        *self.values.get_mut(&name).unwrap() =
+                            Axis_Emulation_Type::Max.assoc_value();
+                    }
                 }
-            }
-            Axis_Emulation_Type::Max => {
-                *max = false;
-                if *min {
-                    *self.values.get_mut(&name).unwrap() = Axis_Emulation_Type::Min.assoc_value();
+                Axis_Emulation_Type::Max => {
+                    *max = false;
+                    if *min {
+                        *self.values.get_mut(&name).unwrap() =
+                            Axis_Emulation_Type::Min.assoc_value();
+                    }
                 }
             }
         }

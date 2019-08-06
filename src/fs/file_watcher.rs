@@ -5,7 +5,7 @@ use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Duration;
 
-pub trait File_Watcher_Event_Handler: Sync + Send {
+pub trait File_Watcher_Event_Handler: Send {
     fn handle(&mut self, evt: &DebouncedEvent);
 }
 

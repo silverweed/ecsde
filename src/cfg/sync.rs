@@ -1,15 +1,15 @@
-use super::config::{Config, Config_Change_Interface};
+use super::config::Config;
 use super::parsing::{self, Cfg_Entry, Cfg_Section};
 use crate::fs::{file_watcher, utils};
 use notify::DebouncedEvent;
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::Sender;
 
 pub struct Config_Watch_Handler {
-    config_change: Arc<Mutex<Config_Change_Interface>>,
+    config_change: Sender<Cfg_Entry>,
 }
 
 impl Config_Watch_Handler {
-    pub fn new(config: &Config) -> Self {
+    pub fn new(config: &mut Config) -> Self {
         Config_Watch_Handler {
             config_change: config.get_change_interface(),
         }
@@ -23,12 +23,12 @@ impl file_watcher::File_Watcher_Event_Handler for Config_Watch_Handler {
                 if !utils::is_hidden(pathbuf) =>
             {
                 if let Ok(sections) = parsing::parse_config_file(pathbuf) {
-                    let mut config_change = self.config_change.lock().unwrap();
-
                     for Cfg_Section { header, entries } in sections.into_iter() {
                         for Cfg_Entry { key, value } in entries.into_iter() {
                             let name = format!("{}/{}", header, key);
-                            config_change.request_entry_change(Cfg_Entry { key: name, value });
+                            self.config_change
+                                .send(Cfg_Entry { key: name, value })
+                                .unwrap();
                         }
                     }
                 }

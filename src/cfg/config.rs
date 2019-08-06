@@ -6,48 +6,29 @@ use std::collections::HashMap;
 use std::convert::From;
 use std::path::Path;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::vec::Vec;
-
-pub(super) struct Config_Change_Interface {
-    pending_changes: Vec<Cfg_Entry>,
-}
-
-impl Config_Change_Interface {
-    pub fn new() -> Config_Change_Interface {
-        Config_Change_Interface {
-            pending_changes: vec![],
-        }
-    }
-
-    pub fn update(&mut self) -> Vec<Cfg_Entry> {
-        let out = self.pending_changes.clone();
-        self.pending_changes.clear();
-        out
-    }
-
-    pub fn request_entry_change(&mut self, entry_change: Cfg_Entry) {
-        self.pending_changes.push(entry_change);
-    }
-}
 
 pub struct Config {
     bool_vars: HashMap<String_Id, Rc<RefCell<bool>>>,
     int_vars: HashMap<String_Id, Rc<RefCell<i32>>>,
     float_vars: HashMap<String_Id, Rc<RefCell<f32>>>,
     string_vars: HashMap<String_Id, Rc<RefCell<String>>>,
-    change_interface: Arc<Mutex<Config_Change_Interface>>,
+    change_rx: Receiver<Cfg_Entry>,
+    change_tx: Option<Sender<Cfg_Entry>>,
 }
 
 impl Config {
     #[cfg(test)]
     pub fn new_empty() -> Config {
+        let (change_tx, change_rx) = mpsc::channel();
         Config {
             bool_vars: HashMap::new(),
             int_vars: HashMap::new(),
             float_vars: HashMap::new(),
             string_vars: HashMap::new(),
-            change_interface: Arc::new(Mutex::new(Config_Change_Interface::new())),
+            change_rx,
+            change_tx: Some(change_tx),
         }
     }
 
@@ -82,17 +63,22 @@ impl Config {
             }
         }
 
+        let (change_tx, change_rx) = mpsc::channel();
+
         Config {
             bool_vars,
             int_vars,
             float_vars,
             string_vars,
-            change_interface: Arc::new(Mutex::new(Config_Change_Interface::new())),
+            change_rx,
+            change_tx: Some(change_tx),
         }
     }
 
-    pub(super) fn get_change_interface(&self) -> Arc<Mutex<Config_Change_Interface>> {
-        self.change_interface.clone()
+    pub(super) fn get_change_interface(&mut self) -> Sender<Cfg_Entry> {
+        self.change_tx
+            .take()
+            .expect("[ ERROR ] Called get_change_interface twice!")
     }
 
     pub fn get_var_bool(&self, path: &str) -> Option<Cfg_Var<bool>> {
@@ -168,12 +154,9 @@ impl Config {
     }
 
     pub fn update(&mut self) {
-        let change_interface = self.change_interface.try_lock();
-        if change_interface.is_ok() {
-            let pending_changes = change_interface.unwrap().update();
-            for change in pending_changes.into_iter() {
-                self.change_entry_value(&change.key, change.value);
-            }
+        let changes = self.change_rx.try_iter().collect::<Vec<Cfg_Entry>>();
+        for change in changes {
+            self.change_entry_value(&change.key, change.value);
         }
     }
 

@@ -98,7 +98,7 @@ impl<'r> App<'r> {
     }
 
     fn init_all_systems(&mut self) -> Maybe_Error {
-        let config_watcher = Box::new(cfg::sync::Config_Watch_Handler::new(&self.config));
+        let config_watcher = Box::new(cfg::sync::Config_Watch_Handler::new(&mut self.config));
         fs::file_watcher::start_file_watch(
             self.env.get_cfg_root().to_path_buf(),
             vec![config_watcher],
