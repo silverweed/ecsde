@@ -3,6 +3,7 @@ pub mod bindings;
 pub mod callbacks;
 pub mod core_actions;
 pub mod input_system;
+pub mod joystick_mgr;
 pub mod provider;
 
 use crate::core::env::Env_Info;

@@ -6,12 +6,12 @@ mod sfml;
 #[cfg(feature = "use-sfml")]
 use self::sfml as backend;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Joystick_Type {
     XBox360,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Joystick {
     pub id: u32,
     pub joy_type: Joystick_Type,

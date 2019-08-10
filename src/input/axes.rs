@@ -7,7 +7,7 @@ use std::collections::HashMap;
 /// A Virtual Axis can be mapped to any number of real joystick axes (e.g. Joystick_Axis::Stick_Left)
 /// or to a set of Input_Actions: those can either set the axis value to max or to min (e.g.
 /// Key::W may set the value to +1 and Key::S to -1).
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Virtual_Axes {
     /// Map { virtual_axis_name => value [-1, 1] }
     pub(super) values: HashMap<String_Id, f32>,
@@ -25,6 +25,10 @@ impl Virtual_Axes {
             values,
             value_comes_from_emulation: HashMap::new(),
         }
+    }
+
+    pub fn get_all_values(&self) -> HashMap<String_Id, f32> {
+        self.values.clone()
     }
 
     pub fn get_axis_value(&self, name: String_Id) -> f32 {

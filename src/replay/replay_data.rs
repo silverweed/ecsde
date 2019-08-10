@@ -1,5 +1,9 @@
 use crate::core::common::direction::Direction_Flags;
+use crate::core::common::serialize::Serializable;
+use crate::core::common::stringid::String_Id;
 use crate::core::time;
+use crate::input::axes::Virtual_Axes;
+use crate::input::bindings::joystick;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
@@ -9,23 +13,25 @@ use std::vec::Vec;
 #[cfg(feature = "use-sfml")]
 type Event_Type = sfml::window::Event;
 
+const AXES_COUNT: usize = joystick::Joystick_Axis::_Count as usize;
+
 /// Contains the replay data for a single frame. It consists in time information (a frame number)
 /// plus the diff from the previous saved point.
-/// @Incomplete: currently only contains data for the four directions (in boolean format).
+/// Note that raw events and real axes, rather than processed game actions or virtual axes, are saved.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Replay_Data_Point {
-    frame_number: u64,
-    directions: Direction_Flags,
-    // @Incomplete :replay_actions:
-    actions: Vec<Event_Type>,
+    pub frame_number: u64,
+    pub actions: Vec<Event_Type>,
+    pub axes: [f32; AXES_COUNT],
 }
 
 impl std::default::Default for Replay_Data_Point {
     fn default() -> Replay_Data_Point {
+        let axes: [f32; AXES_COUNT] = std::default::Default::default();
         Replay_Data_Point {
             frame_number: 0,
-            directions: Direction_Flags::empty(),
             actions: vec![],
+            axes,
         }
     }
 }
@@ -33,35 +39,36 @@ impl std::default::Default for Replay_Data_Point {
 impl Replay_Data_Point {
     pub fn new(
         frame_number: u64,
-        directions_pressed: Direction_Flags,
         actions: &[Event_Type],
+        axes: &[f32; AXES_COUNT],
     ) -> Replay_Data_Point {
         Replay_Data_Point {
             frame_number,
-            directions: directions_pressed,
             actions: actions.to_vec(),
+            axes: axes.clone(),
         }
     }
+}
 
-    pub fn directions(&self) -> Direction_Flags {
-        self.directions
+impl Serializable for Replay_Data_Point {
+    fn serialize(&self) -> String {
+        // @Temporary
+        format!("{} {:?} {:?}", self.frame_number, self.actions, self.axes)
     }
 
-    pub fn frame_number(&self) -> u64 {
-        self.frame_number
-    }
-
-    pub fn actions(&self) -> &[Event_Type] {
-        &self.actions
+    fn deserialize(raw: &str) -> Result<Replay_Data_Point, String> {
+        // @Temporary
+        let axes: [f32; AXES_COUNT] = std::default::Default::default();
+        Ok(Replay_Data_Point::new(0, &[], &axes))
     }
 }
 
 #[derive(Debug)]
 pub struct Replay_Data {
-    pub(self) data: Vec<Replay_Data_Point>,
+    pub data: Vec<Replay_Data_Point>,
     /// Note: for the replay to work correctly, the game tick time should not be changed while recording
-    pub(self) ms_per_frame: u16,
-    pub(self) duration: Duration,
+    pub ms_per_frame: u16,
+    pub duration: Duration,
 }
 
 impl Replay_Data {
@@ -84,20 +91,12 @@ impl Replay_Data {
         replay
     }
 
-    pub fn len(&self) -> usize {
-        self.data.len()
-    }
-
-    pub fn duration(&self) -> Duration {
-        self.duration
-    }
-
-    pub fn from_serialized(path: &Path) -> Result<Replay_Data, Box<dyn std::error::Error>> {
+    pub fn from_file(path: &Path) -> Result<Replay_Data, Box<dyn std::error::Error>> {
         let now = std::time::SystemTime::now();
         let mut file = File::open(path)?;
         let mut content = String::new();
         file.read_to_string(&mut content)?;
-        let replay = Self::deserialize(&content);
+        let replay = Self::deserialize(&content)?;
         let time_elapsed = std::time::SystemTime::now().duration_since(now).unwrap();
         eprintln!(
             "[ OK ] Loaded replay data from {:?} in {} ms. Replay duration = {} s.",
@@ -108,11 +107,40 @@ impl Replay_Data {
         Ok(replay)
     }
 
-    pub fn deserialize(content: &str) -> Replay_Data {
+    #[inline]
+    fn calc_duration(replay: &Replay_Data) -> Duration {
+        if replay.data.len() == 0 {
+            Duration::new(0, 0)
+        } else {
+            let last_frame_number = replay.data[replay.data.len() - 1].frame_number;
+            Duration::from_millis(last_frame_number * u64::from(replay.ms_per_frame))
+        }
+    }
+}
+
+impl Serializable for Replay_Data {
+    fn serialize(&self) -> String {
+        let mut s = String::from("");
+
+        s.push_str(&self.ms_per_frame.to_string());
+        s.push_str("\r\n");
+
+        // @Incomplete: for now, serialize plain text. Later, do binary.
+        for datum in self.data.iter() {
+            s.push_str(datum.frame_number.to_string().as_str());
+            s.push(' ');
+            //s.push_str(datum.directions.bits().to_string().as_str());
+            s.push_str("\r\n");
+        }
+
+        s
+    }
+
+    fn deserialize(raw: &str) -> Result<Replay_Data, String> {
         let mut replay = Replay_Data::new(0);
 
         // First line should contains the ms per frame
-        let mut lines = content.lines();
+        let mut lines = raw.lines();
         if let Some(line) = lines.next() {
             replay.ms_per_frame = match line.trim().parse::<u16>() {
                 Ok(ms_per_frame) => ms_per_frame,
@@ -124,72 +152,15 @@ impl Replay_Data {
         }
 
         for line in lines {
-            let tokens: Vec<_> = line.splitn(2, ' ').collect();
-            if tokens.len() == 2 {
-                match tokens[0].parse::<u64>() {
-                    Ok(frame_number) => match tokens[1].parse::<u8>() {
-                        Ok(directions) => replay.data.push(Replay_Data_Point::new(
-                            frame_number,
-                            Direction_Flags::from_bits_truncate(directions),
-                            &vec![], // @Incomplete :replay_actions:
-                        )),
-                        Err(_err) => {
-                            eprintln!(
-                                "[ WARNING ] Error parsing directions: token was {}",
-                                tokens[1]
-                            );
-                            continue;
-                        }
-                    },
-                    Err(_err) => {
-                        eprintln!(
-                            "[ WARNING ] Error parsing frame number: token was {}",
-                            tokens[0]
-                        );
-                        continue;
-                    }
-                }
-            } else {
-                eprintln!("[ WARNING ] Bogus line in replay data: {}", line);
+            match Replay_Data_Point::deserialize(line) {
+                Ok(point) => replay.data.push(point),
+                Err(msg) => eprintln!("[ WARNING ] Error parsing line {}: {}", line, msg),
             }
         }
 
         replay.duration = Self::calc_duration(&replay);
 
-        replay
-    }
-
-    #[inline]
-    fn calc_duration(replay: &Replay_Data) -> Duration {
-        let last_frame_number = replay.data[replay.data.len() - 1].frame_number();
-        Duration::from_millis(last_frame_number * u64::from(replay.ms_per_frame))
-    }
-
-    pub fn add_point(
-        &mut self,
-        frame_number: u64,
-        directions: Direction_Flags,
-        actions: &[Event_Type],
-    ) {
-        self.data
-            .push(Replay_Data_Point::new(frame_number, directions, actions));
-    }
-
-    pub fn serialize(&self) -> String {
-        let mut s = String::from("");
-
-        s.push_str(&self.ms_per_frame.to_string());
-        s.push_str("\r\n");
-
-        // @Incomplete: for now, serialize plain text. Later, do binary.
-        for datum in self.data.iter() {
-            s.push_str(datum.frame_number.to_string().as_str());
-            s.push(' ');
-            s.push_str(datum.directions.bits().to_string().as_str());
-            s.push_str("\r\n");
-        }
-
-        s
+        Ok(replay)
     }
 }
 

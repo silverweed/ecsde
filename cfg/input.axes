@@ -1,0 +1,8 @@
+horizontal: Stick_Left_H, +D, -A, Dpad_H
+vertical: Stick_Left_V, -W, +S, Dpad_V
+
+trigger_l: Trigger_Left
+trigger_r: Trigger_Right
+
+horizontal_r: Stick_Right_H
+vertical_r: Stick_Right_V

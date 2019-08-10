@@ -12,7 +12,7 @@ pub trait File_Watcher_Event_Handler: Send {
 pub fn start_file_watch(
     path: PathBuf,
     event_handlers: Vec<Box<dyn File_Watcher_Event_Handler>>,
-) -> Result<thread::JoinHandle<()>, std::io::Error> {
+) -> std::io::Result<thread::JoinHandle<()>> {
     thread::Builder::new()
         .name(format!("fwch_{:?}", path.as_path().file_name().unwrap()))
         .spawn(move || {

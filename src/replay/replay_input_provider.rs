@@ -30,8 +30,8 @@ impl Input_Provider for Replay_Input_Provider {
         } else {
             loop {
                 if let Some(datum) = self.replay_data_iter.cur() {
-                    if self.cur_frame >= datum.frame_number() {
-                        events.extend_from_slice(&datum.actions());
+                    if self.cur_frame >= datum.frame_number {
+                        events.extend_from_slice(&datum.actions);
                         self.replay_data_iter.next();
                     } else {
                         break;
