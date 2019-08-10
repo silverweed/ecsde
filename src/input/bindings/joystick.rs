@@ -186,7 +186,7 @@ const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = 
     None,     // Trigger_Right
 ];
 
-#[cfg(target_os = "osx")]
+#[cfg(target_os = "macos")]
 const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = [
     Some(3),  // Face_Top
     Some(2),  // Face_Right
@@ -207,8 +207,6 @@ const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = 
     Some(7),  // Trigger_Right
 ];
 
-// @Incomplete: button mapping on OSX may not range from 0 to 11: in that case we'll probably need
-// a hash map or something...
 #[cfg(target_os = "linux")]
 const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 11] = [
     Joystick_Button::Face_Bottom,
@@ -238,7 +236,7 @@ const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 10] = [
     Joystick_Button::Stick_Right,
 ];
 
-#[cfg(target_os = "osx")]
+#[cfg(target_os = "macos")]
 const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 13] = [
     Joystick_Button::Face_Left,
     Joystick_Button::Face_Bottom,
