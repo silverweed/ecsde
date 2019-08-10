@@ -8,13 +8,16 @@ use crate::gfx;
 use crate::gfx::window::Window_Handle;
 use crate::resources;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
-use sfml::graphics::Text;
-use sfml::graphics::Transformable;
 use std::collections::VecDeque;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 use std::vec::Vec;
+
+#[cfg(feature = "use-sfml")]
+use sfml::graphics::Text;
+#[cfg(feature = "use-sfml")]
+use sfml::graphics::Transformable;
 
 pub enum UI_Request {
     Add_Fadeout_Text(String),
@@ -66,13 +69,13 @@ impl UI_System {
         self.fadeout_text_font =
             gres.load_font(&resources::gfx::font_path(env, Self::FADEOUT_TEXT_FONT));
         if self.fadeout_text_font.is_none() {
-            return Err(Box::new(std::io::Error::new(
+            Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "Failed to load font for UI!",
-            )));
+            )))
+        } else {
+            Ok(())
         }
-
-        Ok(())
     }
 
     pub fn update(&mut self, dt: &Duration, window: &mut Window_Handle, gres: &mut Gfx_Resources) {

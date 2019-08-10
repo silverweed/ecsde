@@ -138,6 +138,11 @@ pub fn resize_keep_ratio(window: &mut Window_Handle, new_width: u32, new_height:
 }
 
 #[cfg(feature = "use-sfml")]
+pub fn get_window_target_size(window: &Window_Handle) -> (u32, u32) {
+    sfml::window::get_window_target_size(window)
+}
+
+#[cfg(feature = "use-sfml")]
 pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect) -> Sprite<'a> {
     sfml::render::create_sprite(texture, rect)
 }

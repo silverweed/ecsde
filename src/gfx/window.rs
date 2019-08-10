@@ -28,3 +28,7 @@ pub fn display(window: &mut Window_Handle) {
 pub fn resize_keep_ratio(window: &mut Window_Handle, new_width: u32, new_height: u32) {
     backend::resize_keep_ratio(window, new_width, new_height);
 }
+
+pub fn get_window_target_size(window: &Window_Handle) -> (u32, u32) {
+    backend::get_window_target_size(window)
+}

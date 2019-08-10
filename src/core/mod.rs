@@ -1,7 +1,6 @@
 pub mod app;
 pub mod app_config;
 pub mod common;
-pub mod debug;
 pub mod env;
 pub mod msg;
 pub mod systems;

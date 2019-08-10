@@ -1,7 +1,6 @@
 use super::app_config::App_Config;
 use super::common::colors;
 use super::common::Maybe_Error;
-use super::debug;
 use super::env::Env_Info;
 use super::msg::Msg_Responder;
 use super::time;
@@ -16,6 +15,9 @@ use crate::resources;
 use crate::states;
 use std::path;
 use std::time::Duration;
+
+#[cfg(debug_assertions)]
+use crate::debug;
 
 pub struct App<'r> {
     should_close: bool,
@@ -32,6 +34,9 @@ pub struct App<'r> {
 
     replay_recording_system: recording_system::Replay_Recording_System,
     replay_data: Option<replay_data::Replay_Data>,
+
+    #[cfg(debug_assertions)]
+    debug_overlay: debug::overlay::Debug_Overlay,
 }
 
 impl<'r> App<'r> {
@@ -56,6 +61,9 @@ impl<'r> App<'r> {
                 &recording_system::Replay_Recording_System_Config { ms_per_frame },
             ),
             replay_data: maybe_create_replay_data(cfg),
+
+            #[cfg(debug_assertions)]
+            debug_overlay: debug::overlay::Debug_Overlay::new(),
         }
     }
 
@@ -68,6 +76,8 @@ impl<'r> App<'r> {
 
         self.init_states()?;
         self.init_all_systems()?;
+        #[cfg(debug_assertions)]
+        self.init_debug()?;
         self.world.init();
 
         Ok(())
@@ -118,6 +128,11 @@ impl<'r> App<'r> {
         Ok(())
     }
 
+    #[cfg(debug_assertions)]
+    fn init_debug(&mut self) -> Maybe_Error {
+        self.debug_overlay.init(&self.env, &mut self.gfx_resources)
+    }
+
     pub fn run(&mut self, window: &mut gfx::window::Window_Handle) -> Maybe_Error {
         self.start_game_loop(window)?;
         Ok(())
@@ -136,7 +151,9 @@ impl<'r> App<'r> {
     }
 
     fn start_game_loop(&mut self, window: &mut gfx::window::Window_Handle) -> Maybe_Error {
+        #[cfg(debug_assertions)]
         let mut fps_debug = debug::fps::Fps_Console_Printer::new(&Duration::from_secs(3), "main");
+
         let mut execution_time = Duration::new(0, 0);
         let mut input_provider = self.create_input_provider();
         let mut is_replaying = !input_provider.is_realtime_player_input();
@@ -190,6 +207,9 @@ impl<'r> App<'r> {
                         joy_type: crate::input::bindings::joystick::Joystick_Type::XBox360,
                     })
                     .unwrap();
+
+                #[cfg(debug_assertions)]
+                update_debug_overlay(&mut self.debug_overlay, real_axes);
 
                 // Only record replay data if we're not already playing back a replay.
                 if input_provider.is_realtime_player_input() {
@@ -265,6 +285,8 @@ impl<'r> App<'r> {
             }
 
             self.config.update();
+
+            #[cfg(debug_assertions)]
             fps_debug.tick(&real_dt);
         }
 
@@ -317,6 +339,10 @@ impl<'r> App<'r> {
             .ui_system
             .borrow_mut()
             .update(&real_dt, window, &mut self.gfx_resources);
+
+        #[cfg(debug_assertions)]
+        self.debug_overlay.draw(window, &mut self.gfx_resources);
+
         gfx::window::display(window);
 
         Ok(())
@@ -341,5 +367,22 @@ fn maybe_create_replay_data(cfg: &App_Config) -> Option<replay_data::Replay_Data
         }
     } else {
         None
+    }
+}
+
+#[cfg(debug_assertions)]
+fn update_debug_overlay(
+    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    real_axes: &input::joystick_mgr::Real_Axes_Values,
+) {
+    use input::bindings::joystick;
+    use std::convert::TryInto;
+
+    debug_overlay.clear();
+    for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
+        let axis: joystick::Joystick_Axis = i.try_into().unwrap_or_else(|err| {
+            panic!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
+        });
+        debug_overlay.add_line(&format!("{:?}: {:.2}", axis, real_axes[i as usize]));
     }
 }

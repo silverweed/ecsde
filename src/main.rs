@@ -33,8 +33,12 @@ pub(crate) mod input;
 pub(crate) mod replay;
 pub(crate) mod resources;
 pub(crate) mod states;
+
 #[cfg(test)]
 pub(crate) mod test_common;
+
+#[cfg(debug_assertions)]
+pub(crate) mod debug;
 
 fn main() -> core::common::Maybe_Error {
     let cfg = core::app_config::App_Config::new(env::args());

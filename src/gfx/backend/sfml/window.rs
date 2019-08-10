@@ -87,3 +87,7 @@ pub fn resize_keep_ratio(window: &mut Window_Handle, new_width: u32, new_height:
     view.set_viewport(&viewport);
     window.set_view(&view);
 }
+
+pub fn get_window_target_size(window: &Window_Handle) -> (u32, u32) {
+    window.target_size
+}
