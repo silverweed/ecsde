@@ -56,7 +56,7 @@ impl Replay_Data_Point {
 
 impl Binary_Serializable for Replay_Data_Point {
     fn serialize(&self, output: &mut Byte_Stream) -> std::io::Result<()> {
-        output.write_u64(self.frame_number)?;
+        output.write_u32(self.frame_number as u32)?;
 
         output.write_u8(self.events.len() as u8)?;
         for event in self.events.iter() {
@@ -74,7 +74,7 @@ impl Binary_Serializable for Replay_Data_Point {
     }
 
     fn deserialize(input: &mut Byte_Stream) -> std::io::Result<Replay_Data_Point> {
-        let frame_number = input.read_u64()?;
+        let frame_number = input.read_u32()? as u64;
 
         let n_events = input.read_u8()?;
         let mut events = vec![];
