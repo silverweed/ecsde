@@ -88,7 +88,6 @@ impl Binary_Serializable for Event {
     }
 }
 
-// @Incomplete
 #[cfg(test)]
 mod tests {
     use super::*;

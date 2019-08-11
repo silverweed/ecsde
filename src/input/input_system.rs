@@ -3,7 +3,7 @@ use super::bindings::joystick;
 use super::bindings::{Axis_Emulation_Type, Input_Bindings};
 use super::core_actions::Core_Action;
 use super::joystick_mgr::{Joystick_Manager, Real_Axes_Values};
-use super::provider::{Input_Provider, Input_Provider_Input, Input_Provider_Output};
+use super::provider::{Input_Provider, Input_Provider_Input};
 use crate::core::common::stringid::String_Id;
 use crate::core::env::Env_Info;
 use std::convert::TryInto;
@@ -13,23 +13,6 @@ use sfml::window::Event;
 
 #[cfg(feature = "use-sfml")]
 pub type Input_Raw_Event = sfml::window::Event;
-
-pub struct Default_Input_Provider {}
-
-/// The default input provider just gets all events from the window
-impl Input_Provider for Default_Input_Provider {
-    fn poll_events(&mut self, window: &mut Input_Provider_Input) -> Vec<Input_Provider_Output> {
-        let mut events = vec![];
-        while let Some(evt) = window.poll_event() {
-            events.push(evt);
-        }
-        events
-    }
-
-    fn is_realtime_player_input(&self) -> bool {
-        true
-    }
-}
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub enum Action_Kind {
@@ -93,15 +76,29 @@ impl Input_System {
         window: &mut sfml::graphics::RenderWindow,
         provider: &mut dyn Input_Provider,
     ) {
-        self.joystick_mgr.update();
+        provider.update(window);
+
+        // @Incomplete :multiple_joysticks:
+        provider.get_axes(
+            joystick::Joystick {
+                id: 0,
+                joy_type: joystick::Joystick_Type::XBox360,
+            },
+            self.joystick_mgr
+                .mut_values(joystick::Joystick {
+                    id: 0,
+                    joy_type: joystick::Joystick_Type::XBox360,
+                })
+                .unwrap(),
+        );
         self.update_real_axes(); // Note: these axes values may be later overwritten by actions
 
-        let events = provider.poll_events(window);
-        self.read_events_to_actions(&events);
+        let events = provider.get_events();
+        self.read_events_to_actions(events);
     }
 
     #[cfg(feature = "use-sfml")]
-    fn read_events_to_actions(&mut self, events: &[Event]) {
+    fn read_events_to_actions(&mut self, events: &[Input_Raw_Event]) {
         let bindings = &self.bindings;
         self.core_actions.clear();
         self.game_actions.clear();

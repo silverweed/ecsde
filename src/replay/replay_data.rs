@@ -20,6 +20,10 @@ pub struct Replay_Data_Point {
     pub frame_number: u64,
     pub events: Vec<Event_Type>,
     pub axes: [f32; AXES_COUNT],
+    /// Bitmask indicating which axes in self.axes must be considered.
+    /// This is done for optimizing the disk space taken by serialized replay data:
+    /// we don't serialize unchanged axes values.
+    pub axes_mask: u8,
 }
 
 impl std::default::Default for Replay_Data_Point {
@@ -29,6 +33,7 @@ impl std::default::Default for Replay_Data_Point {
             frame_number: 0,
             events: vec![],
             axes,
+            axes_mask: u8::max_value(),
         }
     }
 }
@@ -38,36 +43,61 @@ impl Replay_Data_Point {
         frame_number: u64,
         events: &[Event_Type],
         axes: &[f32; AXES_COUNT],
+        axes_mask: u8,
     ) -> Replay_Data_Point {
         Replay_Data_Point {
             frame_number,
             events: events.to_vec(),
             axes: axes.clone(),
+            axes_mask,
         }
     }
 }
 
 impl Binary_Serializable for Replay_Data_Point {
     fn serialize(&self, output: &mut Byte_Stream) -> std::io::Result<()> {
-        // @Incomplete: axes
         output.write_u64(self.frame_number)?;
+
         output.write_u8(self.events.len() as u8)?;
         for event in self.events.iter() {
             event.serialize(output)?;
         }
+
+        output.write_u8(self.axes_mask)?;
+        for i in 0..AXES_COUNT {
+            if (self.axes_mask & (1 << i)) != 0 {
+                output.write_u32(self.axes[i].to_bits())?;
+            }
+        }
+
         Ok(())
     }
 
     fn deserialize(input: &mut Byte_Stream) -> std::io::Result<Replay_Data_Point> {
-        // @Incomplete: axes
         let frame_number = input.read_u64()?;
+
         let n_events = input.read_u8()?;
         let mut events = vec![];
-        for i in 0u8..n_events {
+        for _ in 0u8..n_events {
             events.push(Event_Type::deserialize(input)?);
         }
-        let axes: [f32; AXES_COUNT] = std::default::Default::default();
-        Ok(Replay_Data_Point::new(frame_number, &events, &axes))
+
+        let mut axes: [f32; AXES_COUNT] = std::default::Default::default();
+        let axes_mask = input.read_u8()?;
+        for i in 0..axes.len() {
+            if (axes_mask & (1 << i)) != 0 {
+                let val = input.read_u32()?;
+                let val = f32::from_bits(val);
+                axes[i] = val;
+            }
+        }
+
+        Ok(Replay_Data_Point::new(
+            frame_number,
+            &events,
+            &axes,
+            axes_mask,
+        ))
     }
 }
 
@@ -104,11 +134,11 @@ impl Replay_Data {
     pub fn from_file(path: &Path) -> Result<Replay_Data, Box<dyn std::error::Error>> {
         let now = std::time::SystemTime::now();
         let mut file = File::open(path)?;
-        let mut content = String::new();
 
-        file.read_to_string(&mut content)?;
+        let mut buf = vec![];
+        file.read_to_end(&mut buf)?;
 
-        let mut byte_stream = Byte_Stream::new();
+        let mut byte_stream = Byte_Stream::new_from_vec(buf);
         let replay = Self::deserialize(&mut byte_stream)?;
 
         let time_elapsed = std::time::SystemTime::now().duration_since(now).unwrap();
@@ -202,14 +232,14 @@ mod tests {
         // @Incomplete :replay_actions:
         let axes = Real_Axes_Values::default();
         let data_points = vec![
-            Replay_Data_Point::new(0, &[], &axes),
-            Replay_Data_Point::new(1, &[], &axes),
-            Replay_Data_Point::new(10, &[], &axes),
-            Replay_Data_Point::new(209, &[], &axes),
-            Replay_Data_Point::new(1110, &[], &axes),
-            Replay_Data_Point::new(1111, &[], &axes),
-            Replay_Data_Point::new(6531, &[], &axes),
-            Replay_Data_Point::new(424242, &[], &axes),
+            Replay_Data_Point::new(0, &[], &axes, 0x0),
+            Replay_Data_Point::new(1, &[], &axes, 0x0),
+            Replay_Data_Point::new(10, &[], &axes, 0x0),
+            Replay_Data_Point::new(209, &[], &axes, 0x0),
+            Replay_Data_Point::new(1110, &[], &axes, 0x0),
+            Replay_Data_Point::new(1111, &[], &axes, 0x0),
+            Replay_Data_Point::new(6531, &[], &axes, 0x0),
+            Replay_Data_Point::new(424242, &[], &axes, 0x0),
         ];
 
         let mut byte_stream = Byte_Stream::new();
@@ -244,14 +274,14 @@ mod tests {
         // @Incomplete :replay_actions:
         let axes = Real_Axes_Values::default();
         let data_points = vec![
-            Replay_Data_Point::new(0, &[], &axes),
-            Replay_Data_Point::new(1, &[], &axes),
-            Replay_Data_Point::new(10, &[], &axes),
-            Replay_Data_Point::new(209, &[], &axes),
-            Replay_Data_Point::new(1110, &[], &axes),
-            Replay_Data_Point::new(1111, &[], &axes),
-            Replay_Data_Point::new(6531, &[], &axes),
-            Replay_Data_Point::new(424242, &[], &axes),
+            Replay_Data_Point::new(0, &[], &axes, 0x0),
+            Replay_Data_Point::new(1, &[], &axes, 0x0),
+            Replay_Data_Point::new(10, &[], &axes, 0x0),
+            Replay_Data_Point::new(209, &[], &axes, 0x0),
+            Replay_Data_Point::new(1110, &[], &axes, 0x0),
+            Replay_Data_Point::new(1111, &[], &axes, 0x0),
+            Replay_Data_Point::new(6531, &[], &axes, 0x0),
+            Replay_Data_Point::new(424242, &[], &axes, 0x0),
         ];
 
         let mut byte_stream = Byte_Stream::new();

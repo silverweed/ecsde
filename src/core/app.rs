@@ -43,6 +43,7 @@ impl<'r> App<'r> {
         let env = Env_Info::gather().unwrap();
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
         let world = world::World::new(&env);
+        let replay_data = maybe_create_replay_data(cfg);
         let ms_per_frame = *config
             .get_var_int("engine/gameplay/gameplay_update_tick_ms")
             .expect("[ FATAL ] engine/gameplay/gameplay_update_tick_ms not found in config file!")
@@ -59,7 +60,7 @@ impl<'r> App<'r> {
             replay_recording_system: recording_system::Replay_Recording_System::new(
                 &recording_system::Replay_Recording_System_Config { ms_per_frame },
             ),
-            replay_data: maybe_create_replay_data(cfg),
+            replay_data,
 
             #[cfg(debug_assertions)]
             debug_overlay: debug::overlay::Debug_Overlay::new(),
@@ -116,9 +117,10 @@ impl<'r> App<'r> {
             .borrow_mut()
             .init(&self.env, &mut self.gfx_resources)?;
 
-        if *self
-            .config
-            .get_var_bool_or("engine/debug/replay/record", false)
+        if self.replay_data.is_none()
+            && *self
+                .config
+                .get_var_bool_or("engine/debug/replay/record", false)
         {
             self.replay_recording_system
                 .start_recording_thread(&self.config)?;
@@ -145,7 +147,7 @@ impl<'r> App<'r> {
                 replay_data,
             ))
         } else {
-            Box::new(input::input_system::Default_Input_Provider {})
+            Box::new(input::default_input_provider::Default_Input_Provider::new())
         }
     }
 
@@ -212,7 +214,9 @@ impl<'r> App<'r> {
                 update_debug_overlay(&mut self.debug_overlay, real_axes);
 
                 // Only record replay data if we're not already playing back a replay.
-                if input_provider.is_realtime_player_input() {
+                if self.replay_recording_system.is_recording()
+                    && input_provider.is_realtime_player_input()
+                {
                     let record_replay_data = *self
                         .config
                         .get_var_bool_or("engine/debug/replay/record", false);

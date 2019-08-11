@@ -3,11 +3,11 @@ use std::io::Cursor;
 use std::vec::Vec;
 
 pub trait Binary_Serializable: Sized {
-    fn serialize(&self, output: &mut Byte_Stream) -> std::io::Result<()> {
+    fn serialize(&self, _output: &mut Byte_Stream) -> std::io::Result<()> {
         unimplemented!();
     }
 
-    fn deserialize(input: &mut Byte_Stream) -> std::io::Result<Self> {
+    fn deserialize(_input: &mut Byte_Stream) -> std::io::Result<Self> {
         unimplemented!();
     }
 }
@@ -24,8 +24,15 @@ impl std::convert::AsRef<[u8]> for Byte_Stream {
 
 impl Byte_Stream {
     pub fn new() -> Byte_Stream {
-        let cursor = Cursor::new(vec![]);
-        Byte_Stream { cursor }
+        Byte_Stream {
+            cursor: Cursor::new(vec![]),
+        }
+    }
+
+    pub fn new_from_vec(data: Vec<u8>) -> Byte_Stream {
+        Byte_Stream {
+            cursor: Cursor::new(data),
+        }
     }
 
     pub fn seek(&mut self, pos: u64) {

@@ -23,22 +23,11 @@ impl Joystick_Manager {
         Joystick_Manager { joysticks }
     }
 
-    pub fn update(&mut self) {
-        for (joy, values) in self.joysticks.iter_mut() {
-            Self::get_all_joy_axes_values(*joy, values);
-        }
-    }
-
     pub fn values(&self, joy: Joystick) -> Option<&Real_Axes_Values> {
         self.joysticks.get(&joy)
     }
 
-    fn get_all_joy_axes_values(joystick: Joystick, values: &mut Real_Axes_Values) {
-        for i in 0u8..Joystick_Axis::_Count as u8 {
-            let axis = i
-                .try_into()
-                .unwrap_or_else(|_| panic!("Failed to convert {} to a valid Joystick_Axis!", i));
-            values[i as usize] = joystick::get_joy_axis_value(joystick, axis);
-        }
+    pub(super) fn mut_values(&mut self, joy: Joystick) -> Option<&mut Real_Axes_Values> {
+        self.joysticks.get_mut(&joy)
     }
 }
