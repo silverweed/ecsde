@@ -1,6 +1,6 @@
 use super::recording_system::Replay_Recording_System_Config;
 use super::replay_data::Replay_Data_Point;
-use crate::core::common::serialize::Serializable;
+use crate::core::common::serialize::{Binary_Serializable, Byte_Stream};
 use crate::core::common::Maybe_Error;
 use std::fs::File;
 use std::io::prelude::*;
@@ -53,14 +53,15 @@ fn write_prelude(
     file: &mut File,
     recording_cfg: &Replay_Recording_System_Config,
 ) -> std::io::Result<()> {
-    // @Temporary
-    file.write_fmt(format_args!("{}\r\n", recording_cfg.ms_per_frame))
+    let mut byte_stream = Byte_Stream::new();
+    byte_stream.write_u16(recording_cfg.ms_per_frame);
+    file.write_all(byte_stream.as_ref())
 }
 
 fn write_record_data(file: &mut File, data: &[Replay_Data_Point]) -> std::io::Result<()> {
+    let mut byte_stream = Byte_Stream::new();
     for point in data.iter() {
-        // @Temporary
-        file.write_fmt(format_args!("{}\r\n", point.serialize()))?;
+        point.serialize(&mut byte_stream)?;
     }
-    Ok(())
+    file.write_all(byte_stream.as_ref())
 }

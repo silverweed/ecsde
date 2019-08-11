@@ -31,7 +31,7 @@ impl Input_Provider for Replay_Input_Provider {
             loop {
                 if let Some(datum) = self.replay_data_iter.cur() {
                     if self.cur_frame >= datum.frame_number {
-                        events.extend_from_slice(&datum.actions);
+                        events.extend_from_slice(&datum.events);
                         self.replay_data_iter.next();
                     } else {
                         break;
@@ -59,59 +59,38 @@ mod tests {
     use super::*;
     use crate::core::common::direction::Direction_Flags;
 
-    #[cfg(feature = "use-sfml")]
+    use crate::input::bindings::keymap::sfml::keypressed;
+    use crate::input::bindings::mouse::sfml::mousepressed;
+    use crate::input::joystick_mgr::Real_Axes_Values;
     use sfml::window::mouse::Button;
-    #[cfg(feature = "use-sfml")]
-    use sfml::window::Event;
-    #[cfg(feature = "use-sfml")]
     use sfml::window::Key;
-
-    macro_rules! keypressed {
-        ($key:expr) => {
-            Event::KeyPressed {
-                code: $key,
-                alt: false,
-                ctrl: false,
-                shift: false,
-                system: false,
-            }
-        };
-    }
-
-    macro_rules! mousepressed {
-        ($btn:expr) => {
-            Event::MouseButtonPressed {
-                button: $btn,
-                x: 0,
-                y: 0,
-            }
-        };
-    }
 
     #[test]
     fn poll_replayed_events() {
         let mut window = crate::gfx::window::create_render_window(&(), (1, 1), "test window");
-        let evt1 = vec![keypressed!(Key::Num0)];
-        let evt2 = vec![keypressed!(Key::A)];
-        let evt3 = vec![keypressed!(Key::Z), mousepressed!(Button::Left)];
+        // @Incomplete
+        let evt1 = vec![keypressed(Key::Num0)];
+        let evt2 = vec![keypressed(Key::A)];
+        let evt3 = vec![keypressed(Key::Z), mousepressed(Button::Left)];
+        let axes = Real_Axes_Values::default();
         let replay_data = Replay_Data::new_from_data(
             16,
             &vec![
-                Replay_Data_Point::new(0, Direction_Flags::empty(), &evt1),
-                Replay_Data_Point::new(0, Direction_Flags::empty(), &evt2),
-                Replay_Data_Point::new(3, Direction_Flags::empty(), &evt3),
+                Replay_Data_Point::new(0, &evt1, &axes),
+                Replay_Data_Point::new(0, &evt2, &axes),
+                Replay_Data_Point::new(3, &evt3, &axes),
             ],
         );
 
-        assert_eq!(replay_data.len(), 3);
+        assert_eq!(replay_data.data.len(), 3);
 
         let mut replay_provider = Replay_Input_Provider::new(replay_data);
 
         // frame 0
         let events = replay_provider.poll_events(&mut window);
         assert_eq!(events.len(), 2);
-        assert_eq!(events[0], keypressed!(Key::Num0));
-        assert_eq!(events[1], keypressed!(Key::A));
+        assert_eq!(events[0], keypressed(Key::Num0));
+        assert_eq!(events[1], keypressed(Key::A));
 
         // frame 1
         let events = replay_provider.poll_events(&mut window);
@@ -124,7 +103,7 @@ mod tests {
         // frame 3
         let events = replay_provider.poll_events(&mut window);
         assert_eq!(events.len(), 2);
-        assert_eq!(events[0], keypressed!(Key::Z));
-        assert_eq!(events[1], mousepressed!(Button::Left));
+        assert_eq!(events[0], keypressed(Key::Z));
+        assert_eq!(events[1], mousepressed(Button::Left));
     }
 }

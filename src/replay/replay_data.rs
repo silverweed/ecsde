@@ -1,8 +1,5 @@
-use crate::core::common::direction::Direction_Flags;
-use crate::core::common::serialize::Serializable;
-use crate::core::common::stringid::String_Id;
+use crate::core::common::serialize::{Binary_Serializable, Byte_Stream};
 use crate::core::time;
-use crate::input::axes::Virtual_Axes;
 use crate::input::bindings::joystick;
 use std::fs::File;
 use std::io::prelude::*;
@@ -11,7 +8,7 @@ use std::time::Duration;
 use std::vec::Vec;
 
 #[cfg(feature = "use-sfml")]
-type Event_Type = sfml::window::Event;
+type Event_Type = ::sfml::window::Event;
 
 const AXES_COUNT: usize = joystick::Joystick_Axis::_Count as usize;
 
@@ -21,7 +18,7 @@ const AXES_COUNT: usize = joystick::Joystick_Axis::_Count as usize;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Replay_Data_Point {
     pub frame_number: u64,
-    pub actions: Vec<Event_Type>,
+    pub events: Vec<Event_Type>,
     pub axes: [f32; AXES_COUNT],
 }
 
@@ -30,7 +27,7 @@ impl std::default::Default for Replay_Data_Point {
         let axes: [f32; AXES_COUNT] = std::default::Default::default();
         Replay_Data_Point {
             frame_number: 0,
-            actions: vec![],
+            events: vec![],
             axes,
         }
     }
@@ -39,30 +36,43 @@ impl std::default::Default for Replay_Data_Point {
 impl Replay_Data_Point {
     pub fn new(
         frame_number: u64,
-        actions: &[Event_Type],
+        events: &[Event_Type],
         axes: &[f32; AXES_COUNT],
     ) -> Replay_Data_Point {
         Replay_Data_Point {
             frame_number,
-            actions: actions.to_vec(),
+            events: events.to_vec(),
             axes: axes.clone(),
         }
     }
 }
 
-impl Serializable for Replay_Data_Point {
-    fn serialize(&self) -> String {
-        // @Temporary
-        format!("{} {:?} {:?}", self.frame_number, self.actions, self.axes)
+impl Binary_Serializable for Replay_Data_Point {
+    fn serialize(&self, output: &mut Byte_Stream) -> std::io::Result<()> {
+        // @Incomplete: axes
+        output.write_u64(self.frame_number)?;
+        output.write_u8(self.events.len() as u8)?;
+        for event in self.events.iter() {
+            event.serialize(output)?;
+        }
+        Ok(())
     }
 
-    fn deserialize(raw: &str) -> Result<Replay_Data_Point, String> {
-        // @Temporary
+    fn deserialize(input: &mut Byte_Stream) -> std::io::Result<Replay_Data_Point> {
+        // @Incomplete: axes
+        let frame_number = input.read_u64()?;
+        let n_events = input.read_u8()?;
+        let mut events = vec![];
+        for i in 0u8..n_events {
+            events.push(Event_Type::deserialize(input)?);
+        }
         let axes: [f32; AXES_COUNT] = std::default::Default::default();
-        Ok(Replay_Data_Point::new(0, &[], &axes))
+        Ok(Replay_Data_Point::new(frame_number, &events, &axes))
     }
 }
 
+/// Replay_Data is used only for the playback. It loads serialized replay data from a file
+/// and provides an iterator to access all the recorded events.
 #[derive(Debug)]
 pub struct Replay_Data {
     pub data: Vec<Replay_Data_Point>,
@@ -95,8 +105,12 @@ impl Replay_Data {
         let now = std::time::SystemTime::now();
         let mut file = File::open(path)?;
         let mut content = String::new();
+
         file.read_to_string(&mut content)?;
-        let replay = Self::deserialize(&content)?;
+
+        let mut byte_stream = Byte_Stream::new();
+        let replay = Self::deserialize(&mut byte_stream)?;
+
         let time_elapsed = std::time::SystemTime::now().duration_since(now).unwrap();
         eprintln!(
             "[ OK ] Loaded replay data from {:?} in {} ms. Replay duration = {} s.",
@@ -104,6 +118,7 @@ impl Replay_Data {
             time_elapsed.as_millis(),
             time::to_secs_frac(&replay.duration)
         );
+
         Ok(replay)
     }
 
@@ -118,44 +133,15 @@ impl Replay_Data {
     }
 }
 
-impl Serializable for Replay_Data {
-    fn serialize(&self) -> String {
-        let mut s = String::from("");
-
-        s.push_str(&self.ms_per_frame.to_string());
-        s.push_str("\r\n");
-
-        // @Incomplete: for now, serialize plain text. Later, do binary.
-        for datum in self.data.iter() {
-            s.push_str(datum.frame_number.to_string().as_str());
-            s.push(' ');
-            //s.push_str(datum.directions.bits().to_string().as_str());
-            s.push_str("\r\n");
-        }
-
-        s
-    }
-
-    fn deserialize(raw: &str) -> Result<Replay_Data, String> {
+impl Binary_Serializable for Replay_Data {
+    fn deserialize(input: &mut Byte_Stream) -> std::io::Result<Replay_Data> {
         let mut replay = Replay_Data::new(0);
 
         // First line should contains the ms per frame
-        let mut lines = raw.lines();
-        if let Some(line) = lines.next() {
-            replay.ms_per_frame = match line.trim().parse::<u16>() {
-                Ok(ms_per_frame) => ms_per_frame,
-                Err(_err) => {
-                    eprintln!("[ WARNING ] Error parsing ms_per_frame: line was {}", line);
-                    0
-                }
-            }
-        }
+        replay.ms_per_frame = input.read_u16()?;
 
-        for line in lines {
-            match Replay_Data_Point::deserialize(line) {
-                Ok(point) => replay.data.push(point),
-                Err(msg) => eprintln!("[ WARNING ] Error parsing line {}: {}", line, msg),
-            }
+        while (input.pos() as usize) < input.len() {
+            replay.data.push(Replay_Data_Point::deserialize(input)?);
         }
 
         replay.duration = Self::calc_duration(&replay);
@@ -209,49 +195,90 @@ impl Replay_Data_Iter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::input::joystick_mgr::Real_Axes_Values;
 
     #[test]
-    fn serialize_deserialize() {
+    fn serialize_deserialize_replay_data_point() {
         // @Incomplete :replay_actions:
+        let axes = Real_Axes_Values::default();
         let data_points = vec![
-            Replay_Data_Point::new(0, Direction_Flags::UP, &vec![]),
-            Replay_Data_Point::new(1, Direction_Flags::RIGHT, &vec![]),
-            Replay_Data_Point::new(10, Direction_Flags::UP | Direction_Flags::DOWN, &vec![]),
-            Replay_Data_Point::new(209, Direction_Flags::LEFT, &vec![]),
-            Replay_Data_Point::new(
-                1110,
-                Direction_Flags::LEFT | Direction_Flags::RIGHT,
-                &vec![],
-            ),
-            Replay_Data_Point::new(
-                1111,
-                Direction_Flags::UP
-                    | Direction_Flags::RIGHT
-                    | Direction_Flags::DOWN
-                    | Direction_Flags::LEFT,
-                &vec![],
-            ),
-            Replay_Data_Point::new(
-                6531,
-                Direction_Flags::UP | Direction_Flags::LEFT | Direction_Flags::DOWN,
-                &vec![],
-            ),
-            Replay_Data_Point::new(
-                424242,
-                Direction_Flags::DOWN | Direction_Flags::RIGHT,
-                &vec![],
-            ),
+            Replay_Data_Point::new(0, &[], &axes),
+            Replay_Data_Point::new(1, &[], &axes),
+            Replay_Data_Point::new(10, &[], &axes),
+            Replay_Data_Point::new(209, &[], &axes),
+            Replay_Data_Point::new(1110, &[], &axes),
+            Replay_Data_Point::new(1111, &[], &axes),
+            Replay_Data_Point::new(6531, &[], &axes),
+            Replay_Data_Point::new(424242, &[], &axes),
         ];
 
-        let replay = Replay_Data::new_from_data(10, &data_points);
-        let serialized = replay.serialize();
-        let deserialized = Replay_Data::deserialize(&serialized);
+        let mut byte_stream = Byte_Stream::new();
 
-        assert_eq!(deserialized.ms_per_frame, replay.ms_per_frame);
-        assert_eq!(deserialized.duration, replay.duration);
-        assert_eq!(deserialized.data.len(), replay.data.len());
-        for i in 0..replay.data.len() {
-            assert_eq!(deserialized.data[i], replay.data[i]);
+        for point in data_points.iter() {
+            point
+                .serialize(&mut byte_stream)
+                .unwrap_or_else(|err| panic!("Error serializing replay data point: {}", err));
+        }
+
+        byte_stream.seek(0);
+
+        let mut deser_points = vec![];
+
+        while (byte_stream.pos() as usize) < byte_stream.len() {
+            println!("pos: {}/{}", byte_stream.pos(), byte_stream.len());
+            deser_points.push(
+                Replay_Data_Point::deserialize(&mut byte_stream).unwrap_or_else(|err| {
+                    panic!("Failed to deserialize replay data point: {}", err)
+                }),
+            );
+        }
+
+        assert_eq!(data_points.len(), deser_points.len());
+        for i in 0..data_points.len() {
+            assert_eq!(data_points[i], deser_points[i]);
+        }
+    }
+
+    #[test]
+    fn serialize_deserialize_replay_data() {
+        // @Incomplete :replay_actions:
+        let axes = Real_Axes_Values::default();
+        let data_points = vec![
+            Replay_Data_Point::new(0, &[], &axes),
+            Replay_Data_Point::new(1, &[], &axes),
+            Replay_Data_Point::new(10, &[], &axes),
+            Replay_Data_Point::new(209, &[], &axes),
+            Replay_Data_Point::new(1110, &[], &axes),
+            Replay_Data_Point::new(1111, &[], &axes),
+            Replay_Data_Point::new(6531, &[], &axes),
+            Replay_Data_Point::new(424242, &[], &axes),
+        ];
+
+        let mut byte_stream = Byte_Stream::new();
+
+        // Simulate the serialization done by the recording thread
+        let ms_per_frame = 16;
+        byte_stream.write_u16(ms_per_frame);
+
+        for point in data_points.iter() {
+            point
+                .serialize(&mut byte_stream)
+                .unwrap_or_else(|err| panic!("Failed to serialize replay data point: {}", err));
+        }
+
+        byte_stream.seek(0);
+
+        let deserialized = Replay_Data::deserialize(&mut byte_stream)
+            .unwrap_or_else(|err| panic!("Failed to deserialize replay data: {}", err));
+
+        assert_eq!(deserialized.ms_per_frame, ms_per_frame);
+        assert_eq!(
+            deserialized.duration,
+            Duration::from_millis(424242u64 * (ms_per_frame as u64))
+        );
+        assert_eq!(deserialized.data.len(), data_points.len());
+        for i in 0..data_points.len() {
+            assert_eq!(deserialized.data[i], data_points[i]);
         }
     }
 }

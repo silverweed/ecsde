@@ -5,6 +5,7 @@ pub mod core_actions;
 pub mod input_system;
 pub mod joystick_mgr;
 pub mod provider;
+pub mod serialize;
 
 use crate::core::env::Env_Info;
 

@@ -4,7 +4,6 @@ use crate::cfg;
 use crate::core::common::Maybe_Error;
 use crate::input::bindings::joystick::Joystick_Axis;
 use crate::input::input_system::Input_Raw_Event;
-use std::io::prelude::*;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::JoinHandle;
 
@@ -40,7 +39,7 @@ impl Replay_Recording_System {
         let cfg = recording_thread::Recording_Thread_Config {
             recording_cfg: self.config,
             // @Temporary
-            output_file: std::path::Path::new("replay.txt")
+            output_file: std::path::Path::new("replay.bin")
                 .to_path_buf()
                 .into_boxed_path(),
             file_write_interval: std::time::Duration::from_millis(

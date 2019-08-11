@@ -1,4 +1,4 @@
-use crate::core::common::colors;
+use crate::core::common::colors::{self, Color};
 use crate::core::common::vector::{to_framework_vec, Vec2f};
 use crate::core::common::Maybe_Error;
 use crate::core::env::Env_Info;
@@ -12,8 +12,13 @@ use sfml::graphics::Text;
 #[cfg(feature = "use-sfml")]
 use sfml::graphics::Transformable;
 
+struct Debug_Line {
+    pub text: String,
+    pub color: Color,
+}
+
 pub struct Debug_Overlay {
-    lines: Vec<String>,
+    lines: Vec<Debug_Line>,
     font: Font_Handle,
 }
 
@@ -49,15 +54,26 @@ impl Debug_Overlay {
     }
 
     pub fn add_line(&mut self, line: &str) {
-        self.lines.push(String::from(line));
+        self.lines.push(Debug_Line {
+            text: String::from(line),
+            color: colors::rgb(255, 255, 255),
+        });
+    }
+
+    pub fn add_line_col(&mut self, line: &str, color: Color) {
+        self.lines.push(Debug_Line {
+            text: String::from(line),
+            color,
+        });
     }
 
     pub fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
         // @Cutnpaste from UI
         for (i, line) in self.lines.iter().enumerate() {
+            let Debug_Line { text, color } = line;
             let text = {
-                let mut text = Text::new(line, gres.get_font(self.font), Self::FONT_SIZE.into());
-                text.set_fill_color(&colors::rgb(255, 255, 255));
+                let mut text = Text::new(text, gres.get_font(self.font), Self::FONT_SIZE.into());
+                text.set_fill_color(&color);
                 text.set_position(to_framework_vec(Vec2f::new(
                     window::get_window_target_size(window).0 as f32
                         - text.local_bounds().width

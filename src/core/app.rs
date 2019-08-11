@@ -13,7 +13,6 @@ use crate::input;
 use crate::replay::{recording_system, replay_data, replay_input_provider};
 use crate::resources;
 use crate::states;
-use std::path;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
@@ -173,7 +172,7 @@ impl<'r> App<'r> {
 
             execution_time += dt;
 
-            // Update input
+            // Check if the replay ended this frame
             if is_replaying && input_provider.is_realtime_player_input() {
                 systems
                     .ui_system
@@ -184,6 +183,7 @@ impl<'r> App<'r> {
                 is_replaying = false;
             }
 
+            // Update input
             systems
                 .input_system
                 .borrow_mut()
@@ -383,6 +383,9 @@ fn update_debug_overlay(
         let axis: joystick::Joystick_Axis = i.try_into().unwrap_or_else(|err| {
             panic!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
         });
-        debug_overlay.add_line(&format!("{:?}: {:.2}", axis, real_axes[i as usize]));
+        debug_overlay.add_line_col(
+            &format!("{:?}: {:.2}", axis, real_axes[i as usize]),
+            colors::rgb(255, 255, 0),
+        );
     }
 }
