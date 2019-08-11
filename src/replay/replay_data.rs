@@ -48,7 +48,7 @@ impl Replay_Data_Point {
         Replay_Data_Point {
             frame_number,
             events: events.to_vec(),
-            axes: axes.clone(),
+            axes: *axes,
             axes_mask,
         }
     }
@@ -84,11 +84,11 @@ impl Binary_Serializable for Replay_Data_Point {
 
         let mut axes: [f32; AXES_COUNT] = std::default::Default::default();
         let axes_mask = input.read_u8()?;
-        for i in 0..axes.len() {
+        for (i, axis) in axes.iter_mut().enumerate() {
             if (axes_mask & (1 << i)) != 0 {
                 let val = input.read_u32()?;
                 let val = f32::from_bits(val);
-                axes[i] = val;
+                *axis = val;
             }
         }
 
@@ -154,7 +154,7 @@ impl Replay_Data {
 
     #[inline]
     fn calc_duration(replay: &Replay_Data) -> Duration {
-        if replay.data.len() == 0 {
+        if replay.data.is_empty() {
             Duration::new(0, 0)
         } else {
             let last_frame_number = replay.data[replay.data.len() - 1].frame_number;
@@ -288,7 +288,7 @@ mod tests {
 
         // Simulate the serialization done by the recording thread
         let ms_per_frame = 16;
-        byte_stream.write_u16(ms_per_frame);
+        byte_stream.write_u16(ms_per_frame).unwrap();
 
         for point in data_points.iter() {
             point

@@ -23,11 +23,11 @@ pub struct Replay_Recording_System {
 }
 
 impl Replay_Recording_System {
-    pub fn new(cfg: &Replay_Recording_System_Config) -> Replay_Recording_System {
+    pub fn new(cfg: Replay_Recording_System_Config) -> Replay_Recording_System {
         let (data_tx, data_rx) = mpsc::channel();
         Replay_Recording_System {
             cur_frame: 0,
-            config: *cfg,
+            config: cfg,
             data_rx: Some(data_rx),
             data_tx,
             recording_thread_handle: None,
@@ -69,7 +69,7 @@ impl Replay_Recording_System {
         self.cur_frame += 1;
 
         let axes_mask = calc_axes_diff_mask(&self.prev_axes_values, axes);
-        if events.len() > 0 || axes_mask != 0 {
+        if !events.is_empty() || axes_mask != 0 {
             self.data_tx
                 .send(Replay_Data_Point::new(
                     self.cur_frame,
@@ -90,7 +90,7 @@ impl Replay_Recording_System {
 fn calc_axes_diff_mask(old: &Real_Axes_Values, new: &Real_Axes_Values) -> u8 {
     let mut mask = 0u8;
     for i in 0..Joystick_Axis::_Count as usize {
-        mask |= u8::from(old[i] != new[i]) << i;
+        mask |= u8::from((old[i] - new[i]).abs() > std::f32::EPSILON) << i;
     }
     mask
 }

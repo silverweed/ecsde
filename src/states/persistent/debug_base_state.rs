@@ -6,13 +6,14 @@ use crate::core::time_manager::{Time_Manager, Time_Msg, Time_Resp};
 use crate::core::world::World;
 use crate::game::gameplay_system::{Gameplay_System, Gameplay_System_Msg};
 use crate::gfx::ui::{UI_Request, UI_System};
-use crate::input::input_system::Game_Action;
+use crate::input::input_system::{Action_Kind, Game_Action};
 use crate::states::state::Persistent_Game_State;
 use std::convert::TryFrom;
 use std::time::Duration;
 
 pub struct Debug_Base_State {
-    sid_change_speed: String_Id,
+    sid_game_speed_up: String_Id,
+    sid_game_speed_down: String_Id,
     sid_pause_toggle: String_Id,
     sid_step_sim: String_Id,
     sid_print_em_debug_info: String_Id,
@@ -24,7 +25,8 @@ const CHANGE_SPEED_DELTA: f32 = 0.1;
 impl Debug_Base_State {
     pub fn new() -> Debug_Base_State {
         Debug_Base_State {
-            sid_change_speed: String_Id::from("change_speed"),
+            sid_game_speed_up: String_Id::from("game_speed_up"),
+            sid_game_speed_down: String_Id::from("game_speed_down"),
             sid_pause_toggle: String_Id::from("pause_toggle"),
             sid_step_sim: String_Id::from("step_sim"),
             sid_print_em_debug_info: String_Id::from("print_em_debug_info"),
@@ -45,11 +47,18 @@ impl Persistent_Game_State for Debug_Base_State {
         let mut ui_system = dispatcher.borrow_mut::<UI_System>().unwrap();
 
         for action in actions.iter() {
-            if action.0 == self.sid_change_speed {
+            if (action.0 == self.sid_game_speed_up || action.0 == self.sid_game_speed_down)
+                && action.1 == Action_Kind::Pressed
+            {
                 let ts = if let Time_Resp::Cur_Time_Scale(ts) =
                     time_mgr.send_message(Time_Msg::Get_Time_Scale)
                 {
                     ts + CHANGE_SPEED_DELTA
+                        * if action.0 == self.sid_game_speed_up {
+                            1.0
+                        } else {
+                            -1.0
+                        }
                 } else {
                     panic!("[ FATAL ] unexpected response from time_mgr!");
                 };
@@ -67,7 +76,7 @@ impl Persistent_Game_State for Debug_Base_State {
                     "Time scale: {:.2}",
                     ts
                 )));
-            } else if action.0 == self.sid_pause_toggle {
+            } else if action.0 == self.sid_pause_toggle && action.1 == Action_Kind::Pressed {
                 time_mgr.send_message(Time_Msg::Pause_Toggle);
                 let paused = if let Time_Resp::Is_Paused(paused) =
                     time_mgr.send_message(Time_Msg::Is_Paused)
@@ -81,7 +90,7 @@ impl Persistent_Game_State for Debug_Base_State {
                 } else {
                     "Resumed"
                 })));
-            } else if action.0 == self.sid_step_sim {
+            } else if action.0 == self.sid_step_sim && action.1 == Action_Kind::Pressed {
                 let target_fps = config.get_var_int_or("engine/rendering/fps", 60);
                 let step_delta =
                     Duration::from_nanos(u64::try_from(1_000_000_000 / *target_fps).unwrap());
@@ -92,11 +101,11 @@ impl Persistent_Game_State for Debug_Base_State {
                 time_mgr.send_message(Time_Msg::Pause);
                 time_mgr.send_message(Time_Msg::Step(step_delta));
                 dispatcher.send_message::<Gameplay_System>(Gameplay_System_Msg::Step(step_delta));
-            } else if action.0 == self.sid_print_em_debug_info {
+            } else if action.0 == self.sid_print_em_debug_info && action.1 == Action_Kind::Pressed {
                 dispatcher.send_message::<Gameplay_System>(
                     Gameplay_System_Msg::Print_Entity_Manager_Debug_Info,
                 );
-            } else if action.0 == self.sid_quit {
+            } else if action.0 == self.sid_quit && action.1 == Action_Kind::Pressed {
                 return true;
             }
         }

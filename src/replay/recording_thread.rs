@@ -21,12 +21,12 @@ pub fn start_recording_thread(
 ) -> std::io::Result<thread::JoinHandle<()>> {
     thread::Builder::new()
         .name(String::from("recording_thread"))
-        .spawn(move || recording_loop(recv, &cfg).unwrap())
+        .spawn(move || recording_loop(recv, cfg).unwrap())
 }
 
-fn recording_loop(recv: Receiver<Replay_Data_Point>, cfg: &Recording_Thread_Config) -> Maybe_Error {
+fn recording_loop(recv: Receiver<Replay_Data_Point>, cfg: Recording_Thread_Config) -> Maybe_Error {
     let mut file = File::create(&cfg.output_file)?;
-    write_prelude(&mut file, &cfg.recording_cfg)?;
+    write_prelude(&mut file, cfg.recording_cfg)?;
 
     let mut replay_data_buffer = vec![];
     let mut time_elapsed = Duration::new(0, 0);
@@ -51,7 +51,7 @@ fn recording_loop(recv: Receiver<Replay_Data_Point>, cfg: &Recording_Thread_Conf
 
 fn write_prelude(
     file: &mut File,
-    recording_cfg: &Replay_Recording_System_Config,
+    recording_cfg: Replay_Recording_System_Config,
 ) -> std::io::Result<()> {
     let mut byte_stream = Byte_Stream::new();
     byte_stream.write_u16(recording_cfg.ms_per_frame)?;

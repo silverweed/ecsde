@@ -27,7 +27,7 @@ pub(super) enum Axis_Emulation_Type {
 
 impl Axis_Emulation_Type {
     #[inline]
-    pub fn assoc_value(&self) -> f32 {
+    pub fn assoc_value(self) -> f32 {
         match self {
             Axis_Emulation_Type::Min => -1.0,
             Axis_Emulation_Type::Max => 1.0,

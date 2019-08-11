@@ -1,4 +1,5 @@
 use super::replay_data::{Replay_Data, Replay_Data_Iter};
+use crate::cfg::Cfg_Var;
 use crate::input::bindings::joystick;
 use crate::input::input_system::Input_Raw_Event;
 use crate::input::joystick_mgr::Real_Axes_Values;
@@ -6,22 +7,31 @@ use crate::input::provider::{Input_Provider, Input_Provider_Input};
 use std::convert::TryInto;
 use std::vec::Vec;
 
+pub struct Replay_Input_Provider_Config {
+    pub disable_input_during_replay: Cfg_Var<bool>,
+}
+
 pub struct Replay_Input_Provider {
     cur_frame: u64,
     replay_data_iter: Replay_Data_Iter,
     depleted: bool,
     events: Vec<Input_Raw_Event>,
     axes: Real_Axes_Values,
+    config: Replay_Input_Provider_Config,
 }
 
 impl Replay_Input_Provider {
-    pub fn new(replay_data: Replay_Data) -> Replay_Input_Provider {
+    pub fn new(
+        config: Replay_Input_Provider_Config,
+        replay_data: Replay_Data,
+    ) -> Replay_Input_Provider {
         Replay_Input_Provider {
             cur_frame: 0,
             replay_data_iter: replay_data.into_iter(),
             depleted: false,
             events: vec![],
             axes: Real_Axes_Values::default(),
+            config,
         }
     }
 }
@@ -33,6 +43,14 @@ impl Input_Provider for Replay_Input_Provider {
             // Once replay data is depleted, feed regular window events.
             self.default_update(window);
         } else {
+            if *self.config.disable_input_during_replay {
+                self.update_core_events(window);
+            } else {
+                while let Some(evt) = window.poll_event() {
+                    self.events.push(evt);
+                }
+            }
+
             loop {
                 if let Some(datum) = self.replay_data_iter.cur() {
                     if self.cur_frame >= datum.frame_number {
@@ -52,8 +70,6 @@ impl Input_Provider for Replay_Input_Provider {
                 }
             }
 
-            self.update_core_events(window);
-
             self.cur_frame += 1;
         }
     }
@@ -62,6 +78,7 @@ impl Input_Provider for Replay_Input_Provider {
         &self.events
     }
 
+    // @Incomplete :multiple_joysticks:
     fn get_axes(&mut self, joystick: joystick::Joystick, axes: &mut Real_Axes_Values) {
         *axes = self.axes;
     }
@@ -108,7 +125,6 @@ impl Replay_Input_Provider {
 mod tests {
     use super::super::replay_data::Replay_Data_Point;
     use super::*;
-    use crate::core::common::direction::Direction_Flags;
 
     use crate::input::bindings::keymap::sfml::keypressed;
     use crate::input::bindings::mouse::sfml::mousepressed;
@@ -136,7 +152,12 @@ mod tests {
 
         assert_eq!(replay_data.data.len(), 3);
 
-        let mut replay_provider = Replay_Input_Provider::new(replay_data);
+        let mut replay_provider = Replay_Input_Provider::new(
+            Replay_Input_Provider_Config {
+                disable_input_during_replay: Cfg_Var::new_from_val(true),
+            },
+            replay_data,
+        );
 
         fn all_but_resized(provider: &dyn Input_Provider) -> Vec<&Event> {
             provider

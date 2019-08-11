@@ -58,7 +58,7 @@ impl<'r> App<'r> {
             audio_resources: resources::audio::Audio_Resources::new(sound_loader),
             world,
             replay_recording_system: recording_system::Replay_Recording_System::new(
-                &recording_system::Replay_Recording_System_Config { ms_per_frame },
+                recording_system::Replay_Recording_System_Config { ms_per_frame },
             ),
             replay_data,
 
@@ -143,7 +143,13 @@ impl<'r> App<'r> {
         // Consumes self.replay_data!
         let replay_data = self.replay_data.take();
         if let Some(replay_data) = replay_data {
+            let config = replay_input_provider::Replay_Input_Provider_Config {
+                disable_input_during_replay: self
+                    .config
+                    .get_var_bool_or("engine/debug/replay/disable_input_during_replay", false),
+            };
             Box::new(replay_input_provider::Replay_Input_Provider::new(
+                config,
                 replay_data,
             ))
         } else {

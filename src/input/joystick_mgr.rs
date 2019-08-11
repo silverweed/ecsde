@@ -1,6 +1,5 @@
 use super::bindings::joystick::{self, Joystick, Joystick_Axis};
 use std::collections::HashMap;
-use std::convert::TryInto;
 
 pub type Real_Axes_Values = [f32; Joystick_Axis::_Count as usize];
 

@@ -3,7 +3,7 @@ use super::bindings::joystick;
 use super::bindings::{Axis_Emulation_Type, Input_Bindings};
 use super::core_actions::Core_Action;
 use super::joystick_mgr::{Joystick_Manager, Real_Axes_Values};
-use super::provider::{Input_Provider, Input_Provider_Input};
+use super::provider::Input_Provider;
 use crate::core::common::stringid::String_Id;
 use crate::core::env::Env_Info;
 use std::convert::TryInto;
