@@ -5,7 +5,7 @@ use crate::core::common::Maybe_Error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::thread;
 use std::time::{Duration, SystemTime};
 
@@ -29,22 +29,25 @@ fn recording_loop(recv: Receiver<Replay_Data_Point>, cfg: Recording_Thread_Confi
     write_prelude(&mut file, cfg.recording_cfg)?;
 
     let mut replay_data_buffer = vec![];
-    let mut time_elapsed = Duration::new(0, 0);
+    let mut timeout = cfg.file_write_interval;
     loop {
         let start = SystemTime::now();
 
-        for point in recv.try_iter() {
-            replay_data_buffer.push(point);
-        }
-
-        time_elapsed += SystemTime::now()
-            .duration_since(start)
-            .unwrap_or_else(|err| panic!("Failed to get duration_since: {}", err));
-
-        if time_elapsed > cfg.file_write_interval {
-            write_record_data(&mut file, &replay_data_buffer)?;
-            replay_data_buffer.clear();
-            time_elapsed = Duration::new(0, 0);
+        // Blocking call with variable timeout so we don't stress the CPU but we still
+        // get to write to file regularly with our chosen time interval.
+        match recv.recv_timeout(timeout) {
+            Ok(point) => {
+                replay_data_buffer.push(point);
+                timeout -= SystemTime::now()
+                    .duration_since(start)
+                    .unwrap_or_else(|err| panic!("Failed to calc duration: {}", err));
+            }
+            Err(RecvTimeoutError::Timeout) => {
+                write_record_data(&mut file, &replay_data_buffer)?;
+                replay_data_buffer.clear();
+                timeout = cfg.file_write_interval;
+            }
+            Err(RecvTimeoutError::Disconnected) => break Ok(()),
         }
     }
 }
