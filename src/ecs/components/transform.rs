@@ -91,6 +91,7 @@ impl C_Transform2D {
         Matrix3::new(sxc, sys, tx, -sxs, syc, ty, 0.0, 0.0, 1.0)
     }
 
+    #[cfg(feature = "use-sfml")]
     pub fn get_matrix_sfml(&self) -> sfml::graphics::Transform {
         let Rad(angle) = self.rotation;
         let angle = -angle;
