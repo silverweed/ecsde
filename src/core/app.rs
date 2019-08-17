@@ -117,13 +117,15 @@ impl<'r> App<'r> {
             .borrow_mut()
             .init(&self.env, &mut self.gfx_resources)?;
 
-        if self.replay_data.is_none()
-            && *self
-                .config
-                .get_var_bool_or("engine/debug/replay/record", false)
-        {
-            self.replay_recording_system
-                .start_recording_thread(&self.config)?;
+        if cfg!(debug_assertions) {
+            if self.replay_data.is_none()
+                && *self
+                    .config
+                    .get_var_bool_or("engine/debug/replay/record", false)
+            {
+                self.replay_recording_system
+                    .start_recording_thread(&self.config)?;
+            }
         }
 
         Ok(())
@@ -217,17 +219,19 @@ impl<'r> App<'r> {
                     .unwrap();
 
                 #[cfg(debug_assertions)]
-                update_debug_overlay(&mut self.debug_overlay, real_axes);
-
-                // Only record replay data if we're not already playing back a replay.
-                if self.replay_recording_system.is_recording()
-                    && input_provider.is_realtime_player_input()
                 {
-                    let record_replay_data = *self
-                        .config
-                        .get_var_bool_or("engine/debug/replay/record", false);
-                    if record_replay_data {
-                        self.replay_recording_system.update(raw_events, real_axes);
+                    update_debug_overlay(&mut self.debug_overlay, real_axes);
+
+                    // Only record replay data if we're not already playing back a replay.
+                    if self.replay_recording_system.is_recording()
+                        && input_provider.is_realtime_player_input()
+                    {
+                        let record_replay_data = *self
+                            .config
+                            .get_var_bool_or("engine/debug/replay/record", false);
+                        if record_replay_data {
+                            self.replay_recording_system.update(raw_events, real_axes);
+                        }
                     }
                 }
 
@@ -363,6 +367,7 @@ impl<'r> App<'r> {
     }
 }
 
+#[cfg(debug_assertions)]
 fn maybe_create_replay_data(cfg: &App_Config) -> Option<replay_data::Replay_Data> {
     if let Some(path) = &cfg.replay_file {
         match replay_data::Replay_Data::from_file(&path) {
@@ -378,6 +383,11 @@ fn maybe_create_replay_data(cfg: &App_Config) -> Option<replay_data::Replay_Data
     } else {
         None
     }
+}
+
+#[cfg(not(debug_assertions))]
+fn maybe_create_replay_data(cfg: &App_Config) -> Option<replay_data::Replay_Data> {
+    None
 }
 
 #[cfg(debug_assertions)]
