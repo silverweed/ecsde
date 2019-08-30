@@ -62,9 +62,9 @@ impl Input_Provider for Replay_Input_Provider {
                             if (datum.joy_mask & (1 << joy_id)) != 0 {
 								let joy_axes = &mut self.dip.axes[joy_id];
 								let joy_data = datum.joy_data[joy_id];
-								for axis_id in 0..joy_axes.len() {
+								for (axis_id, axis) in joy_axes.iter_mut().enumerate() {
 									if (joy_data.axes_mask & (1 << axis_id)) != 0 {
-										joy_axes[axis_id] = joy_data.axes[axis_id];
+										*axis = joy_data.axes[axis_id];
 									}
 								}
                             }

@@ -122,16 +122,14 @@ impl<'r> App<'r> {
             .borrow_mut()
             .init(&self.env, &mut self.gfx_resources)?;
 
-        if cfg!(debug_assertions) {
-            if self.replay_data.is_none()
+        if cfg!(debug_assertions) && self.replay_data.is_none()
                 && *self
                     .config
                     .get_var_bool_or("engine/debug/replay/record", false)
-            {
-                self.replay_recording_system
-                    .start_recording_thread(&self.config)?;
-            }
-        }
+		{
+			self.replay_recording_system
+				.start_recording_thread(&self.config)?;
+		}
 
         Ok(())
     }

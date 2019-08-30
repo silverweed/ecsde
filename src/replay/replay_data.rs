@@ -127,7 +127,7 @@ impl Binary_Serializable for Replay_Data_Point {
     }
 
     fn deserialize(input: &mut Byte_Stream) -> std::io::Result<Replay_Data_Point> {
-        let frame_number = input.read_u32()? as u64;
+        let frame_number = u64::from(input.read_u32()?);
 
         let n_events = input.read_u8()?;
         let mut events = vec![];
