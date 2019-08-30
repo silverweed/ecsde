@@ -122,14 +122,15 @@ impl<'r> App<'r> {
             .borrow_mut()
             .init(&self.env, &mut self.gfx_resources)?;
 
-        if cfg!(debug_assertions) && self.replay_data.is_none()
-                && *self
-                    .config
-                    .get_var_bool_or("engine/debug/replay/record", false)
-		{
-			self.replay_recording_system
-				.start_recording_thread(&self.config)?;
-		}
+        if cfg!(debug_assertions)
+            && self.replay_data.is_none()
+            && *self
+                .config
+                .get_var_bool_or("engine/debug/replay/record", false)
+        {
+            self.replay_recording_system
+                .start_recording_thread(&self.config)?;
+        }
 
         Ok(())
     }
@@ -228,7 +229,8 @@ impl<'r> App<'r> {
                             .config
                             .get_var_bool_or("engine/debug/replay/record", false);
                         if record_replay_data {
-                            self.replay_recording_system.update(raw_events, real_axes, joy_mask);
+                            self.replay_recording_system
+                                .update(raw_events, real_axes, joy_mask);
                         }
                     }
                 }
@@ -379,27 +381,28 @@ fn maybe_create_replay_data(cfg: &App_Config) -> Option<replay_data::Replay_Data
 #[cfg(debug_assertions)]
 fn update_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
-    real_axes: &[input::joystick_mgr::Real_Axes_Values; input::bindings::joystick::JOY_COUNT as usize],
-	joy_mask: u8,
+    real_axes: &[input::joystick_mgr::Real_Axes_Values;
+         input::bindings::joystick::JOY_COUNT as usize],
+    joy_mask: u8,
 ) {
     use input::bindings::joystick;
     use std::convert::TryInto;
 
     debug_overlay.clear();
 
-	for (joy_id, axes) in real_axes.iter().enumerate() {
-		if (joy_mask & (1 << joy_id)) != 0 {
-			debug_overlay.add_line_col(&format!("> Joy {} <", joy_id), colors::rgb(235, 52, 216));
+    for (joy_id, axes) in real_axes.iter().enumerate() {
+        if (joy_mask & (1 << joy_id)) != 0 {
+            debug_overlay.add_line_col(&format!("> Joy {} <", joy_id), colors::rgb(235, 52, 216));
 
-			for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
-				let axis: joystick::Joystick_Axis = i.try_into().unwrap_or_else(|err| {
-					panic!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
-				});
-				debug_overlay.add_line_col(
-					&format!("{:?}: {:.2}", axis, axes[i as usize]),
-					colors::rgb(255, 255, 0),
-				);
-			}
-		}
-	}
+            for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
+                let axis: joystick::Joystick_Axis = i.try_into().unwrap_or_else(|err| {
+                    panic!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
+                });
+                debug_overlay.add_line_col(
+                    &format!("{:?}: {:.2}", axis, axes[i as usize]),
+                    colors::rgb(255, 255, 0),
+                );
+            }
+        }
+    }
 }

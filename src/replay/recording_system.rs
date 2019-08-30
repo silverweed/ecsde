@@ -65,34 +65,40 @@ impl Replay_Recording_System {
         self.data_rx.is_none()
     }
 
-	/// Note: joy_mask tells which values of `axes` must be considered.
-    pub fn update(&mut self, events: &[Input_Raw_Event], axes: &[Real_Axes_Values; joystick::JOY_COUNT as usize], joy_mask: u8) {
+    /// Note: joy_mask tells which values of `axes` must be considered.
+    pub fn update(
+        &mut self,
+        events: &[Input_Raw_Event],
+        axes: &[Real_Axes_Values; joystick::JOY_COUNT as usize],
+        joy_mask: u8,
+    ) {
         self.cur_frame += 1;
 
-		let mut should_send = !events.is_empty();
-		let mut joy_data: [Replay_Joystick_Data; joystick::JOY_COUNT as usize] = std::default::Default::default();
+        let mut should_send = !events.is_empty();
+        let mut joy_data: [Replay_Joystick_Data; joystick::JOY_COUNT as usize] =
+            std::default::Default::default();
 
-		for (i, axes) in axes.iter().enumerate() {
-			if (joy_mask & (1 << i)) == 0 {
-				continue;
-			}
+        for (i, axes) in axes.iter().enumerate() {
+            if (joy_mask & (1 << i)) == 0 {
+                continue;
+            }
 
-			let axes_mask = calc_axes_diff_mask(&self.prev_axes_values[i], axes);
-			if axes_mask != 0 {
-				joy_data[i].axes = *axes;
-				joy_data[i].axes_mask = axes_mask;
-				should_send = true;
-			}
+            let axes_mask = calc_axes_diff_mask(&self.prev_axes_values[i], axes);
+            if axes_mask != 0 {
+                joy_data[i].axes = *axes;
+                joy_data[i].axes_mask = axes_mask;
+                should_send = true;
+            }
 
-			self.prev_axes_values[i] = *axes;
-		}
+            self.prev_axes_values[i] = *axes;
+        }
 
         if should_send {
             self.data_tx
                 .send(Replay_Data_Point::new(
                     self.cur_frame,
                     events,
-					&joy_data,
+                    &joy_data,
                     joy_mask,
                 ))
                 .unwrap_or_else(|err| {

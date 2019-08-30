@@ -109,17 +109,17 @@ pub fn string_to_joy_axis(s: &str) -> Option<Joystick_Axis> {
 
 #[inline]
 pub fn is_joy_connected(id: u32) -> bool {
-	backend::is_connected(id)
+    backend::is_connected(id)
 }
 
 #[inline]
 pub fn get_joy_type(id: u32) -> Result<Joystick_Type, &'static str> {
-	backend::get_joy_type(id)
+    backend::get_joy_type(id)
 }
 
 #[inline]
 pub fn get_connected_joysticks_mask() -> u8 {
-	backend::get_connected_joysticks_mask()
+    backend::get_connected_joysticks_mask()
 }
 
 pub fn get_joy_btn_id(joystick: Joystick, button: Joystick_Button) -> Option<u32> {

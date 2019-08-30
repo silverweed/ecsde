@@ -21,11 +21,11 @@ const JOY_COUNT: usize = joystick::JOY_COUNT as usize;
 pub struct Replay_Data_Point {
     pub frame_number: u64,
     pub events: Vec<Event_Type>,
-	pub joy_data: [Replay_Joystick_Data; JOY_COUNT],
-	/// Bitmask indicating which joysticks in self.joy_data must be considered.
-	/// This is done for optimizing the disk space taken by serializing replay data:
-	/// we don't serialize unconnected joystick data.
-	pub joy_mask: u8,
+    pub joy_data: [Replay_Joystick_Data; JOY_COUNT],
+    /// Bitmask indicating which joysticks in self.joy_data must be considered.
+    /// This is done for optimizing the disk space taken by serializing replay data:
+    /// we don't serialize unconnected joystick data.
+    pub joy_mask: u8,
 }
 
 /// Contains replay data for a single frame, for a single joystick.
@@ -43,8 +43,8 @@ impl std::default::Default for Replay_Data_Point {
         Replay_Data_Point {
             frame_number: 0,
             events: vec![],
-			joy_data: Default::default(),
-			joy_mask: 0u8,
+            joy_data: Default::default(),
+            joy_mask: 0u8,
         }
     }
 }
@@ -53,28 +53,25 @@ impl Replay_Data_Point {
     pub fn new(
         frame_number: u64,
         events: &[Event_Type],
-		joy_data: &[Replay_Joystick_Data; JOY_COUNT],
-		joy_mask: u8,
+        joy_data: &[Replay_Joystick_Data; JOY_COUNT],
+        joy_mask: u8,
     ) -> Replay_Data_Point {
         Replay_Data_Point {
             frame_number,
             events: events.to_vec(),
-			joy_data: *joy_data,
-			joy_mask,
+            joy_data: *joy_data,
+            joy_mask,
         }
     }
 }
 
 impl Replay_Joystick_Data {
-	pub fn new(
-        axes: &[f32; AXES_COUNT],
-        axes_mask: u8,
-	) -> Replay_Joystick_Data {
-		Replay_Joystick_Data {
-			axes: *axes,
-			axes_mask,
-		}
-	}
+    pub fn new(axes: &[f32; AXES_COUNT], axes_mask: u8) -> Replay_Joystick_Data {
+        Replay_Joystick_Data {
+            axes: *axes,
+            axes_mask,
+        }
+    }
 }
 
 impl Binary_Serializable for Replay_Joystick_Data {
@@ -100,10 +97,7 @@ impl Binary_Serializable for Replay_Joystick_Data {
             }
         }
 
-        Ok(Replay_Joystick_Data::new(
-            &axes,
-            axes_mask,
-        ))
+        Ok(Replay_Joystick_Data::new(&axes, axes_mask))
     }
 }
 
@@ -116,7 +110,7 @@ impl Binary_Serializable for Replay_Data_Point {
             event.serialize(output)?;
         }
 
-		output.write_u8(self.joy_mask)?;
+        output.write_u8(self.joy_mask)?;
         for i in 0..JOY_COUNT {
             if (self.joy_mask & (1 << i)) != 0 {
                 self.joy_data[i].serialize(output)?;
@@ -196,7 +190,7 @@ impl Replay_Data {
         eprintln!(
             "[ OK ] Loaded replay data from {:?} in {} ms. Replay duration = {} s.",
             path,
-			start_t.elapsed().as_millis(),
+            start_t.elapsed().as_millis(),
             time::to_secs_frac(&replay.duration)
         );
 

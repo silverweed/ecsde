@@ -1,10 +1,10 @@
 use super::replay_data::{Replay_Data, Replay_Data_Iter};
 use crate::cfg::Cfg_Var;
 use crate::input::bindings::joystick;
+use crate::input::default_input_provider::Default_Input_Provider;
 use crate::input::input_system::Input_Raw_Event;
 use crate::input::joystick_mgr::{Joystick_Manager, Real_Axes_Values};
 use crate::input::provider::{Input_Provider, Input_Provider_Input};
-use crate::input::default_input_provider::Default_Input_Provider;
 
 pub struct Replay_Input_Provider_Config {
     pub disable_input_during_replay: Cfg_Var<bool>,
@@ -14,7 +14,7 @@ pub struct Replay_Input_Provider {
     cur_frame: u64,
     replay_data_iter: Replay_Data_Iter,
     depleted: bool,
-	dip: Default_Input_Provider,
+    dip: Default_Input_Provider,
     config: Replay_Input_Provider_Config,
 }
 
@@ -27,7 +27,7 @@ impl Replay_Input_Provider {
             cur_frame: 0,
             replay_data_iter: replay_data.into_iter(),
             depleted: false,
-			dip: Default_Input_Provider::default(),
+            dip: Default_Input_Provider::default(),
             config,
         }
     }
@@ -52,21 +52,21 @@ impl Input_Provider for Replay_Input_Provider {
             loop {
                 if let Some(datum) = self.replay_data_iter.cur() {
                     if self.cur_frame >= datum.frame_number {
-						// We have a new replay data point at this frame.
+                        // We have a new replay data point at this frame.
 
-						// Update events
+                        // Update events
                         self.dip.events.extend_from_slice(&datum.events);
 
-						// Update all joysticks values
+                        // Update all joysticks values
                         for joy_id in 0..self.dip.axes.len() {
                             if (datum.joy_mask & (1 << joy_id)) != 0 {
-								let joy_axes = &mut self.dip.axes[joy_id];
-								let joy_data = datum.joy_data[joy_id];
-								for (axis_id, axis) in joy_axes.iter_mut().enumerate() {
-									if (joy_data.axes_mask & (1 << axis_id)) != 0 {
-										*axis = joy_data.axes[axis_id];
-									}
-								}
+                                let joy_axes = &mut self.dip.axes[joy_id];
+                                let joy_data = datum.joy_data[joy_id];
+                                for (axis_id, axis) in joy_axes.iter_mut().enumerate() {
+                                    if (joy_data.axes_mask & (1 << axis_id)) != 0 {
+                                        *axis = joy_data.axes[axis_id];
+                                    }
+                                }
                             }
                         }
                         self.replay_data_iter.next();
@@ -88,7 +88,7 @@ impl Input_Provider for Replay_Input_Provider {
     }
 
     fn get_axes(&self, axes: &mut [Real_Axes_Values; joystick::JOY_COUNT as usize]) {
-		self.dip.get_axes(axes)
+        self.dip.get_axes(axes)
     }
 
     fn is_realtime_player_input(&self) -> bool {
@@ -129,7 +129,8 @@ mod tests {
         let evt2 = vec![keypressed(Key::A)];
         let evt3 = vec![keypressed(Key::Z), mousepressed(Button::Left)];
         // @Incomplete: axes
-		let joy_data: [Replay_Joystick_Data; joystick::JOY_COUNT as usize] = std::default::Default::default();
+        let joy_data: [Replay_Joystick_Data; joystick::JOY_COUNT as usize] =
+            std::default::Default::default();
         let replay_data = Replay_Data::new_from_data(
             16,
             &vec![
@@ -162,7 +163,7 @@ mod tests {
                 .collect()
         }
 
-		let joy_mgr = Joystick_Manager::new();
+        let joy_mgr = Joystick_Manager::new();
 
         // frame 0
         replay_provider.update(&mut window, &joy_mgr);

@@ -51,16 +51,16 @@ pub(super) fn get_axis_value_xbox360(joystick_id: u32, axis: Joystick_Axis) -> f
 
 #[inline(always)]
 pub(super) fn is_connected(joystick_id: u32) -> bool {
-	joystick::is_connected(joystick_id)
+    joystick::is_connected(joystick_id)
 }
 
 pub fn get_joy_type(id: u32) -> Result<Joystick_Type, &'static str> {
-	if !is_connected(id) {
-		return Err("Joystick is not connected.");
-	}
+    if !is_connected(id) {
+        return Err("Joystick is not connected.");
+    }
 
-	// @Temporary: for now we only support XBox360
-	Ok(Joystick_Type::XBox360)
+    // @Temporary: for now we only support XBox360
+    Ok(Joystick_Type::XBox360)
 }
 
 #[inline(always)]
@@ -69,9 +69,9 @@ fn norm_minus_one_to_one(x: f32, min: f32, max: f32) -> f32 {
 }
 
 pub(super) fn get_connected_joysticks_mask() -> u8 {
-	let mut mask = 0u8;
-	for i in 0..joystick::COUNT {
-		mask |= (is_connected(i) as u8) << i;
-	}
-	mask
+    let mut mask = 0u8;
+    for i in 0..joystick::COUNT {
+        mask |= (is_connected(i) as u8) << i;
+    }
+    mask
 }

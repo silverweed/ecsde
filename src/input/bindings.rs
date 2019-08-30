@@ -1,5 +1,5 @@
-use crate::core::common::stringid::String_Id;
 use super::joystick_mgr::Joystick_Manager;
+use crate::core::common::stringid::String_Id;
 use std::collections::HashMap;
 use std::path::Path;
 use std::vec::Vec;
@@ -80,11 +80,14 @@ impl Input_Bindings {
         &self,
         joystick_id: u32,
         button: u32,
-		joy_mgr: &Joystick_Manager,
+        joy_mgr: &Joystick_Manager,
     ) -> Option<&Vec<String_Id>> {
-        let joystick = joy_mgr.get_joystick(joystick_id).unwrap_or_else(||
-			panic!("[ ERROR ] Tried to get action for joystick {}, but it is not registered!", joystick_id)
-		);
+        let joystick = joy_mgr.get_joystick(joystick_id).unwrap_or_else(|| {
+            panic!(
+                "[ ERROR ] Tried to get action for joystick {}, but it is not registered!",
+                joystick_id
+            )
+        });
         self.action_bindings
             .get(&Input_Action::Joystick(joystick::get_joy_btn_from_id(
                 *joystick, button,
@@ -107,11 +110,14 @@ impl Input_Bindings {
         &self,
         joystick_id: u32,
         button: u32,
-		joy_mgr: &Joystick_Manager,
+        joy_mgr: &Joystick_Manager,
     ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
-        let joystick = joy_mgr.get_joystick(joystick_id).unwrap_or_else(||
-			panic!("[ ERROR ] Tried to get emulated axes for joystick {}, but it is not registered!", joystick_id)
-		);
+        let joystick = joy_mgr.get_joystick(joystick_id).unwrap_or_else(|| {
+            panic!(
+                "[ ERROR ] Tried to get emulated axes for joystick {}, but it is not registered!",
+                joystick_id
+            )
+        });
         self.axis_bindings
             .emulated
             .get(&Input_Action::Joystick(joystick::get_joy_btn_from_id(

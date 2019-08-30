@@ -33,8 +33,8 @@ impl Config {
     }
 
     pub fn new_from_dir(dir_path: &Path) -> Config {
-		#[cfg(debug_assertions)]
-		let start_t = std::time::Instant::now();
+        #[cfg(debug_assertions)]
+        let start_t = std::time::Instant::now();
 
         let raw = Raw_Config::new_from_dir(dir_path);
 
@@ -69,7 +69,11 @@ impl Config {
         #[cfg(debug_assertions)]
         {
             let diff = start_t.elapsed();
-            println!("[ OK ] Loaded cfg dir {:?} in {} ms.", dir_path, crate::core::time::to_secs_frac(&diff) * 1000.0);
+            println!(
+                "[ OK ] Loaded cfg dir {:?} in {} ms.",
+                dir_path,
+                crate::core::time::to_secs_frac(&diff) * 1000.0
+            );
         }
 
         let (change_tx, change_rx) = mpsc::channel();

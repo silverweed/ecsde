@@ -13,7 +13,7 @@ pub struct Sprite<'a> {
 }
 
 // @Incomplete
-pub struct Text {};
+pub struct Text {}
 
 pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect) -> Sprite<'a> {
     Sprite {
