@@ -1,8 +1,8 @@
 use super::recording_thread;
-use super::replay_data::Replay_Data_Point;
+use super::replay_data::{Replay_Data_Point, Replay_Joystick_Data};
 use crate::cfg;
 use crate::core::common::Maybe_Error;
-use crate::input::bindings::joystick::Joystick_Axis;
+use crate::input::bindings::joystick::{self, Joystick_Axis};
 use crate::input::input_system::Input_Raw_Event;
 use crate::input::joystick_mgr::Real_Axes_Values;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -19,7 +19,7 @@ pub struct Replay_Recording_System {
     data_tx: Sender<Replay_Data_Point>,
     data_rx: Option<Receiver<Replay_Data_Point>>,
     recording_thread_handle: Option<JoinHandle<()>>,
-    prev_axes_values: Real_Axes_Values,
+    prev_axes_values: [Real_Axes_Values; joystick::JOY_COUNT as usize],
 }
 
 impl Replay_Recording_System {
@@ -31,7 +31,7 @@ impl Replay_Recording_System {
             data_rx: Some(data_rx),
             data_tx,
             recording_thread_handle: None,
-            prev_axes_values: Real_Axes_Values::default(),
+            prev_axes_values: std::default::Default::default(),
         }
     }
 
@@ -65,24 +65,40 @@ impl Replay_Recording_System {
         self.data_rx.is_none()
     }
 
-    pub fn update(&mut self, events: &[Input_Raw_Event], axes: &Real_Axes_Values) {
+	/// Note: joy_mask tells which values of `axes` must be considered.
+    pub fn update(&mut self, events: &[Input_Raw_Event], axes: &[Real_Axes_Values; joystick::JOY_COUNT as usize], joy_mask: u8) {
         self.cur_frame += 1;
 
-        let axes_mask = calc_axes_diff_mask(&self.prev_axes_values, axes);
-        if !events.is_empty() || axes_mask != 0 {
+		let mut should_send = !events.is_empty();
+		let mut joy_data: [Replay_Joystick_Data; joystick::JOY_COUNT as usize] = std::default::Default::default();
+
+		for (i, axes) in axes.iter().enumerate() {
+			if (joy_mask & (1 << i)) == 0 {
+				continue;
+			}
+
+			let axes_mask = calc_axes_diff_mask(&self.prev_axes_values[i], axes);
+			if axes_mask != 0 {
+				joy_data[i].axes = *axes;
+				joy_data[i].axes_mask = axes_mask;
+				should_send = true;
+			}
+
+			self.prev_axes_values[i] = *axes;
+		}
+
+        if should_send {
             self.data_tx
                 .send(Replay_Data_Point::new(
                     self.cur_frame,
                     events,
-                    axes,
-                    axes_mask,
+					&joy_data,
+                    joy_mask,
                 ))
                 .unwrap_or_else(|err| {
                     panic!("Failed to send game actions to replay thread: {}", err)
                 });
         }
-
-        self.prev_axes_values = *axes;
     }
 }
 

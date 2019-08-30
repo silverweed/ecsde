@@ -4,6 +4,7 @@ use super::bindings::{Axis_Emulation_Type, Input_Bindings};
 use super::core_actions::Core_Action;
 use super::joystick_mgr::{Joystick_Manager, Real_Axes_Values};
 use super::provider::Input_Provider;
+use crate::core::common::Maybe_Error;
 use crate::core::common::stringid::String_Id;
 use crate::core::env::Env_Info;
 use std::convert::TryInto;
@@ -50,6 +51,10 @@ impl Input_System {
         }
     }
 
+	pub fn init(&mut self) -> Maybe_Error {
+		self.joystick_mgr.init()
+	}
+
     pub fn get_game_actions(&self) -> &[Game_Action] {
         &self.game_actions
     }
@@ -66,6 +71,11 @@ impl Input_System {
         self.joystick_mgr.values(joystick)
     }
 
+	/// Returns ([all axes values for all joysticks], bitmask for connected joysticks)
+	pub fn get_all_real_axes(&self) -> (&[Real_Axes_Values; joystick::JOY_COUNT as usize], u8) {
+		self.joystick_mgr.all_values()	
+	}
+
     pub fn get_raw_events(&self) -> &[Input_Raw_Event] {
         &self.raw_events
     }
@@ -76,21 +86,10 @@ impl Input_System {
         window: &mut sfml::graphics::RenderWindow,
         provider: &mut dyn Input_Provider,
     ) {
-        provider.update(window);
+		sfml::window::joystick::update();
+        provider.update(window, &self.joystick_mgr);
 
-        // @Incomplete :multiple_joysticks:
-        provider.get_axes(
-            joystick::Joystick {
-                id: 0,
-                joy_type: joystick::Joystick_Type::XBox360,
-            },
-            self.joystick_mgr
-                .mut_values(joystick::Joystick {
-                    id: 0,
-                    joy_type: joystick::Joystick_Type::XBox360,
-                })
-                .unwrap(),
-        );
+		self.joystick_mgr.update_from_input_provider(provider);
         self.update_real_axes(); // Note: these axes values may be later overwritten by actions
 
         let events = provider.get_events();
@@ -154,18 +153,18 @@ impl Input_System {
                     }
                 }
                 Event::JoystickButtonPressed { joystickid, button } => {
-                    if let Some(names) = bindings.get_joystick_actions(joystickid, button) {
+                    if let Some(names) = bindings.get_joystick_actions(joystickid, button, &self.joystick_mgr) {
                         handle_actions(&mut self.game_actions, Action_Kind::Pressed, names);
                     }
-                    if let Some(names) = bindings.get_joystick_emulated_axes(joystickid, button) {
+                    if let Some(names) = bindings.get_joystick_emulated_axes(joystickid, button, &self.joystick_mgr) {
                         handle_axis_pressed(&mut self.axes, names);
                     }
                 }
                 Event::JoystickButtonReleased { joystickid, button } => {
-                    if let Some(names) = bindings.get_joystick_actions(joystickid, button) {
+                    if let Some(names) = bindings.get_joystick_actions(joystickid, button, &self.joystick_mgr) {
                         handle_actions(&mut self.game_actions, Action_Kind::Released, names);
                     }
-                    if let Some(names) = bindings.get_joystick_emulated_axes(joystickid, button) {
+                    if let Some(names) = bindings.get_joystick_emulated_axes(joystickid, button, &self.joystick_mgr) {
                         handle_axis_released(&mut self.axes, names);
                     }
                 }
@@ -185,6 +184,12 @@ impl Input_System {
                         handle_axis_released(&mut self.axes, names);
                     }
                 }
+				Event::JoystickConnected { joystickid } => {
+					self.joystick_mgr.register(joystickid);
+				}
+				Event::JoystickDisconnected { joystickid } => {
+					self.joystick_mgr.unregister(joystickid);
+				}
                 _ => {
                     // We're not interested in this event.
                     self.raw_events.pop();
@@ -212,34 +217,34 @@ impl Input_System {
 
         let bindings = &self.bindings;
 
-        // @Temporary :joystick:
-        let real_axes = self
-            .joystick_mgr
-            .values(joystick::Joystick {
-                id: 0,
-                joy_type: joystick::Joystick_Type::XBox360,
-            })
-            .unwrap();
+        let (all_real_axes, joy_mask) = self.joystick_mgr.all_values();
+		
+		for (joy_id, real_axes) in all_real_axes.iter().enumerate() {
+			if (joy_mask & (1 << joy_id)) == 0 {
+				continue;
+			}
 
-        for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
-            let axis = i.try_into().unwrap_or_else(|err| {
-                panic!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
-            });
-            for virtual_axis_name in bindings.get_virtual_axes_from_real_axis(axis) {
-                if let Some((min, max)) = axes.value_comes_from_emulation.get(virtual_axis_name) {
-                    if *min || *max {
-                        continue;
-                    }
-                }
-                let cur_value = axes.values.get_mut(&virtual_axis_name).unwrap();
-                let new_value = real_axes[i as usize];
+			for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
+				let axis = i.try_into().unwrap_or_else(|err| {
+					panic!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
+				});
 
-                // It may be the case that multiple real axes map to the same virtual axis.
-                // For now, we keep the value that has the maximum absolute value.
-                if new_value.abs() > cur_value.abs() {
-                    *cur_value = new_value;
-                }
-            }
-        }
+				for virtual_axis_name in bindings.get_virtual_axes_from_real_axis(axis) {
+					if let Some((min, max)) = axes.value_comes_from_emulation.get(virtual_axis_name) {
+						if *min || *max {
+							continue;
+						}
+					}
+					let cur_value = axes.values.get_mut(&virtual_axis_name).unwrap();
+					let new_value = real_axes[i as usize];
+
+					// It may be the case that multiple real axes map to the same virtual axis.
+					// For now, we keep the value that has the maximum absolute value.
+					if new_value.abs() > cur_value.abs() {
+						*cur_value = new_value;
+					}
+				}
+			}
+		}
     }
 }

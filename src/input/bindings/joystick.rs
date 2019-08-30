@@ -6,6 +6,8 @@ mod sfml;
 #[cfg(feature = "use-sfml")]
 use self::sfml as backend;
 
+pub const JOY_COUNT: u32 = sfml::JOY_COUNT;
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Joystick_Type {
     XBox360,
@@ -105,6 +107,21 @@ pub fn string_to_joy_axis(s: &str) -> Option<Joystick_Axis> {
     }
 }
 
+#[inline]
+pub fn is_joy_connected(id: u32) -> bool {
+	backend::is_connected(id)
+}
+
+#[inline]
+pub fn get_joy_type(id: u32) -> Result<Joystick_Type, &'static str> {
+	backend::get_joy_type(id)
+}
+
+#[inline]
+pub fn get_connected_joysticks_mask() -> u8 {
+	backend::get_connected_joysticks_mask()
+}
+
 pub fn get_joy_btn_id(joystick: Joystick, button: Joystick_Button) -> Option<u32> {
     match joystick.joy_type {
         Joystick_Type::XBox360 => get_joy_btn_id_xbox360(button),
@@ -117,16 +134,16 @@ fn get_joy_btn_id_xbox360(button: Joystick_Button) -> Option<u32> {
     BUTTONS_TO_IDS_XBOX360[button as usize]
 }
 
-pub fn get_joy_btn_from_id(joystick: Joystick, id: u32) -> Option<Joystick_Button> {
+pub fn get_joy_btn_from_id(joystick: Joystick, btn_id: u32) -> Option<Joystick_Button> {
     match joystick.joy_type {
-        Joystick_Type::XBox360 => get_joy_btn_from_id_xbox360(id),
+        Joystick_Type::XBox360 => get_joy_btn_from_id_xbox360(btn_id),
     }
 }
 
 #[inline]
-fn get_joy_btn_from_id_xbox360(id: u32) -> Option<Joystick_Button> {
-    if (id as usize) < IDS_TO_BUTTONS_XBOX360.len() {
-        Some(IDS_TO_BUTTONS_XBOX360[id as usize])
+fn get_joy_btn_from_id_xbox360(btn_id: u32) -> Option<Joystick_Button> {
+    if (btn_id as usize) < IDS_TO_BUTTONS_XBOX360.len() {
+        Some(IDS_TO_BUTTONS_XBOX360[btn_id as usize])
     } else {
         None
     }

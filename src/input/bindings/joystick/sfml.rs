@@ -1,5 +1,7 @@
-use super::Joystick_Axis;
+use super::{Joystick_Axis, Joystick_Type};
 use sfml::window::joystick::{self, Axis};
+
+pub(super) const JOY_COUNT: u32 = joystick::COUNT;
 
 #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
 pub(super) const AXES_ENGINE_TO_FRAMEWORK_XBOX360: [Option<Axis>; Joystick_Axis::_Count as usize] = [
@@ -13,7 +15,7 @@ pub(super) const AXES_ENGINE_TO_FRAMEWORK_XBOX360: [Option<Axis>; Joystick_Axis:
     Some(Axis::PovY), // Dpad_V,
 ];
 
-#[cfg(any(target_os = "linux", target_os = "windows"))]
+#[cfg(target_os = "linux")]
 pub(super) const AXES_RANGES_XBOX360: [(f32, f32); Joystick_Axis::_Count as usize] = [
     (-100.0, 100.0),
     (-100.0, 100.0),
@@ -25,7 +27,7 @@ pub(super) const AXES_RANGES_XBOX360: [(f32, f32); Joystick_Axis::_Count as usiz
     (-100.0, 100.0),
 ];
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "windows", target_os = "macos"))]
 pub(super) const AXES_RANGES_XBOX360: [(f32, f32); Joystick_Axis::_Count as usize] = [
     (-100.0, 100.0),
     (-100.0, 100.0),
@@ -34,7 +36,7 @@ pub(super) const AXES_RANGES_XBOX360: [(f32, f32); Joystick_Axis::_Count as usiz
     (-100.0, 100.0),
     (-100.0, 100.0),
     (-100.0, 100.0),
-    (100.0, -100.0), // The Dpad_V is inverted on OSX
+    (100.0, -100.0), // The Dpad_V is inverted on Windows and OSX
 ];
 
 pub(super) fn get_axis_value_xbox360(joystick_id: u32, axis: Joystick_Axis) -> f32 {
@@ -48,6 +50,28 @@ pub(super) fn get_axis_value_xbox360(joystick_id: u32, axis: Joystick_Axis) -> f
 }
 
 #[inline(always)]
+pub(super) fn is_connected(joystick_id: u32) -> bool {
+	joystick::is_connected(joystick_id)
+}
+
+pub fn get_joy_type(id: u32) -> Result<Joystick_Type, &'static str> {
+	if !is_connected(id) {
+		return Err("Joystick is not connected.");
+	}
+
+	// @Temporary: for now we only support XBox360
+	Ok(Joystick_Type::XBox360)
+}
+
+#[inline(always)]
 fn norm_minus_one_to_one(x: f32, min: f32, max: f32) -> f32 {
     2.0 * (x - min) / (max - min) - 1.0
+}
+
+pub(super) fn get_connected_joysticks_mask() -> u8 {
+	let mut mask = 0u8;
+	for i in 0..joystick::COUNT {
+		mask |= (is_connected(i) as u8) << i;
+	}
+	mask
 }

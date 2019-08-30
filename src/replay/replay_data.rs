@@ -1,6 +1,7 @@
 use crate::core::common::serialize::{Binary_Serializable, Byte_Stream};
 use crate::core::time;
 use crate::input::bindings::joystick;
+use std::default::Default;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
@@ -11,6 +12,7 @@ use std::vec::Vec;
 type Event_Type = ::sfml::window::Event;
 
 const AXES_COUNT: usize = joystick::Joystick_Axis::_Count as usize;
+const JOY_COUNT: usize = joystick::JOY_COUNT as usize;
 
 /// Contains the replay data for a single frame. It consists in time information (a frame number)
 /// plus the diff from the previous saved point.
@@ -19,6 +21,16 @@ const AXES_COUNT: usize = joystick::Joystick_Axis::_Count as usize;
 pub struct Replay_Data_Point {
     pub frame_number: u64,
     pub events: Vec<Event_Type>,
+	pub joy_data: [Replay_Joystick_Data; JOY_COUNT],
+	/// Bitmask indicating which joysticks in self.joy_data must be considered.
+	/// This is done for optimizing the disk space taken by serializing replay data:
+	/// we don't serialize unconnected joystick data.
+	pub joy_mask: u8,
+}
+
+/// Contains replay data for a single frame, for a single joystick.
+#[derive(Copy, Clone, Debug, PartialEq, Default)]
+pub struct Replay_Joystick_Data {
     pub axes: [f32; AXES_COUNT],
     /// Bitmask indicating which axes in self.axes must be considered.
     /// This is done for optimizing the disk space taken by serialized replay data:
@@ -28,12 +40,11 @@ pub struct Replay_Data_Point {
 
 impl std::default::Default for Replay_Data_Point {
     fn default() -> Replay_Data_Point {
-        let axes: [f32; AXES_COUNT] = std::default::Default::default();
         Replay_Data_Point {
             frame_number: 0,
             events: vec![],
-            axes,
-            axes_mask: u8::max_value(),
+			joy_data: Default::default(),
+			joy_mask: 0u8,
         }
     }
 }
@@ -42,15 +53,57 @@ impl Replay_Data_Point {
     pub fn new(
         frame_number: u64,
         events: &[Event_Type],
-        axes: &[f32; AXES_COUNT],
-        axes_mask: u8,
+		joy_data: &[Replay_Joystick_Data; JOY_COUNT],
+		joy_mask: u8,
     ) -> Replay_Data_Point {
         Replay_Data_Point {
             frame_number,
             events: events.to_vec(),
-            axes: *axes,
-            axes_mask,
+			joy_data: *joy_data,
+			joy_mask,
         }
+    }
+}
+
+impl Replay_Joystick_Data {
+	pub fn new(
+        axes: &[f32; AXES_COUNT],
+        axes_mask: u8,
+	) -> Replay_Joystick_Data {
+		Replay_Joystick_Data {
+			axes: *axes,
+			axes_mask,
+		}
+	}
+}
+
+impl Binary_Serializable for Replay_Joystick_Data {
+    fn serialize(&self, output: &mut Byte_Stream) -> std::io::Result<()> {
+        output.write_u8(self.axes_mask)?;
+        for i in 0..AXES_COUNT {
+            if (self.axes_mask & (1 << i)) != 0 {
+                output.write_u32(self.axes[i].to_bits())?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn deserialize(input: &mut Byte_Stream) -> std::io::Result<Replay_Joystick_Data> {
+        let mut axes: [f32; AXES_COUNT] = Default::default();
+        let axes_mask = input.read_u8()?;
+        for (i, axis) in axes.iter_mut().enumerate() {
+            if (axes_mask & (1 << i)) != 0 {
+                let val = input.read_u32()?;
+                let val = f32::from_bits(val);
+                *axis = val;
+            }
+        }
+
+        Ok(Replay_Joystick_Data::new(
+            &axes,
+            axes_mask,
+        ))
     }
 }
 
@@ -63,10 +116,10 @@ impl Binary_Serializable for Replay_Data_Point {
             event.serialize(output)?;
         }
 
-        output.write_u8(self.axes_mask)?;
-        for i in 0..AXES_COUNT {
-            if (self.axes_mask & (1 << i)) != 0 {
-                output.write_u32(self.axes[i].to_bits())?;
+		output.write_u8(self.joy_mask)?;
+        for i in 0..JOY_COUNT {
+            if (self.joy_mask & (1 << i)) != 0 {
+                self.joy_data[i].serialize(output)?;
             }
         }
 
@@ -82,21 +135,20 @@ impl Binary_Serializable for Replay_Data_Point {
             events.push(Event_Type::deserialize(input)?);
         }
 
-        let mut axes: [f32; AXES_COUNT] = std::default::Default::default();
-        let axes_mask = input.read_u8()?;
-        for (i, axis) in axes.iter_mut().enumerate() {
-            if (axes_mask & (1 << i)) != 0 {
-                let val = input.read_u32()?;
-                let val = f32::from_bits(val);
-                *axis = val;
+        let mut joy_data: [Replay_Joystick_Data; JOY_COUNT] = Default::default();
+        let joy_mask = input.read_u8()?;
+        for (i, data) in joy_data.iter_mut().enumerate() {
+            if (joy_mask & (1 << i)) != 0 {
+                let val = Replay_Joystick_Data::deserialize(input)?;
+                *data = val;
             }
         }
 
         Ok(Replay_Data_Point::new(
             frame_number,
             &events,
-            &axes,
-            axes_mask,
+            &joy_data,
+            joy_mask,
         ))
     }
 }
@@ -132,7 +184,7 @@ impl Replay_Data {
     }
 
     pub fn from_file(path: &Path) -> Result<Replay_Data, Box<dyn std::error::Error>> {
-        let now = std::time::SystemTime::now();
+        let start_t = std::time::Instant::now();
         let mut file = File::open(path)?;
 
         let mut buf = vec![];
@@ -141,11 +193,10 @@ impl Replay_Data {
         let mut byte_stream = Byte_Stream::new_from_vec(buf);
         let replay = Self::deserialize(&mut byte_stream)?;
 
-        let time_elapsed = std::time::SystemTime::now().duration_since(now).unwrap();
         eprintln!(
             "[ OK ] Loaded replay data from {:?} in {} ms. Replay duration = {} s.",
             path,
-            time_elapsed.as_millis(),
+			start_t.elapsed().as_millis(),
             time::to_secs_frac(&replay.duration)
         );
 
@@ -225,21 +276,20 @@ impl Replay_Data_Iter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::input::joystick_mgr::Real_Axes_Values;
 
     #[test]
     fn serialize_deserialize_replay_data_point() {
         // @Incomplete :replay_actions:
-        let axes = Real_Axes_Values::default();
+        let joy_data: [Replay_Joystick_Data; JOY_COUNT] = Default::default();
         let data_points = vec![
-            Replay_Data_Point::new(0, &[], &axes, 0x0),
-            Replay_Data_Point::new(1, &[], &axes, 0x0),
-            Replay_Data_Point::new(10, &[], &axes, 0x0),
-            Replay_Data_Point::new(209, &[], &axes, 0x0),
-            Replay_Data_Point::new(1110, &[], &axes, 0x0),
-            Replay_Data_Point::new(1111, &[], &axes, 0x0),
-            Replay_Data_Point::new(6531, &[], &axes, 0x0),
-            Replay_Data_Point::new(424242, &[], &axes, 0x0),
+            Replay_Data_Point::new(0, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(1, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(10, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(209, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(1110, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(1111, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(6531, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(424242, &[], &joy_data, 0x0),
         ];
 
         let mut byte_stream = Byte_Stream::new();
@@ -272,16 +322,16 @@ mod tests {
     #[test]
     fn serialize_deserialize_replay_data() {
         // @Incomplete :replay_actions:
-        let axes = Real_Axes_Values::default();
+        let joy_data: [Replay_Joystick_Data; JOY_COUNT] = Default::default();
         let data_points = vec![
-            Replay_Data_Point::new(0, &[], &axes, 0x0),
-            Replay_Data_Point::new(1, &[], &axes, 0x0),
-            Replay_Data_Point::new(10, &[], &axes, 0x0),
-            Replay_Data_Point::new(209, &[], &axes, 0x0),
-            Replay_Data_Point::new(1110, &[], &axes, 0x0),
-            Replay_Data_Point::new(1111, &[], &axes, 0x0),
-            Replay_Data_Point::new(6531, &[], &axes, 0x0),
-            Replay_Data_Point::new(424242, &[], &axes, 0x0),
+            Replay_Data_Point::new(0, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(1, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(10, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(209, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(1110, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(1111, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(6531, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(424242, &[], &joy_data, 0x0),
         ];
 
         let mut byte_stream = Byte_Stream::new();

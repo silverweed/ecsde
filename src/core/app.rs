@@ -101,17 +101,22 @@ impl<'r> App<'r> {
         )?;
 
         let systems = self.world.get_systems();
+
+        systems.input_system.borrow_mut().init()?;
+
         systems.gameplay_system.borrow_mut().init(
             &mut self.gfx_resources,
             &self.env,
             &self.config,
         )?;
+
         systems
             .render_system
             .borrow_mut()
             .init(gfx::render_system::Render_System_Config {
                 clear_color: colors::rgb(22, 0, 22),
             })?;
+
         systems
             .ui_system
             .borrow_mut()
@@ -155,7 +160,7 @@ impl<'r> App<'r> {
                 replay_data,
             ))
         } else {
-            Box::new(input::default_input_provider::Default_Input_Provider::new())
+            Box::new(input::default_input_provider::Default_Input_Provider::default())
         }
     }
 
@@ -211,16 +216,11 @@ impl<'r> App<'r> {
                 let axes = input_system.get_virtual_axes();
                 let raw_events = input_system.get_raw_events();
                 // @Temporary :joystick:
-                let real_axes = input_system
-                    .get_real_axes(crate::input::bindings::joystick::Joystick {
-                        id: 0,
-                        joy_type: crate::input::bindings::joystick::Joystick_Type::XBox360,
-                    })
-                    .unwrap();
+                let (real_axes, joy_mask) = input_system.get_all_real_axes();
 
                 #[cfg(debug_assertions)]
                 {
-                    update_debug_overlay(&mut self.debug_overlay, real_axes);
+                    update_debug_overlay(&mut self.debug_overlay, real_axes, joy_mask);
 
                     // Only record replay data if we're not already playing back a replay.
                     if self.replay_recording_system.is_recording()
@@ -230,7 +230,7 @@ impl<'r> App<'r> {
                             .config
                             .get_var_bool_or("engine/debug/replay/record", false);
                         if record_replay_data {
-                            self.replay_recording_system.update(raw_events, real_axes);
+                            self.replay_recording_system.update(raw_events, real_axes, joy_mask);
                         }
                     }
                 }
@@ -246,7 +246,7 @@ impl<'r> App<'r> {
                 // Update game systems
                 {
                     #[cfg(prof_t)]
-                    let gameplay_start_t = SystemTime::now();
+                    let gameplay_start_t = std::time::Instant::now();
 
                     let mut gameplay_system = systems.gameplay_system.borrow_mut();
 
@@ -257,13 +257,7 @@ impl<'r> App<'r> {
                     }
 
                     #[cfg(prof_t)]
-                    println!(
-                        "Gameplay: {} ms",
-                        SystemTime::now()
-                            .duration_since(gameplay_start_t)
-                            .unwrap()
-                            .as_millis()
-                    );
+                    println!("Gameplay: {} ms", gameplay_start_t.elapsed().as_millis());
                 }
             }
 
@@ -272,7 +266,7 @@ impl<'r> App<'r> {
 
             // Render
             #[cfg(prof_t)]
-            let render_start_t = SystemTime::now();
+            let render_start_t = std::time::Instant::now();
 
             self.update_graphics(
                 window,
@@ -281,13 +275,7 @@ impl<'r> App<'r> {
             )?;
 
             #[cfg(prof_t)]
-            println!(
-                "Render: {} ms",
-                SystemTime::now()
-                    .duration_since(render_start_t)
-                    .unwrap()
-                    .as_millis()
-            );
+            println!("Render: {} ms", render_start_t.elapsed().as_millis());
 
             #[cfg(debug_assertions)]
             {
@@ -393,19 +381,27 @@ fn maybe_create_replay_data(cfg: &App_Config) -> Option<replay_data::Replay_Data
 #[cfg(debug_assertions)]
 fn update_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
-    real_axes: &input::joystick_mgr::Real_Axes_Values,
+    real_axes: &[input::joystick_mgr::Real_Axes_Values; input::bindings::joystick::JOY_COUNT as usize],
+	joy_mask: u8,
 ) {
     use input::bindings::joystick;
     use std::convert::TryInto;
 
     debug_overlay.clear();
-    for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
-        let axis: joystick::Joystick_Axis = i.try_into().unwrap_or_else(|err| {
-            panic!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
-        });
-        debug_overlay.add_line_col(
-            &format!("{:?}: {:.2}", axis, real_axes[i as usize]),
-            colors::rgb(255, 255, 0),
-        );
-    }
+
+	for (joy_id, axes) in real_axes.iter().enumerate() {
+		if (joy_mask & (1 << joy_id)) != 0 {
+			debug_overlay.add_line_col(&format!("> Joy {} <", joy_id), colors::rgb(235, 52, 216));
+
+			for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
+				let axis: joystick::Joystick_Axis = i.try_into().unwrap_or_else(|err| {
+					panic!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
+				});
+				debug_overlay.add_line_col(
+					&format!("{:?}: {:.2}", axis, axes[i as usize]),
+					colors::rgb(255, 255, 0),
+				);
+			}
+		}
+	}
 }
