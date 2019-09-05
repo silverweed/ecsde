@@ -50,7 +50,6 @@ impl Audio_System {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::audio;
     use crate::resources::audio::sound_path;
     use crate::test_common;
 
@@ -60,8 +59,7 @@ mod tests {
         let mut a_sys = Audio_System::new(&Audio_System_Config {
             max_concurrent_sounds: max_conc_sounds,
         });
-        let sound_loader = audio::sound_loader::Sound_Loader {};
-        let (_, mut ares, env) = test_common::create_test_resources_and_env(&sound_loader);
+        let (_, mut ares, env) = test_common::create_test_resources_and_env();
         let snd_handle = ares.load_sound(&sound_path(&env, "coin.ogg"));
 
         a_sys.play_sound(&ares, snd_handle);

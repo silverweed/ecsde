@@ -1,12 +1,12 @@
 mod cache;
 
 use super::asset_path;
-use crate::core::common::stringid::String_Id;
+use super::loaders;
 use crate::core::env::Env_Info;
 use crate::gfx::render::{Font, Texture};
 
-pub type Texture_Handle = cache::Texture_Handle;
-pub type Font_Handle = Option<String_Id>;
+pub type Texture_Handle = loaders::Res_Handle;
+pub type Font_Handle = loaders::Res_Handle;
 
 pub struct Gfx_Resources<'l> {
     textures: cache::Texture_Cache<'l>,

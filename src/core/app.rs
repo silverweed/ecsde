@@ -5,7 +5,6 @@ use super::env::Env_Info;
 use super::msg::Msg_Responder;
 use super::time;
 use super::world;
-use crate::audio;
 use crate::cfg;
 use crate::fs;
 use crate::gfx;
@@ -39,7 +38,7 @@ pub struct App<'r> {
 }
 
 impl<'r> App<'r> {
-    pub fn new(cfg: &App_Config, sound_loader: &'r audio::sound_loader::Sound_Loader) -> Self {
+    pub fn new(cfg: &App_Config) -> Self {
         let env = Env_Info::gather().unwrap();
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
         let world = world::World::new(&env);
@@ -55,7 +54,7 @@ impl<'r> App<'r> {
             config,
             state_mgr: states::state_manager::State_Manager::new(),
             gfx_resources: resources::gfx::Gfx_Resources::new(),
-            audio_resources: resources::audio::Audio_Resources::new(sound_loader),
+            audio_resources: resources::audio::Audio_Resources::new(),
             world,
             replay_recording_system: recording_system::Replay_Recording_System::new(
                 recording_system::Replay_Recording_System_Config { ms_per_frame },

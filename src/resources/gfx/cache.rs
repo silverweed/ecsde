@@ -1,72 +1,42 @@
-use crate::core::common::stringid::String_Id;
 use crate::gfx::render::{Font, Texture};
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use crate::resources::loaders;
 
-pub type Texture_Handle = Option<String_Id>;
-pub type Font_Handle = Option<String_Id>;
+//// Textures
+pub(super) struct Texture_Loader;
 
-pub struct Texture_Cache<'l> {
-    textures: HashMap<String_Id, Texture<'l>>,
+impl<'l> loaders::Resource_Loader<'l, Texture<'l>> for Texture_Loader {
+    type Args = str;
+
+    fn load(&'l self, fname: &str) -> Result<Texture<'l>, String> {
+        // @Incomplete: give a more descriptive error, if that's even possible.
+        Texture::from_file(fname).ok_or_else(|| String::from("Texture load failed"))
+    }
 }
 
-impl<'l> Texture_Cache<'l> {
+pub(super) type Texture_Cache<'l> = loaders::Cache<'l, Texture<'l>, Texture_Loader>;
+
+impl Texture_Cache<'_> {
     pub fn new() -> Self {
-        Texture_Cache {
-            textures: HashMap::new(),
-        }
-    }
-
-    pub fn load(&mut self, fname: &str) -> Texture_Handle {
-        let id = String_Id::from(fname);
-        match self.textures.entry(id) {
-            Entry::Occupied(_) => Some(id),
-            Entry::Vacant(v) => {
-                let tex = Texture::from_file(fname).unwrap();
-                v.insert(tex);
-                eprintln!("Loaded texture {}", fname);
-                Some(id)
-            }
-        }
-    }
-
-    pub fn must_get(&self, handle: Texture_Handle) -> &Texture<'_> {
-        &self.textures[&handle.unwrap()]
-    }
-
-    pub fn must_get_mut<'a>(&'a mut self, handle: Texture_Handle) -> &'a mut Texture<'l>
-    where
-        'l: 'a,
-    {
-        self.textures.get_mut(&handle.unwrap()).unwrap()
+        Self::new_with_loader(&Texture_Loader {})
     }
 }
 
-pub struct Font_Cache<'l> {
-    fonts: HashMap<String_Id, Font<'l>>,
+//// Fonts
+pub(super) struct Font_Loader;
+
+impl<'l> loaders::Resource_Loader<'l, Font<'l>> for Font_Loader {
+    type Args = str;
+
+    fn load(&'l self, fname: &str) -> Result<Font<'l>, String> {
+        // @Incomplete: give a more descriptive error, if that's even possible.
+        Font::from_file(fname).ok_or_else(|| String::from("Font load failed"))
+    }
 }
+
+pub(super) type Font_Cache<'l> = loaders::Cache<'l, Font<'l>, Font_Loader>;
 
 impl Font_Cache<'_> {
     pub fn new() -> Self {
-        Font_Cache {
-            fonts: HashMap::new(),
-        }
-    }
-
-    pub fn load(&mut self, fname: &str) -> Font_Handle {
-        let id = String_Id::from(fname);
-        match self.fonts.entry(id) {
-            Entry::Occupied(_) => Some(id),
-            Entry::Vacant(v) => {
-                let font = Font::from_file(fname).unwrap();
-                v.insert(font);
-                eprintln!("Loaded font {}", fname);
-                Some(id)
-            }
-        }
-    }
-
-    pub fn must_get(&self, handle: Font_Handle) -> &Font<'_> {
-        &self.fonts[&handle.unwrap_or_else(|| panic!("must_get() failed for handle {:?}!", handle))]
+        Self::new_with_loader(&Font_Loader {})
     }
 }

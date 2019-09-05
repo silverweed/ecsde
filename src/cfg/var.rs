@@ -64,14 +64,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::audio;
     use crate::cfg;
     use crate::test_common::*;
 
     #[test]
     fn cfg_var_load() {
-        let sound_loader = audio::sound_loader::Sound_Loader {};
-        let (_, _, env) = create_test_resources_and_env(&sound_loader);
+        let (_, _, env) = create_test_resources_and_env();
         let config = cfg::Config::new_from_dir(env.get_test_cfg_root());
 
         let entry_int = config.get_var_int("test/entry_int");

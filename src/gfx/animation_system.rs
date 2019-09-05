@@ -33,15 +33,13 @@ pub fn update(dt: &Duration, em: &mut Entity_Manager) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::audio;
     use crate::core::common::rect::Rect;
     use crate::resources::gfx::tex_path;
     use crate::test_common;
 
     #[test]
     fn animation_system() {
-        let sound_loader = audio::sound_loader::Sound_Loader {};
-        let (mut gres, _, env) = test_common::create_test_resources_and_env(&sound_loader);
+        let (mut gres, _, env) = test_common::create_test_resources_and_env();
         let mut em = Entity_Manager::new();
         em.register_component::<C_Renderable>();
         em.register_component::<C_Animated_Sprite>();

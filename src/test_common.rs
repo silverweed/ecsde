@@ -1,4 +1,3 @@
-use crate::audio::sound_loader::Sound_Loader;
 use crate::core::env::Env_Info;
 use crate::resources::audio::Audio_Resources;
 use crate::resources::gfx::Gfx_Resources;
@@ -22,11 +21,9 @@ pub fn create_resource_loaders() -> (Resource_Loaders, sdl2::Sdl, sdl2::VideoSub
 }
 
 // Used for setting up tests which need resources
-pub fn create_test_resources_and_env<'a>(
-    sound_loader: &'a Sound_Loader,
-) -> (Gfx_Resources<'a>, Audio_Resources<'a>, Env_Info) {
+pub fn create_test_resources_and_env<'a>() -> (Gfx_Resources<'a>, Audio_Resources<'a>, Env_Info) {
     let gfx = Gfx_Resources::new();
-    let audio = Audio_Resources::new(sound_loader);
+    let audio = Audio_Resources::new();
     let env = Env_Info::gather().expect("Failed to gather env info!");
     (gfx, audio, env)
 }
