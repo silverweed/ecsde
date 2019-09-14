@@ -31,8 +31,8 @@ impl World {
         let disp = &mut self.dispatcher;
         let systems = &mut self.systems;
         disp.register(self.time.clone());
-        disp.register(systems.ui_system.clone());
         disp.register(systems.gameplay_system.clone());
+        disp.register(systems.debug_system.clone());
     }
 
     pub fn update(&mut self) {

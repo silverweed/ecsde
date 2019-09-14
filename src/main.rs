@@ -44,9 +44,8 @@ pub(crate) mod debug;
 fn main() -> core::common::Maybe_Error {
     let cfg = core::app_config::App_Config::new(env::args());
 
-    let mut app = core::app::App::new(&cfg);
-
     let mut window = gfx::window::create_render_window(&(), cfg.target_win_size, &cfg.title);
+    let mut app = core::app::App::new(cfg);
 
     app.init()?;
     app.run(&mut window)

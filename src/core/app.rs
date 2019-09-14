@@ -15,6 +15,11 @@ use crate::states;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
+use super::common::stringid::String_Id;
+#[cfg(debug_assertions)]
+use std::collections::HashMap;
+
+#[cfg(debug_assertions)]
 use crate::debug;
 
 pub struct App<'r> {
@@ -22,6 +27,7 @@ pub struct App<'r> {
 
     env: Env_Info,
     config: cfg::Config,
+    app_config: App_Config,
 
     state_mgr: states::state_manager::State_Manager,
 
@@ -32,17 +38,14 @@ pub struct App<'r> {
 
     replay_recording_system: recording_system::Replay_Recording_System,
     replay_data: Option<replay_data::Replay_Data>,
-
-    #[cfg(debug_assertions)]
-    debug_overlay: debug::overlay::Debug_Overlay,
 }
 
 impl<'r> App<'r> {
-    pub fn new(cfg: &App_Config) -> Self {
+    pub fn new(cfg: App_Config) -> Self {
         let env = Env_Info::gather().unwrap();
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
         let world = world::World::new(&env);
-        let replay_data = maybe_create_replay_data(cfg);
+        let replay_data = maybe_create_replay_data(&cfg);
         let ms_per_frame = *config
             .get_var_int("engine/gameplay/gameplay_update_tick_ms")
             .expect("[ FATAL ] engine/gameplay/gameplay_update_tick_ms not found in config file!")
@@ -52,6 +55,7 @@ impl<'r> App<'r> {
             should_close: false,
             env,
             config,
+            app_config: cfg,
             state_mgr: states::state_manager::State_Manager::new(),
             gfx_resources: resources::gfx::Gfx_Resources::new(),
             audio_resources: resources::audio::Audio_Resources::new(),
@@ -60,9 +64,6 @@ impl<'r> App<'r> {
                 recording_system::Replay_Recording_System_Config { ms_per_frame },
             ),
             replay_data,
-
-            #[cfg(debug_assertions)]
-            debug_overlay: debug::overlay::Debug_Overlay::new(),
         }
     }
 
@@ -116,11 +117,6 @@ impl<'r> App<'r> {
                 clear_color: colors::rgb(22, 0, 22),
             })?;
 
-        systems
-            .ui_system
-            .borrow_mut()
-            .init(&self.env, &mut self.gfx_resources)?;
-
         if cfg!(debug_assertions)
             && self.replay_data.is_none()
             && *self
@@ -136,7 +132,57 @@ impl<'r> App<'r> {
 
     #[cfg(debug_assertions)]
     fn init_debug(&mut self) -> Maybe_Error {
-        self.debug_overlay.init(&self.env, &mut self.gfx_resources)
+        use crate::core::common::vector::Vec2f;
+        use debug::{fadeout_overlay, overlay};
+
+        const FONT: &'static str = "Hack-Regular.ttf";
+
+        let font = self
+            .gfx_resources
+            .load_font(&resources::gfx::font_path(&self.env, FONT));
+
+        // @Robustness: add validity check
+
+        let mut debug_system = self.world.get_systems().debug_system.borrow_mut();
+        // Joystick overlay
+        {
+            let debug_overlay_config = overlay::Debug_Overlay_Config {
+                row_spacing: 2.0,
+                font_size: 20,
+                pad_x: 5.0,
+                pad_y: 5.0,
+            };
+
+            let mut joy_overlay = debug_system.create_overlay(
+                String_Id::from("joysticks"),
+                debug_overlay_config,
+                font,
+            );
+            joy_overlay.horiz_align = debug::overlay::Align::End;
+            joy_overlay.position = Vec2f::new(self.app_config.target_win_size.0 as f32, 0.0);
+        }
+
+        // Fadeout text
+        {
+            let fadeout_overlay_config = fadeout_overlay::Fadeout_Debug_Overlay_Config {
+                row_spacing: 2.0,
+                font_size: 20,
+                pad_x: 5.0,
+                pad_y: 5.0,
+                fadeout_time: Duration::from_secs(3),
+                max_rows: 30,
+            };
+
+            let mut fadeout_overlay = debug_system.create_fadeout_overlay(
+                String_Id::from("msg"),
+                fadeout_overlay_config,
+                font,
+            );
+            fadeout_overlay.horiz_align = debug::overlay::Align::Begin;
+            fadeout_overlay.position = Vec2f::new(0.0, 0.0);
+        }
+
+        Ok(())
     }
 
     pub fn run(&mut self, window: &mut gfx::window::Window_Handle) -> Maybe_Error {
@@ -170,6 +216,9 @@ impl<'r> App<'r> {
         let mut input_provider = self.create_input_provider();
         let mut is_replaying = !input_provider.is_realtime_player_input();
 
+        #[cfg(debug_assertions)]
+        let sid_joysticks = String_Id::from("joysticks");
+
         while !self.should_close {
             self.world.update();
             let (dt, real_dt) = (self.world.dt(), self.world.real_dt());
@@ -188,11 +237,10 @@ impl<'r> App<'r> {
             // Check if the replay ended this frame
             if is_replaying && input_provider.is_realtime_player_input() {
                 systems
-                    .ui_system
+                    .debug_system
                     .borrow_mut()
-                    .send_message(gfx::ui::UI_Request::Add_Fadeout_Text(String::from(
-                        "REPLAY HAS ENDED.",
-                    )));
+                    .get_fadeout_overlay(String_Id::from("main"))
+                    .add_line("REPLAY HAS ENDED.");
                 is_replaying = false;
             }
 
@@ -218,7 +266,11 @@ impl<'r> App<'r> {
 
                 #[cfg(debug_assertions)]
                 {
-                    update_debug_overlay(&mut self.debug_overlay, real_axes, joy_mask);
+                    update_joystick_debug_overlay(
+                        systems.debug_system.borrow_mut().get_overlay(sid_joysticks),
+                        real_axes,
+                        joy_mask,
+                    );
 
                     // Only record replay data if we're not already playing back a replay.
                     if self.replay_recording_system.is_recording()
@@ -336,13 +388,12 @@ impl<'r> App<'r> {
             frame_lag_normalized,
             smooth_by_extrapolating_velocity,
         );
-        systems
-            .ui_system
-            .borrow_mut()
-            .update(&real_dt, window, &mut self.gfx_resources);
 
         #[cfg(debug_assertions)]
-        self.debug_overlay.draw(window, &mut self.gfx_resources);
+        systems
+            .debug_system
+            .borrow_mut()
+            .update(&real_dt, window, &mut self.gfx_resources);
 
         gfx::window::display(window);
 
@@ -378,7 +429,7 @@ fn maybe_create_replay_data(cfg: &App_Config) -> Option<replay_data::Replay_Data
 }
 
 #[cfg(debug_assertions)]
-fn update_debug_overlay(
+fn update_joystick_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
     real_axes: &[input::joystick_mgr::Real_Axes_Values;
          input::bindings::joystick::JOY_COUNT as usize],
@@ -391,13 +442,13 @@ fn update_debug_overlay(
 
     for (joy_id, axes) in real_axes.iter().enumerate() {
         if (joy_mask & (1 << joy_id)) != 0 {
-            debug_overlay.add_line_col(&format!("> Joy {} <", joy_id), colors::rgb(235, 52, 216));
+            debug_overlay.add_line_color(&format!("> Joy {} <", joy_id), colors::rgb(235, 52, 216));
 
             for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
                 let axis: joystick::Joystick_Axis = i.try_into().unwrap_or_else(|err| {
                     panic!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
                 });
-                debug_overlay.add_line_col(
+                debug_overlay.add_line_color(
                     &format!("{:?}: {:.2}", axis, axes[i as usize]),
                     colors::rgb(255, 255, 0),
                 );

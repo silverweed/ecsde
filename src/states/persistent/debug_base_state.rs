@@ -4,8 +4,8 @@ use crate::core::msg::Msg_Responder;
 use crate::core::time;
 use crate::core::time_manager::{Time_Manager, Time_Msg, Time_Resp};
 use crate::core::world::World;
+use crate::debug::debug_system::Debug_System;
 use crate::game::gameplay_system::{Gameplay_System, Gameplay_System_Msg};
-use crate::gfx::ui::{UI_Request, UI_System};
 use crate::input::input_system::{Action_Kind, Game_Action};
 use crate::states::state::Persistent_Game_State;
 use std::convert::TryFrom;
@@ -44,8 +44,12 @@ impl Persistent_Game_State for Debug_Base_State {
     ) -> bool {
         let dispatcher = world.get_dispatcher();
         let mut time_mgr = dispatcher.borrow_mut::<Time_Manager>().unwrap();
-        let mut ui_system = dispatcher.borrow_mut::<UI_System>().unwrap();
+        let mut debug_system = dispatcher.borrow_mut::<Debug_System>().unwrap();
 
+        let mut msg_overlay = debug_system.get_fadeout_overlay(String_Id::from("msg"));
+
+        // @Refactor: change the horrible if-else chain with a match.
+        // This requires implementing a compile-time sid function (consider syntax extension).
         for action in actions.iter() {
             if (action.0 == self.sid_game_speed_up || action.0 == self.sid_game_speed_down)
                 && action.1 == Action_Kind::Pressed
@@ -72,10 +76,7 @@ impl Persistent_Game_State for Debug_Base_State {
                 } else {
                     panic!("[ FATAL ] unexpected response from time_mgr!");
                 };
-                ui_system.send_message(UI_Request::Add_Fadeout_Text(format!(
-                    "Time scale: {:.2}",
-                    ts
-                )));
+                msg_overlay.add_line(&format!("Time scale: {:.2}", ts));
             } else if action.0 == self.sid_pause_toggle && action.1 == Action_Kind::Pressed {
                 time_mgr.send_message(Time_Msg::Pause_Toggle);
                 let paused = if let Time_Resp::Is_Paused(paused) =
@@ -85,19 +86,15 @@ impl Persistent_Game_State for Debug_Base_State {
                 } else {
                     panic!("[ FATAL ] unexpected response from time_mgr!");
                 };
-                ui_system.send_message(UI_Request::Add_Fadeout_Text(String::from(if paused {
-                    "Paused"
-                } else {
-                    "Resumed"
-                })));
+                msg_overlay.add_line(if paused { "Paused" } else { "Resumed" });
             } else if action.0 == self.sid_step_sim && action.1 == Action_Kind::Pressed {
                 let target_fps = config.get_var_int_or("engine/rendering/fps", 60);
                 let step_delta =
                     Duration::from_nanos(u64::try_from(1_000_000_000 / *target_fps).unwrap());
-                ui_system.send_message(UI_Request::Add_Fadeout_Text(format!(
+                msg_overlay.add_line(&format!(
                     "Stepping of: {:.2} ms",
                     time::to_secs_frac(&step_delta) * 1000.0
-                )));
+                ));
                 time_mgr.send_message(Time_Msg::Pause);
                 time_mgr.send_message(Time_Msg::Step(step_delta));
                 dispatcher.send_message::<Gameplay_System>(Gameplay_System_Msg::Step(step_delta));
