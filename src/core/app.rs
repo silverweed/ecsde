@@ -145,9 +145,9 @@ impl<'r> App<'r> {
         // @Robustness: add font validity check
 
         let mut debug_system = self.world.get_systems().debug_system.borrow_mut();
-        // Joystick overlay
+        // Debug overlays
         {
-            let debug_overlay_config = overlay::Debug_Overlay_Config {
+            let mut debug_overlay_config = overlay::Debug_Overlay_Config {
                 row_spacing: 2.0,
                 font_size: 20,
                 pad_x: 5.0,
@@ -162,9 +162,19 @@ impl<'r> App<'r> {
             );
             joy_overlay.horiz_align = align::Align::End;
             joy_overlay.position = Vec2f::new(self.app_config.target_win_size.0 as f32, 0.0);
+
+            debug_overlay_config.font_size = 16;
+            let mut time_overlay =
+                debug_system.create_overlay(String_Id::from("time"), debug_overlay_config, font);
+            time_overlay.horiz_align = align::Align::End;
+            time_overlay.vert_align = align::Align::End;
+            time_overlay.position = Vec2f::new(
+                self.app_config.target_win_size.0 as f32,
+                self.app_config.target_win_size.1 as f32,
+            );
         }
 
-        // Fadeout text
+        // Debug fadeout overlays
         {
             let fadeout_overlay_config = fadeout_overlay::Fadeout_Debug_Overlay_Config {
                 row_spacing: 2.0,
@@ -223,11 +233,20 @@ impl<'r> App<'r> {
         let sid_joysticks = String_Id::from("joysticks");
         #[cfg(debug_assertions)]
         let sid_msg = String_Id::from("msg");
+        #[cfg(debug_assertions)]
+        let sid_time = String_Id::from("time");
 
         while !self.should_close {
             self.world.update();
+
             let (dt, real_dt) = (self.world.dt(), self.world.real_dt());
             let systems = self.world.get_systems();
+
+            #[cfg(debug_assertions)]
+            update_time_debug_overlay(
+                systems.debug_system.borrow_mut().get_overlay(sid_time),
+                &self.world.time.borrow(),
+            );
 
             let update_time = Duration::from_millis(
                 *self
@@ -461,4 +480,20 @@ fn update_joystick_debug_overlay(
             }
         }
     }
+}
+
+#[cfg(debug_assertions)]
+fn update_time_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, time: &time::Time) {
+    debug_overlay.clear();
+
+    debug_overlay.add_line_color(
+        &format!(
+            "[time] game: {:.2}, real: {:.2}, scale: {:.2}, paused: {}",
+            time.get_game_time(),
+            time.get_real_time(),
+            time.get_time_scale(),
+            if time.is_paused() { "yes" } else { "no" }
+        ),
+        colors::rgb(100, 200, 200),
+    );
 }
