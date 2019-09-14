@@ -175,10 +175,10 @@ mod tests {
     }
 
     fn assert_approx_eq(a: Rad<f32>, b: Rad<f32>) {
+        use float_cmp::ApproxEq;
+
         let Rad(a) = a;
         let Rad(b) = b;
-        if (a - b).abs() > 1e-6 {
-            assert!(false, "Expected: {}, Got: {}", b, a);
-        }
+        assert!(a.approx_eq(b, (0.0, 2)), "Expected: {}, Got: {}", b, a);
     }
 }

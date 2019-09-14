@@ -1,3 +1,4 @@
+use crate::core::common::align::Align;
 use crate::core::common::colors::{self, Color};
 use crate::core::common::rect::Rect;
 use crate::core::common::vector::{to_framework_vec, Vec2f};
@@ -22,23 +23,6 @@ pub struct Debug_Overlay_Config {
     pub pad_x: f32,
     pub pad_y: f32,
     pub background: Color,
-}
-
-#[derive(Copy, Clone)]
-pub enum Align {
-    Begin,
-    Middle,
-    End,
-}
-
-impl Align {
-    pub fn aligned_pos(self, pos: f32, bound: f32) -> f32 {
-        match self {
-            Align::Begin => pos,
-            Align::Middle => 0.5 * (pos - bound),
-            Align::End => -(pos + bound),
-        }
-    }
 }
 
 pub struct Debug_Overlay {

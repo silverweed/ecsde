@@ -1,4 +1,5 @@
 use super::app_config::App_Config;
+use super::common::align;
 use super::common::colors;
 use super::common::Maybe_Error;
 use super::env::Env_Info;
@@ -156,7 +157,7 @@ impl<'r> App<'r> {
                 debug_overlay_config,
                 font,
             );
-            joy_overlay.horiz_align = debug::overlay::Align::End;
+            joy_overlay.horiz_align = align::Align::End;
             joy_overlay.position = Vec2f::new(self.app_config.target_win_size.0 as f32, 0.0);
         }
 
@@ -177,7 +178,7 @@ impl<'r> App<'r> {
                 fadeout_overlay_config,
                 font,
             );
-            fadeout_overlay.horiz_align = debug::overlay::Align::Begin;
+            fadeout_overlay.horiz_align = align::Align::Begin;
             fadeout_overlay.position = Vec2f::new(0.0, 0.0);
         }
 

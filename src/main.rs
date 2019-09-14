@@ -12,6 +12,9 @@ extern crate num_enum;
 #[macro_use]
 extern crate lazy_static; // used for String_Id
 
+#[cfg(test)]
+extern crate float_cmp;
+
 #[macro_use]
 extern crate bitflags;
 

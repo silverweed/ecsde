@@ -1,3 +1,4 @@
+pub mod align;
 pub mod colors;
 pub mod direction;
 pub mod rect;

@@ -1,5 +1,5 @@
-use super::overlay::Align;
 use crate::core;
+use crate::core::common::align::Align;
 use crate::core::common::colors::{self, Color};
 use crate::core::common::rect::Rect;
 use crate::core::common::vector::{to_framework_vec, Vec2f};
@@ -122,16 +122,9 @@ impl Fadeout_Debug_Overlay {
         // Draw lines
         for (i, (text, bounds)) in texts.iter_mut().enumerate() {
             let pos = Vec2f::new(
-                match self.horiz_align {
-                    Align::Begin => pad_x,
-                    Align::Middle => 0.5 * (pad_x - bounds.width),
-                    Align::End => -(bounds.width + pad_x),
-                },
-                match self.vert_align {
-                    Align::Begin => pad_y,
-                    Align::Middle => 0.5 * (pad_y - tot_height),
-                    Align::End => -(tot_height + pad_y),
-                } + (i as f32) * (max_row_height + row_spacing),
+                self.horiz_align.aligned_pos(pad_x, bounds.width),
+                self.vert_align.aligned_pos(pad_y, tot_height)
+                    + (i as f32) * (max_row_height + row_spacing),
             );
             text.set_position(to_framework_vec(position + pos));
 
