@@ -84,10 +84,13 @@ impl<'r> App<'r> {
     fn init_states(&mut self) -> Maybe_Error {
         let base_state = Box::new(states::persistent::engine_base_state::Engine_Base_State {});
         self.state_mgr.add_persistent_state(&self.world, base_state);
-        let debug_base_state =
-            Box::new(states::persistent::debug_base_state::Debug_Base_State::new());
-        self.state_mgr
-            .add_persistent_state(&self.world, debug_base_state);
+        #[cfg(debug_assertions)]
+        {
+            let debug_base_state =
+                Box::new(states::persistent::debug_base_state::Debug_Base_State::new());
+            self.state_mgr
+                .add_persistent_state(&self.world, debug_base_state);
+        }
         Ok(())
     }
 
@@ -218,6 +221,8 @@ impl<'r> App<'r> {
 
         #[cfg(debug_assertions)]
         let sid_joysticks = String_Id::from("joysticks");
+        #[cfg(debug_assertions)]
+        let sid_msg = String_Id::from("msg");
 
         while !self.should_close {
             self.world.update();
@@ -236,10 +241,11 @@ impl<'r> App<'r> {
 
             // Check if the replay ended this frame
             if is_replaying && input_provider.is_realtime_player_input() {
+                #[cfg(debug_assertions)]
                 systems
                     .debug_system
                     .borrow_mut()
-                    .get_fadeout_overlay(String_Id::from("msg"))
+                    .get_fadeout_overlay(sid_msg)
                     .add_line("REPLAY HAS ENDED.");
                 is_replaying = false;
             }

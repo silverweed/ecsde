@@ -1,11 +1,13 @@
 use super::env::Env_Info;
 use crate::audio;
-use crate::debug::debug_system;
 use crate::game::gameplay_system;
 use crate::gfx;
 use crate::input::input_system;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+#[cfg(debug_assertions)]
+use crate::debug::debug_system;
 
 pub struct Core_Systems {
     pub input_system: Rc<RefCell<input_system::Input_System>>,
@@ -28,6 +30,7 @@ impl Core_Systems {
                 },
             ))),
             gameplay_system: Rc::new(RefCell::new(gameplay_system::Gameplay_System::new())),
+            #[cfg(debug_assertions)]
             debug_system: Rc::new(RefCell::new(debug_system::Debug_System::new())),
         }
     }
