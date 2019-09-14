@@ -1,18 +1,13 @@
 use super::overlay::Align;
 use crate::core;
 use crate::core::common::colors::{self, Color};
+use crate::core::common::rect::Rect;
 use crate::core::common::vector::{to_framework_vec, Vec2f};
-use crate::core::common::Maybe_Error;
-use crate::core::env::Env_Info;
 use crate::gfx;
 use crate::gfx::window::Window_Handle;
-use crate::resources;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
-use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
-use std::vec::Vec;
 
 #[cfg(feature = "use-sfml")]
 use sfml::graphics::Text;
@@ -31,6 +26,7 @@ pub struct Fadeout_Debug_Overlay_Config {
     pub font_size: u16,
     pub pad_x: f32,
     pub pad_y: f32,
+    pub background: Color,
     pub max_rows: usize,
     pub fadeout_time: Duration,
 }
@@ -59,15 +55,21 @@ impl Fadeout_Debug_Overlay {
 
     pub fn update(&mut self, dt: &Duration) {
         let fadeout_time = self.config.fadeout_time;
-        for (i, text) in self.fadeout_texts.iter_mut().enumerate() {
+        let mut n_drained = 0;
+        for (i, text) in self.fadeout_texts.iter_mut().enumerate().rev() {
             text.time += *dt;
             if text.time >= fadeout_time {
-                self.fadeout_texts.truncate(i);
+                // All following texts must have a time >= fadeout_time, since they're sorted by insertion time.
+                n_drained = i + 1;
                 break;
             }
         }
+        for _ in 0..n_drained {
+            self.fadeout_texts.pop_front();
+        }
     }
 
+    // @Refactor: this is mostly @Cutnpaste from overlay.rs
     pub fn draw(&mut self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
         let font = self.font;
         let Fadeout_Debug_Overlay_Config {
@@ -81,24 +83,43 @@ impl Fadeout_Debug_Overlay {
 
         let mut texts = vec![];
         let mut max_row_height = 0f32;
+        let mut max_row_width = 0f32;
 
         for line in self.fadeout_texts.iter() {
             let Fadeout_Text { text, color, time } = line;
-            let mut text = Text::new(text, gres.get_font(font), font_size.into());
 
             let d = core::time::duration_ratio(&time, &fadeout_time);
             let alpha = 255 - (d * d * 255.0f32) as u8;
-            let mut text = Text::new(&line.text, gres.get_font(font), font_size.into());
+            let mut text = Text::new(&text, gres.get_font(font), font_size.into());
             text.set_fill_color(&colors::rgba(color.r, color.g, color.b, alpha));
 
             let txt_bounds = text.local_bounds();
+            max_row_width = max_row_width.max(txt_bounds.width);
             max_row_height = max_row_height.max(txt_bounds.height);
 
             texts.push((text, txt_bounds));
         }
 
         let position = self.position;
-        let tot_height = max_row_height * texts.len() as f32;
+        let n_texts_f = texts.len() as f32;
+        let tot_height = max_row_height * n_texts_f + row_spacing * (n_texts_f - 1.0);
+
+        // Draw background
+        gfx::render::fill_color_rect(
+            window,
+            self.config.background,
+            Rect::new(
+                position.x
+                    + self
+                        .horiz_align
+                        .aligned_pos(0.0, 2.0 * pad_x + max_row_width),
+                position.y + self.vert_align.aligned_pos(0.0, 2.0 * pad_y + tot_height),
+                2.0 * pad_x + max_row_width,
+                2.0 * pad_y + tot_height,
+            ),
+        );
+
+        // Draw lines
         for (i, (text, bounds)) in texts.iter_mut().enumerate() {
             let pos = Vec2f::new(
                 match self.horiz_align {

@@ -6,7 +6,7 @@ use typename::TypeName;
 #[derive(Copy, Clone, Debug, TypeName)]
 pub struct C_Renderable {
     pub texture: resources::gfx::Texture_Handle,
-    pub rect: Rect,
+    pub rect: Rect<i32>,
 }
 
 impl Default for C_Renderable {

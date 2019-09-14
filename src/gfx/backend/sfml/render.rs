@@ -1,8 +1,10 @@
+use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
 use crate::core::common::vector::Vec2f;
 use crate::ecs::components::transform::C_Transform2D;
 use crate::gfx::window::Window_Handle;
 use cgmath::Rad;
+use sfml::graphics::Shape;
 use sfml::graphics::{RectangleShape, RenderStates, RenderTarget, Transform, Transformable};
 use sfml::system::Vector2f;
 
@@ -68,7 +70,7 @@ impl std::ops::DerefMut for Font<'_> {
 
 pub type Sprite<'a> = sfml::graphics::Sprite<'a>;
 
-pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect) -> Sprite<'a> {
+pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect<i32>) -> Sprite<'a> {
     let mut sprite = Sprite::with_texture(texture);
     sprite.set_texture_rect(&rect);
     sprite
@@ -92,7 +94,7 @@ pub fn render_sprite(
     window.handle.draw_with_renderstates(sprite, render_states);
 }
 
-pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: Rect) {
+pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: Rect<i32>) {
     let render_states = RenderStates {
         blend_mode: get_blend_mode(window),
         ..Default::default()
@@ -107,6 +109,23 @@ pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: R
 
 pub fn render_text(window: &mut Window_Handle, text: &Text<'_>) {
     window.handle.draw(text);
+}
+
+pub fn fill_color_rect<T>(window: &mut Window_Handle, color: Color, rect: Rect<T>)
+where
+    T: std::convert::Into<f32> + Copy + Clone + std::fmt::Debug,
+{
+    let render_states = RenderStates {
+        blend_mode: get_blend_mode(window),
+        ..Default::default()
+    };
+    let mut rectangle_shape = RectangleShape::new();
+    rectangle_shape.set_position(Vector2f::new(rect.x().into(), rect.y().into()));
+    rectangle_shape.set_size(Vector2f::new(rect.width().into(), rect.height().into()));
+    rectangle_shape.set_fill_color(&color);
+    window
+        .handle
+        .draw_rectangle_shape(&rectangle_shape, render_states);
 }
 
 pub fn get_blend_mode(window: &Window_Handle) -> Blend_Mode {

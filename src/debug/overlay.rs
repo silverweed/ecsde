@@ -1,10 +1,8 @@
 use crate::core::common::colors::{self, Color};
+use crate::core::common::rect::Rect;
 use crate::core::common::vector::{to_framework_vec, Vec2f};
-use crate::core::common::Maybe_Error;
-use crate::core::env::Env_Info;
 use crate::gfx;
 use crate::gfx::window::Window_Handle;
-use crate::resources;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
 #[cfg(feature = "use-sfml")]
@@ -23,12 +21,24 @@ pub struct Debug_Overlay_Config {
     pub font_size: u16,
     pub pad_x: f32,
     pub pad_y: f32,
+    pub background: Color,
 }
 
+#[derive(Copy, Clone)]
 pub enum Align {
     Begin,
     Middle,
     End,
+}
+
+impl Align {
+    pub fn aligned_pos(self, pos: f32, bound: f32) -> f32 {
+        match self {
+            Align::Begin => pos,
+            Align::Middle => 0.5 * (pos - bound),
+            Align::End => -(pos + bound),
+        }
+    }
 }
 
 pub struct Debug_Overlay {
@@ -82,6 +92,7 @@ impl Debug_Overlay {
         } = self.config;
 
         let mut texts = vec![];
+        let mut max_row_width = 0f32;
         let mut max_row_height = 0f32;
 
         for line in self.lines.iter() {
@@ -90,25 +101,37 @@ impl Debug_Overlay {
             text.set_fill_color(&color);
 
             let txt_bounds = text.local_bounds();
+            max_row_width = max_row_width.max(txt_bounds.width);
             max_row_height = max_row_height.max(txt_bounds.height);
 
             texts.push((text, txt_bounds));
         }
 
         let position = self.position;
-        let tot_height = max_row_height * texts.len() as f32;
+        let n_texts_f = texts.len() as f32;
+        let tot_height = max_row_height * n_texts_f + row_spacing * (n_texts_f - 1.0);
+
+        // Draw background
+        gfx::render::fill_color_rect(
+            window,
+            self.config.background,
+            Rect::new(
+                position.x
+                    + self
+                        .horiz_align
+                        .aligned_pos(0.0, 2.0 * pad_x + max_row_width),
+                position.y + self.vert_align.aligned_pos(0.0, 2.0 * pad_y + tot_height),
+                2.0 * pad_x + max_row_width,
+                2.0 * pad_y + tot_height,
+            ),
+        );
+
+        // Draw texts
         for (i, (text, bounds)) in texts.iter_mut().enumerate() {
             let pos = Vec2f::new(
-                match self.horiz_align {
-                    Align::Begin => pad_x,
-                    Align::Middle => 0.5 * (pad_x - bounds.width),
-                    Align::End => -(bounds.width + pad_x),
-                },
-                match self.vert_align {
-                    Align::Begin => pad_y,
-                    Align::Middle => 0.5 * (pad_y - tot_height),
-                    Align::End => -(tot_height + pad_y),
-                } + (i as f32) * (max_row_height + row_spacing),
+                self.horiz_align.aligned_pos(pad_x, bounds.width),
+                self.vert_align.aligned_pos(pad_y, tot_height)
+                    + (i as f32) * (max_row_height + row_spacing),
             );
             text.set_position(to_framework_vec(position + pos));
 

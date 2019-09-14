@@ -23,7 +23,7 @@ pub fn update(dt: &Duration, em: &mut Entity_Manager) {
             let rect = renderable.borrow().rect;
             let width = rect.width();
             let x =
-                (rect.x() + width as i32) % (width * (anim_sprite.borrow().n_frames - 1)) as i32;
+                (rect.x() + width) % (width * (anim_sprite.borrow().n_frames - 1) as i32) as i32;
 
             renderable.borrow_mut().rect.set_x(x);
         }

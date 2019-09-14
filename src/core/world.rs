@@ -1,15 +1,12 @@
 use super::env::Env_Info;
-use super::msg;
 use super::systems;
-use super::time_manager;
+use super::time::Time;
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::time::Duration;
 
 pub struct World {
-    time: Rc<RefCell<time_manager::Time_Manager>>,
+    pub time: RefCell<Time>,
     systems: systems::Core_Systems,
-    dispatcher: msg::Msg_Dispatcher,
 
     // Cache delta time values
     dt: Duration,
@@ -19,25 +16,18 @@ pub struct World {
 impl World {
     pub fn new(env: &Env_Info) -> World {
         World {
-            time: Rc::new(RefCell::new(time_manager::Time_Manager::new())),
+            time: RefCell::new(Time::new()),
             systems: systems::Core_Systems::new(env),
-            dispatcher: msg::Msg_Dispatcher::new(),
             dt: Duration::new(0, 0),
             real_dt: Duration::new(0, 0),
         }
     }
 
-    pub fn init(&mut self) {
-        let disp = &mut self.dispatcher;
-        let systems = &mut self.systems;
-        disp.register(self.time.clone());
-        disp.register(systems.gameplay_system.clone());
-        disp.register(systems.debug_system.clone());
-    }
+    pub fn init(&mut self) {}
 
     pub fn update(&mut self) {
-        self.time.borrow_mut().time.update();
-        let time = &self.time.borrow().time;
+        let time = &mut self.time.borrow_mut();
+        time.update();
         self.dt = time.dt();
         self.real_dt = time.real_dt();
     }
@@ -52,9 +42,5 @@ impl World {
 
     pub fn get_systems(&self) -> &systems::Core_Systems {
         &self.systems
-    }
-
-    pub fn get_dispatcher(&self) -> &msg::Msg_Dispatcher {
-        &self.dispatcher
     }
 }

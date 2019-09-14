@@ -5,7 +5,6 @@ use crate::core::common::rect::Rect;
 use crate::core::common::stringid::String_Id;
 use crate::core::common::vector::Vec2f;
 use crate::core::env::Env_Info;
-use crate::core::msg;
 use crate::core::time;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
@@ -27,27 +26,6 @@ pub struct Gameplay_System {
     camera: Entity,
     latest_frame_actions: Vec<Game_Action>,
     latest_frame_axes: Virtual_Axes,
-}
-
-pub enum Gameplay_System_Msg {
-    Step(Duration),
-    Print_Entity_Manager_Debug_Info,
-}
-
-impl msg::Msg_Responder for Gameplay_System {
-    type Msg_Data = Gameplay_System_Msg;
-    type Resp_Data = ();
-
-    fn send_message(&mut self, msg: Gameplay_System_Msg) {
-        match msg {
-            Gameplay_System_Msg::Step(dt) => self.update_with_latest_frame_actions(&dt),
-            Gameplay_System_Msg::Print_Entity_Manager_Debug_Info =>
-            {
-                #[cfg(debug_assertions)]
-                self.entity_manager.print_debug_info()
-            }
-        }
-    }
 }
 
 impl Gameplay_System {
@@ -93,6 +71,16 @@ impl Gameplay_System {
         axes: &Virtual_Axes,
     ) {
         self.update_camera(real_dt, actions, axes);
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn step(&mut self, dt: &Duration) {
+        self.update_with_latest_frame_actions(dt);
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn print_debug_info(&self) {
+        self.entity_manager.print_debug_info();
     }
 
     fn update_with_latest_frame_actions(&mut self, dt: &Duration) {
@@ -218,7 +206,7 @@ impl Gameplay_System {
                 rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
                 assert!(rend.texture.is_some(), "Could not load yv texture!");
                 let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
-                rend.rect = Rect::new(0, 0, sw, sh);
+                rend.rect = Rect::new(0, 0, sw as i32, sh as i32);
                 (sw, sh)
             };
             {

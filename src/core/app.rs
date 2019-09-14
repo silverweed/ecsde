@@ -2,7 +2,6 @@ use super::app_config::App_Config;
 use super::common::colors;
 use super::common::Maybe_Error;
 use super::env::Env_Info;
-use super::msg::Msg_Responder;
 use super::time;
 use super::world;
 use crate::cfg;
@@ -16,8 +15,6 @@ use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use super::common::stringid::String_Id;
-#[cfg(debug_assertions)]
-use std::collections::HashMap;
 
 #[cfg(debug_assertions)]
 use crate::debug;
@@ -141,7 +138,7 @@ impl<'r> App<'r> {
             .gfx_resources
             .load_font(&resources::gfx::font_path(&self.env, FONT));
 
-        // @Robustness: add validity check
+        // @Robustness: add font validity check
 
         let mut debug_system = self.world.get_systems().debug_system.borrow_mut();
         // Joystick overlay
@@ -151,6 +148,7 @@ impl<'r> App<'r> {
                 font_size: 20,
                 pad_x: 5.0,
                 pad_y: 5.0,
+                background: colors::rgba(25, 25, 25, 210),
             };
 
             let mut joy_overlay = debug_system.create_overlay(
@@ -169,6 +167,7 @@ impl<'r> App<'r> {
                 font_size: 20,
                 pad_x: 5.0,
                 pad_y: 5.0,
+                background: colors::rgba(25, 25, 25, 210),
                 fadeout_time: Duration::from_secs(3),
                 max_rows: 30,
             };
@@ -239,7 +238,7 @@ impl<'r> App<'r> {
                 systems
                     .debug_system
                     .borrow_mut()
-                    .get_fadeout_overlay(String_Id::from("main"))
+                    .get_fadeout_overlay(String_Id::from("msg"))
                     .add_line("REPLAY HAS ENDED.");
                 is_replaying = false;
             }

@@ -3,22 +3,11 @@ use super::overlay;
 use crate::core::common::stringid::String_Id;
 use crate::core::common::Maybe_Error;
 use crate::core::env::Env_Info;
-use crate::core::msg::Msg_Responder;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::time::Duration;
-
-// @Temporary
-impl Msg_Responder for Debug_System {
-    type Msg_Data = ();
-    type Resp_Data = ();
-
-    fn send_message(&mut self, msg: Self::Msg_Data) -> Self::Resp_Data {
-        ()
-    }
-}
 
 pub struct Debug_System {
     overlays: HashMap<String_Id, overlay::Debug_Overlay>,
@@ -33,7 +22,7 @@ impl Debug_System {
         }
     }
 
-    pub fn init(&mut self, env: &Env_Info, gres: &mut Gfx_Resources) -> Maybe_Error {
+    pub fn init(&mut self, _env: &Env_Info, _gres: &mut Gfx_Resources) -> Maybe_Error {
         Ok(())
     }
 
