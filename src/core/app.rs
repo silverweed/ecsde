@@ -136,7 +136,7 @@ impl<'r> App<'r> {
         use crate::core::common::vector::Vec2f;
         use debug::{fadeout_overlay, overlay};
 
-        const FONT: &'static str = "Hack-Regular.ttf";
+        const FONT: &str = "Hack-Regular.ttf";
 
         let font = self
             .gfx_resources
