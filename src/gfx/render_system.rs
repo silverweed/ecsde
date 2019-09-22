@@ -55,7 +55,7 @@ impl Render_System {
             let texture = resources.get_texture(*tex_id);
             let sprite = gfx::render::create_sprite(texture, *src_rect);
 
-            let mut rend_transform = spatial.transform;
+            let mut rend_transform = spatial.global_transform;
             if smooth_by_extrapolating_velocity {
                 let v = spatial.velocity;
                 rend_transform.translate(v.x * frame_lag_normalized, v.y * frame_lag_normalized);

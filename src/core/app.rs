@@ -172,6 +172,10 @@ impl<'r> App<'r> {
                 self.app_config.target_win_size.0 as f32,
                 self.app_config.target_win_size.1 as f32,
             );
+
+			let mut fps_overlay = debug_system.create_overlay(String_Id::from("fps"), debug_overlay_config, font);
+			fps_overlay.vert_align = align::Align::End;
+			fps_overlay.position = Vec2f::new(0.0, self.app_config.target_win_size.1 as f32);
         }
 
         // Debug fadeout overlays
@@ -235,6 +239,8 @@ impl<'r> App<'r> {
         let sid_msg = String_Id::from("msg");
         #[cfg(debug_assertions)]
         let sid_time = String_Id::from("time");
+        #[cfg(debug_assertions)]
+        let sid_fps = String_Id::from("fps");
 
         while !self.should_close {
             self.world.update();
@@ -340,6 +346,9 @@ impl<'r> App<'r> {
             // Update audio
             systems.audio_system.borrow_mut().update();
 
+			#[cfg(debug_assertions)]
+			update_fps_debug_overlay(self.world.get_systems().debug_system.borrow_mut().get_overlay(sid_fps), &fps_debug);
+
             // Render
             #[cfg(prof_t)]
             let render_start_t = std::time::Instant::now();
@@ -365,7 +374,7 @@ impl<'r> App<'r> {
             self.config.update();
 
             #[cfg(debug_assertions)]
-            fps_debug.tick(&real_dt);
+			fps_debug.tick(&real_dt);
         }
 
         self.on_game_loop_end()?;
@@ -496,4 +505,10 @@ fn update_time_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, 
         ),
         colors::rgb(100, 200, 200),
     );
+}
+
+#[cfg(debug_assertions)]
+fn update_fps_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, fps: &debug::fps::Fps_Console_Printer) {
+	debug_overlay.clear();
+	debug_overlay.add_line_color(&format!("FPS: {}", fps.get_fps() as u32), colors::rgba(180, 180, 180, 200));
 }

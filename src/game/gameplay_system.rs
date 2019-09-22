@@ -15,8 +15,7 @@ use crate::gfx;
 use crate::input::axes::Virtual_Axes;
 use crate::input::input_system::Game_Action;
 use crate::resources::gfx::{tex_path, Gfx_Resources};
-use cgmath::Deg;
-use cgmath::InnerSpace;
+use cgmath::{Deg, InnerSpace};
 use std::cell::Ref;
 use std::time::Duration;
 
@@ -26,6 +25,7 @@ pub struct Gameplay_System {
     camera: Entity,
     latest_frame_actions: Vec<Game_Action>,
     latest_frame_axes: Virtual_Axes,
+	scene_tree: game::scene_tree::Scene_Tree,
 }
 
 impl Gameplay_System {
@@ -36,6 +36,7 @@ impl Gameplay_System {
             camera: Entity::INVALID,
             latest_frame_actions: vec![],
             latest_frame_axes: Virtual_Axes::default(),
+			scene_tree: game::scene_tree::Scene_Tree::new(),
         }
     }
 
@@ -61,6 +62,18 @@ impl Gameplay_System {
         gfx::animation_system::update(&dt, &mut self.entity_manager);
         game::controllable_system::update(&dt, actions, axes, &mut self.entity_manager);
 
+		for e in &self.entities {
+			if let Some(t) = self.entity_manager.get_component::<C_Spatial2D>(*e) {
+				self.scene_tree.set_local_transform(*e, &t.local_transform);
+			}
+		}
+		self.scene_tree.compute_global_transforms();
+		for e in &self.entities {
+			if let Some(mut t) = self.entity_manager.get_component_mut::<C_Spatial2D>(*e) {
+				t.global_transform = *self.scene_tree.get_global_transform(*e).unwrap();
+			}
+		}
+		
         self.update_demo_entites(&dt);
     }
 
@@ -154,8 +167,8 @@ impl Gameplay_System {
         self.entities.push(yv);
         {
             let mut s = em.add_component::<C_Spatial2D>(yv);
-            s.transform.set_position(300.0, 200.0);
-            s.transform.set_scale(3.0, 3.0);
+            s.local_transform.set_position(300.0, 200.0);
+            s.local_transform.set_scale(3.0, 3.0);
         }
         //{
         //let mut rend = em.add_component::<C_Renderable>(yv);
@@ -168,7 +181,7 @@ impl Gameplay_System {
         self.entities.push(plant);
         {
             let mut s = em.add_component::<C_Spatial2D>(plant);
-            s.transform.set_position(400.0, 500.0);
+            s.local_transform.set_position(400.0, 500.0);
         }
         //{
         //let mut rend = em.add_component::<C_Renderable>(plant);
@@ -198,8 +211,8 @@ impl Gameplay_System {
             ctrl.speed = cfg.get_var_float_or("gameplay/player/player_speed", 300.0);
         }
 
-        let n = 30;
-        for i in 0..200 {
+		let mut prev_entity: Option<Entity> = None;
+        for i in 0..2 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
@@ -209,12 +222,21 @@ impl Gameplay_System {
                 rend.rect = Rect::new(0, 0, sw as i32, sh as i32);
                 (sw, sh)
             };
-            {
-                let mut t = em.add_component::<C_Spatial2D>(entity);
-                t.transform.set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
-                t.transform
-                    .set_position(n as f32 * (i % n) as f32, n as f32 * (i / n) as f32);
-            }
+			{
+				let mut t = em.add_component::<C_Spatial2D>(entity);
+                //t.local_transform.set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
+				if i > 0 {
+					t.local_transform.set_position(100.0, 0.0);
+				}
+				self.scene_tree.add(entity, prev_entity, &t.local_transform);
+			}
+			prev_entity = Some(entity);
+            //{
+            //    let mut t = em.add_component::<C_Spatial2D>(entity);
+            //    t.transform.set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
+            //    t.transform
+            //        .set_position(n as f32 * (i % n) as f32, n as f32 * (i / n) as f32);
+            //}
             //{
             //let mut ctrl = em.add_component::<C_Controllable>(entity);
             //ctrl.speed = cfg.get_var_float_or("gameplay/player/player_speed", 300.0);
@@ -231,7 +253,7 @@ impl Gameplay_System {
         for (ctrl, spat) in em.get_component_tuple_mut::<C_Controllable, C_Spatial2D>() {
             let transl = ctrl.borrow().translation_this_frame;
             let mut spat = spat.borrow_mut();
-            spat.transform.translate_v(transl);
+            spat.local_transform.translate_v(transl);
             spat.velocity.x = transl.x;
             spat.velocity.y = transl.y;
         }
@@ -241,8 +263,11 @@ impl Gameplay_System {
             .iter_mut()
             .enumerate()
         {
-            let speed = i as f32 * 2.1;
-            t.transform.rotate(Deg(dt_secs * speed));
+            //let speed = i as f32 * 2.1;
+			let speed = 100.0;
+            t.local_transform.rotate(Deg(dt_secs * speed));
+			println!("{:?}", t.local_transform);
+			break;
         }
     }
 }

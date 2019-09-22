@@ -3,6 +3,7 @@ use cgmath::{Matrix3, Rad};
 use std::convert::Into;
 use typename::TypeName;
 
+// Likely @Incomplete: we don't want to recalculate the matrix every time.
 #[derive(Copy, Clone, Debug, TypeName, PartialEq)]
 pub struct C_Transform2D {
     position: Vec2f,
@@ -26,6 +27,20 @@ impl C_Transform2D {
     pub fn new() -> C_Transform2D {
         C_Transform2D::default()
     }
+
+	pub fn new_from_matrix(m: &Matrix3<f32>) -> C_Transform2D {
+		let sx = (m[0][0] * m[0][0] + m[1][0] * m[1][0]).sqrt();
+		let sy = (m[0][1] * m[0][1] + m[1][1] * m[1][1]).sqrt();
+		let rot = m[1][0].atan2(m[0][0]);
+		let tx = m[0][2];
+		let ty = m[1][2];
+		C_Transform2D {
+			position: Vec2f::new(tx, ty),
+			rotation: Rad(rot),
+			scale: Vec2f::new(sx, sy),
+			origin: Vec2f::new(0.0, 0.0), // @Incomplete
+		}
+	}
 
     pub fn translate(&mut self, x: f32, y: f32) {
         self.position.x += x;
@@ -111,6 +126,8 @@ impl C_Transform2D {
 #[cfg(test)]
 mod tests {
     use super::*;
+	use float_cmp::ApproxEq;
+
 
     #[test]
     fn default() {
@@ -174,9 +191,21 @@ mod tests {
         assert_approx_eq(tr.rotation(), Rad(-1.2));
     }
 
-    fn assert_approx_eq(a: Rad<f32>, b: Rad<f32>) {
-        use float_cmp::ApproxEq;
+	#[test]
+	fn to_matrix_from_matrix() {
+		let mut t1 = C_Transform2D::new();
+		let mut t2 = C_Transform2D::new();
 
+		t1.set_position(100.0, 0.0);
+		t1.set_rotation(Rad(1.4));
+		t1.set_scale(2.0, 2.0);
+		t2 = C_Transform2D::new_from_matrix(&t1.get_matrix());
+		assert!(t2.position().x.approx_eq(100.0, (0.0, 2)));
+		assert_approx_eq(t2.rotation(), Rad(1.4));
+		assert!(t2.scale().y.approx_eq(2.0, (0.0, 2)));
+	}
+
+    fn assert_approx_eq(a: Rad<f32>, b: Rad<f32>) {
         let Rad(a) = a;
         let Rad(b) = b;
         assert!(a.approx_eq(b, (0.0, 2)), "Expected: {}, Got: {}", b, a);

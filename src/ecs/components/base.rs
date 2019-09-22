@@ -17,6 +17,7 @@ impl C_Velocity2D {
 
 #[derive(Copy, Clone, Debug, TypeName, PartialEq, Default)]
 pub struct C_Spatial2D {
-    pub transform: C_Transform2D,
+    pub local_transform: C_Transform2D,
+    pub global_transform: C_Transform2D,
     pub velocity: C_Velocity2D,
 }
