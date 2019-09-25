@@ -1,4 +1,4 @@
-use crate::ecs::components::transform::C_Transform2D;
+use crate::ecs::components::transform::{matrix_pretty_print, C_Transform2D};
 use crate::ecs::entity_manager::Entity;
 use std::vec::Vec;
 
@@ -41,13 +41,13 @@ impl Scene_Tree {
         }
     }
 
-	pub fn set_local_transform(&mut self, e: Entity, new_transform: &C_Transform2D) {
-		self.local_transforms[e.index] = *new_transform;
-	}
+    pub fn set_local_transform(&mut self, e: Entity, new_transform: &C_Transform2D) {
+        self.local_transforms[e.index] = *new_transform;
+    }
 
-	pub fn get_global_transform(&self, e: Entity) -> Option<&C_Transform2D> {
-		self.global_transforms.get(e.index)
-	}
+    pub fn get_global_transform(&self, e: Entity) -> Option<&C_Transform2D> {
+        self.global_transforms.get(e.index)
+    }
 
     pub fn compute_global_transforms(&mut self) {
         let local_transforms = &self.local_transforms;
@@ -60,9 +60,10 @@ impl Scene_Tree {
         for i in 1..global_transforms.len() {
             let parent = hierarchy[i];
             // @Speed: this recalculates matrices every time! Optimize this!
-            global_transforms[i] =
-                C_Transform2D::new_from_matrix(&(global_transforms[parent as usize].get_matrix() * local_transforms[i].get_matrix()));
-			//println!("local: {:?}, global: {:?}, parent: {:?}", local_transforms[i].rotation(), global_transforms[i].rotation(), parent);
+            global_transforms[i] = C_Transform2D::new_from_matrix(
+                &(global_transforms[parent as usize].get_matrix()
+                    * local_transforms[i].get_matrix()),
+            );
         }
     }
 }

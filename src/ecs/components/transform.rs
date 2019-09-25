@@ -28,19 +28,19 @@ impl C_Transform2D {
         C_Transform2D::default()
     }
 
-	pub fn new_from_matrix(m: &Matrix3<f32>) -> C_Transform2D {
-		let sx = (m[0][0] * m[0][0] + m[1][0] * m[1][0]).sqrt();
-		let sy = (m[0][1] * m[0][1] + m[1][1] * m[1][1]).sqrt();
-		let rot = m[1][0].atan2(m[0][0]);
-		let tx = m[0][2];
-		let ty = m[1][2];
-		C_Transform2D {
-			position: Vec2f::new(tx, ty),
-			rotation: Rad(rot),
-			scale: Vec2f::new(sx, sy),
-			origin: Vec2f::new(0.0, 0.0), // @Incomplete
-		}
-	}
+    pub fn new_from_matrix(m: &Matrix3<f32>) -> C_Transform2D {
+        let sx = (m[0][0] * m[0][0] + m[0][1] * m[0][1]).sqrt();
+        let sy = (m[1][0] * m[1][0] + m[1][1] * m[1][1]).sqrt();
+        let rot = m[0][1].atan2(m[0][0]);
+        let tx = m[2][0];
+        let ty = m[2][1];
+        C_Transform2D {
+            position: Vec2f::new(tx, ty),
+            rotation: Rad(rot),
+            scale: Vec2f::new(sx, sy),
+            origin: Vec2f::new(0.0, 0.0), // @Incomplete
+        }
+    }
 
     pub fn translate(&mut self, x: f32, y: f32) {
         self.position.x += x;
@@ -103,7 +103,9 @@ impl C_Transform2D {
         let tx = -self.origin.x * sxc - self.origin.y * sys + self.position.x;
         let ty = self.origin.x * sxs - self.origin.y * syc + self.position.y;
 
-        Matrix3::new(sxc, sys, tx, -sxs, syc, ty, 0.0, 0.0, 1.0)
+        // R | T
+        // 0 | 1
+        Matrix3::new(sxc, -sys, 0.0, sxs, syc, 0.0, tx, ty, 1.0)
     }
 
     #[cfg(feature = "use-sfml")]
@@ -119,15 +121,28 @@ impl C_Transform2D {
         let tx = -self.origin.x * sxc - self.origin.y * sys + self.position.x;
         let ty = self.origin.x * sxs - self.origin.y * syc + self.position.y;
 
+        // R | 0
+        // T | 1
         sfml::graphics::Transform::new(sxc, sys, tx, -sxs, syc, ty, 0.0, 0.0, 1.0)
     }
+}
+
+// Note: Matrix3 is column-major
+pub fn matrix_pretty_print(m: &Matrix3<f32>) {
+    println!(
+        "
+{:.2} {:.2} {:.2}
+{:.2} {:.2} {:.2}
+{:.2} {:.2} {:.2}
+",
+        m[0][0], m[1][0], m[2][0], m[0][1], m[1][1], m[2][1], m[0][2], m[1][2], m[2][2]
+    );
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-	use float_cmp::ApproxEq;
-
+    use float_cmp::ApproxEq;
 
     #[test]
     fn default() {
@@ -191,19 +206,19 @@ mod tests {
         assert_approx_eq(tr.rotation(), Rad(-1.2));
     }
 
-	#[test]
-	fn to_matrix_from_matrix() {
-		let mut t1 = C_Transform2D::new();
-		let mut t2 = C_Transform2D::new();
+    #[test]
+    fn to_matrix_from_matrix() {
+        let mut t1 = C_Transform2D::new();
+        let mut t2 = C_Transform2D::new();
 
-		t1.set_position(100.0, 0.0);
-		t1.set_rotation(Rad(1.4));
-		t1.set_scale(2.0, 2.0);
-		t2 = C_Transform2D::new_from_matrix(&t1.get_matrix());
-		assert!(t2.position().x.approx_eq(100.0, (0.0, 2)));
-		assert_approx_eq(t2.rotation(), Rad(1.4));
-		assert!(t2.scale().y.approx_eq(2.0, (0.0, 2)));
-	}
+        t1.set_position(100.0, 0.0);
+        t1.set_rotation(Rad(1.4));
+        t1.set_scale(2.0, 2.0);
+        t2 = C_Transform2D::new_from_matrix(&t1.get_matrix());
+        assert!(t2.position().x.approx_eq(100.0, (0.0, 2)));
+        assert_approx_eq(t2.rotation(), Rad(1.4));
+        assert!(t2.scale().y.approx_eq(2.0, (0.0, 2)));
+    }
 
     fn assert_approx_eq(a: Rad<f32>, b: Rad<f32>) {
         let Rad(a) = a;
