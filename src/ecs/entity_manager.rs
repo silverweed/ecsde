@@ -1,5 +1,5 @@
 use super::components::Component;
-use crate::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
+use crate::alloc::generational_allocator::{self, Generational_Allocator, Generational_Index};
 
 use std::cell::{Ref, RefCell, RefMut};
 use std::iter::Iterator;
@@ -61,8 +61,8 @@ type VecOpt<T> = Vec<Option<RefCell<T>>>;
 
 impl Entity {
     pub const INVALID: Entity = Entity {
-        gen: u64::max_value(),
-        index: usize::max_value(),
+        gen: generational_allocator::Gen_Type::max_value(),
+        index: generational_allocator::Index_Type::max_value(),
     };
 }
 

@@ -1,9 +1,12 @@
 use std::vec::Vec;
 
+pub type Index_Type = usize;
+pub type Gen_Type = u32;
+
 #[derive(Default, Copy, Clone, Debug, PartialEq, Hash)]
 pub struct Generational_Index {
-    pub index: usize,
-    pub gen: u64,
+    pub index: Index_Type,
+    pub gen: Gen_Type,
 }
 
 impl Eq for Generational_Index {}
@@ -17,7 +20,7 @@ pub struct Generational_Allocator {
     // true if i-th slot is in use, false otherwise
     alive: Vec<bool>,
     // generation of i-th slot
-    gens: Vec<u64>,
+    gens: Vec<Gen_Type>,
     // list of currently free slots. Used to retrieve the next available slot in O(1).
     free_slots: Vec<usize>,
 }
