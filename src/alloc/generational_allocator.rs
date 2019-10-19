@@ -3,13 +3,11 @@ use std::vec::Vec;
 pub type Index_Type = usize;
 pub type Gen_Type = u32;
 
-#[derive(Default, Copy, Clone, Debug, PartialEq, Hash)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub struct Generational_Index {
     pub index: Index_Type,
     pub gen: Gen_Type,
 }
-
-impl Eq for Generational_Index {}
 
 /// Generational_Allocator provides an interface to allocate/deallocate
 /// Generational Indices and check if an index is valid.
