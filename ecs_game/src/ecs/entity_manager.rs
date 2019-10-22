@@ -453,6 +453,7 @@ mod tests {
         let mut em = Entity_Manager::new();
         let e = em.new_entity();
         em.destroy_entity(e);
+        assert!(!em.is_valid_entity(e));
     }
 
     #[test]
