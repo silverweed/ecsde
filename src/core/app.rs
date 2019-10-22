@@ -1,13 +1,13 @@
 use super::app_config::App_Config;
-use super::common::align;
 use super::common::colors;
 use super::common::Maybe_Error;
 use super::env::Env_Info;
 use super::time;
 use super::world;
-use crate::cfg;
+use crate::cfg::{self, from_cfg};
 use crate::fs;
 use crate::gfx;
+use crate::gfx::align;
 use crate::input;
 use crate::replay::{recording_system, replay_data, replay_input_provider};
 use crate::resources;
@@ -44,10 +44,13 @@ impl<'r> App<'r> {
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
         let world = world::World::new(&env);
         let replay_data = maybe_create_replay_data(&cfg);
-        let ms_per_frame = *config
-            .get_var_int("engine/gameplay/gameplay_update_tick_ms")
-            .expect("[ FATAL ] engine/gameplay/gameplay_update_tick_ms not found in config file!")
-            as u16;
+        let ms_per_frame = from_cfg(
+            config
+                .get_var::<i32>("engine/gameplay/gameplay_update_tick_ms")
+                .expect(
+                    "[ FATAL ] engine/gameplay/gameplay_update_tick_ms not found in config file!",
+                ),
+        ) as u16;
 
         App {
             should_close: false,
@@ -120,9 +123,7 @@ impl<'r> App<'r> {
 
         if cfg!(debug_assertions)
             && self.replay_data.is_none()
-            && *self
-                .config
-                .get_var_bool_or("engine/debug/replay/record", false)
+            && from_cfg(self.config.get_var_or("engine/debug/replay/record", false))
         {
             self.replay_recording_system
                 .start_recording_thread(&self.config)?;
@@ -173,9 +174,10 @@ impl<'r> App<'r> {
                 self.app_config.target_win_size.1 as f32,
             );
 
-			let mut fps_overlay = debug_system.create_overlay(String_Id::from("fps"), debug_overlay_config, font);
-			fps_overlay.vert_align = align::Align::End;
-			fps_overlay.position = Vec2f::new(0.0, self.app_config.target_win_size.1 as f32);
+            let mut fps_overlay =
+                debug_system.create_overlay(String_Id::from("fps"), debug_overlay_config, font);
+            fps_overlay.vert_align = align::Align::End;
+            fps_overlay.position = Vec2f::new(0.0, self.app_config.target_win_size.1 as f32);
         }
 
         // Debug fadeout overlays
@@ -214,7 +216,7 @@ impl<'r> App<'r> {
             let config = replay_input_provider::Replay_Input_Provider_Config {
                 disable_input_during_replay: self
                     .config
-                    .get_var_bool_or("engine/debug/replay/disable_input_during_replay", false),
+                    .get_var_or("engine/debug/replay/disable_input_during_replay", false),
             };
             Box::new(replay_input_provider::Replay_Input_Provider::new(
                 config,
@@ -255,10 +257,10 @@ impl<'r> App<'r> {
             );
 
             let update_time = Duration::from_millis(
-                *self
+                from_cfg(self
                     .config
-                    .get_var_int("engine/gameplay/gameplay_update_tick_ms")
-                    .expect("[ FATAL ] engine/gameplay/gameplay_update_tick_ms not found in config file!")
+                    .get_var::<i32>("engine/gameplay/gameplay_update_tick_ms")
+                    .expect("[ FATAL ] engine/gameplay/gameplay_update_tick_ms not found in config file!"))
                     as u64,
             );
 
@@ -307,9 +309,8 @@ impl<'r> App<'r> {
                     if self.replay_recording_system.is_recording()
                         && input_provider.is_realtime_player_input()
                     {
-                        let record_replay_data = *self
-                            .config
-                            .get_var_bool_or("engine/debug/replay/record", false);
+                        let record_replay_data =
+                            from_cfg(self.config.get_var_or("engine/debug/replay/record", false));
                         if record_replay_data {
                             self.replay_recording_system
                                 .update(raw_events, real_axes, joy_mask);
@@ -346,8 +347,15 @@ impl<'r> App<'r> {
             // Update audio
             systems.audio_system.borrow_mut().update();
 
-			#[cfg(debug_assertions)]
-			update_fps_debug_overlay(self.world.get_systems().debug_system.borrow_mut().get_overlay(sid_fps), &fps_debug);
+            #[cfg(debug_assertions)]
+            update_fps_debug_overlay(
+                self.world
+                    .get_systems()
+                    .debug_system
+                    .borrow_mut()
+                    .get_overlay(sid_fps),
+                &fps_debug,
+            );
 
             // Render
             #[cfg(prof_t)]
@@ -364,17 +372,17 @@ impl<'r> App<'r> {
 
             #[cfg(debug_assertions)]
             {
-                let sleep = *self
-                    .config
-                    .get_var_int_or("engine/debug/extra_frame_sleep_ms", 0)
-                    as u64;
+                let sleep = from_cfg(
+                    self.config
+                        .get_var_or("engine/debug/extra_frame_sleep_ms", 0),
+                ) as u64;
                 std::thread::sleep(Duration::from_millis(sleep));
             }
 
             self.config.update();
 
             #[cfg(debug_assertions)]
-			fps_debug.tick(&real_dt);
+            fps_debug.tick(&real_dt);
         }
 
         self.on_game_loop_end()?;
@@ -406,9 +414,10 @@ impl<'r> App<'r> {
         real_dt: Duration,
         frame_lag_normalized: f32,
     ) -> Maybe_Error {
-        let smooth_by_extrapolating_velocity = *self
-            .config
-            .get_var_bool_or("engine/rendering/smooth_by_extrapolating_velocity", false);
+        let smooth_by_extrapolating_velocity = from_cfg(
+            self.config
+                .get_var_or("engine/rendering/smooth_by_extrapolating_velocity", false),
+        );
 
         let systems = self.world.get_systems();
 
@@ -508,7 +517,13 @@ fn update_time_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, 
 }
 
 #[cfg(debug_assertions)]
-fn update_fps_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, fps: &debug::fps::Fps_Console_Printer) {
-	debug_overlay.clear();
-	debug_overlay.add_line_color(&format!("FPS: {}", fps.get_fps() as u32), colors::rgba(180, 180, 180, 200));
+fn update_fps_debug_overlay(
+    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    fps: &debug::fps::Fps_Console_Printer,
+) {
+    debug_overlay.clear();
+    debug_overlay.add_line_color(
+        &format!("FPS: {}", fps.get_fps() as u32),
+        colors::rgba(180, 180, 180, 200),
+    );
 }

@@ -1,5 +1,5 @@
 use super::controllable_system::C_Controllable;
-use crate::cfg;
+use crate::cfg::{self, from_cfg};
 use crate::core::common;
 use crate::core::common::rect::Rect;
 use crate::core::common::stringid::String_Id;
@@ -142,7 +142,7 @@ impl Gameplay_System {
         let v = {
             let real_dt_secs = time::to_secs_frac(real_dt);
             let mut camera_ctrl = camera_ctrl.unwrap();
-            let speed = *camera_ctrl.speed;
+            let speed = from_cfg(camera_ctrl.speed);
             let velocity = movement * speed;
             let v = velocity * real_dt_secs;
             camera_ctrl.translation_this_frame = v;
@@ -196,7 +196,7 @@ impl Gameplay_System {
         }
         {
             let mut ctrl = em.add_component::<C_Controllable>(plant);
-            ctrl.speed = cfg.get_var_float_or("gameplay/player/player_speed", 300.0);
+            ctrl.speed = cfg.get_var_or("gameplay/player/player_speed", 300.0);
         }
     }
 
@@ -208,7 +208,7 @@ impl Gameplay_System {
         em.add_component::<C_Camera2D>(self.camera);
         {
             let mut ctrl = em.add_component::<C_Controllable>(self.camera);
-            ctrl.speed = cfg.get_var_float_or("gameplay/player/player_speed", 300.0);
+            ctrl.speed = cfg.get_var_or("gameplay/player/player_speed", 300.0);
         }
 
         let mut prev_entity: Option<Entity> = None;

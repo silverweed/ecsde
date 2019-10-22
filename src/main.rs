@@ -8,9 +8,8 @@ extern crate ears;
 extern crate notify;
 extern crate num_enum;
 
-#[cfg(debug_assertions)]
 #[macro_use]
-extern crate lazy_static; // used for String_Id
+extern crate lazy_static;
 
 #[cfg(test)]
 extern crate float_cmp;

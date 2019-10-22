@@ -1,9 +1,9 @@
 use crate::core;
-use crate::core::common::align::Align;
 use crate::core::common::colors::{self, Color};
 use crate::core::common::rect::Rect;
 use crate::core::common::vector::{to_framework_vec, Vec2f};
 use crate::gfx;
+use crate::gfx::align::Align;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;

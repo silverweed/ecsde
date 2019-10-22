@@ -1,3 +1,4 @@
+use super::value::Cfg_Value;
 use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -7,15 +8,6 @@ use std::vec::Vec;
 
 const HEADER_SEPARATOR: char = '/';
 const COMMENT_START: char = '#';
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Cfg_Value {
-    Nil, // @Redundant: do we really need this value?
-    Bool(bool),
-    Int(i32),
-    Float(f32),
-    String(String),
-}
 
 /// Contains all configurations from all cfg files.
 /// Conceptually, it's as all cfg sections were in the same file: they're just split

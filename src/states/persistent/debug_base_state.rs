@@ -1,4 +1,4 @@
-use crate::cfg;
+use crate::cfg::{self, from_cfg};
 use crate::core::common::stringid::String_Id;
 use crate::core::time;
 use crate::core::world::World;
@@ -64,9 +64,10 @@ impl Persistent_Game_State for Debug_Base_State {
                 time.set_paused(!paused);
                 msg_overlay.add_line(if !paused { "Paused" } else { "Resumed" });
             } else if action.0 == self.sid_step_sim && action.1 == Action_Kind::Pressed {
-                let target_fps = config.get_var_int_or("engine/rendering/fps", 60);
-                let step_delta =
-                    Duration::from_nanos(u64::try_from(1_000_000_000 / *target_fps).unwrap());
+                let target_fps = config.get_var_or("engine/rendering/fps", 60);
+                let step_delta = Duration::from_nanos(
+                    u64::try_from(1_000_000_000 / from_cfg(target_fps)).unwrap(),
+                );
                 msg_overlay.add_line(&format!(
                     "Stepping of: {:.2} ms",
                     time::to_secs_frac(&step_delta) * 1000.0

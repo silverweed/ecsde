@@ -1,18 +1,36 @@
-use std::cell::RefCell;
-use std::ops::Deref;
-use std::rc::Rc;
+use super::config::CFG_VAR_TABLE;
+use super::value::Cfg_Value;
+use crate::core::common::stringid::String_Id;
+use std::convert::{From, Into, TryFrom};
+use typename::TypeName;
 
-#[derive(Debug, Clone)]
+pub(super) fn from_cfg<T>(var: Cfg_Var<T>) -> T
+where
+    T: Default + TypeName + Into<Cfg_Value> + TryFrom<Cfg_Value>,
+{
+    let table = CFG_VAR_TABLE.read().unwrap();
+    let value = table.get(&var.id).unwrap();
+    T::try_from(value.clone()).unwrap_or_else(|_| {
+        panic!(
+            "Error dereferencing Cfg_Var<{}>: incompatible value {:?}",
+            T::type_name(),
+            value
+        )
+    })
+}
+
+#[derive(Debug, Copy, Clone)]
 pub struct Cfg_Var<T>
 where
-    T: Default,
+    T: Default + TypeName + Into<Cfg_Value>,
 {
-    value: Rc<RefCell<T>>,
+    id: String_Id,
+    _marker: std::marker::PhantomData<T>,
 }
 
 impl<T> Default for Cfg_Var<T>
 where
-    T: Default,
+    T: Default + TypeName + Into<Cfg_Value>,
 {
     fn default() -> Cfg_Var<T> {
         Cfg_Var::empty()
@@ -21,44 +39,33 @@ where
 
 impl<T> Cfg_Var<T>
 where
-    T: Default,
+    T: Default + TypeName + Into<Cfg_Value>,
 {
-    pub fn new(val: &Rc<RefCell<T>>) -> Cfg_Var<T> {
-        Cfg_Var { value: val.clone() }
+    pub fn new(id: String_Id) -> Cfg_Var<T> {
+        Cfg_Var {
+            id,
+            _marker: std::marker::PhantomData,
+        }
     }
 
     pub fn new_from_val(value: T) -> Cfg_Var<T> {
-        Cfg_Var {
-            value: Rc::new(RefCell::new(value)),
-        }
+        let id = String_Id::from("empty"); // @Temporary
+        let mut table = CFG_VAR_TABLE.write().unwrap();
+        table.insert(id, value.into());
+        Self::new(id)
     }
 
     pub fn empty() -> Cfg_Var<T> {
-        Cfg_Var {
-            value: Rc::new(RefCell::new(T::default())),
-        }
-    }
-}
-
-impl<T> Deref for Cfg_Var<T>
-where
-    T: Default,
-{
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        // Note: the only place that can mutate this pointer's value is the Config struct.
-        unsafe { &*self.value.as_ptr() }
-        //&*self.value
+        Self::new_from_val(T::default())
     }
 }
 
 impl<T: std::fmt::Display> std::fmt::Display for Cfg_Var<T>
 where
-    T: Default,
+    T: Default + TypeName + Into<Cfg_Value>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.value.borrow())
+        write!(f, "{}", &self)
     }
 }
 

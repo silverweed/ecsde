@@ -1,6 +1,6 @@
 use super::recording_thread;
 use super::replay_data::{Replay_Data_Point, Replay_Joystick_Data};
-use crate::cfg;
+use crate::cfg::{self, from_cfg};
 use crate::core::common::Maybe_Error;
 use crate::input::bindings::joystick::{self, Joystick_Axis};
 use crate::input::input_system::Input_Raw_Event;
@@ -42,7 +42,7 @@ impl Replay_Recording_System {
             .unwrap_or_else(|| panic!("start_recording_thread called twice!"));
 
         let file_write_interval_secs =
-            *config.get_var_float_or("engine/debug/replay/file_write_interval", 1.0);
+            from_cfg(config.get_var_or("engine/debug/replay/file_write_interval", 1.0));
 
         let cfg = recording_thread::Recording_Thread_Config {
             recording_cfg: self.config,

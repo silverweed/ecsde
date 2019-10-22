@@ -1,5 +1,5 @@
 use super::replay_data::{Replay_Data, Replay_Data_Iter};
-use crate::cfg::Cfg_Var;
+use crate::cfg::{from_cfg, Cfg_Var};
 use crate::input::bindings::joystick;
 use crate::input::default_input_provider::Default_Input_Provider;
 use crate::input::input_system::Input_Raw_Event;
@@ -41,7 +41,7 @@ impl Input_Provider for Replay_Input_Provider {
             // Once replay data is depleted, feed regular window events.
             self.dip.update(window, joy_mgr);
         } else {
-            if *self.config.disable_input_during_replay {
+            if from_cfg(self.config.disable_input_during_replay) {
                 self.update_core_events(window);
             } else {
                 while let Some(evt) = window.poll_event() {
