@@ -5,7 +5,7 @@ use std::collections::hash_map::Entry;
 #[cfg(debug_assertions)]
 use std::collections::HashMap;
 #[cfg(debug_assertions)]
-use std::sync::Mutex;
+use std::sync::RwLock;
 
 #[derive(PartialEq, Hash, Copy, Clone, PartialOrd, Eq, Ord)]
 pub struct String_Id(u32);
@@ -21,7 +21,7 @@ where
         #[cfg(debug_assertions)]
         {
             match STRING_ID_MAP
-                .lock()
+                .write()
                 .expect("[ ERROR ] Failed to lock STRING_ID_MAP")
                 .entry(this)
             {
@@ -55,7 +55,7 @@ impl std::fmt::Display for String_Id {
             "{} (orig = \"{}\")",
             self.0,
             STRING_ID_MAP
-                .lock()
+                .read()
                 .expect("[ ERROR ] Failed to lock STRING_ID_MAP")[self]
         )
     }
@@ -74,7 +74,7 @@ impl std::fmt::Debug for String_Id {
             "String_Id({}, \"{}\")",
             self.0,
             STRING_ID_MAP
-                .lock()
+                .read()
                 .expect("[ ERROR ] Failed to lock STRING_ID_MAP")[self]
         )
     }
@@ -94,7 +94,7 @@ fn fnv1a(bytes: &[u8]) -> u32 {
 
 #[cfg(debug_assertions)]
 lazy_static! {
-    static ref STRING_ID_MAP: Mutex<HashMap<String_Id, String>> = Mutex::new(HashMap::new());
+    static ref STRING_ID_MAP: RwLock<HashMap<String_Id, String>> = RwLock::new(HashMap::new());
 }
 
 #[cfg(test)]
