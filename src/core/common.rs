@@ -1,4 +1,5 @@
 pub mod align;
+pub mod bitset;
 pub mod colors;
 pub mod direction;
 pub mod rect;
