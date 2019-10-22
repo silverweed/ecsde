@@ -1,3 +1,4 @@
+pub mod bitset;
 pub mod colors;
 pub mod direction;
 pub mod rand;

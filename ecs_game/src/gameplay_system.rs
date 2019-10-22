@@ -65,17 +65,27 @@ impl Gameplay_System {
         gfx::animation_system::update(&dt, &mut self.entity_manager);
         controllable_system::update(&dt, actions, axes, &mut self.entity_manager, cfg);
 
+        use std::time::Instant;
+        let now = Instant::now();
         for e in &self.entities {
             if let Some(t) = self.entity_manager.get_component::<C_Spatial2D>(*e) {
                 self.scene_tree.set_local_transform(*e, &t.local_transform);
             }
         }
+        println!("copying took {:?} ms", Instant::now().duration_since(now));
+        let now = Instant::now();
         self.scene_tree.compute_global_transforms();
+        println!("computing took {:?} ms", Instant::now().duration_since(now));
+        let now = Instant::now();
         for e in &self.entities {
             if let Some(mut t) = self.entity_manager.get_component_mut::<C_Spatial2D>(*e) {
                 t.global_transform = *self.scene_tree.get_global_transform(*e).unwrap();
             }
         }
+        println!(
+            "backcopying took {:?} ms",
+            Instant::now().duration_since(now)
+        );
 
         self.update_demo_entites(&dt);
     }
@@ -222,7 +232,7 @@ impl Gameplay_System {
         }
 
         let mut prev_entity: Option<Entity> = None;
-        for i in 0..10 {
+        for i in 0..1000 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
@@ -234,9 +244,10 @@ impl Gameplay_System {
             };
             {
                 let mut t = em.add_component::<C_Spatial2D>(entity);
-                //t.local_transform.set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
+                t.local_transform
+                    .set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
                 if i > 0 {
-                    t.local_transform.set_position(20.0, 0.0);
+                    t.local_transform.set_position(50.0, 0.0);
                 }
                 self.scene_tree.add(entity, prev_entity, &t.local_transform);
             }
@@ -273,7 +284,7 @@ impl Gameplay_System {
             .iter_mut()
             .enumerate()
         {
-            let speed = 20.0;
+            let speed = 10.0;
             t.local_transform.rotate(Deg(dt_secs * speed));
         }
     }
