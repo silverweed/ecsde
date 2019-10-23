@@ -1,4 +1,4 @@
-use crate::cfg::{from_cfg, Cfg_Var};
+use crate::cfg::Cfg_Var;
 use crate::core::common::vector::Vec2f;
 use crate::core::time;
 use crate::ecs::entity_manager::Entity_Manager;
@@ -33,7 +33,7 @@ pub fn update(
     let controllables = em.get_components_mut::<C_Controllable>();
 
     for mut ctrl in controllables {
-        let speed = from_cfg(ctrl.speed);
+        let speed = ctrl.speed.read();
         let velocity = movement * speed;
         let v = velocity * dt_secs;
         ctrl.translation_this_frame = v;

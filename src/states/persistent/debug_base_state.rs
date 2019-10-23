@@ -1,4 +1,4 @@
-use crate::cfg::{self, from_cfg};
+use crate::cfg::Cfg_Var;
 use crate::core::common::stringid::String_Id;
 use crate::core::time;
 use crate::core::world::World;
@@ -14,6 +14,7 @@ pub struct Debug_Base_State {
     sid_step_sim: String_Id,
     sid_print_em_debug_info: String_Id,
     sid_quit: String_Id,
+    fps: Cfg_Var<i32>,
 }
 
 const CHANGE_SPEED_DELTA: f32 = 0.1;
@@ -27,17 +28,13 @@ impl Debug_Base_State {
             sid_step_sim: String_Id::from("step_sim"),
             sid_print_em_debug_info: String_Id::from("print_em_debug_info"),
             sid_quit: String_Id::from("quit"),
+            fps: Cfg_Var::new("engine/fps"),
         }
     }
 }
 
 impl Persistent_Game_State for Debug_Base_State {
-    fn handle_actions(
-        &mut self,
-        actions: &[Game_Action],
-        world: &World,
-        config: &cfg::Config,
-    ) -> bool {
+    fn handle_actions(&mut self, actions: &[Game_Action], world: &World) -> bool {
         let mut time = world.time.borrow_mut();
         let mut debug_system = world.get_systems().debug_system.borrow_mut();
         let msg_overlay = debug_system.get_fadeout_overlay(String_Id::from("msg"));
@@ -64,10 +61,9 @@ impl Persistent_Game_State for Debug_Base_State {
                 time.set_paused(!paused);
                 msg_overlay.add_line(if !paused { "Paused" } else { "Resumed" });
             } else if action.0 == self.sid_step_sim && action.1 == Action_Kind::Pressed {
-                let target_fps = config.get_var_or("engine/rendering/fps", 60);
-                let step_delta = Duration::from_nanos(
-                    u64::try_from(1_000_000_000 / from_cfg(target_fps)).unwrap(),
-                );
+                let target_fps = self.fps.read();
+                let step_delta =
+                    Duration::from_nanos(u64::try_from(1_000_000_000 / target_fps).unwrap());
                 msg_overlay.add_line(&format!(
                     "Stepping of: {:.2} ms",
                     time::to_secs_frac(&step_delta) * 1000.0

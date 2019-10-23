@@ -1,4 +1,3 @@
-use crate::cfg;
 use crate::core::world::World;
 use crate::input::input_system::Game_Action;
 
@@ -18,12 +17,7 @@ pub trait Game_State {
         State_Transition::None
     }
     /// Returns true if should quit
-    fn handle_actions(
-        &mut self,
-        _actions: &[Game_Action],
-        _world: &World,
-        _config: &cfg::Config,
-    ) -> bool {
+    fn handle_actions(&mut self, _actions: &[Game_Action], _world: &World) -> bool {
         false
     }
 }
@@ -33,12 +27,7 @@ pub trait Persistent_Game_State {
     fn on_end(&mut self, _world: &World) {}
     fn update(&mut self, _world: &World) {}
     /// Returns true if should quit
-    fn handle_actions(
-        &mut self,
-        _actions: &[Game_Action],
-        _world: &World,
-        _config: &cfg::Config,
-    ) -> bool {
+    fn handle_actions(&mut self, _actions: &[Game_Action], _world: &World) -> bool {
         false
     }
 }

@@ -1,5 +1,4 @@
 use super::state::{Game_State, Persistent_Game_State, State_Transition};
-use crate::cfg;
 use crate::core::world::World;
 use crate::input::input_system::Game_Action;
 use std::vec::Vec;
@@ -47,20 +46,15 @@ impl State_Manager {
     }
 
     /// Returns true if should quit
-    pub fn handle_actions(
-        &mut self,
-        actions: &[Game_Action],
-        world: &World,
-        config: &cfg::Config,
-    ) -> bool {
+    pub fn handle_actions(&mut self, actions: &[Game_Action], world: &World) -> bool {
         let mut should_quit = false;
 
         if let Some(state) = self.current_state() {
-            should_quit |= state.handle_actions(actions, world, config);
+            should_quit |= state.handle_actions(actions, world);
         }
 
         for state in &mut self.persistent_states {
-            should_quit |= state.handle_actions(actions, world, config);
+            should_quit |= state.handle_actions(actions, world);
         }
 
         should_quit
@@ -157,12 +151,7 @@ mod tests {
                 State_Transition::Pop
             }
         }
-        fn handle_actions(
-            &mut self,
-            _actions: &[Game_Action],
-            _world: &World,
-            _config: &cfg::Config,
-        ) -> bool {
+        fn handle_actions(&mut self, _actions: &[Game_Action], _world: &World) -> bool {
             self.data.borrow_mut().handled_actions += 1;
             false
         }
@@ -189,15 +178,14 @@ mod tests {
         assert_eq!(data.borrow().handled_actions, 0);
 
         let actions = [];
-        let cfg = cfg::Config::new_empty();
-        smgr.handle_actions(&actions, &world, &cfg);
+        smgr.handle_actions(&actions, &world);
         assert_eq!(data.borrow().handled_actions, 1);
 
         smgr.update(&world); // this pops the state
         assert_eq!(data.borrow().updated, 2, "State was not updated");
         assert!(data.borrow().ended, "State was not ended");
 
-        smgr.handle_actions(&actions, &world, &cfg);
+        smgr.handle_actions(&actions, &world);
         assert_eq!(
             data.borrow().handled_actions,
             1,

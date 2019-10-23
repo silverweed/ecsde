@@ -1,6 +1,6 @@
 use super::recording_thread;
 use super::replay_data::{Replay_Data_Point, Replay_Joystick_Data};
-use crate::cfg::{self, from_cfg};
+use crate::cfg::Cfg_Var;
 use crate::core::common::Maybe_Error;
 use crate::input::bindings::joystick::{self, Joystick_Axis};
 use crate::input::input_system::Input_Raw_Event;
@@ -10,7 +10,7 @@ use std::thread::JoinHandle;
 
 #[derive(Copy, Clone)]
 pub struct Replay_Recording_System_Config {
-    pub ms_per_frame: u16,
+    pub ms_per_frame: Cfg_Var<i32>,
 }
 
 pub struct Replay_Recording_System {
@@ -35,14 +35,14 @@ impl Replay_Recording_System {
         }
     }
 
-    pub fn start_recording_thread(&mut self, config: &cfg::Config) -> Maybe_Error {
+    pub fn start_recording_thread(&mut self) -> Maybe_Error {
         let data_rx = self
             .data_rx
             .take()
             .unwrap_or_else(|| panic!("start_recording_thread called twice!"));
 
         let file_write_interval_secs =
-            from_cfg(config.get_var_or("engine/debug/replay/file_write_interval", 1.0));
+            Cfg_Var::<f32>::new("engine/debug/replay/file_write_interval");
 
         let cfg = recording_thread::Recording_Thread_Config {
             recording_cfg: self.config,
@@ -51,7 +51,7 @@ impl Replay_Recording_System {
                 .to_path_buf()
                 .into_boxed_path(),
             file_write_interval: std::time::Duration::from_millis(
-                (file_write_interval_secs * 1000.0) as u64,
+                (file_write_interval_secs.read() * 1000.0) as u64,
             ),
         };
 

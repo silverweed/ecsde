@@ -4,7 +4,7 @@ use super::common::Maybe_Error;
 use super::env::Env_Info;
 use super::time;
 use super::world;
-use crate::cfg::{self, from_cfg};
+use crate::cfg::{self, Cfg_Var};
 use crate::fs;
 use crate::gfx;
 use crate::gfx::align;
@@ -44,13 +44,7 @@ impl<'r> App<'r> {
         let config = cfg::Config::new_from_dir(env.get_cfg_root());
         let world = world::World::new(&env);
         let replay_data = maybe_create_replay_data(&cfg);
-        let ms_per_frame = from_cfg(
-            config
-                .get_var::<i32>("engine/gameplay/gameplay_update_tick_ms")
-                .expect(
-                    "[ FATAL ] engine/gameplay/gameplay_update_tick_ms not found in config file!",
-                ),
-        ) as u16;
+        let ms_per_frame = Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms");
 
         App {
             should_close: false,
@@ -108,11 +102,10 @@ impl<'r> App<'r> {
 
         systems.input_system.borrow_mut().init()?;
 
-        systems.gameplay_system.borrow_mut().init(
-            &mut self.gfx_resources,
-            &self.env,
-            &self.config,
-        )?;
+        systems
+            .gameplay_system
+            .borrow_mut()
+            .init(&mut self.gfx_resources, &self.env)?;
 
         systems
             .render_system
@@ -123,10 +116,9 @@ impl<'r> App<'r> {
 
         if cfg!(debug_assertions)
             && self.replay_data.is_none()
-            && from_cfg(self.config.get_var_or("engine/debug/replay/record", false))
+            && Cfg_Var::<bool>::new("engine/debug/replay/record").read()
         {
-            self.replay_recording_system
-                .start_recording_thread(&self.config)?;
+            self.replay_recording_system.start_recording_thread()?;
         }
 
         Ok(())
@@ -214,9 +206,9 @@ impl<'r> App<'r> {
         let replay_data = self.replay_data.take();
         if let Some(replay_data) = replay_data {
             let config = replay_input_provider::Replay_Input_Provider_Config {
-                disable_input_during_replay: self
-                    .config
-                    .get_var_or("engine/debug/replay/disable_input_during_replay", false),
+                disable_input_during_replay: Cfg_Var::new(
+                    "engine/debug/replay/disable_input_during_replay",
+                ),
             };
             Box::new(replay_input_provider::Replay_Input_Provider::new(
                 config,
@@ -234,6 +226,14 @@ impl<'r> App<'r> {
         let mut execution_time = Duration::new(0, 0);
         let mut input_provider = self.create_input_provider();
         let mut is_replaying = !input_provider.is_realtime_player_input();
+        // Cfg vars
+        let update_time = Cfg_Var::<i32>::new("engine/gameplay/gameplay_update_tick_ms");
+        let smooth_by_extrapolating_velocity =
+            Cfg_Var::<bool>::new("engine/rendering/smooth_by_extrapolating_velocity");
+        #[cfg(debug_assertions)]
+        let extra_frame_sleep_ms = Cfg_Var::<i32>::new("engine/debug/extra_frame_sleep_ms");
+        #[cfg(debug_assertions)]
+        let record_replay = Cfg_Var::<bool>::new("engine/debug/replay/record");
 
         #[cfg(debug_assertions)]
         let sid_joysticks = String_Id::from("joysticks");
@@ -255,14 +255,7 @@ impl<'r> App<'r> {
                 systems.debug_system.borrow_mut().get_overlay(sid_time),
                 &self.world.time.borrow(),
             );
-
-            let update_time = Duration::from_millis(
-                from_cfg(self
-                    .config
-                    .get_var::<i32>("engine/gameplay/gameplay_update_tick_ms")
-                    .expect("[ FATAL ] engine/gameplay/gameplay_update_tick_ms not found in config file!"))
-                    as u64,
-            );
+            let update_time = Duration::from_millis(update_time.read() as u64);
 
             execution_time += dt;
 
@@ -309,8 +302,7 @@ impl<'r> App<'r> {
                     if self.replay_recording_system.is_recording()
                         && input_provider.is_realtime_player_input()
                     {
-                        let record_replay_data =
-                            from_cfg(self.config.get_var_or("engine/debug/replay/record", false));
+                        let record_replay_data = record_replay.read();
                         if record_replay_data {
                             self.replay_recording_system
                                 .update(raw_events, real_axes, joy_mask);
@@ -318,10 +310,7 @@ impl<'r> App<'r> {
                     }
                 }
 
-                if self
-                    .state_mgr
-                    .handle_actions(&actions, &self.world, &self.config)
-                {
+                if self.state_mgr.handle_actions(&actions, &self.world) {
                     self.should_close = true;
                     break;
                 }
@@ -365,6 +354,7 @@ impl<'r> App<'r> {
                 window,
                 real_dt,
                 time::duration_ratio(&execution_time, &update_time) as f32,
+                smooth_by_extrapolating_velocity.read(),
             )?;
 
             #[cfg(prof_t)]
@@ -372,10 +362,7 @@ impl<'r> App<'r> {
 
             #[cfg(debug_assertions)]
             {
-                let sleep = from_cfg(
-                    self.config
-                        .get_var_or("engine/debug/extra_frame_sleep_ms", 0),
-                ) as u64;
+                let sleep = extra_frame_sleep_ms.read() as u64;
                 std::thread::sleep(Duration::from_millis(sleep));
             }
 
@@ -413,12 +400,8 @@ impl<'r> App<'r> {
         window: &mut gfx::window::Window_Handle,
         real_dt: Duration,
         frame_lag_normalized: f32,
+        smooth_by_extrapolating_velocity: bool,
     ) -> Maybe_Error {
-        let smooth_by_extrapolating_velocity = from_cfg(
-            self.config
-                .get_var_or("engine/rendering/smooth_by_extrapolating_velocity", false),
-        );
-
         let systems = self.world.get_systems();
 
         gfx::window::set_clear_color(window, colors::rgb(0, 0, 0));

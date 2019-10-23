@@ -10,6 +10,12 @@ use std::sync::RwLock;
 #[derive(PartialEq, Hash, Copy, Clone, PartialOrd, Eq, Ord)]
 pub struct String_Id(u32);
 
+impl String_Id {
+    pub fn from_u32(x: u32) -> String_Id {
+        String_Id(x)
+    }
+}
+
 impl<'a, T> From<T> for String_Id
 where
     &'a str: From<T>,
