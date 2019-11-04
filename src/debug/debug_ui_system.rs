@@ -9,14 +9,14 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::time::Duration;
 
-pub struct Debug_System {
+pub struct Debug_Ui_System {
     overlays: HashMap<String_Id, overlay::Debug_Overlay>,
     fadeout_overlays: HashMap<String_Id, fadeout_overlay::Fadeout_Debug_Overlay>,
 }
 
-impl Debug_System {
-    pub fn new() -> Debug_System {
-        Debug_System {
+impl Debug_Ui_System {
+    pub fn new() -> Debug_Ui_System {
+        Debug_Ui_System {
             overlays: HashMap::new(),
             fadeout_overlays: HashMap::new(),
         }

@@ -1,4 +1,4 @@
-use crate::core::world::World;
+use crate::core::app::Engine_State;
 use crate::input::input_system::Game_Action;
 
 pub enum State_Transition {
@@ -9,25 +9,25 @@ pub enum State_Transition {
 }
 
 pub trait Game_State {
-    fn on_start(&mut self, _world: &World) {}
-    fn on_pause(&mut self, _world: &World) {}
-    fn on_resume(&mut self, _world: &World) {}
-    fn on_end(&mut self, _world: &World) {}
-    fn update(&mut self, _world: &World) -> State_Transition {
+    fn on_start(&mut self, _state: &mut Engine_State) {}
+    fn on_pause(&mut self, _state: &mut Engine_State) {}
+    fn on_resume(&mut self, _state: &mut Engine_State) {}
+    fn on_end(&mut self, _state: &mut Engine_State) {}
+    fn update(&mut self, _state: &mut Engine_State) -> State_Transition {
         State_Transition::None
     }
     /// Returns true if should quit
-    fn handle_actions(&mut self, _actions: &[Game_Action], _world: &World) -> bool {
+    fn handle_actions(&mut self, _actions: &[Game_Action], _state: &mut Engine_State) -> bool {
         false
     }
 }
 
 pub trait Persistent_Game_State {
-    fn on_start(&mut self, _world: &World) {}
-    fn on_end(&mut self, _world: &World) {}
-    fn update(&mut self, _world: &World) {}
+    fn on_start(&mut self, _state: &mut Engine_State) {}
+    fn on_end(&mut self, _state: &mut Engine_State) {}
+    fn update(&mut self, _state: &mut Engine_State) {}
     /// Returns true if should quit
-    fn handle_actions(&mut self, _actions: &[Game_Action], _world: &World) -> bool {
+    fn handle_actions(&mut self, _actions: &[Game_Action], _state: &mut Engine_State) -> bool {
         false
     }
 }

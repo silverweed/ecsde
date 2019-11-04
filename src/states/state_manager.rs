@@ -1,5 +1,5 @@
 use super::state::{Game_State, Persistent_Game_State, State_Transition};
-use crate::core::world::World;
+use crate::core::app::Engine_State;
 use crate::input::input_system::Game_Action;
 use std::vec::Vec;
 
@@ -22,39 +22,46 @@ impl State_Manager {
         }
     }
 
-    pub fn with_initial_state(world: &World, mut state: Box<dyn Game_State>) -> State_Manager {
-        state.on_start(world);
+    pub fn with_initial_state(
+        engine_state: &mut Engine_State,
+        mut state: Box<dyn Game_State>,
+    ) -> State_Manager {
+        state.on_start(engine_state);
         State_Manager {
             state_stack: vec![state],
             persistent_states: vec![],
         }
     }
 
-    pub fn update(&mut self, world: &World) {
+    pub fn update(&mut self, engine_state: &mut Engine_State) {
         for state in &mut self.persistent_states {
-            state.update(world);
+            state.update(engine_state);
         }
 
         if let Some(state) = self.current_state() {
-            match state.update(world) {
+            match state.update(engine_state) {
                 State_Transition::None => {}
-                State_Transition::Push(new_state) => self.push_state(world, new_state),
-                State_Transition::Replace(new_state) => self.replace_state(world, new_state),
-                State_Transition::Pop => self.pop_state(world),
+                State_Transition::Push(new_state) => self.push_state(engine_state, new_state),
+                State_Transition::Replace(new_state) => self.replace_state(engine_state, new_state),
+                State_Transition::Pop => self.pop_state(engine_state),
             }
         }
     }
 
     /// Returns true if should quit
-    pub fn handle_actions(&mut self, actions: &[Game_Action], world: &World) -> bool {
+    pub fn handle_actions(
+        &mut self,
+        actions: &[Game_Action],
+        engine_state: &mut Engine_State,
+    ) -> bool {
         let mut should_quit = false;
 
         if let Some(state) = self.current_state() {
-            should_quit |= state.handle_actions(actions, world);
+            should_quit |= state.handle_actions(actions, engine_state);
         }
 
         for state in &mut self.persistent_states {
-            should_quit |= state.handle_actions(actions, world);
+            should_quit |= state.handle_actions(actions, engine_state);
         }
 
         should_quit
@@ -62,10 +69,10 @@ impl State_Manager {
 
     pub fn add_persistent_state(
         &mut self,
-        world: &World,
+        engine_state: &mut Engine_State,
         mut state: Box<dyn Persistent_Game_State>,
     ) {
-        state.on_start(world);
+        state.on_start(engine_state);
         self.persistent_states.push(state);
     }
 
@@ -79,32 +86,32 @@ impl State_Manager {
         }
     }
 
-    fn push_state(&mut self, world: &World, mut state: Box<dyn Game_State>) {
+    fn push_state(&mut self, engine_state: &mut Engine_State, mut state: Box<dyn Game_State>) {
         if let Some(s) = self.current_state() {
-            s.on_pause(world);
+            s.on_pause(engine_state);
         }
-        state.on_start(world);
+        state.on_start(engine_state);
         self.state_stack.push(state);
     }
 
-    fn pop_state(&mut self, world: &World) {
+    fn pop_state(&mut self, engine_state: &mut Engine_State) {
         if let Some(mut prev_state) = self.state_stack.pop() {
-            prev_state.on_end(world);
+            prev_state.on_end(engine_state);
         } else {
             eprintln!("[ ERROR ] Tried to pop state, but state stack is empty!");
         }
 
         if let Some(state) = self.current_state() {
-            state.on_resume(world);
+            state.on_resume(engine_state);
         }
     }
 
-    fn replace_state(&mut self, world: &World, mut state: Box<dyn Game_State>) {
+    fn replace_state(&mut self, engine_state: &mut Engine_State, mut state: Box<dyn Game_State>) {
         if let Some(mut prev_state) = self.state_stack.pop() {
-            prev_state.on_end(world);
+            prev_state.on_end(engine_state);
         }
 
-        state.on_start(world);
+        state.on_start(engine_state);
         self.state_stack.push(state);
     }
 }
@@ -131,19 +138,19 @@ mod tests {
     }
 
     impl Game_State for Test_State_1 {
-        fn on_start(&mut self, _world: &World) {
+        fn on_start(&mut self, _state: &mut Engine_State) {
             self.data.borrow_mut().started = true;
         }
-        fn on_end(&mut self, _world: &World) {
+        fn on_end(&mut self, _state: &mut Engine_State) {
             self.data.borrow_mut().ended = true;
         }
-        fn on_pause(&mut self, _world: &World) {
+        fn on_pause(&mut self, _state: &mut Engine_State) {
             self.data.borrow_mut().paused = true;
         }
-        fn on_resume(&mut self, _world: &World) {
+        fn on_resume(&mut self, _state: &mut Engine_State) {
             self.data.borrow_mut().resumed = true;
         }
-        fn update(&mut self, _world: &World) -> State_Transition {
+        fn update(&mut self, _state: &mut Engine_State) -> State_Transition {
             self.data.borrow_mut().updated += 1;
             if self.data.borrow().updated < 2 {
                 State_Transition::None
@@ -151,7 +158,7 @@ mod tests {
                 State_Transition::Pop
             }
         }
-        fn handle_actions(&mut self, _actions: &[Game_Action], _world: &World) -> bool {
+        fn handle_actions(&mut self, _actions: &[Game_Action], _state: &mut Engine_State) -> bool {
             self.data.borrow_mut().handled_actions += 1;
             false
         }
@@ -162,9 +169,13 @@ mod tests {
     fn state_manager() {
         let data = Rc::new(RefCell::new(Test_State_Data::default()));
         let state = Box::new(Test_State_1 { data: data.clone() });
-        let world =
-            World::new(&crate::core::env::Env_Info::gather().expect("Failed to gather Env_Info"));
-        let mut smgr = State_Manager::with_initial_state(&world, state);
+        let mut engine_state =
+            crate::core::app::create_engine_state(crate::core::app_config::App_Config {
+                title: String::from(""),
+                target_win_size: (0, 0),
+                replay_file: None,
+            });
+        let mut smgr = State_Manager::with_initial_state(&mut engine_state, state);
 
         assert!(data.borrow().started, "State was not started");
         assert!(!data.borrow().ended, "State was ended");
@@ -173,26 +184,26 @@ mod tests {
         assert_eq!(data.borrow().updated, 0);
         assert_eq!(data.borrow().handled_actions, 0);
 
-        smgr.update(&world);
+        smgr.update(&mut engine_state);
         assert_eq!(data.borrow().updated, 1);
         assert_eq!(data.borrow().handled_actions, 0);
 
         let actions = [];
-        smgr.handle_actions(&actions, &world);
+        smgr.handle_actions(&actions, &mut engine_state);
         assert_eq!(data.borrow().handled_actions, 1);
 
-        smgr.update(&world); // this pops the state
+        smgr.update(&mut engine_state); // this pops the state
         assert_eq!(data.borrow().updated, 2, "State was not updated");
         assert!(data.borrow().ended, "State was not ended");
 
-        smgr.handle_actions(&actions, &world);
+        smgr.handle_actions(&actions, &mut engine_state);
         assert_eq!(
             data.borrow().handled_actions,
             1,
             "State was handled but should have been popped"
         );
 
-        smgr.update(&world);
+        smgr.update(&mut engine_state);
         assert_eq!(
             data.borrow().updated,
             2,

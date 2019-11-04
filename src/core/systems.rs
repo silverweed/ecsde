@@ -7,31 +7,48 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 #[cfg(debug_assertions)]
-use crate::debug::debug_system;
+use crate::debug::debug_ui_system;
+#[cfg(debug_assertions)]
+use crate::replay::recording_system;
 
 pub struct Core_Systems {
-    pub input_system: Rc<RefCell<input_system::Input_System>>,
-    pub render_system: Rc<RefCell<gfx::render_system::Render_System>>,
-    pub audio_system: Rc<RefCell<audio::system::Audio_System>>,
-    pub gameplay_system: Rc<RefCell<gameplay_system::Gameplay_System>>,
+    pub input_system: input_system::Input_System,
+    pub render_system: gfx::render_system::Render_System,
+    pub audio_system: audio::system::Audio_System,
+    pub gameplay_system: gameplay_system::Gameplay_System,
+}
 
-    #[cfg(debug_assertions)]
-    pub debug_system: Rc<RefCell<debug_system::Debug_System>>,
+#[cfg(debug_assertions)]
+pub struct Debug_Systems {
+    pub debug_ui_system: debug_ui_system::Debug_Ui_System,
+    pub replay_recording_system: recording_system::Replay_Recording_System,
 }
 
 impl Core_Systems {
     pub fn new(env: &Env_Info) -> Core_Systems {
         Core_Systems {
-            input_system: Rc::new(RefCell::new(input_system::Input_System::new(env))),
-            render_system: Rc::new(RefCell::new(gfx::render_system::Render_System::new())),
-            audio_system: Rc::new(RefCell::new(audio::system::Audio_System::new(
-                &audio::system::Audio_System_Config {
-                    max_concurrent_sounds: 10,
+            input_system: input_system::Input_System::new(env),
+            render_system: gfx::render_system::Render_System::new(),
+            audio_system: audio::system::Audio_System::new(&audio::system::Audio_System_Config {
+                max_concurrent_sounds: 10,
+            }),
+            gameplay_system: gameplay_system::Gameplay_System::new(),
+        }
+    }
+}
+
+#[cfg(debug_assertions)]
+impl Debug_Systems {
+    pub fn new() -> Debug_Systems {
+        Debug_Systems {
+            debug_ui_system: debug_ui_system::Debug_Ui_System::new(),
+            replay_recording_system: recording_system::Replay_Recording_System::new(
+                recording_system::Replay_Recording_System_Config {
+                    ms_per_frame: crate::cfg::Cfg_Var::new(
+                        "engine/gameplay/gameplay_update_tick_ms",
+                    ),
                 },
-            ))),
-            gameplay_system: Rc::new(RefCell::new(gameplay_system::Gameplay_System::new())),
-            #[cfg(debug_assertions)]
-            debug_system: Rc::new(RefCell::new(debug_system::Debug_System::new())),
+            ),
         }
     }
 }
