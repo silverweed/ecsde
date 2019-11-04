@@ -209,12 +209,11 @@ mod tests {
     #[test]
     fn to_matrix_from_matrix() {
         let mut t1 = C_Transform2D::new();
-        let mut t2 = C_Transform2D::new();
-
         t1.set_position(100.0, 0.0);
         t1.set_rotation(Rad(1.4));
         t1.set_scale(2.0, 2.0);
-        t2 = C_Transform2D::new_from_matrix(&t1.get_matrix());
+
+        let t2 = C_Transform2D::new_from_matrix(&t1.get_matrix());
         assert!(t2.position().x.approx_eq(100.0, (0.0, 2)));
         assert_approx_eq(t2.rotation(), Rad(1.4));
         assert!(t2.scale().y.approx_eq(2.0, (0.0, 2)));

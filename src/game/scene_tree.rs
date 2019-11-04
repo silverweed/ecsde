@@ -155,9 +155,8 @@ impl Scene_Tree {
 mod tests {
     use super::*;
     use crate::ecs::entity_manager::Entity_Manager;
-    use cgmath::{Deg, Matrix3, Rad};
+    use cgmath::Deg;
     use float_cmp::ApproxEq;
-    use std::convert::Into;
 
     #[test]
     fn simple_tree() {
