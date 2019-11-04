@@ -11,7 +11,6 @@ use crate::gfx::align;
 use crate::input;
 use crate::replay::{recording_system, replay_data, replay_input_provider};
 use crate::resources;
-use crate::states;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
@@ -32,6 +31,7 @@ pub struct Engine_State<'r> {
     pub systems: Core_Systems,
     #[cfg(debug_assertions)]
     pub debug_systems: Debug_Systems,
+
     pub replay_data: Option<replay_data::Replay_Data>,
 
     pub gfx_resources: resources::gfx::Gfx_Resources<'r>,
@@ -128,7 +128,7 @@ pub fn init_engine_debug(engine_state: &mut Engine_State<'_>) -> Maybe_Error {
         engine_state.app_config.target_win_size.0 as f32,
         engine_state.app_config.target_win_size.1 as f32,
     );
-    let mut debug_ui_system = &mut engine_state.debug_systems.debug_ui_system;
+    let debug_ui_system = &mut engine_state.debug_systems.debug_ui_system;
 
     // Debug overlays
     {
@@ -286,7 +286,7 @@ pub fn start_game_loop(
                 #[cfg(prof_t)]
                 let gameplay_start_t = std::time::Instant::now();
 
-                let mut gameplay_system = &mut systems.gameplay_system;
+                let gameplay_system = &mut systems.gameplay_system;
 
                 gameplay_system.realtime_update(&real_dt, actions, axes);
                 while execution_time > update_time {
