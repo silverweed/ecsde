@@ -1,22 +1,22 @@
 all: build
 
 run: 
-	cargo run --features use-sfml
+	cargo run 
 
 build: 
-	cargo build --features use-sfml
+	cargo build 
 
 release: 
-	cargo build --release --features use-sfml
+	cargo build --release 
 
 run_release: 
-	cargo run --release --features use-sfml
+	cargo run --release -
 
 test: 
-	cargo test --features use-sfml
+	cargo test 
 
 clippy:
-	cargo clippy --features use-sfml
+	cargo clippy
 
 link: 
 	@exec &>/dev/null; \
