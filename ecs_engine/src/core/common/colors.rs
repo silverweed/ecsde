@@ -1,8 +1,5 @@
 // @Refactoring: probably this should be hidden in the gfx backend
 
-#[cfg(feature = "use-sdl")]
-pub type Color = sdl2::pixels::Color;
-
 #[cfg(feature = "use-sfml")]
 pub type Color = sfml::graphics::Color;
 
@@ -13,16 +10,6 @@ pub fn color_to_hex(c: Color) -> u32 {
     h |= u32::from(c.g) << 16;
     h |= u32::from(c.r) << 24;
     h
-}
-
-#[cfg(feature = "use-sdl")]
-pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
-    Color::RGBA(r, g, b, a)
-}
-
-#[cfg(feature = "use-sdl")]
-pub fn rgb(r: u8, g: u8, b: u8) -> Color {
-    Color::RGB(r, g, b)
 }
 
 #[cfg(feature = "use-sfml")]

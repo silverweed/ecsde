@@ -20,12 +20,12 @@ clippy:
 
 link: 
 	@exec &>/dev/null; \
-	pushd target/debug && ln -s ../../cfg && ln -s ../../assets; \
-	pushd deps && ln -s ../../cfg && ln -s ../../assets && ln -s ../../test_resources; \
+	pushd target/debug && ln -s ../../../cfg && ln -s ../../../assets; \
+	pushd deps && ln -s ../../../../cfg && ln -s ../../../../assets && ln -s ../../../../test_resources; \
 	popd 
 
 link_release: 
 	@exec &>/dev/null; \
-	pushd target/release && ln -s ../../cfg && ln -s ../../assets; \
-	pushd deps && ln -s ../../cfg && ln -s ../../assets && ln -s ../../test_resources; \
+	pushd target/release && ln -s ../../../cfg && ln -s ../../../assets; \
+	pushd deps && ln -s ../../../../cfg && ln -s ../../../../assets && ln -s ../../../../test_resources; \
 	popd 
