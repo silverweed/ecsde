@@ -1,6 +1,7 @@
 use crate::core::common::serialize::{Binary_Serializable, Byte_Stream};
 use crate::input::bindings::{keymap, mouse};
 use sfml::window::Event;
+use std::io;
 
 const PRE_KEY_PRESSED: u8 = 0x0;
 const PRE_KEY_RELEASED: u8 = 0x1;
@@ -10,7 +11,7 @@ const PRE_MOUSE_PRESSED: u8 = 0x4;
 const PRE_MOUSE_RELEASED: u8 = 0x5;
 
 impl Binary_Serializable for Event {
-    fn serialize(&self, output: &mut Byte_Stream) -> std::io::Result<()> {
+    fn serialize(&self, output: &mut Byte_Stream) -> io::Result<()> {
         match self {
             // Note: Event::Key is #[repr(i32)]
             Event::KeyPressed { code, .. } => {
@@ -46,19 +47,17 @@ impl Binary_Serializable for Event {
         Ok(())
     }
 
-    fn deserialize(input: &mut Byte_Stream) -> std::io::Result<Event> {
+    fn deserialize(input: &mut Byte_Stream) -> io::Result<Event> {
         let prelude = input.read_u8()?;
         match prelude {
             PRE_KEY_PRESSED => {
                 let code = input.read_u16()?;
-                let code = keymap::num_to_key(code as usize)
-                    .unwrap_or_else(|| panic!("Invalid keycode {}", code));
+                let code = keymap::num_to_key(code as usize).ok_or(io::ErrorKind::InvalidData)?;
                 Ok(keymap::sfml::keypressed(code))
             }
             PRE_KEY_RELEASED => {
                 let code = input.read_u16()?;
-                let code = keymap::num_to_key(code as usize)
-                    .unwrap_or_else(|| panic!("Invalid keycode {}", code));
+                let code = keymap::num_to_key(code as usize).ok_or(io::ErrorKind::InvalidData)?;
                 Ok(keymap::sfml::keyreleased(code))
             }
             PRE_JOY_PRESSED => {
@@ -73,17 +72,20 @@ impl Binary_Serializable for Event {
             }
             PRE_MOUSE_PRESSED => {
                 let button = input.read_u8()?;
-                let button = mouse::num_to_mouse_btn(button as usize)
-                    .unwrap_or_else(|| panic!("Invalid button {}", button));
+                let button =
+                    mouse::num_to_mouse_btn(button as usize).ok_or(io::ErrorKind::InvalidData)?;
                 Ok(mouse::sfml::mousepressed(button.into()))
             }
             PRE_MOUSE_RELEASED => {
                 let button = input.read_u8()?;
-                let button = mouse::num_to_mouse_btn(button as usize)
-                    .unwrap_or_else(|| panic!("Invalid button {}", button));
+                let button =
+                    mouse::num_to_mouse_btn(button as usize).ok_or(io::ErrorKind::InvalidData)?;
                 Ok(mouse::sfml::mousereleased(button.into()))
             }
-            _ => unreachable!(),
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Invalid prelude: {}", prelude),
+            )),
         }
     }
 }
