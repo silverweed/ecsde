@@ -1,0 +1,12 @@
+[package]
+edition = "2018"
+name = "ecs_game"
+version = "0.1.0"
+authors = ["silverweed <silverweed1991@gmail.com>"]
+
+[lib]
+crate-type = ["dylib"]
+
+[dependencies.ecs_engine]
+features = ["use-sfml"]
+path = "../ecs_engine"

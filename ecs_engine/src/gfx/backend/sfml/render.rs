@@ -1,7 +1,7 @@
 use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
+use crate::core::common::transform::Transform2D;
 use crate::core::common::vector::Vec2f;
-use crate::ecs::components::transform::C_Transform2D;
 use crate::gfx::window::Window_Handle;
 use cgmath::Rad;
 use sfml::graphics::Shape;
@@ -79,8 +79,8 @@ pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect<i32>) -> Sprite<'a
 pub fn render_sprite(
     window: &mut Window_Handle,
     sprite: &Sprite<'_>,
-    transform: &C_Transform2D,
-    camera: &C_Transform2D,
+    transform: &Transform2D,
+    camera: &Transform2D,
 ) {
     //let origin = vector::from_framework_vec(sprite.origin());
     let mut render_transform = camera.get_matrix_sfml().inverse();
@@ -142,8 +142,8 @@ pub fn get_texture_size(texture: &sfml::graphics::Texture) -> (u32, u32) {
 }
 
 fn calc_render_transform(
-    transform: &C_Transform2D,
-    camera: &C_Transform2D,
+    transform: &Transform2D,
+    camera: &Transform2D,
     rot_origin: Vec2f,
     scale_origin: Vec2f,
 ) -> Transform {

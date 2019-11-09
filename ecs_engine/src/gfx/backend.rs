@@ -3,7 +3,7 @@ mod sfml;
 
 use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
-use crate::ecs::components::transform::C_Transform2D;
+use crate::core::common::transform::Transform2D;
 
 // -----------------------------------------------------------------------------
 // ----------------------------- Backend: SFML ---------------------------------

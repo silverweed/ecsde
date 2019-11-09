@@ -5,16 +5,16 @@ use typename::TypeName;
 
 // Likely @Incomplete: we don't want to recalculate the matrix every time.
 #[derive(Copy, Clone, Debug, TypeName, PartialEq)]
-pub struct C_Transform2D {
+pub struct Transform2D {
     position: Vec2f,
     rotation: Rad<f32>,
     scale: Vec2f,
     origin: Vec2f,
 }
 
-impl Default for C_Transform2D {
+impl Default for Transform2D {
     fn default() -> Self {
-        C_Transform2D {
+        Transform2D {
             position: Vec2f::new(0.0, 0.0),
             rotation: Rad(0.0),
             scale: Vec2f::new(1.0, 1.0),
@@ -23,18 +23,18 @@ impl Default for C_Transform2D {
     }
 }
 
-impl C_Transform2D {
-    pub fn new() -> C_Transform2D {
-        C_Transform2D::default()
+impl Transform2D {
+    pub fn new() -> Transform2D {
+        Transform2D::default()
     }
 
-    pub fn new_from_matrix(m: &Matrix3<f32>) -> C_Transform2D {
+    pub fn new_from_matrix(m: &Matrix3<f32>) -> Transform2D {
         let sx = (m[0][0] * m[0][0] + m[0][1] * m[0][1]).sqrt();
         let sy = (m[1][0] * m[1][0] + m[1][1] * m[1][1]).sqrt();
         let rot = m[0][1].atan2(m[0][0]);
         let tx = m[2][0];
         let ty = m[2][1];
-        C_Transform2D {
+        Transform2D {
             position: Vec2f::new(tx, ty),
             rotation: Rad(rot),
             scale: Vec2f::new(sx, sy),
@@ -146,7 +146,7 @@ mod tests {
 
     #[test]
     fn default() {
-        let tr = C_Transform2D::new();
+        let tr = Transform2D::new();
         assert_eq!(tr.position(), Vec2f::new(0.0, 0.0));
         assert_eq!(tr.rotation(), Rad(0.0));
         assert_eq!(tr.scale(), Vec2f::new(1.0, 1.0));
@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn translate() {
-        let mut tr = C_Transform2D::new();
+        let mut tr = Transform2D::new();
         tr.translate(-42.0, 21.0);
         assert_eq!(tr.position(), Vec2f::new(-42.0, 21.0));
         tr.translate(1.5, -21.0);
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn set_position() {
-        let mut tr = C_Transform2D::new();
+        let mut tr = Transform2D::new();
         tr.set_position(-222.2, 0.02);
         assert_eq!(tr.position(), Vec2f::new(-222.2, 0.02));
         tr.set_position(11.2, 0.0);
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn add_scale() {
-        let mut tr = C_Transform2D::new();
+        let mut tr = Transform2D::new();
         tr.add_scale(0.5, -0.5);
         assert_eq!(tr.scale(), Vec2f::new(1.5, 0.5));
         tr.add_scale(1.5, 10.0);
@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn set_scale() {
-        let mut tr = C_Transform2D::new();
+        let mut tr = Transform2D::new();
         tr.set_scale(0.5, -0.5);
         assert_eq!(tr.scale(), Vec2f::new(0.5, -0.5));
         tr.set_scale(-1.0, 10.5);
@@ -190,7 +190,7 @@ mod tests {
 
     #[test]
     fn rotate() {
-        let mut tr = C_Transform2D::new();
+        let mut tr = Transform2D::new();
         tr.rotate(Rad(2.0));
         assert_approx_eq(tr.rotation(), Rad(2.0));
         tr.rotate(Rad(-1.2));
@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn set_rotation() {
-        let mut tr = C_Transform2D::new();
+        let mut tr = Transform2D::new();
         tr.set_rotation(Rad(2.0));
         assert_approx_eq(tr.rotation(), Rad(2.0));
         tr.set_rotation(Rad(-1.2));
@@ -208,12 +208,12 @@ mod tests {
 
     #[test]
     fn to_matrix_from_matrix() {
-        let mut t1 = C_Transform2D::new();
+        let mut t1 = Transform2D::new();
         t1.set_position(100.0, 0.0);
         t1.set_rotation(Rad(1.4));
         t1.set_scale(2.0, 2.0);
 
-        let t2 = C_Transform2D::new_from_matrix(&t1.get_matrix());
+        let t2 = Transform2D::new_from_matrix(&t1.get_matrix());
         assert!(t2.position().x.approx_eq(100.0, (0.0, 2)));
         assert_approx_eq(t2.rotation(), Rad(1.4));
         assert!(t2.scale().y.approx_eq(2.0, (0.0, 2)));

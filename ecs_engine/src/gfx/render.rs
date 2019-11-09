@@ -1,7 +1,7 @@
 use super::backend;
 use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
-use crate::ecs::components::transform::C_Transform2D;
+use crate::core::common::transform::Transform2D;
 use crate::gfx::window::Window_Handle;
 
 pub type Blend_Mode = backend::Blend_Mode;
@@ -25,8 +25,8 @@ pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect<i32>) -> Sprite<'a
 pub fn render_sprite(
     window: &mut Window_Handle,
     sprite: &Sprite<'_>,
-    transform: &C_Transform2D,
-    camera: &C_Transform2D,
+    transform: &Transform2D,
+    camera: &Transform2D,
 ) {
     backend::render_sprite(window, sprite, transform, camera);
 }

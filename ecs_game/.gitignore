@@ -1,0 +1,13 @@
+/target
+**/*.rs.bk
+*.swp
+*.swo
+*~
+.gdbhist
+Cargo.lock
+cfg/*
+!cfg/*.cfg
+!cfg/*.keys
+.vs/
+.gdb_history
+replay.bin
