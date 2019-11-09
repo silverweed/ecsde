@@ -36,4 +36,4 @@ pub mod resources;
 pub(crate) mod test_common;
 
 #[cfg(debug_assertions)]
-pub(crate) mod debug;
+pub mod debug;

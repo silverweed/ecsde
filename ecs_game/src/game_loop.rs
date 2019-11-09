@@ -4,12 +4,12 @@ use ecs_engine::core::common::colors;
 use ecs_engine::core::common::Maybe_Error;
 use ecs_engine::gfx;
 use ecs_engine::input;
-use ecs_engine::time;
+use ecs_engine::core::time;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use ecs_engine::debug;
-
+/*
 pub fn tick_game(game_state: &mut Game_State) -> Maybe_Error {
     let window = &mut game_state.window;
     let engine_state = &mut game_state.engine_state;
@@ -133,6 +133,7 @@ pub fn tick_game(game_state: &mut Game_State) -> Maybe_Error {
     #[cfg(debug_assertions)]
     fps_debug.tick(&real_dt);
 }
+*/
 
 /*
 
@@ -290,6 +291,7 @@ pub fn start_game_loop(
 }
 */
 
+/*
 fn update_graphics(
     window: &mut gfx::window::Window_Handle,
     engine_state: &mut Engine_State,
@@ -377,3 +379,4 @@ fn update_fps_debug_overlay(
         colors::rgba(180, 180, 180, 200),
     );
 }
+*/

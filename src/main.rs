@@ -12,7 +12,10 @@ mod hotload;
 use hotload::*;
 
 const GAME_DLL_FOLDER: &str = "ecs_game/target/debug";
+#[cfg(target_os = "linux")]
 const GAME_DLL_FILE: &str = "libecs_game.so";
+#[cfg(target_os = "macos")]
+const GAME_DLL_FILE: &str = "libecs_game.dylib";
 
 #[cfg(debug_assertions)]
 fn main() -> ecs_engine::core::common::Maybe_Error {

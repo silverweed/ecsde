@@ -19,10 +19,10 @@ pub struct Game_State<'a> {
     pub window: window::Window_Handle,
     pub engine_state: app::Engine_State<'a>,
 
-    #[cfg(debug_assertions)]
-    pub fps_debug: debug::fps::Fps_Console_Printer,
+    //#[cfg(debug_assertions)]
+    //pub fps_debug: debug::fps::Fps_Console_Printer,
 
-    pub execution_time: Duration,
+    //pub execution_time: Duration,
     //input_provider = create_input_provider(&mut engine_state.replay_data);
     //is_replaying = !input_provider.is_realtime_player_input();
     //// Cfg vars
