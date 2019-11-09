@@ -54,7 +54,7 @@ fn main() -> ecs_engine::core::common::Maybe_Error {
             unsafe {
                 game_api = game_load(&game_lib)?;
                 game_state = (game_api.init)();
-                eprintln!("[ OK ] Reloaded API and game state.");
+                eprintln!("[ OK ] Reloaded API and game state from {:?}.", unique_lib_path);
             }
         }
 

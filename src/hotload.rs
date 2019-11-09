@@ -27,8 +27,10 @@ impl Game_Dll_File_Watcher {
 #[cfg(debug_assertions)]
 impl file_watcher::File_Watcher_Event_Handler for Game_Dll_File_Watcher {
     fn handle(&mut self, event: &DebouncedEvent) {
+    println!("EVENT = {:?}", event);
         match event {
             DebouncedEvent::Write(path)
+            | DebouncedEvent::Create(path)
             | DebouncedEvent::Chmod(path)
             | DebouncedEvent::Remove(path)
                 if *path == self.file =>
