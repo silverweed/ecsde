@@ -60,8 +60,6 @@ fn main() -> ecs_engine::core::common::Maybe_Error {
                 break;
             }
         }
-
-        std::thread::sleep(std::time::Duration::from_millis(16));
     }
 
     unsafe {
