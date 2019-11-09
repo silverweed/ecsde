@@ -4,17 +4,20 @@ use super::common::Maybe_Error;
 use super::env::Env_Info;
 use super::time;
 use crate::cfg::{self, Cfg_Var};
-use crate::core::systems::{Core_Systems, Debug_Systems};
+use crate::core::systems::Core_Systems;
 use crate::fs;
 use crate::gfx;
 use crate::gfx::align;
 use crate::input;
 use crate::replay::{recording_system, replay_data, replay_input_provider};
 use crate::resources;
+use notify::RecursiveMode;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use super::common::stringid::String_Id;
+#[cfg(debug_assertions)]
+use crate::core::systems::Debug_Systems;
 
 #[cfg(debug_assertions)]
 use crate::debug;
@@ -42,6 +45,7 @@ pub fn create_engine_state<'r>(app_config: App_Config) -> Engine_State<'r> {
     let env = Env_Info::gather().unwrap();
     let config = cfg::Config::new_from_dir(env.get_cfg_root());
     let systems = Core_Systems::new(&env);
+    #[cfg(debug_assertions)]
     let debug_systems = Debug_Systems::new();
     let time = time::Time::new();
     let replay_data = maybe_create_replay_data(&app_config);
@@ -57,6 +61,7 @@ pub fn create_engine_state<'r>(app_config: App_Config) -> Engine_State<'r> {
         gfx_resources,
         audio_resources,
         systems,
+        #[cfg(debug_assertions)]
         debug_systems,
         replay_data,
     }
@@ -64,7 +69,15 @@ pub fn create_engine_state<'r>(app_config: App_Config) -> Engine_State<'r> {
 
 pub fn start_config_watch(env: &Env_Info, config: &mut cfg::Config) -> Maybe_Error {
     let config_watcher = Box::new(cfg::sync::Config_Watch_Handler::new(config));
-    fs::file_watcher::start_file_watch(env.get_cfg_root().to_path_buf(), vec![config_watcher])?;
+    let config_watcher_cfg = fs::file_watcher::File_Watch_Config {
+        interval: Duration::from_secs(1),
+        recursive_mode: RecursiveMode::Recursive,
+    };
+    fs::file_watcher::start_file_watch(
+        env.get_cfg_root().to_path_buf(),
+        config_watcher_cfg,
+        vec![config_watcher],
+    )?;
     Ok(())
 }
 

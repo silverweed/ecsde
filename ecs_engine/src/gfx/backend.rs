@@ -66,8 +66,8 @@ pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect<i32>) -> Sprite<'a
 pub fn render_sprite(
     window: &mut Window_Handle,
     sprite: &Sprite<'_>,
-    transform: &C_Transform2D,
-    camera: &C_Transform2D,
+    transform: &Transform2D,
+    camera: &Transform2D,
 ) {
     sfml::render::render_sprite(window, sprite, transform, camera);
 }

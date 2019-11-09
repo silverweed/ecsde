@@ -1,31 +1,35 @@
+SHELL = bash
 all: build
 
-run: 
+run:
 	cargo run --features use-sfml
 
-build: 
+build:
 	cargo build --features use-sfml
 
-release: 
+release:
 	cargo build --release --features use-sfml
 
-run_release: 
+run_release:
 	cargo run --release --features use-sfml
 
-test: 
+test:
 	cargo test --features use-sfml
+
+test_release:
+	cargo test --release --features use-sfml
 
 clippy:
 	cargo clippy --features use-sfml
 
-link: 
+link:
 	@exec &>/dev/null; \
 	pushd target/debug && ln -s ../../../cfg && ln -s ../../../assets; \
 	pushd deps && ln -s ../../../../cfg && ln -s ../../../../assets && ln -s ../../../../test_resources; \
-	popd 
+	popd
 
-link_release: 
+link_release:
 	@exec &>/dev/null; \
 	pushd target/release && ln -s ../../../cfg && ln -s ../../../assets; \
 	pushd deps && ln -s ../../../../cfg && ln -s ../../../../assets && ln -s ../../../../test_resources; \
-	popd 
+	popd

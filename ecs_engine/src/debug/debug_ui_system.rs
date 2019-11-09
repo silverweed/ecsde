@@ -9,6 +9,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::time::Duration;
 
+#[derive(Default)]
 pub struct Debug_Ui_System {
     overlays: HashMap<String_Id, overlay::Debug_Overlay>,
     fadeout_overlays: HashMap<String_Id, fadeout_overlay::Fadeout_Debug_Overlay>,

@@ -1,4 +1,5 @@
 #![warn(clippy::all)]
+#![allow(clippy::new_without_default)]
 #![allow(non_camel_case_types)]
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
@@ -30,7 +31,6 @@ pub mod gfx;
 pub mod input;
 pub mod replay;
 pub mod resources;
-pub mod states;
 
 #[cfg(test)]
 pub(crate) mod test_common;

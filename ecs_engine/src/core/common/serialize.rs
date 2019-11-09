@@ -12,6 +12,7 @@ pub trait Binary_Serializable: Sized {
     }
 }
 
+#[derive(Default)]
 pub struct Byte_Stream {
     cursor: Cursor<Vec<u8>>,
 }
@@ -45,6 +46,10 @@ impl Byte_Stream {
 
     pub fn len(&self) -> usize {
         self.cursor.get_ref().len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn write_u8(&mut self, x: u8) -> std::io::Result<()> {

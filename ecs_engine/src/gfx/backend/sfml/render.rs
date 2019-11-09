@@ -12,14 +12,14 @@ pub type Blend_Mode = sfml::graphics::blend_mode::BlendMode;
 
 pub struct Texture<'a> {
     texture: sfml::graphics::Texture,
-    marker: &'a std::marker::PhantomData<()>,
+    _marker: &'a std::marker::PhantomData<()>,
 }
 
 impl Texture<'_> {
     pub fn from_file(fname: &str) -> Option<Self> {
         Some(Texture {
             texture: sfml::graphics::Texture::from_file(fname)?,
-            marker: &std::marker::PhantomData,
+            _marker: &std::marker::PhantomData,
         })
     }
 }
@@ -42,14 +42,14 @@ pub type Text<'a> = sfml::graphics::Text<'a>;
 
 pub struct Font<'a> {
     font: sfml::graphics::Font,
-    marker: &'a std::marker::PhantomData<()>,
+    _marker: &'a std::marker::PhantomData<()>,
 }
 
 impl Font<'_> {
     pub fn from_file(fname: &str) -> Option<Self> {
         Some(Font {
             font: sfml::graphics::Font::from_file(fname)?,
-            marker: &std::marker::PhantomData,
+            _marker: &std::marker::PhantomData,
         })
     }
 }

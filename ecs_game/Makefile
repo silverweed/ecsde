@@ -1,7 +1,10 @@
 all: build
 
 run:
-	LD_LIBRARY_PATH=ecs_game/target/debug cargo run
+	cargo run
+
+watch:
+	cargo watch -i src -x build
 
 build:
 	cargo build
@@ -10,7 +13,7 @@ release:
 	cargo build --release
 
 run_release:
-	LD_LIBRARY_PATH=ecs_game/target/release cargo run --release -
+	cargo run --release -
 
 test:
 	cargo test

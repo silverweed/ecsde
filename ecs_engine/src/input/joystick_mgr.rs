@@ -7,6 +7,7 @@ const JOY_COUNT: usize = joystick::JOY_COUNT as usize;
 
 pub type Real_Axes_Values = [f32; Joystick_Axis::_Count as usize];
 
+#[derive(Default)]
 pub struct Joystick_Manager {
     joysticks: [Option<Joystick>; JOY_COUNT],
     values: [Real_Axes_Values; JOY_COUNT],
