@@ -10,4 +10,6 @@ pub struct Game_Api<'lib> {
     pub init: ll::Symbol<'lib, unsafe extern "C" fn() -> *mut Game_State>,
     pub update: ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State) -> bool>,
     pub shutdown: ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State)>,
+    pub unload: ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State)>,
+    pub reload: ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State)>,
 }

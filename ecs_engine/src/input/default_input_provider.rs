@@ -2,6 +2,7 @@ use super::bindings::joystick;
 use super::input_system::Input_Raw_Event;
 use super::joystick_mgr::{Joystick_Manager, Real_Axes_Values};
 use super::provider::{Input_Provider, Input_Provider_Input};
+use crate::cfg;
 use std::convert::TryInto;
 use std::vec::Vec;
 
@@ -13,7 +14,12 @@ pub struct Default_Input_Provider {
 
 /// The default input provider just gets all events from the window
 impl Input_Provider for Default_Input_Provider {
-    fn update(&mut self, window: &mut Input_Provider_Input, joy_mgr: &Joystick_Manager) {
+    fn update(
+        &mut self,
+        window: &mut Input_Provider_Input,
+        joy_mgr: &Joystick_Manager,
+        _: &cfg::Config,
+    ) {
         self.events.clear();
         while let Some(evt) = window.poll_event() {
             self.events.push(evt);

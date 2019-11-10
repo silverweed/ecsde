@@ -1,6 +1,6 @@
-use super::transform::C_Transform2D;
-use crate::core::common::rect::Rect;
-use crate::resources;
+use ecs_engine::core::common::rect::Rect;
+use ecs_engine::core::common::transform::Transform2D;
+use ecs_engine::resources;
 use typename::TypeName;
 
 #[derive(Copy, Clone, Debug, TypeName)]
@@ -27,5 +27,5 @@ pub struct C_Animated_Sprite {
 
 #[derive(Copy, Clone, Debug, TypeName, Default)]
 pub struct C_Camera2D {
-    pub transform: C_Transform2D,
+    pub transform: Transform2D,
 }

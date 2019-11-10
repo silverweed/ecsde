@@ -5,27 +5,21 @@ use std::collections::HashMap;
 use std::convert::From;
 use std::path::Path;
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::sync::RwLock;
 use std::vec::Vec;
-
-lazy_static! {
-    pub static ref CFG_VAR_TABLE: RwLock<HashMap<String_Id, Cfg_Value>> =
-        RwLock::new(HashMap::new());
-}
 
 pub struct Config {
     change_rx: Receiver<Cfg_Entry>,
     change_tx: Option<Sender<Cfg_Entry>>,
+    cfg_var_table: HashMap<String_Id, Cfg_Value>,
 }
 
 impl Config {
     pub fn new_from_dir(dir_path: &Path) -> Config {
         #[cfg(debug_assertions)]
         let start_t = std::time::Instant::now();
-
+        let mut cfg_var_table = HashMap::new();
         {
             let raw = Raw_Config::new_from_dir(dir_path);
-            let mut table = CFG_VAR_TABLE.write().unwrap();
 
             // Flatten section/entries into string ids and convert values to cfg vars
             for section in raw.sections.into_iter() {
@@ -34,7 +28,7 @@ impl Config {
                     let id = String_Id::from(name.as_str());
                     eprintln!("Loading cfg var {} = {:?}", name, entry.value);
 
-                    table.insert(id, entry.value);
+                    cfg_var_table.insert(id, entry.value);
                 }
             }
         }
@@ -54,6 +48,7 @@ impl Config {
         Config {
             change_rx,
             change_tx: Some(change_tx),
+            cfg_var_table,
         }
     }
 
@@ -70,10 +65,17 @@ impl Config {
         }
     }
 
+    pub(super) fn read_cfg(&self, id: String_Id) -> Option<&Cfg_Value> {
+        self.cfg_var_table.get(&id)
+    }
+
+    pub(super) fn write_cfg(&mut self, id: String_Id, val: Cfg_Value) {
+        self.cfg_var_table.insert(id, val);
+    }
+
     fn change_entry_value(&mut self, var_path: &str, value: Cfg_Value) {
         let id = String_Id::from(var_path);
-        let mut table = CFG_VAR_TABLE.write().unwrap();
         // @Incomplete: maybe give a warning if type changes?
-        table.insert(id, value);
+        self.cfg_var_table.insert(id, value);
     }
 }

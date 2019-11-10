@@ -40,7 +40,7 @@ fn recording_loop(recv: Receiver<Replay_Data_Point>, cfg: Recording_Thread_Confi
                 replay_data_buffer.push(point);
                 timeout = timeout
                     .checked_sub(start_t.elapsed())
-                    .unwrap_or_else(|| Duration::new(0, 0));
+                    .unwrap_or_else(|| Duration::default());
             }
             Err(RecvTimeoutError::Timeout) => {
                 write_record_data(&mut file, &replay_data_buffer)?;
@@ -57,7 +57,7 @@ fn write_prelude(
     recording_cfg: Replay_Recording_System_Config,
 ) -> std::io::Result<()> {
     let mut byte_stream = Byte_Stream::new();
-    byte_stream.write_u16(recording_cfg.ms_per_frame.read() as u16)?;
+    byte_stream.write_u16(recording_cfg.ms_per_frame as u16)?;
     file.write_all(byte_stream.as_ref())
 }
 

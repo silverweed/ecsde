@@ -1,9 +1,9 @@
-use crate::core::common::colors::{self, Color};
-use crate::core::common::Maybe_Error;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Camera2D, C_Renderable};
-use crate::gfx;
-use crate::resources;
+use ecs_engine::core::common::colors::{self, Color};
+use ecs_engine::core::common::Maybe_Error;
+use ecs_engine::gfx as ngfx;
+use ecs_engine::resources;
 use std::cell::Ref;
 
 pub struct Render_System_Config {
@@ -34,15 +34,15 @@ impl Render_System {
 
     pub fn update(
         &mut self,
-        window: &mut gfx::window::Window_Handle,
+        window: &mut ngfx::window::Window_Handle,
         resources: &resources::gfx::Gfx_Resources,
         camera: &C_Camera2D,
         renderables: &[(Ref<'_, C_Renderable>, Ref<'_, C_Spatial2D>)],
         frame_lag_normalized: f32,
         smooth_by_extrapolating_velocity: bool,
     ) {
-        gfx::window::set_clear_color(window, self.config.clear_color);
-        gfx::window::clear(window);
+        ngfx::window::set_clear_color(window, self.config.clear_color);
+        ngfx::window::clear(window);
 
         for (rend, spatial) in renderables {
             let rend: &C_Renderable = &*rend;
@@ -53,7 +53,7 @@ impl Render_System {
             } = rend;
 
             let texture = resources.get_texture(*tex_id);
-            let sprite = gfx::render::create_sprite(texture, *src_rect);
+            let sprite = ngfx::render::create_sprite(texture, *src_rect);
 
             let mut rend_transform = spatial.global_transform;
             if smooth_by_extrapolating_velocity {
@@ -61,7 +61,7 @@ impl Render_System {
                 rend_transform.translate(v.x * frame_lag_normalized, v.y * frame_lag_normalized);
             }
 
-            gfx::render::render_sprite(window, &sprite, &rend_transform, &camera.transform);
+            ngfx::render::render_sprite(window, &sprite, &rend_transform, &camera.transform);
         }
     }
 }

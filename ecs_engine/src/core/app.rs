@@ -9,7 +9,7 @@ use crate::fs;
 use crate::gfx;
 use crate::gfx::align;
 use crate::input;
-use crate::replay::{recording_system, replay_data, replay_input_provider};
+use crate::replay::{replay_data, replay_input_provider};
 use crate::resources;
 use notify::RecursiveMode;
 use std::time::Duration;
@@ -46,7 +46,7 @@ pub fn create_engine_state<'r>(app_config: App_Config) -> Engine_State<'r> {
     let config = cfg::Config::new_from_dir(env.get_cfg_root());
     let systems = Core_Systems::new(&env);
     #[cfg(debug_assertions)]
-    let debug_systems = Debug_Systems::new();
+    let debug_systems = Debug_Systems::new(&config);
     let time = time::Time::new();
     let replay_data = maybe_create_replay_data(&app_config);
     let gfx_resources = resources::gfx::Gfx_Resources::new();
@@ -86,43 +86,22 @@ pub fn init_engine_systems(engine_state: &mut Engine_State) -> Maybe_Error {
 
     systems.input_system.init()?;
 
-    //systems
-    //.gameplay_system
-    //.init(&mut engine_state.gfx_resources, &engine_state.env)?;
-
-    //systems
-    //.render_system
-    //.init(gfx::render_system::Render_System_Config {
-    //clear_color: colors::rgb(22, 0, 22),
-    //})?;
-
     Ok(())
 }
 
 #[cfg(debug_assertions)]
-pub fn start_recording(
-    replay_data: &Option<replay_data::Replay_Data>,
-    replay_recording_system: &mut recording_system::Replay_Recording_System,
-) -> Maybe_Error {
-    if replay_data.is_none() && Cfg_Var::<bool>::new("engine/debug/replay/record").read() {
-        replay_recording_system.start_recording_thread()?;
+pub fn start_recording(engine_state: &mut Engine_State) -> Maybe_Error {
+    if engine_state.replay_data.is_none()
+        && Cfg_Var::<bool>::new("engine/debug/replay/record").read(&engine_state.config)
+    {
+        engine_state
+            .debug_systems
+            .replay_recording_system
+            .start_recording_thread(&engine_state.config)?;
     }
 
     Ok(())
 }
-
-//fn init_states(&mut self) -> Maybe_Error {
-//let base_state = Box::new(states::persistent::engine_base_state::Engine_Base_State {});
-//self.state_mgr.add_persistent_state(&self.world, base_state);
-//#[cfg(debug_assertions)]
-//{
-//let debug_base_state =
-//Box::new(states::persistent::debug_base_state::Debug_Base_State::new());
-//self.state_mgr
-//.add_persistent_state(&self.world, debug_base_state);
-//}
-//Ok(())
-//}
 
 #[cfg(debug_assertions)]
 pub fn init_engine_debug(engine_state: &mut Engine_State<'_>) -> Maybe_Error {
@@ -198,7 +177,7 @@ pub fn init_engine_debug(engine_state: &mut Engine_State<'_>) -> Maybe_Error {
     Ok(())
 }
 
-fn create_input_provider(
+pub fn create_input_provider(
     replay_data: &mut Option<replay_data::Replay_Data>,
 ) -> Box<dyn input::provider::Input_Provider> {
     // Consumes self.replay_data!
@@ -218,7 +197,7 @@ fn create_input_provider(
     }
 }
 
-fn handle_core_actions(
+pub fn handle_core_actions(
     actions: &[input::core_actions::Core_Action],
     window: &mut gfx::window::Window_Handle,
 ) -> bool {

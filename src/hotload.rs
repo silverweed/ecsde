@@ -27,7 +27,7 @@ impl Game_Dll_File_Watcher {
 #[cfg(debug_assertions)]
 impl file_watcher::File_Watcher_Event_Handler for Game_Dll_File_Watcher {
     fn handle(&mut self, event: &DebouncedEvent) {
-    println!("EVENT = {:?}", event);
+        println!("EVENT = {:?}", event);
         match event {
             DebouncedEvent::Write(path)
             | DebouncedEvent::Create(path)
@@ -83,5 +83,7 @@ pub unsafe fn game_load(game_lib: &ll::Library) -> ll::Result<Game_Api<'_>> {
         init: game_lib.get(b"game_init")?,
         update: game_lib.get(b"game_update")?,
         shutdown: game_lib.get(b"game_shutdown")?,
+        unload: game_lib.get(b"game_unload")?,
+        reload: game_lib.get(b"game_reload")?,
     })
 }

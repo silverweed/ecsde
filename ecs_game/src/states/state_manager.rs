@@ -1,6 +1,6 @@
 use super::state::{Game_State, Persistent_Game_State, State_Transition};
-use crate::core::app::Engine_State;
-use crate::input::input_system::Game_Action;
+use ecs_engine::core::app::Engine_State;
+use ecs_engine::input::input_system::Game_Action;
 use std::vec::Vec;
 
 /// Manages a PDA of Game_States.
@@ -170,7 +170,7 @@ mod tests {
         let data = Rc::new(RefCell::new(Test_State_Data::default()));
         let state = Box::new(Test_State_1 { data: data.clone() });
         let mut engine_state =
-            crate::core::app::create_engine_state(crate::core::app_config::App_Config {
+            ecs_engine::core::app::create_engine_state(crate::core::app_config::App_Config {
                 title: String::from(""),
                 target_win_size: (0, 0),
                 replay_file: None,

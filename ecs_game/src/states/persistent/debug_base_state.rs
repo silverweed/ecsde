@@ -1,9 +1,9 @@
-use crate::cfg::Cfg_Var;
-use crate::core::app::Engine_State;
-use crate::core::common::stringid::String_Id;
-use crate::core::time;
-use crate::input::input_system::{Action_Kind, Game_Action};
 use crate::states::state::Persistent_Game_State;
+use ecs_engine::cfg::Cfg_Var;
+use ecs_engine::core::app::Engine_State;
+use ecs_engine::core::common::stringid::String_Id;
+use ecs_engine::core::time;
+use ecs_engine::input::input_system::{Action_Kind, Game_Action};
 use std::convert::TryFrom;
 use std::time::Duration;
 
@@ -62,7 +62,7 @@ impl Persistent_Game_State for Debug_Base_State {
                 state.time.set_paused(!paused);
                 msg_overlay.add_line(if !paused { "Paused" } else { "Resumed" });
             } else if action.0 == self.sid_step_sim && action.1 == Action_Kind::Pressed {
-                let target_fps = self.fps.read();
+                let target_fps = self.fps.read(&state.config);
                 let step_delta =
                     Duration::from_nanos(u64::try_from(1_000_000_000 / target_fps).unwrap());
                 msg_overlay.add_line(&format!(
@@ -71,9 +71,9 @@ impl Persistent_Game_State for Debug_Base_State {
                 ));
                 state.time.set_paused(true);
                 state.time.step(&step_delta);
-                state.systems.gameplay_system.step(&step_delta);
+            //state.systems.gameplay_system.step(&step_delta);
             } else if action.0 == self.sid_print_em_debug_info && action.1 == Action_Kind::Pressed {
-                state.systems.gameplay_system.print_debug_info();
+                //state.systems.gameplay_system.print_debug_info();
             } else if action.0 == self.sid_quit && action.1 == Action_Kind::Pressed {
                 return true;
             }

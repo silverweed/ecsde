@@ -50,6 +50,10 @@ pub fn create_render_window(
     }
 }
 
+pub fn destroy_render_window(window: &mut Window_Handle) {
+    window.handle.close();
+}
+
 pub fn set_clear_color(window: &mut Window_Handle, color: Color) {
     window.clear_color = color;
 }

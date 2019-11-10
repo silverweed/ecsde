@@ -13,6 +13,10 @@ pub fn create_render_window(
     backend::create_render_window(args, target_size, title)
 }
 
+pub fn destroy_render_window(window: &mut Window_Handle) {
+    backend::destroy_render_window(window);
+}
+
 pub fn set_clear_color(window: &mut Window_Handle, color: Color) {
     backend::set_clear_color(window, color);
 }

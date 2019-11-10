@@ -1,5 +1,6 @@
 use super::env::Env_Info;
 use crate::audio;
+use crate::cfg;
 use crate::input::input_system;
 
 #[cfg(debug_assertions)]
@@ -31,14 +32,15 @@ impl Core_Systems {
 
 #[cfg(debug_assertions)]
 impl Debug_Systems {
-    pub fn new() -> Debug_Systems {
+    pub fn new(cfg: &cfg::Config) -> Debug_Systems {
         Debug_Systems {
             debug_ui_system: debug_ui_system::Debug_Ui_System::new(),
             replay_recording_system: recording_system::Replay_Recording_System::new(
                 recording_system::Replay_Recording_System_Config {
-                    ms_per_frame: crate::cfg::Cfg_Var::new(
+                    ms_per_frame: crate::cfg::Cfg_Var::<i32>::new(
                         "engine/gameplay/gameplay_update_tick_ms",
-                    ),
+                    )
+                    .read(cfg),
                 },
             ),
         }

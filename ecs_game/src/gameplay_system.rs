@@ -1,21 +1,23 @@
 use super::controllable_system::C_Controllable;
-use crate::cfg::Cfg_Var;
-use crate::core::common;
-use crate::core::common::rect::Rect;
-use crate::core::common::stringid::String_Id;
-use crate::core::common::vector::Vec2f;
-use crate::core::env::Env_Info;
-use crate::core::time;
+use crate::controllable_system;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
-use crate::ecs::components::transform::C_Transform2D;
-use crate::ecs::entity_manager::{Entity, Entity_Manager};
-use crate::game;
+use crate::ecs::entity_manager::{Entity, Entity_Manager, INVALID_ENTITY};
 use crate::gfx;
-use crate::input::axes::Virtual_Axes;
-use crate::input::input_system::Game_Action;
-use crate::resources::gfx::{tex_path, Gfx_Resources};
+use crate::scene_tree;
 use cgmath::{Deg, InnerSpace};
+use ecs_engine::cfg::{self, Cfg_Var};
+use ecs_engine::core::common;
+use ecs_engine::core::common::rect::Rect;
+use ecs_engine::core::common::stringid::String_Id;
+use ecs_engine::core::common::transform::Transform2D;
+use ecs_engine::core::common::vector::Vec2f;
+use ecs_engine::core::env::Env_Info;
+use ecs_engine::core::time;
+use ecs_engine::gfx as ngfx;
+use ecs_engine::input::axes::Virtual_Axes;
+use ecs_engine::input::input_system::Game_Action;
+use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 use std::cell::Ref;
 use std::time::Duration;
 
@@ -25,7 +27,7 @@ pub struct Gameplay_System {
     camera: Entity,
     latest_frame_actions: Vec<Game_Action>,
     latest_frame_axes: Virtual_Axes,
-    scene_tree: game::scene_tree::Scene_Tree,
+    scene_tree: scene_tree::Scene_Tree,
 }
 
 impl Gameplay_System {
@@ -33,10 +35,10 @@ impl Gameplay_System {
         Gameplay_System {
             entity_manager: Entity_Manager::new(),
             entities: vec![],
-            camera: Entity::INVALID,
+            camera: INVALID_ENTITY,
             latest_frame_actions: vec![],
             latest_frame_axes: Virtual_Axes::default(),
-            scene_tree: game::scene_tree::Scene_Tree::new(),
+            scene_tree: scene_tree::Scene_Tree::new(),
         }
     }
 
@@ -49,13 +51,19 @@ impl Gameplay_System {
         Ok(())
     }
 
-    pub fn update(&mut self, dt: &Duration, actions: &[Game_Action], axes: &Virtual_Axes) {
+    pub fn update(
+        &mut self,
+        dt: &Duration,
+        actions: &[Game_Action],
+        axes: &Virtual_Axes,
+        cfg: &cfg::Config,
+    ) {
         // Used for stepping
         self.latest_frame_actions = actions.to_vec();
 
         ///// Update all game systems /////
         gfx::animation_system::update(&dt, &mut self.entity_manager);
-        game::controllable_system::update(&dt, actions, axes, &mut self.entity_manager);
+        controllable_system::update(&dt, actions, axes, &mut self.entity_manager, cfg);
 
         for e in &self.entities {
             if let Some(t) = self.entity_manager.get_component::<C_Spatial2D>(*e) {
@@ -77,13 +85,14 @@ impl Gameplay_System {
         real_dt: &Duration,
         actions: &[Game_Action],
         axes: &Virtual_Axes,
+        cfg: &cfg::Config,
     ) {
-        self.update_camera(real_dt, actions, axes);
+        self.update_camera(real_dt, actions, axes, cfg);
     }
 
     #[cfg(debug_assertions)]
-    pub fn step(&mut self, dt: &Duration) {
-        self.update_with_latest_frame_actions(dt);
+    pub fn step(&mut self, dt: &Duration, cfg: &cfg::Config) {
+        self.update_with_latest_frame_actions(dt, cfg);
     }
 
     #[cfg(debug_assertions)]
@@ -91,12 +100,12 @@ impl Gameplay_System {
         self.entity_manager.print_debug_info();
     }
 
-    fn update_with_latest_frame_actions(&mut self, dt: &Duration) {
+    fn update_with_latest_frame_actions(&mut self, dt: &Duration, cfg: &cfg::Config) {
         let mut actions = vec![];
         std::mem::swap(&mut self.latest_frame_actions, &mut actions);
         let mut axes = Virtual_Axes::default();
         std::mem::swap(&mut self.latest_frame_axes, &mut axes);
-        self.update(&dt, &actions, &axes);
+        self.update(&dt, &actions, &axes, cfg);
     }
 
     pub fn get_renderable_entities(&self) -> Vec<(Ref<'_, C_Renderable>, Ref<'_, C_Spatial2D>)> {
@@ -117,14 +126,20 @@ impl Gameplay_System {
         let em = &mut self.entity_manager;
 
         em.register_component::<C_Spatial2D>();
-        em.register_component::<C_Transform2D>();
+        em.register_component::<Transform2D>();
         em.register_component::<C_Camera2D>();
         em.register_component::<C_Renderable>();
         em.register_component::<C_Animated_Sprite>();
         em.register_component::<C_Controllable>();
     }
 
-    fn update_camera(&mut self, real_dt: &Duration, _actions: &[Game_Action], axes: &Virtual_Axes) {
+    fn update_camera(
+        &mut self,
+        real_dt: &Duration,
+        _actions: &[Game_Action],
+        axes: &Virtual_Axes,
+        cfg: &cfg::Config,
+    ) {
         // @Incomplete
         let movement = get_movement_from_input(axes);
         let camera_ctrl = self
@@ -137,7 +152,7 @@ impl Gameplay_System {
         let v = {
             let real_dt_secs = time::to_secs_frac(real_dt);
             let mut camera_ctrl = camera_ctrl.unwrap();
-            let speed = camera_ctrl.speed.read();
+            let speed = camera_ctrl.speed.read(cfg);
             let velocity = movement * speed;
             let v = velocity * real_dt_secs;
             camera_ctrl.translation_this_frame = v;
@@ -213,7 +228,7 @@ impl Gameplay_System {
                 let mut rend = em.add_component::<C_Renderable>(entity);
                 rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
                 assert!(rend.texture.is_some(), "Could not load yv texture!");
-                let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
+                let (sw, sh) = ngfx::render::get_texture_size(rsrc.get_texture(rend.texture));
                 rend.rect = Rect::new(0, 0, sw as i32, sh as i32);
                 (sw, sh)
             };

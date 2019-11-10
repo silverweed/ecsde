@@ -4,6 +4,7 @@ use super::bindings::{Axis_Emulation_Type, Input_Bindings};
 use super::core_actions::Core_Action;
 use super::joystick_mgr::{Joystick_Manager, Real_Axes_Values};
 use super::provider::Input_Provider;
+use crate::cfg;
 use crate::core::common::stringid::String_Id;
 use crate::core::common::Maybe_Error;
 use crate::core::env::Env_Info;
@@ -85,9 +86,10 @@ impl Input_System {
         &mut self,
         window: &mut sfml::graphics::RenderWindow,
         provider: &mut dyn Input_Provider,
+        cfg: &cfg::Config,
     ) {
         sfml::window::joystick::update();
-        provider.update(window, &self.joystick_mgr);
+        provider.update(window, &self.joystick_mgr, cfg);
 
         self.joystick_mgr.update_from_input_provider(provider);
         self.update_real_axes(); // Note: these axes values may be later overwritten by actions

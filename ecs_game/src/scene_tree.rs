@@ -1,6 +1,6 @@
-use crate::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
-use crate::ecs::components::transform::C_Transform2D;
 use crate::ecs::entity_manager::Entity;
+use ecs_engine::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
+use ecs_engine::core::common::transform::Transform2D;
 use std::vec::Vec;
 
 type Node = Generational_Index;
@@ -18,8 +18,8 @@ pub struct Scene_Tree {
     // it's 0 if the root has not been set, 1 otherwise.
     hierarchy: Vec<Node>,
 
-    local_transforms: Vec<C_Transform2D>,
-    global_transforms: Vec<C_Transform2D>,
+    local_transforms: Vec<Transform2D>,
+    global_transforms: Vec<Transform2D>,
 }
 
 impl Scene_Tree {
@@ -33,7 +33,7 @@ impl Scene_Tree {
         }
     }
 
-    pub fn add(&mut self, e: Entity, parent: Option<Entity>, local_transform: &C_Transform2D) {
+    pub fn add(&mut self, e: Entity, parent: Option<Entity>, local_transform: &Transform2D) {
         // Check invariants
         assert_eq!(self.local_transforms.len(), self.global_transforms.len());
         assert!(self.local_transforms.len() <= self.hierarchy.len());
@@ -123,12 +123,12 @@ impl Scene_Tree {
         assert_eq!(self.local_transforms.len(), self.hierarchy.len());
     }
 
-    pub fn set_local_transform(&mut self, e: Entity, new_transform: &C_Transform2D) {
+    pub fn set_local_transform(&mut self, e: Entity, new_transform: &Transform2D) {
         self.local_transforms[self.nodes[e.index as usize].unwrap().index as usize - 1] =
             *new_transform;
     }
 
-    pub fn get_global_transform(&self, e: Entity) -> Option<&C_Transform2D> {
+    pub fn get_global_transform(&self, e: Entity) -> Option<&Transform2D> {
         self.global_transforms
             .get(self.nodes.get(e.index as usize)?.unwrap().index as usize - 1)
     }
@@ -144,7 +144,7 @@ impl Scene_Tree {
         for i in 1..global_transforms.len() {
             let parent_index = hierarchy[i].index as usize - 1;
             // @Speed: this recalculates matrices every time! Optimize this!
-            global_transforms[i] = C_Transform2D::new_from_matrix(
+            global_transforms[i] = Transform2D::new_from_matrix(
                 &(global_transforms[parent_index].get_matrix() * local_transforms[i].get_matrix()),
             );
         }
@@ -154,25 +154,25 @@ impl Scene_Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ecs::entity_manager::Entity_Manager;
     use cgmath::Deg;
+    use ecs_engine::ecs::entity_manager::Entity_Manager;
     use float_cmp::ApproxEq;
 
     #[test]
     fn simple_tree() {
         let mut em = Entity_Manager::new();
-        em.register_component::<C_Transform2D>();
+        em.register_component::<Transform2D>();
 
         let mut tree = Scene_Tree::new();
 
         let root_e = em.new_entity();
         {
-            let root_t = em.add_component::<C_Transform2D>(root_e);
+            let root_t = em.add_component::<Transform2D>(root_e);
             tree.add(root_e, None, &root_t);
         }
         let child_e = em.new_entity();
         {
-            let mut child_t = em.add_component::<C_Transform2D>(child_e);
+            let mut child_t = em.add_component::<Transform2D>(child_e);
             child_t.set_position(100.0, 0.0);
             tree.add(child_e, Some(root_e), &child_t);
         }
@@ -182,7 +182,7 @@ mod tests {
         let new_child_t = tree.get_global_transform(child_e).unwrap();
         assert!(new_child_t.position().x.approx_eq(100.0, (0.0, 2)));
 
-        let mut root_t = em.get_component_mut::<C_Transform2D>(root_e).unwrap();
+        let mut root_t = em.get_component_mut::<Transform2D>(root_e).unwrap();
         root_t.rotate(Deg(90.0));
         tree.set_local_transform(root_e, &root_t);
 

@@ -26,11 +26,16 @@ pub type Font<'a> = sfml::render::Font<'a>;
 #[cfg(feature = "use-sfml")]
 #[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn create_render_window(
-    video_subsystem: &Create_Render_Window_Args,
+    create_args: &Create_Render_Window_Args,
     target_size: (u32, u32),
     title: &str,
 ) -> Window_Handle {
-    sfml::window::create_render_window(video_subsystem, target_size, title)
+    sfml::window::create_render_window(create_args, target_size, title)
+}
+
+#[cfg(feature = "use-sfml")]
+pub fn destroy_render_window(window: &mut Window_Handle) {
+    sfml::window::destroy_render_window(window);
 }
 
 #[cfg(feature = "use-sfml")]

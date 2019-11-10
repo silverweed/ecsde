@@ -1,6 +1,5 @@
 pub mod base;
 pub mod gfx;
-pub mod transform;
 
 use std::fmt::Debug;
 use typename::TypeName;

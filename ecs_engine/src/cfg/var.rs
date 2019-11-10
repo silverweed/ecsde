@@ -1,20 +1,16 @@
-use super::config::CFG_VAR_TABLE;
+use super::config::Config;
 use super::value::Cfg_Value;
 use crate::core::common::stringid::String_Id;
 use std::convert::{From, Into, TryFrom};
 use std::fmt::Debug;
 use typename::TypeName;
 
-fn read_cfg<T>(path_id: String_Id) -> T
+fn read_cfg<T>(path_id: String_Id, cfg: &Config) -> T
 where
     T: Default + TypeName + Into<Cfg_Value> + TryFrom<Cfg_Value>,
 {
-    let table = CFG_VAR_TABLE
-        .read()
-        .expect("[ FATAL ] Failed to lock CFG_VAR_TABLE");
-
-    let value = table
-        .get(&path_id)
+    let value = cfg
+        .read_cfg(path_id)
         .unwrap_or_else(|| panic!("[ FATAL ] Tried to read inexistent Cfg_Var \"{}\"", path_id));
 
     T::try_from(value.clone()).unwrap_or_else(|_| {
@@ -36,6 +32,15 @@ where
     _marker: std::marker::PhantomData<T>,
 }
 
+impl<T> Default for Cfg_Var<T>
+where
+    T: Default + TypeName + Into<Cfg_Value> + TryFrom<Cfg_Value>,
+{
+    fn default() -> Self {
+        Self::new("")
+    }
+}
+
 #[cfg(not(debug_assertions))]
 #[derive(Debug, Clone)]
 pub struct Cfg_Var<T>(T)
@@ -43,15 +48,6 @@ where
     T: Default + TypeName + Into<Cfg_Value>;
 
 impl<T> Copy for Cfg_Var<T> where T: Copy + TypeName + Default + Into<Cfg_Value> {}
-
-impl<T> Default for Cfg_Var<T>
-where
-    T: Default + TypeName + Into<Cfg_Value> + TryFrom<Cfg_Value> + Debug,
-{
-    fn default() -> Cfg_Var<T> {
-        Cfg_Var::new_from_val(T::default())
-    }
-}
 
 impl<T> Cfg_Var<T>
 where
@@ -80,66 +76,65 @@ where
     }
 
     #[cfg(debug_assertions)]
-    pub fn new_from_val(value: T) -> Cfg_Var<T>
+    pub fn new_from_val(value: T, cfg: &mut Config) -> Cfg_Var<T>
     where
         T: Debug,
     {
         let id = String_Id::from(format!("{:?}", value).as_str());
-        let mut table = CFG_VAR_TABLE.write().unwrap();
-        table.insert(id, value.into());
+        cfg.write_cfg(id, value.into());
         Self::new_from_sid(id)
     }
 
     #[cfg(not(debug_assertions))]
-    pub fn new_from_val(value: T) -> Cfg_Var<T> {
+    pub fn new_from_val(value: T, _: &mut Config) -> Cfg_Var<T> {
         Cfg_Var(value)
     }
 }
 
 impl Cfg_Var<bool> {
     #[cfg(debug_assertions)]
-    pub fn read(self) -> bool {
-        read_cfg(self.id)
+    pub fn read(self, cfg: &Config) -> bool {
+        read_cfg(self.id, cfg)
     }
 
     #[cfg(not(debug_assertions))]
-    pub fn read(self) -> bool {
+    pub fn read(self, _: &Config) -> bool {
         self.0
     }
 }
 
 impl Cfg_Var<i32> {
     #[cfg(debug_assertions)]
-    pub fn read(self) -> i32 {
-        read_cfg(self.id)
+    pub fn read(self, cfg: &Config) -> i32 {
+        read_cfg(self.id, cfg)
     }
 
     #[cfg(not(debug_assertions))]
-    pub fn read(self) -> i32 {
+    pub fn read(self, _: &Config) -> i32 {
         self.0
     }
 }
 
 impl Cfg_Var<f32> {
     #[cfg(debug_assertions)]
-    pub fn read(self) -> f32 {
-        read_cfg(self.id)
+    pub fn read(self, cfg: &Config) -> f32 {
+        read_cfg(self.id, cfg)
     }
 
     #[cfg(not(debug_assertions))]
-    pub fn read(self) -> f32 {
+    pub fn read(self, _: &Config) -> f32 {
         self.0
     }
 }
 
 impl Cfg_Var<String> {
     #[cfg(debug_assertions)]
-    pub fn read(&self) -> String {
-        read_cfg(self.id)
+    pub fn read(&self, cfg: &Config) -> String {
+        read_cfg(self.id, cfg)
     }
 
     #[cfg(not(debug_assertions))]
-    pub fn read(&self) -> String {
+    pub fn read(&self, _: &Config) -> String {
         self.0.clone()
     }
 }

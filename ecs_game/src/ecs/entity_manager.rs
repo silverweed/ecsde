@@ -1,5 +1,5 @@
 use super::components::Component;
-use crate::alloc::generational_allocator::{self, Generational_Allocator, Generational_Index};
+use ecs_engine::alloc::generational_allocator::{self, Generational_Allocator, Generational_Index};
 
 use std::cell::{Ref, RefCell, RefMut};
 use std::iter::Iterator;
@@ -59,12 +59,10 @@ Max # Entities ever instantiated:    {}",
 pub type Entity = Generational_Index;
 type VecOpt<T> = Vec<Option<RefCell<T>>>;
 
-impl Entity {
-    pub const INVALID: Entity = Entity {
-        gen: generational_allocator::Gen_Type::max_value(),
-        index: generational_allocator::Index_Type::max_value(),
-    };
-}
+pub const INVALID_ENTITY: Entity = Entity {
+    gen: generational_allocator::Gen_Type::max_value(),
+    index: generational_allocator::Index_Type::max_value(),
+};
 
 impl Entity_Manager {
     const INITIAL_SIZE: usize = 64;
