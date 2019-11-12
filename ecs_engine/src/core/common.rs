@@ -1,5 +1,6 @@
 pub mod colors;
 pub mod direction;
+pub mod rand;
 pub mod rect;
 pub mod serialize;
 pub mod stringid;

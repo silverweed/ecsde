@@ -17,7 +17,7 @@ mod scene_tree;
 mod states;
 
 use ecs_engine::cfg::Cfg_Var;
-use ecs_engine::core::common::colors;
+use ecs_engine::core::common::{colors, rand};
 use ecs_engine::core::{app, app_config};
 use ecs_engine::debug;
 use ecs_engine::gfx::{self as ngfx, window};
@@ -48,6 +48,8 @@ pub struct Game_State<'a> {
     pub extra_frame_sleep_ms: Cfg_Var<i32>,
     #[cfg(debug_assertions)]
     pub record_replay: Cfg_Var<bool>,
+
+    pub rng: rand::Default_Rng,
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -167,6 +169,7 @@ fn create_game_state<'a>() -> Result<Box<Game_State<'a>>, Box<dyn std::error::Er
         render_system: gfx::render_system::Render_System::new(),
         gameplay_system: gameplay_system::Gameplay_System::new(),
         //state_mgr: states::state_manager::State_Manager::new(),
+        rng: rand::new_rng()?,
     }))
 }
 
