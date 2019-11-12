@@ -10,8 +10,10 @@ crate-type = ["dylib"]
 [dependencies]
 anymap = "0.12.1"
 typename = "0.1.1"
-cgmath = "0.17.0"
 
 [dependencies.ecs_engine]
 features = ["use-sfml"]
 path = "../ecs_engine"
+
+[dependencies.cgmath]
+path = "../third_party/cgmath"
