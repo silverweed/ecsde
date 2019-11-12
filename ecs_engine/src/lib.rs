@@ -32,7 +32,7 @@ pub mod replay;
 pub mod resources;
 
 #[cfg(test)]
-pub(crate) mod test_common;
+pub mod test_common;
 
 #[cfg(debug_assertions)]
 pub mod debug;

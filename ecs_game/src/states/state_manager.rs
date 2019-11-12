@@ -170,7 +170,7 @@ mod tests {
         let data = Rc::new(RefCell::new(Test_State_Data::default()));
         let state = Box::new(Test_State_1 { data: data.clone() });
         let mut engine_state =
-            ecs_engine::core::app::create_engine_state(crate::core::app_config::App_Config {
+            ecs_engine::core::app::create_engine_state(ecs_engine::core::app_config::App_Config {
                 title: String::from(""),
                 target_win_size: (0, 0),
                 replay_file: None,

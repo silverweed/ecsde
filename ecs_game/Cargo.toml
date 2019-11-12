@@ -9,6 +9,7 @@ crate-type = ["dylib"]
 
 [dependencies]
 anymap = "0.12.1"
+float-cmp = "0.5.2"
 typename = "0.1.1"
 
 [dependencies.ecs_engine]

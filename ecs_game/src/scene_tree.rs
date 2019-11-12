@@ -154,8 +154,8 @@ impl Scene_Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ecs::entity_manager::Entity_Manager;
     use cgmath::Deg;
-    use ecs_engine::ecs::entity_manager::Entity_Manager;
     use float_cmp::ApproxEq;
 
     #[test]
