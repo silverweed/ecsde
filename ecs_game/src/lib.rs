@@ -17,7 +17,7 @@ mod scene_tree;
 mod states;
 
 use ecs_engine::cfg::Cfg_Var;
-use ecs_engine::core::common::{colors, Maybe_Error};
+use ecs_engine::core::common::colors;
 use ecs_engine::core::{app, app_config};
 use ecs_engine::debug;
 use ecs_engine::gfx::{self as ngfx, window};
@@ -99,10 +99,10 @@ pub unsafe extern "C" fn game_shutdown(game_state: *mut Game_State) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn game_unload(game_state: *mut Game_State) {}
+pub unsafe extern "C" fn game_unload(_game_state: *mut Game_State) {}
 
 #[no_mangle]
-pub unsafe extern "C" fn game_reload(game_state: *mut Game_State) {}
+pub unsafe extern "C" fn game_reload(_game_state: *mut Game_State) {}
 
 /////////////////////////////////////////////////////////////////////////////
 //                      END FOREIGN FUNCTION API                           //

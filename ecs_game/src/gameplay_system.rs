@@ -2,7 +2,7 @@ use super::controllable_system::C_Controllable;
 use crate::controllable_system;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
-use crate::ecs::entity_manager::{Entity, Entity_Manager, INVALID_ENTITY};
+use crate::ecs::entity_manager::{Entity, Entity_Manager};
 use crate::gfx;
 use crate::scene_tree;
 use cgmath::{Deg, InnerSpace};
@@ -35,7 +35,7 @@ impl Gameplay_System {
         Gameplay_System {
             entity_manager: Entity_Manager::new(),
             entities: vec![],
-            camera: INVALID_ENTITY,
+            camera: Entity::INVALID,
             latest_frame_actions: vec![],
             latest_frame_axes: Virtual_Axes::default(),
             scene_tree: scene_tree::Scene_Tree::new(),

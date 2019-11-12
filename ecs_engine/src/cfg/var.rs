@@ -157,50 +157,50 @@ mod tests {
     #[test]
     fn cfg_var_load() {
         let (_, _, env) = create_test_resources_and_env();
-        let _config = cfg::Config::new_from_dir(env.get_test_cfg_root());
+        let config = cfg::Config::new_from_dir(env.get_test_cfg_root());
 
         let entry_int = Cfg_Var::<i32>::new("test/entry_int");
-        assert_eq!(entry_int.read(), 42);
+        assert_eq!(entry_int.read(&config), 42);
 
         let entry_bool = Cfg_Var::<bool>::new("test/entry_bool");
-        assert_eq!(entry_bool.read(), true);
+        assert_eq!(entry_bool.read(&config), true);
 
         let entry_float = Cfg_Var::<f32>::new("test/entry_float");
-        assert_eq!(entry_float.read(), 42.0);
+        assert_eq!(entry_float.read(&config), 42.0);
 
         let entry_string = Cfg_Var::<String>::new("test/entry_string");
-        assert_eq!(entry_string.read().as_str(), "Fourty Two");
+        assert_eq!(entry_string.read(&config).as_str(), "Fourty Two");
     }
 
     #[test]
     #[should_panic]
     fn cfg_read_invalid() {
         let (_, _, env) = create_test_resources_and_env();
-        let _config = cfg::Config::new_from_dir(env.get_test_cfg_root());
+        let config = cfg::Config::new_from_dir(env.get_test_cfg_root());
 
         let entry_nonexisting = Cfg_Var::<i32>::new("entry non existing");
-        let _ = entry_nonexisting.read();
+        let _ = entry_nonexisting.read(&config);
     }
 
     #[test]
     fn cfg_new_from_val() {
         let (_, _, env) = create_test_resources_and_env();
-        let _config = cfg::Config::new_from_dir(env.get_test_cfg_root());
+        let mut config = cfg::Config::new_from_dir(env.get_test_cfg_root());
 
-        let var = Cfg_Var::new_from_val(42);
-        assert_eq!(var.read(), 42);
+        let var = Cfg_Var::new_from_val(42, &mut config);
+        assert_eq!(var.read(&config), 42);
 
-        let var = Cfg_Var::new_from_val(String::from("foo"));
-        assert_eq!(var.read(), String::from("foo"));
+        let var = Cfg_Var::new_from_val(String::from("foo"), &mut config);
+        assert_eq!(var.read(&config), String::from("foo"));
     }
 
     #[test]
     #[should_panic]
     fn cfg_incompatible_type() {
         let (_, _, env) = create_test_resources_and_env();
-        let _config = cfg::Config::new_from_dir(env.get_test_cfg_root());
+        let config = cfg::Config::new_from_dir(env.get_test_cfg_root());
 
         let entry_float_mistyped = Cfg_Var::<i32>::new("test/entry_float");
-        let _ = entry_float_mistyped.read();
+        let _ = entry_float_mistyped.read(&config);
     }
 }

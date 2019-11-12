@@ -119,6 +119,7 @@ impl Replay_Input_Provider {
 mod tests {
     use super::super::replay_data::{Replay_Data_Point, Replay_Joystick_Data};
     use super::*;
+    use crate::test_common::create_test_resources_and_env;
 
     use crate::input::bindings::keymap::sfml::keypressed;
     use crate::input::bindings::mouse::sfml::mousepressed;
@@ -144,12 +145,14 @@ mod tests {
                 Replay_Data_Point::new(3, &evt3, &joy_data, 0x0),
             ],
         );
+        let (_, _, env) = create_test_resources_and_env();
+        let mut config = cfg::Config::new_from_dir(env.get_test_cfg_root());
 
         assert_eq!(replay_data.data.len(), 3);
 
         let mut replay_provider = Replay_Input_Provider::new(
             Replay_Input_Provider_Config {
-                disable_input_during_replay: Cfg_Var::new_from_val(true),
+                disable_input_during_replay: Cfg_Var::new_from_val(true, &mut config),
             },
             replay_data,
         );
@@ -171,24 +174,24 @@ mod tests {
         let joy_mgr = Joystick_Manager::new();
 
         // frame 0
-        replay_provider.update(&mut window, &joy_mgr);
+        replay_provider.update(&mut window, &joy_mgr, &config);
         let events = all_but_resized(&replay_provider);
         assert_eq!(events.len(), 2);
         assert_eq!(*events[0], keypressed(Key::Num0));
         assert_eq!(*events[1], keypressed(Key::A));
 
         // frame 1
-        replay_provider.update(&mut window, &joy_mgr);
+        replay_provider.update(&mut window, &joy_mgr, &config);
         let events = all_but_resized(&replay_provider);
         assert_eq!(events.len(), 0);
 
         // frame 2
-        replay_provider.update(&mut window, &joy_mgr);
+        replay_provider.update(&mut window, &joy_mgr, &config);
         let events = all_but_resized(&replay_provider);
         assert_eq!(events.len(), 0);
 
         // frame 3
-        replay_provider.update(&mut window, &joy_mgr);
+        replay_provider.update(&mut window, &joy_mgr, &config);
         let events = all_but_resized(&replay_provider);
         assert_eq!(events.len(), 2);
         assert_eq!(*events[0], keypressed(Key::Z));

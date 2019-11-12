@@ -1,5 +1,5 @@
 use super::components::Component;
-use ecs_engine::alloc::generational_allocator::{self, Generational_Allocator, Generational_Index};
+use ecs_engine::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
 
 use std::cell::{Ref, RefCell, RefMut};
 use std::iter::Iterator;
@@ -58,11 +58,6 @@ Max # Entities ever instantiated:    {}",
 
 pub type Entity = Generational_Index;
 type VecOpt<T> = Vec<Option<RefCell<T>>>;
-
-pub const INVALID_ENTITY: Entity = Entity {
-    gen: generational_allocator::Gen_Type::max_value(),
-    index: generational_allocator::Index_Type::max_value(),
-};
 
 impl Entity_Manager {
     const INITIAL_SIZE: usize = 64;
@@ -197,7 +192,7 @@ impl Entity_Manager {
         #[cfg(debug_assertions)]
         let mut dbg = &mut self.debug_info as *mut Entity_Manager_Debug_Info;
 
-        let alloc_size = self.allocator.size();
+        let alloc_size = self.allocator.capacity();
         match self.get_comp_storage_mut::<C>() {
             Some(vec) => {
                 #[cfg(debug_assertions)]
