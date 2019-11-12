@@ -99,22 +99,10 @@ pub unsafe extern "C" fn game_shutdown(game_state: *mut Game_State) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn game_unload(game_state: *mut Game_State) {
-    if game_state.is_null() {
-        panic!("[ FATAL ] game_unload: game state is null!");
-    }
-    ngfx::window::destroy_render_window(&mut (*game_state).window);
-}
+pub unsafe extern "C" fn game_unload(game_state: *mut Game_State) {}
 
 #[no_mangle]
-pub unsafe extern "C" fn game_reload(game_state: *mut Game_State) {
-    if game_state.is_null() {
-        panic!("[ FATAL ] game_unload: game state is null!");
-    }
-    let cfg = &(*game_state).engine_state.app_config;
-    let window = ngfx::window::create_render_window(&(), cfg.target_win_size, &cfg.title);
-    (*game_state).window = window;
-}
+pub unsafe extern "C" fn game_reload(game_state: *mut Game_State) {}
 
 /////////////////////////////////////////////////////////////////////////////
 //                      END FOREIGN FUNCTION API                           //
