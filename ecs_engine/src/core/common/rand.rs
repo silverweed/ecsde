@@ -3,7 +3,7 @@
 pub type Default_Rng = Rand_Xoshiro256;
 
 pub struct Rand_Xoshiro256 {
-    pub state: [u64; 4],
+    state: [u64; 4],
 }
 
 pub fn new_rng() -> std::io::Result<Rand_Xoshiro256> {
