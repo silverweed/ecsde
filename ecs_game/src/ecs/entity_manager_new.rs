@@ -1,5 +1,5 @@
-use crate::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
-use crate::core::common::bitset::Bit_Set;
+use ecs_engine::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
+use ecs_engine::core::common::bitset::Bit_Set;
 use std::any::TypeId;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;

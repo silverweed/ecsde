@@ -31,7 +31,7 @@ impl Generational_Allocator {
             gens: vec![],
             free_slots: vec![],
         };
-        // Start from gen 1 so we can use { 0, 0 } as "the invalid index" (and can e.g. detect invalid deallocations).
+        // Start from gen -1 so we can use { 0, 0 } as "the invalid index" (and can e.g. detect invalid deallocations).
         alloc.gens.resize(initial_size, 1);
         alloc.free_slots = (0..initial_size).rev().collect();
 
@@ -94,8 +94,13 @@ impl Generational_Allocator {
         self.free_slots.push(idx.index);
     }
 
+    // Note: currently this function is O(n). This is a tradeoff for not keeping an "alive" array in the
+    // allocator. This is probably reasonable, as we don't expect to call is_valid() very often.
+    // Should that not prove to be the case, consider accelerating this function somehow (e.g. with the alive array).
     pub fn is_valid(&self, idx: Generational_Index) -> bool {
-        (idx.index < self.gens.len()) && (idx.gen == self.gens[idx.index])
+        (idx.index < self.gens.len())
+            && (idx.gen == self.gens[idx.index])
+            && !self.free_slots.contains(&idx.index)
     }
 }
 
@@ -242,5 +247,11 @@ mod tests {
     fn gen_alloc_invalid_is_invalid() {
         let alloc = Generational_Allocator::new(4);
         assert!(!alloc.is_valid(Generational_Index::INVALID));
+    }
+
+    #[test]
+    fn gen_alloc_uncreated_entity_is_invalid() {
+        let alloc = Generational_Allocator::new(4);
+        assert!(!alloc.is_valid(Generational_Index { index: 0, gen: 1 }));
     }
 }

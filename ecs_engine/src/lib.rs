@@ -31,7 +31,7 @@ pub mod input;
 pub mod replay;
 pub mod resources;
 
-#[cfg(test)]
+#[cfg(debug_assertions)]
 pub mod test_common;
 
 #[cfg(debug_assertions)]
