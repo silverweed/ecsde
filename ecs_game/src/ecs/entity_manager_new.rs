@@ -1,4 +1,6 @@
-use ecs_engine::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
+use ecs_engine::alloc::generational_allocator::{
+    Gen_Type, Generational_Allocator, Generational_Index, Index_Type,
+};
 use ecs_engine::core::common::bitset::Bit_Set;
 use std::any::TypeId;
 use std::collections::hash_map::Entry;
@@ -6,9 +8,9 @@ use std::collections::HashMap;
 use std::vec::Vec;
 use typename::TypeName;
 
-type Entity = Generational_Index;
-type Entity_Index = usize;
-type Component_Handle = u32;
+pub type Entity = Generational_Index;
+pub type Entity_Index = usize;
+pub type Component_Handle = u32;
 
 #[derive(Default, Clone)]
 struct Component_Storage {
@@ -22,7 +24,7 @@ pub struct Component_Manager {
     components: Vec<Component_Storage>,
     last_comp_handle: Component_Handle,
     // Indexed by entity index
-    entity_comp_set: Vec<Bit_Set>,
+    pub(super) entity_comp_set: Vec<Bit_Set>,
 }
 
 impl Component_Manager {
@@ -138,17 +140,21 @@ impl Entity_Manager {
     pub fn is_valid_entity(&self, entity: Entity) -> bool {
         self.alloc.is_valid(entity)
     }
+
+    pub(super) fn cur_gen(&self, idx: Index_Type) -> Gen_Type {
+        self.alloc.cur_gen(idx)
+    }
 }
 
-pub struct World {
-    component_handles: HashMap<TypeId, Component_Handle>,
-    entity_manager: Entity_Manager,
-    component_manager: Component_Manager,
+pub struct Ecs_World {
+    pub component_handles: HashMap<TypeId, Component_Handle>,
+    pub entity_manager: Entity_Manager,
+    pub component_manager: Component_Manager,
 }
 
-impl World {
-    pub fn new() -> World {
-        World {
+impl Ecs_World {
+    pub fn new() -> Ecs_World {
+        Ecs_World {
             component_handles: HashMap::new(),
             entity_manager: Entity_Manager::new(),
             component_manager: Component_Manager::new(),
@@ -275,14 +281,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn register_same_component_twice() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
         em.register_component::<C_Test>();
     }
 
     #[test]
     fn get_component() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
 
         let e = em.new_entity();
@@ -294,7 +300,7 @@ mod tests {
 
     #[test]
     fn get_component_mut() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
 
         let e = em.new_entity();
@@ -306,7 +312,7 @@ mod tests {
 
     #[test]
     fn mutate_component() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
 
         let e = em.new_entity();
@@ -321,7 +327,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn add_component_inexisting_entity() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
         em.add_component::<C_Test>(Entity { index: 0, gen: 1 });
     }
@@ -329,7 +335,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn get_component_inexisting_entity() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
         em.get_component::<C_Test>(Entity { index: 0, gen: 1 });
     }
@@ -337,14 +343,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn get_component_mut_inexisting_entity() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
         em.get_component_mut::<C_Test>(Entity { index: 0, gen: 1 });
     }
 
     #[test]
     fn destroy_entity() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         let e = em.new_entity();
         em.destroy_entity(e);
         assert!(!em.is_valid_entity(e));
@@ -353,7 +359,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn double_free_entity() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         let e = em.new_entity();
         em.destroy_entity(e);
         em.destroy_entity(e);
@@ -362,14 +368,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn destroy_inexisting_entity() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.destroy_entity(Entity { index: 0, gen: 1 });
     }
 
     #[test]
     #[should_panic]
     fn add_component_destroyed_entity() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
         em.destroy_entity(e);
@@ -379,7 +385,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn get_component_destroyed_entity() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
         em.add_component::<C_Test>(e);
@@ -390,7 +396,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn get_component_destroyed_and_recreated_entity() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
         em.add_component::<C_Test>(e);
@@ -401,7 +407,7 @@ mod tests {
 
     #[test]
     fn get_component_destroyed_and_recreated_entity_good() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
 
         let e1 = em.new_entity();
@@ -414,7 +420,7 @@ mod tests {
 
     #[test]
     fn remove_component() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
         em.add_component::<C_Test>(e);
@@ -423,7 +429,7 @@ mod tests {
 
     #[test]
     fn double_remove_component() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
         em.add_component::<C_Test>(e);
@@ -433,7 +439,7 @@ mod tests {
 
     #[test]
     fn get_removed_component() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
         em.add_component::<C_Test>(e);
@@ -443,7 +449,7 @@ mod tests {
 
     #[test]
     fn remove_and_readd_component() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
         em.add_component::<C_Test>(e);
@@ -455,7 +461,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn remove_component_destroyed_and_recreated_entity() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         em.register_component::<C_Test>();
         let e = em.new_entity();
         em.add_component::<C_Test>(e);
@@ -466,7 +472,7 @@ mod tests {
 
     #[test]
     fn has_get_consistency() {
-        let mut em = World::new();
+        let mut em = Ecs_World::new();
         let mut entities: Vec<Entity> = vec![];
         em.register_component::<C_Test>();
         em.register_component::<C_Test2>();

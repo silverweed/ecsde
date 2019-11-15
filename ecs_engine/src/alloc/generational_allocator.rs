@@ -47,6 +47,11 @@ impl Generational_Allocator {
         self.gens.len() - self.free_slots.len()
     }
 
+    pub fn cur_gen(&self, idx: Index_Type) -> Gen_Type {
+        assert!(idx < self.gens.len());
+        self.gens[idx]
+    }
+
     pub fn allocate(&mut self) -> Generational_Index {
         let i = self.first_free_slot();
         let cur_size = self.gens.len();
@@ -83,11 +88,20 @@ impl Generational_Allocator {
             if idx.index >= self.gens.len() {
                 panic!("Tried to deallocate a Generational_Index whose index is greater than biggest one!");
             }
-            if self.gens[idx.index] > idx.gen {
+        }
+
+        let gen = self.gens[idx.index];
+
+        #[cfg(debug_assertions)]
+        {
+            if gen > idx.gen {
                 panic!("Tried to deallocate an old Generational_Index! Double free?");
             }
-            if self.gens[idx.index] < idx.gen {
+            if gen < idx.gen {
                 panic!("Tried to deallocate a Generational_Index with a generation greater than current!");
+            }
+            if self.free_slots.contains(&idx.index) {
+                panic!("Tried to deallocate a Generational_Index which was never allocated!");
             }
         }
         self.gens[idx.index] += 1;
@@ -184,6 +198,16 @@ mod tests {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
         alloc.deallocate(Generational_Index { index: 0, gen: 0 });
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Tried to deallocate a Generational_Index which was never allocated!"
+    )]
+    fn gen_alloc_bad_deallocate_5() {
+        let n = 10;
+        let mut alloc = Generational_Allocator::new(n);
+        alloc.deallocate(Generational_Index { index: 0, gen: 1 });
     }
 
     #[test]
