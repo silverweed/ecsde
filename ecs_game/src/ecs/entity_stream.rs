@@ -46,9 +46,8 @@ impl Iterator for Entity_Stream<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use typename::TypeName;
 
-    #[derive(Copy, Clone, TypeName)]
+    #[derive(Copy, Clone)]
     struct C_Test {
         pub foo: u32,
     }

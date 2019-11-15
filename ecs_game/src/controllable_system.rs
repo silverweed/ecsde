@@ -5,9 +5,8 @@ use ecs_engine::core::time;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::input_system::Game_Action;
 use std::time::Duration;
-use typename::TypeName;
 
-#[derive(Clone, Debug, TypeName)]
+#[derive(Clone, Debug)]
 pub struct C_Controllable {
     pub speed: Cfg_Var<f32>,
     pub translation_this_frame: Vec2f,

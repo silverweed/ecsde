@@ -1,8 +1,7 @@
 use ecs_engine::core::common::transform::Transform2D;
 use ecs_engine::core::common::vector::Vec2f;
-use typename::TypeName;
 
-#[derive(Copy, Clone, Debug, TypeName, PartialEq, Default)]
+#[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct C_Velocity2D {
     pub x: f32,
     pub y: f32,
@@ -15,7 +14,7 @@ impl C_Velocity2D {
     }
 }
 
-#[derive(Copy, Clone, Debug, TypeName, PartialEq, Default)]
+#[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct C_Spatial2D {
     pub local_transform: Transform2D,
     pub global_transform: Transform2D,

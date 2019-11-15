@@ -1,13 +1,13 @@
 use super::config::Config;
 use super::value::Cfg_Value;
 use crate::core::common::stringid::String_Id;
+use std::any::type_name;
 use std::convert::{From, Into, TryFrom};
 use std::fmt::Debug;
-use typename::TypeName;
 
 fn read_cfg<T>(path_id: String_Id, cfg: &Config) -> T
 where
-    T: Default + TypeName + Into<Cfg_Value> + TryFrom<Cfg_Value>,
+    T: Default + Into<Cfg_Value> + TryFrom<Cfg_Value>,
 {
     let value = cfg
         .read_cfg(path_id)
@@ -16,7 +16,7 @@ where
     T::try_from(value.clone()).unwrap_or_else(|_| {
         panic!(
             "[ FATAL ] Error dereferencing Cfg_Var<{}>: incompatible value {:?}",
-            T::type_name(),
+            type_name::<T>(),
             value
         )
     })
@@ -26,7 +26,7 @@ where
 #[derive(Debug, Clone)]
 pub struct Cfg_Var<T>
 where
-    T: Default + TypeName + Into<Cfg_Value>,
+    T: Default + Into<Cfg_Value>,
 {
     id: String_Id,
     _marker: std::marker::PhantomData<T>,
@@ -34,7 +34,7 @@ where
 
 impl<T> Default for Cfg_Var<T>
 where
-    T: Default + TypeName + Into<Cfg_Value> + TryFrom<Cfg_Value>,
+    T: Default + Into<Cfg_Value> + TryFrom<Cfg_Value>,
 {
     fn default() -> Self {
         Self::new("")
@@ -45,13 +45,13 @@ where
 #[derive(Debug, Clone)]
 pub struct Cfg_Var<T>(T)
 where
-    T: Default + TypeName + Into<Cfg_Value>;
+    T: Default + Into<Cfg_Value>;
 
-impl<T> Copy for Cfg_Var<T> where T: Copy + TypeName + Default + Into<Cfg_Value> {}
+impl<T> Copy for Cfg_Var<T> where T: Copy + Default + Into<Cfg_Value> {}
 
 impl<T> Cfg_Var<T>
 where
-    T: Default + TypeName + Into<Cfg_Value> + TryFrom<Cfg_Value>,
+    T: Default + Into<Cfg_Value> + TryFrom<Cfg_Value>,
 {
     #[cfg(debug_assertions)]
     pub fn new(path: &str) -> Cfg_Var<T> {
@@ -141,7 +141,7 @@ impl Cfg_Var<String> {
 
 impl<T: std::fmt::Display> std::fmt::Display for Cfg_Var<T>
 where
-    T: Default + TypeName + Into<Cfg_Value>,
+    T: Default + Into<Cfg_Value>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", &self)

@@ -1,10 +1,9 @@
 use crate::core::common::vector::Vec2f;
 use cgmath::{Matrix3, Rad};
 use std::convert::Into;
-use typename::TypeName;
 
 // Likely @Incomplete: we don't want to recalculate the matrix every time.
-#[derive(Copy, Clone, Debug, TypeName, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Transform2D {
     position: Vec2f,
     rotation: Rad<f32>,

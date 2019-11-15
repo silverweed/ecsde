@@ -1,6 +1,7 @@
 use super::components::Component;
 use ecs_engine::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
 
+use std::any::type_name;
 use std::cell::{Ref, RefCell, RefMut};
 use std::iter::Iterator;
 use std::option::Option;
@@ -109,7 +110,7 @@ impl Entity_Manager {
             .unwrap_or_else(|| {
                 panic!(
                     "Tried to get_components of unregistered type {}!",
-                    C::type_name()
+                    type_name::<C>()
                 )
             })
             .iter()
@@ -125,7 +126,7 @@ impl Entity_Manager {
             .unwrap_or_else(|| {
                 panic!(
                     "Tried to get_components of unregistered type {}!",
-                    C::type_name()
+                    type_name::<C>()
                 )
             })
             .iter_mut()
@@ -164,7 +165,7 @@ impl Entity_Manager {
         if self.get_comp_storage::<C>().is_some() {
             panic!(
                 "Tried to register the same component {} twice!",
-                C::type_name()
+                type_name::<C>()
             );
         }
         let v: VecOpt<C> = Vec::new();
@@ -183,7 +184,7 @@ impl Entity_Manager {
         if !self.is_valid_entity(e) {
             panic!(
                 "Tried to add component {} to invalid entity {:?}",
-                C::type_name(),
+                type_name::<C>(),
                 e
             );
         }
@@ -217,7 +218,7 @@ impl Entity_Manager {
             }
             None => panic!(
                 "Tried to add unregistered component {} to entity!",
-                C::type_name()
+                type_name::<C>()
             ),
         }
     }
@@ -229,7 +230,7 @@ impl Entity_Manager {
         if !self.is_valid_entity(e) {
             panic!(
                 "Tried to remove component {} from invalid entity {:?}",
-                C::type_name(),
+                type_name::<C>(),
                 e
             );
         }
@@ -251,7 +252,7 @@ impl Entity_Manager {
             } // We don't assert if component is already None.
             None => panic!(
                 "Tried to remove unregistered component {} to entity!",
-                C::type_name()
+                type_name::<C>()
             ),
         }
     }
@@ -277,7 +278,7 @@ impl Entity_Manager {
                     None
                 }
             }
-            None => panic!("Tried to get unregistered component {}!", C::type_name()),
+            None => panic!("Tried to get unregistered component {}!", type_name::<C>()),
         }
     }
 
@@ -301,7 +302,7 @@ impl Entity_Manager {
                     None
                 }
             }
-            None => panic!("Tried to get unregistered component {}!", C::type_name()),
+            None => panic!("Tried to get unregistered component {}!", type_name::<C>()),
         }
     }
 
@@ -317,12 +318,12 @@ impl Entity_Manager {
         C1: Component + 'static,
         C2: Component + 'static,
     {
-        let comps1 = self
-            .get_comp_storage::<C1>()
-            .unwrap_or_else(|| panic!("Tried to get unregistered component {}!", C1::type_name()));
-        let comps2 = self
-            .get_comp_storage::<C2>()
-            .unwrap_or_else(|| panic!("Tried to get unregistered component {}!", C2::type_name()));
+        let comps1 = self.get_comp_storage::<C1>().unwrap_or_else(|| {
+            panic!("Tried to get unregistered component {}!", type_name::<C1>())
+        });
+        let comps2 = self.get_comp_storage::<C2>().unwrap_or_else(|| {
+            panic!("Tried to get unregistered component {}!", type_name::<C2>())
+        });
 
         comps1.iter().zip(comps2.iter()).filter_map(|(c1, c2)| {
             let c1 = c1.as_ref()?.borrow();
@@ -338,12 +339,12 @@ impl Entity_Manager {
         C1: Component + 'static,
         C2: Component + 'static,
     {
-        let comps1 = self
-            .get_comp_storage::<C1>()
-            .unwrap_or_else(|| panic!("Tried to get unregistered component {}!", C1::type_name()));
-        let comps2 = self
-            .get_comp_storage::<C2>()
-            .unwrap_or_else(|| panic!("Tried to get unregistered component {}!", C2::type_name()));
+        let comps1 = self.get_comp_storage::<C1>().unwrap_or_else(|| {
+            panic!("Tried to get unregistered component {}!", type_name::<C1>())
+        });
+        let comps2 = self.get_comp_storage::<C2>().unwrap_or_else(|| {
+            panic!("Tried to get unregistered component {}!", type_name::<C2>())
+        });
 
         comps1.iter().zip(comps2.iter()).filter_map(|(c1, c2)| {
             let c1 = c1.as_ref()?;
@@ -361,19 +362,18 @@ impl Entity_Manager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use typename::TypeName;
 
-    #[derive(Copy, Clone, Debug, Default, TypeName)]
+    #[derive(Copy, Clone, Debug, Default)]
     struct C_Test {
         foo: i32,
     }
 
-    #[derive(Copy, Clone, Debug, Default, TypeName)]
+    #[derive(Copy, Clone, Debug, Default)]
     struct C_Test2 {
         foo: i32,
     }
 
-    #[derive(Copy, Clone, Debug, Default, TypeName)]
+    #[derive(Copy, Clone, Debug, Default)]
     struct C_Test3 {
         foo: i32,
     }

@@ -7,7 +7,6 @@ extern crate anymap;
 extern crate cgmath;
 extern crate ecs_engine;
 extern crate float_cmp;
-extern crate typename;
 
 mod controllable_system;
 mod ecs;

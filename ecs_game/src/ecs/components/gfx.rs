@@ -1,9 +1,8 @@
 use ecs_engine::core::common::rect::Rect;
 use ecs_engine::core::common::transform::Transform2D;
 use ecs_engine::resources;
-use typename::TypeName;
 
-#[derive(Copy, Clone, Debug, TypeName)]
+#[derive(Copy, Clone, Debug)]
 pub struct C_Renderable {
     pub texture: resources::gfx::Texture_Handle,
     pub rect: Rect<i32>,
@@ -18,14 +17,14 @@ impl Default for C_Renderable {
     }
 }
 
-#[derive(Copy, Clone, Debug, TypeName, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct C_Animated_Sprite {
     pub n_frames: u32,
     pub frame_time: f32,
     pub frame_time_elapsed: f32,
 }
 
-#[derive(Copy, Clone, Debug, TypeName, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct C_Camera2D {
     pub transform: Transform2D,
 }

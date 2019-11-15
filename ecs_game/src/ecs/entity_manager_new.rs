@@ -2,11 +2,10 @@ use ecs_engine::alloc::generational_allocator::{
     Gen_Type, Generational_Allocator, Generational_Index, Index_Type,
 };
 use ecs_engine::core::common::bitset::Bit_Set;
-use std::any::TypeId;
+use std::any::{type_name, TypeId};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::vec::Vec;
-use typename::TypeName;
 
 pub type Entity = Generational_Index;
 pub type Entity_Index = usize;
@@ -173,13 +172,13 @@ impl Ecs_World {
         self.entity_manager.is_valid_entity(entity)
     }
 
-    pub fn register_component<T: 'static + Copy + TypeName>(&mut self) {
+    pub fn register_component<T: 'static + Copy>(&mut self) {
         let type_id = TypeId::of::<T>();
         match self.component_handles.entry(type_id) {
             Entry::Occupied(_) => {
                 panic!(
                     "register_component: same component '{}' registered twice!",
-                    T::type_name()
+                    type_name::<T>()
                 );
             }
             Entry::Vacant(v) => {
@@ -189,11 +188,11 @@ impl Ecs_World {
         }
     }
 
-    pub fn add_component<T: 'static + Copy + TypeName>(&mut self, entity: Entity) -> &mut T {
+    pub fn add_component<T: 'static + Copy>(&mut self, entity: Entity) -> &mut T {
         if !self.entity_manager.is_valid_entity(entity) {
             panic!(
                 "add_component::<{}?>: invalid entity {:?}",
-                T::type_name(),
+                type_name::<T>(),
                 entity
             );
         }
@@ -201,11 +200,11 @@ impl Ecs_World {
         unsafe { std::mem::transmute(self.component_manager.add_component(entity, *handle)) }
     }
 
-    pub fn get_component<T: 'static + Copy + TypeName>(&self, entity: Entity) -> Option<&T> {
+    pub fn get_component<T: 'static + Copy>(&self, entity: Entity) -> Option<&T> {
         if !self.entity_manager.is_valid_entity(entity) {
             panic!(
                 "get_component::<{}?>: invalid entity {:?}",
-                T::type_name(),
+                type_name::<T>(),
                 entity
             );
         }
@@ -216,14 +215,11 @@ impl Ecs_World {
             .map(|ptr| unsafe { &*(ptr as *const T) })
     }
 
-    pub fn get_component_mut<T: 'static + Copy + TypeName>(
-        &mut self,
-        entity: Entity,
-    ) -> Option<&mut T> {
+    pub fn get_component_mut<T: 'static + Copy>(&mut self, entity: Entity) -> Option<&mut T> {
         if !self.entity_manager.is_valid_entity(entity) {
             panic!(
                 "get_component_mut::<{}?>: invalid entity {:?}",
-                T::type_name(),
+                type_name::<T>(),
                 entity
             );
         }
@@ -234,11 +230,11 @@ impl Ecs_World {
             .map(|ptr| unsafe { &mut *(ptr as *mut T) })
     }
 
-    pub fn remove_component<T: 'static + Copy + TypeName>(&mut self, entity: Entity) {
+    pub fn remove_component<T: 'static + Copy>(&mut self, entity: Entity) {
         if !self.entity_manager.is_valid_entity(entity) {
             panic!(
                 "remove_component::<{}?>: invalid entity {:?}",
-                T::type_name(),
+                type_name::<T>(),
                 entity
             );
         }
@@ -246,11 +242,11 @@ impl Ecs_World {
         self.component_manager.remove_component(entity, *handle);
     }
 
-    pub fn has_component<T: 'static + Copy + TypeName>(&self, entity: Entity) -> bool {
+    pub fn has_component<T: 'static + Copy>(&self, entity: Entity) -> bool {
         if !self.entity_manager.is_valid_entity(entity) {
             panic!(
                 "has_component::<{}?>: invalid entity {:?}",
-                T::type_name(),
+                type_name::<T>(),
                 entity
             );
         }
@@ -263,17 +259,17 @@ impl Ecs_World {
 mod tests {
     use super::*;
 
-    #[derive(Copy, Clone, Debug, Default, TypeName)]
+    #[derive(Copy, Clone, Debug, Default)]
     struct C_Test {
         foo: i32,
     }
 
-    #[derive(Copy, Clone, Debug, Default, TypeName)]
+    #[derive(Copy, Clone, Debug, Default)]
     struct C_Test2 {
         foo: i32,
     }
 
-    #[derive(Copy, Clone, Debug, Default, TypeName)]
+    #[derive(Copy, Clone, Debug, Default)]
     struct C_Test3 {
         foo: i32,
     }
