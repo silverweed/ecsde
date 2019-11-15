@@ -57,13 +57,19 @@ impl Component_Manager {
         let index = if let Some(index) = storage.comp_idx.get(&entity.index) {
             *index
         } else {
-            let n_comps = storage.data.len() / individual_size;
-            storage.data.resize(storage.data.len() + individual_size, 0);
-            storage.comp_idx.insert(entity.index, n_comps);
             self.entity_comp_set
                 .resize(entity.index + 1, Bit_Set::default());
             self.entity_comp_set[entity.index].set(comp_handle as usize, true);
-            n_comps
+
+            if individual_size != 0 {
+                let n_comps = storage.data.len() / individual_size;
+                storage.data.resize(storage.data.len() + individual_size, 0);
+                storage.comp_idx.insert(entity.index, n_comps);
+                n_comps
+            } else {
+                // Component is a Zero-Sized Type and doesn't carry any data.
+                0
+            }
         };
 
         unsafe { storage.data.as_mut_ptr().add(index * individual_size) }
@@ -75,7 +81,18 @@ impl Component_Manager {
         comp_handle: Component_Handle,
     ) -> Option<*const u8> {
         let storage = &self.components[comp_handle as usize];
-        if let Some(index) = storage.comp_idx.get(&entity.index) {
+
+        if storage.individual_size == 0 {
+            // ZST component (basically a tag): just check if the component is in the bitset.
+            if entity.index < self.entity_comp_set.len()
+                && self.entity_comp_set[entity.index].get(comp_handle as usize)
+            {
+                // return Some(null) to distinguish from the None case.
+                Some(std::ptr::null())
+            } else {
+                None
+            }
+        } else if let Some(index) = storage.comp_idx.get(&entity.index) {
             let comp = unsafe { storage.data.as_ptr().add(*index * storage.individual_size) };
             Some(comp)
         } else {
@@ -92,7 +109,15 @@ impl Component_Manager {
             .components
             .get_mut(comp_handle as usize)
             .unwrap_or_else(|| panic!("Invalid component handle {:?}", comp_handle));
-        if let Some(index) = storage.comp_idx.get_mut(&entity.index) {
+        if storage.individual_size == 0 {
+            // ZST component (basically a tag): just check if the component is in the bitset.
+            if self.entity_comp_set[entity.index].get(comp_handle as usize) {
+                // return Some(null) to distinguish from the None case.
+                Some(std::ptr::null_mut())
+            } else {
+                None
+            }
+        } else if let Some(index) = storage.comp_idx.get_mut(&entity.index) {
             let comp = unsafe {
                 storage
                     .data
@@ -197,7 +222,7 @@ impl Ecs_World {
             );
         }
         let handle = self.component_handles.get(&TypeId::of::<T>()).unwrap();
-        unsafe { std::mem::transmute(self.component_manager.add_component(entity, *handle)) }
+        unsafe { &mut *(self.component_manager.add_component(entity, *handle) as *mut T) }
     }
 
     pub fn get_component<T: 'static + Copy>(&self, entity: Entity) -> Option<&T> {
@@ -209,10 +234,13 @@ impl Ecs_World {
             );
         }
         let handle = self.component_handles.get(&TypeId::of::<T>()).unwrap();
-        self.component_manager
-            .get_component(entity, *handle)
+        let maybe_comp = self.component_manager.get_component(entity, *handle);
+        if std::mem::size_of::<T>() != 0 {
             // reinterpret cast from *const u8 to *const T
-            .map(|ptr| unsafe { &*(ptr as *const T) })
+            maybe_comp.map(|ptr| unsafe { &*(ptr as *const T) })
+        } else {
+            maybe_comp.map(|_| unsafe { &*(&() as *const () as *const T) })
+        }
     }
 
     pub fn get_component_mut<T: 'static + Copy>(&mut self, entity: Entity) -> Option<&mut T> {
@@ -224,10 +252,13 @@ impl Ecs_World {
             );
         }
         let handle = self.component_handles.get(&TypeId::of::<T>()).unwrap();
-        self.component_manager
-            .get_component_mut(entity, *handle)
+        let maybe_comp = self.component_manager.get_component_mut(entity, *handle);
+        if std::mem::size_of::<T>() != 0 {
             // reinterpret cast from *mut u8 to *mut T
-            .map(|ptr| unsafe { &mut *(ptr as *mut T) })
+            maybe_comp.map(|ptr| unsafe { &mut *(ptr as *mut T) })
+        } else {
+            maybe_comp.map(|_| unsafe { &mut *(&mut () as *mut () as *mut T) })
+        }
     }
 
     pub fn remove_component<T: 'static + Copy>(&mut self, entity: Entity) {
@@ -274,6 +305,9 @@ mod tests {
         foo: i32,
     }
 
+    #[derive(Copy, Clone)]
+    struct C_ZST {}
+
     #[test]
     #[should_panic]
     fn register_same_component_twice() {
@@ -292,6 +326,29 @@ mod tests {
 
         em.add_component::<C_Test>(e);
         assert!(em.get_component::<C_Test>(e).is_some());
+    }
+
+    #[test]
+    fn get_component_zero_sized() {
+        let mut em = Ecs_World::new();
+        em.register_component::<C_ZST>();
+
+        let e = em.new_entity();
+        assert!(em.get_component::<C_ZST>(e).is_none());
+
+        let e2 = em.new_entity();
+
+        em.add_component::<C_ZST>(e);
+        em.add_component::<C_ZST>(e2);
+        assert!(em.get_component::<C_ZST>(e).is_some());
+        assert!(em.get_component::<C_ZST>(e2).is_some());
+
+        em.remove_component::<C_ZST>(e);
+        assert!(em.get_component::<C_ZST>(e).is_none());
+        assert!(em.get_component::<C_ZST>(e2).is_some());
+
+        em.remove_component::<C_ZST>(e2);
+        assert!(em.get_component::<C_ZST>(e2).is_none());
     }
 
     #[test]
