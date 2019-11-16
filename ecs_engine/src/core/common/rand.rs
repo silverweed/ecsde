@@ -59,7 +59,7 @@ fn rand_xoshi256_rotate(x: u64, k: i32) -> u64 {
     (x << k) | (x >> (64 - k))
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn get_entropy_from_os(buf: &mut [u8]) -> std::io::Result<()> {
     use std::fs::File;
     use std::io::Read;
