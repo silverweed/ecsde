@@ -115,7 +115,9 @@ fn internal_game_init<'a>() -> Result<Box<Game_State<'a>>, Box<dyn std::error::E
     let env = &game_state.engine_state.env;
     let gres = &mut game_state.engine_state.gfx_resources;
 
-    game_state.gameplay_system.init(gres, env)?;
+    game_state
+        .gameplay_system
+        .init(gres, env, &mut game_state.rng)?;
     game_state
         .render_system
         .init(gfx::render_system::Render_System_Config {

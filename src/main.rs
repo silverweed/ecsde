@@ -14,6 +14,8 @@ use hotload::*;
 const GAME_DLL_FOLDER: &str = "ecs_game/target/debug";
 #[cfg(target_os = "linux")]
 const GAME_DLL_FILE: &str = "libecs_game.so";
+#[cfg(target_os = "windows")]
+const GAME_DLL_FILE: &str = "ecs_game.dll";
 #[cfg(target_os = "macos")]
 const GAME_DLL_FILE: &str = "libecs_game.dylib";
 

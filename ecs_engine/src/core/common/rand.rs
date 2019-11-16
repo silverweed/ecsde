@@ -69,3 +69,34 @@ fn get_entropy_from_os(buf: &mut [u8]) -> std::io::Result<()> {
     let mut file = File::open(random_device_path)?;
     file.read_exact(buf)
 }
+
+#[cfg(target_os = "windows")]
+use std::os::raw::*;
+#[cfg(target_os = "windows")]
+type PVOID = *mut c_void;
+#[cfg(target_os = "windows")]
+type BOOL = c_int;
+#[cfg(target_os = "windows")]
+type ULONG = c_ulong;
+#[cfg(target_os = "windows")]
+extern "stdcall" {
+    /// @Portability: this function is not strictly standard, but it's just SO MUCH more convenient
+    /// to use than the "recommended" BCrypt* API, which is a total mess.
+    /// In case Windows 12 or something breaks this, then I'll take the trouble of using the
+    /// Official(R) MDSN-Approved(TM) API.
+    #[link(name = "Advapi32")]
+    #[link_name = "SystemFunction036"]
+    fn RtlGenRandom(buf: PVOID, buf_len: ULONG) -> BOOL;
+}
+
+#[cfg(target_os = "windows")]
+fn get_entropy_from_os(buf: &mut [u8]) -> std::io::Result<()> {
+    if unsafe { RtlGenRandom(buf.as_mut_ptr() as PVOID, buf.len() as ULONG) } != 0 {
+        Ok(())
+    } else {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "RtlGenRandom call failed.",
+        ))
+    }
+}

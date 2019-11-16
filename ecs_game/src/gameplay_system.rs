@@ -8,6 +8,7 @@ use crate::scene_tree;
 use cgmath::{Deg, InnerSpace};
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::core::common;
+use ecs_engine::core::common::rand;
 use ecs_engine::core::common::rect::Rect;
 use ecs_engine::core::common::stringid::String_Id;
 use ecs_engine::core::common::transform::Transform2D;
@@ -42,10 +43,15 @@ impl Gameplay_System {
         }
     }
 
-    pub fn init(&mut self, gres: &mut Gfx_Resources, env: &Env_Info) -> common::Maybe_Error {
+    pub fn init(
+        &mut self,
+        gres: &mut Gfx_Resources,
+        env: &Env_Info,
+        rng: &mut rand::Default_Rng,
+    ) -> common::Maybe_Error {
         self.register_all_components();
 
-        self.init_demo_entities(gres, env);
+        self.init_demo_entities(gres, env, rng);
         //self.init_demo_sprites(cfg);
 
         Ok(())
@@ -72,20 +78,22 @@ impl Gameplay_System {
                 self.scene_tree.set_local_transform(*e, &t.local_transform);
             }
         }
-        println!("copying took {:?} ms", Instant::now().duration_since(now));
+        //println!("copying took {:?} ms", Instant::now().duration_since(now));
         let now = Instant::now();
         self.scene_tree.compute_global_transforms();
-        println!("computing took {:?} ms", Instant::now().duration_since(now));
-        let now = Instant::now();
+        //println!("computing took {:?} ms", Instant::now().duration_since(now));
+        //let now = Instant::now();
         for e in &self.entities {
             if let Some(mut t) = self.entity_manager.get_component_mut::<C_Spatial2D>(*e) {
                 t.global_transform = *self.scene_tree.get_global_transform(*e).unwrap();
             }
         }
-        println!(
-            "backcopying took {:?} ms",
-            Instant::now().duration_since(now)
-        );
+        /*
+            println!(
+                "backcopying took {:?} ms",
+                Instant::now().duration_since(now)
+            );
+        */
 
         self.update_demo_entites(&dt);
     }
@@ -220,12 +228,21 @@ impl Gameplay_System {
         }
     }
 
-    fn init_demo_entities(&mut self, rsrc: &mut Gfx_Resources, env: &Env_Info) {
+    fn init_demo_entities(
+        &mut self,
+        rsrc: &mut Gfx_Resources,
+        env: &Env_Info,
+        rng: &mut rand::Default_Rng,
+    ) {
         // #DEMO
         let em = &mut self.entity_manager;
 
         self.camera = em.new_entity();
-        em.add_component::<C_Camera2D>(self.camera);
+        {
+            let mut cam = em.add_component::<C_Camera2D>(self.camera);
+            cam.transform.set_scale(2.5, 2.5);
+        }
+
         {
             let mut ctrl = em.add_component::<C_Controllable>(self.camera);
             ctrl.speed = Cfg_Var::new("gameplay/player/player_speed");
@@ -244,10 +261,12 @@ impl Gameplay_System {
             };
             {
                 let mut t = em.add_component::<C_Spatial2D>(entity);
+                let x = rand::rand_01(rng);
+                let y = rand::rand_01(rng);
                 t.local_transform
                     .set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
                 if i > 0 {
-                    t.local_transform.set_position(50.0, 0.0);
+                    t.local_transform.set_position(x * 50.0, y * 50.0);
                 }
                 self.scene_tree.add(entity, prev_entity, &t.local_transform);
             }
@@ -284,7 +303,7 @@ impl Gameplay_System {
             .iter_mut()
             .enumerate()
         {
-            let speed = 10.0;
+            let speed = 1.0;
             t.local_transform.rotate(Deg(dt_secs * speed));
         }
     }

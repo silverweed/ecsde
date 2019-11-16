@@ -8,8 +8,7 @@ pub struct Bit_Set {
 }
 
 impl Bit_Set {
-    pub fn set<T: std::convert::Into<usize>>(&mut self, index: T, value: bool) {
-        let index = index.into();
+    pub fn set(&mut self, index: usize, value: bool) {
         let element_idx = index / 64;
         if element_idx == 0 {
             // fast bit

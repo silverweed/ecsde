@@ -27,15 +27,21 @@ impl Game_Dll_File_Watcher {
 #[cfg(debug_assertions)]
 impl file_watcher::File_Watcher_Event_Handler for Game_Dll_File_Watcher {
     fn handle(&mut self, event: &DebouncedEvent) {
-        println!("EVENT = {:?}", event);
+        eprintln!("EVENT = {:?}", event);
         match event {
             DebouncedEvent::Write(path)
             | DebouncedEvent::Create(path)
             | DebouncedEvent::Chmod(path)
-            | DebouncedEvent::Remove(path)
-                if *path == self.file =>
-            {
-                let _ = self.reload_pending.try_send(());
+            | DebouncedEvent::Remove(path) => {
+                if let Ok(canon_path) = path.canonicalize() {
+                    if canon_path == self.file {
+                        let _ = self.reload_pending.try_send(());
+                    } else {
+                        eprintln!("Not reloading because path != self.file.\n  path = {:?}\n  file = {:?}", canon_path, self.file);
+                    }
+                } else {
+                    eprintln!("Failed to canonicalize path {:?}", path);
+                }
             }
             _ => (),
         }
@@ -67,12 +73,12 @@ pub fn lib_load(lib_path: &str) -> (ll::Library, PathBuf) {
 
 #[cfg(debug_assertions)]
 pub fn lib_reload(lib_path: &str, unique_path: &mut PathBuf) -> ll::Library {
-    std::fs::remove_file(&unique_path).unwrap_or_else(|err| {
-        panic!(
-            "[ ERROR ] Failed to remove old lib {:?}: {:?}",
+    if let Err(err) = std::fs::remove_file(&unique_path) {
+        eprintln!(
+            "[ WARNING ] Failed to remove old lib {:?}: {:?}",
             unique_path, err
-        )
-    });
+        );
+    }
     let (lib, path) = lib_load(lib_path);
     *unique_path = path;
     lib
