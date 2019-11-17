@@ -168,16 +168,16 @@ mod tests {
         let (_, _, env) = create_test_resources_and_env();
         let config = cfg::Config::new_from_dir(env.get_test_cfg_root());
 
-        let entry_int = Cfg_Var::<i32>::new("test/entry_int");
+        let entry_int = Cfg_Var::<i32>::new("test/entry_int", &config);
         assert_eq!(entry_int.read(&config), 42);
 
-        let entry_bool = Cfg_Var::<bool>::new("test/entry_bool");
+        let entry_bool = Cfg_Var::<bool>::new("test/entry_bool", &config);
         assert_eq!(entry_bool.read(&config), true);
 
-        let entry_float = Cfg_Var::<f32>::new("test/entry_float");
+        let entry_float = Cfg_Var::<f32>::new("test/entry_float", &config);
         assert_eq!(entry_float.read(&config), 42.0);
 
-        let entry_string = Cfg_Var::<String>::new("test/entry_string");
+        let entry_string = Cfg_Var::<String>::new("test/entry_string", &config);
         assert_eq!(entry_string.read(&config).as_str(), "Fourty Two");
     }
 
@@ -187,7 +187,7 @@ mod tests {
         let (_, _, env) = create_test_resources_and_env();
         let config = cfg::Config::new_from_dir(env.get_test_cfg_root());
 
-        let entry_nonexisting = Cfg_Var::<i32>::new("entry non existing");
+        let entry_nonexisting = Cfg_Var::<i32>::new("entry non existing", &config);
         let _ = entry_nonexisting.read(&config);
     }
 
@@ -209,7 +209,7 @@ mod tests {
         let (_, _, env) = create_test_resources_and_env();
         let config = cfg::Config::new_from_dir(env.get_test_cfg_root());
 
-        let entry_float_mistyped = Cfg_Var::<i32>::new("test/entry_float");
+        let entry_float_mistyped = Cfg_Var::<i32>::new("test/entry_float", &config);
         let _ = entry_float_mistyped.read(&config);
     }
 }

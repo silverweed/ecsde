@@ -17,3 +17,9 @@ path = "../ecs_engine"
 
 [dependencies.cgmath]
 path = "../third_party/cgmath"
+
+[features]
+prof_update = []
+prof_scene_tree = []
+prof_gameplay = []
+prof_game_render = []

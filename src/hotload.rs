@@ -32,17 +32,18 @@ impl file_watcher::File_Watcher_Event_Handler for Game_Dll_File_Watcher {
             DebouncedEvent::Write(path)
             | DebouncedEvent::Create(path)
             | DebouncedEvent::Chmod(path)
-            | DebouncedEvent::Remove(path) => {
-                if let Ok(canon_path) = path.canonicalize() {
+            | DebouncedEvent::Remove(path) => match path.canonicalize() {
+                Ok(canon_path) => {
                     if canon_path == self.file {
                         let _ = self.reload_pending.try_send(());
                     } else {
                         eprintln!("Not reloading because path != self.file.\n  path = {:?}\n  file = {:?}", canon_path, self.file);
                     }
-                } else {
-                    eprintln!("Failed to canonicalize path {:?}", path);
                 }
-            }
+                Err(err) => {
+                    eprintln!("Failed to canonicalize path {:?}: {:?}", path, err);
+                }
+            },
             _ => (),
         }
     }

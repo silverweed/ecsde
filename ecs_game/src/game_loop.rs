@@ -98,7 +98,7 @@ pub fn tick_game(game_state: &mut Game_State) -> Result<bool, Box<dyn std::error
 
         // Update game systems
         {
-            #[cfg(prof_t)]
+            #[cfg(feature = "prof_gameplay")]
             let gameplay_start_t = std::time::Instant::now();
 
             let gameplay_system = &mut game_state.gameplay_system;
@@ -109,7 +109,7 @@ pub fn tick_game(game_state: &mut Game_State) -> Result<bool, Box<dyn std::error
                 game_state.execution_time -= update_time;
             }
 
-            #[cfg(prof_t)]
+            #[cfg(feature = "prof_gameplay")]
             println!("Gameplay: {} ms", gameplay_start_t.elapsed().as_millis());
         }
     }
@@ -124,7 +124,7 @@ pub fn tick_game(game_state: &mut Game_State) -> Result<bool, Box<dyn std::error
     );
 
     // Render
-    #[cfg(prof_t)]
+    #[cfg(feature = "prof_game_render")]
     let render_start_t = std::time::Instant::now();
 
     let smooth_by_extrapolating_velocity = game_state
@@ -137,7 +137,7 @@ pub fn tick_game(game_state: &mut Game_State) -> Result<bool, Box<dyn std::error
         smooth_by_extrapolating_velocity,
     )?;
 
-    #[cfg(prof_t)]
+    #[cfg(feature = "prof_game_render")]
     println!("Render: {} ms", render_start_t.elapsed().as_millis());
 
     #[cfg(debug_assertions)]

@@ -23,6 +23,8 @@ pub struct Generational_Allocator {
     gens: Vec<Gen_Type>,
     // list of currently free slots. Used to retrieve the next available slot in O(1).
     free_slots: Vec<usize>,
+    // used to ensure is_valid() always returns false for an uncreated index.
+    alive: Vec<bool>,
 }
 
 impl Generational_Allocator {
@@ -30,9 +32,11 @@ impl Generational_Allocator {
         let mut alloc = Generational_Allocator {
             gens: vec![],
             free_slots: vec![],
+            alive: vec![],
         };
         // Start from gen -1 so we can use { 0, 0 } as "the invalid index" (and can e.g. detect invalid deallocations).
         alloc.gens.resize(initial_size, 1);
+        alloc.alive.resize(initial_size, false);
         alloc.free_slots = (0..initial_size).rev().collect();
 
         alloc
@@ -59,6 +63,7 @@ impl Generational_Allocator {
             // Grow the vectors (exponentially)
             let new_size = cur_size * 2;
             self.gens.resize(new_size, 1);
+            self.alive.resize(new_size, false);
             self.free_slots.reserve(new_size);
             for i in (cur_size + 1..new_size).rev() {
                 self.free_slots.push(i);
@@ -66,6 +71,7 @@ impl Generational_Allocator {
         }
 
         let gen = &mut self.gens[i];
+        self.alive[i] = true;
 
         Generational_Index {
             index: i,
@@ -106,15 +112,11 @@ impl Generational_Allocator {
         }
         self.gens[idx.index] += 1;
         self.free_slots.push(idx.index);
+        self.alive[idx.index] = false;
     }
 
-    // Note: currently this function is O(n). This is a tradeoff for not keeping an "alive" array in the
-    // allocator. This is probably reasonable, as we don't expect to call is_valid() very often.
-    // Should that not prove to be the case, consider accelerating this function somehow (e.g. with the alive array).
     pub fn is_valid(&self, idx: Generational_Index) -> bool {
-        (idx.index < self.gens.len())
-            && (idx.gen == self.gens[idx.index])
-            && !self.free_slots.contains(&idx.index)
+        (idx.index < self.gens.len()) && (idx.gen == self.gens[idx.index]) && self.alive[idx.index]
     }
 }
 
@@ -122,12 +124,32 @@ impl Generational_Allocator {
 mod tests {
     use super::*;
 
+    fn assert_invariant_free_slots_alive(alloc: &Generational_Allocator) {
+        for free in &alloc.free_slots {
+            assert!(
+                !alloc.alive[*free],
+                "Slot {} should not be alive but is!",
+                *free
+            );
+        }
+        for i in 0..alloc.alive.len() {
+            if !alloc.alive[i] {
+                assert!(
+                    alloc.free_slots.contains(&i),
+                    "Slot {} is not alive but is not in free_slots!",
+                    i
+                );
+            }
+        }
+    }
+
     #[test]
     fn gen_alloc_create() {
         let n = 10;
         let alloc = Generational_Allocator::new(n);
         assert_eq!(alloc.gens.len(), n);
         assert_eq!(alloc.free_slots.len(), n);
+        assert_invariant_free_slots_alive(&alloc);
     }
 
     #[test]
@@ -140,6 +162,7 @@ mod tests {
             assert!(i1.index == i, "Index should be {} but is {}!", i, i1.index);
             assert!(i1.gen == 1);
         }
+        assert_invariant_free_slots_alive(&alloc);
     }
 
     #[test]
@@ -158,6 +181,7 @@ mod tests {
         for idx in v {
             alloc.deallocate(idx);
         }
+        assert_invariant_free_slots_alive(&alloc);
     }
 
     #[test]
@@ -224,6 +248,7 @@ mod tests {
         let e4 = alloc.allocate();
         assert_eq!(e4.index, 0);
         assert_eq!(e4.gen, 3);
+        assert_invariant_free_slots_alive(&alloc);
     }
 
     #[test]
@@ -234,6 +259,7 @@ mod tests {
         for _i in 0..3 * n {
             alloc.allocate();
         }
+        assert_invariant_free_slots_alive(&alloc);
     }
 
     #[test]
@@ -255,6 +281,7 @@ mod tests {
         assert!(!alloc.is_valid(e1));
         assert!(alloc.is_valid(e2));
         assert!(alloc.is_valid(e3));
+        assert_invariant_free_slots_alive(&alloc);
 
         alloc.deallocate(e3);
         assert!(!alloc.is_valid(e1));
@@ -265,6 +292,7 @@ mod tests {
         assert!(!alloc.is_valid(e1));
         assert!(!alloc.is_valid(e2));
         assert!(!alloc.is_valid(e3));
+        assert_invariant_free_slots_alive(&alloc);
     }
 
     #[test]

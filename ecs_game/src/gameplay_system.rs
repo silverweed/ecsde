@@ -72,30 +72,57 @@ impl Gameplay_System {
         controllable_system::update(&dt, actions, axes, &mut self.entity_manager, cfg);
 
         use std::time::Instant;
-        let now = Instant::now();
+
+        #[cfg(feature = "prof_scene_tree")]
+        let mut now = Instant::now();
+
         for e in &self.entities {
             if let Some(t) = self.entity_manager.get_component::<C_Spatial2D>(*e) {
                 self.scene_tree.set_local_transform(*e, &t.local_transform);
             }
         }
-        //println!("copying took {:?} ms", Instant::now().duration_since(now));
-        let now = Instant::now();
+
+        #[cfg(feature = "prof_scene_tree")]
+        {
+            println!(
+                "[prof_scene_tree] copying took {:?}",
+                Instant::now().duration_since(now).as_micros() as f32 * 0.001
+            );
+            now = Instant::now();
+        }
+
         self.scene_tree.compute_global_transforms();
-        //println!("computing took {:?} ms", Instant::now().duration_since(now));
-        //let now = Instant::now();
+
+        #[cfg(feature = "prof_scene_tree")]
+        {
+            println!(
+                "[prof_scene_tree] computing took {:.3} ms",
+                Instant::now().duration_since(now).as_micros() as f32 * 0.001
+            );
+            now = Instant::now();
+        }
+
         for e in &self.entities {
             if let Some(mut t) = self.entity_manager.get_component_mut::<C_Spatial2D>(*e) {
                 t.global_transform = *self.scene_tree.get_global_transform(*e).unwrap();
             }
         }
-        /*
-            println!(
-                "backcopying took {:?} ms",
-                Instant::now().duration_since(now)
-            );
-        */
+        #[cfg(feature = "prof_scene_tree")]
+        println!(
+            "[prof_scene_tree] backcopying took {:.3} ms",
+            Instant::now().duration_since(now).as_micros() as f32 * 0.001
+        );
+
+        #[cfg(feature = "prof_update")]
+        let now = Instant::now();
 
         self.update_demo_entites(&dt);
+
+        #[cfg(feature = "prof_update")]
+        println!(
+            "[prof_update] update took {:.3} ms",
+            Instant::now().duration_since(now).as_micros() as f32 * 0.001
+        );
     }
 
     pub fn realtime_update(
@@ -210,7 +237,7 @@ impl Gameplay_System {
         }
 
         let mut prev_entity: Option<Entity> = None;
-        for i in 0..1000 {
+        for i in 0..5000 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
