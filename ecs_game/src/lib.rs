@@ -114,10 +114,11 @@ fn internal_game_init<'a>() -> Result<Box<Game_State<'a>>, Box<dyn std::error::E
     let mut game_state = create_game_state()?;
     let env = &game_state.engine_state.env;
     let gres = &mut game_state.engine_state.gfx_resources;
+    let cfg = &game_state.engine_state.config;
 
     game_state
         .gameplay_system
-        .init(gres, env, &mut game_state.rng)?;
+        .init(gres, env, &mut game_state.rng, cfg)?;
     game_state
         .render_system
         .init(gfx::render_system::Render_System_Config {
@@ -149,8 +150,16 @@ fn create_game_state<'a>() -> Result<Box<Game_State<'a>>, Box<dyn std::error::Er
         app::start_recording(&mut engine_state)?;
     }
 
-    let input_provider = app::create_input_provider(&mut engine_state.replay_data);
+    let cfg = &engine_state.config;
+    let input_provider = app::create_input_provider(&mut engine_state.replay_data, cfg);
     let is_replaying = !input_provider.is_realtime_player_input();
+    let update_time = Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg);
+    let smooth_by_extrapolating_velocity =
+        Cfg_Var::new("engine/rendering/smooth_by_extrapolating_velocity", cfg);
+    #[cfg(debug_assertions)]
+    let extra_frame_sleep_ms = Cfg_Var::new("engine/debug/extra_frame_sleep_ms", cfg);
+    #[cfg(debug_assertions)]
+    let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
 
     Ok(Box::new(Game_State {
         window,
@@ -158,16 +167,14 @@ fn create_game_state<'a>() -> Result<Box<Game_State<'a>>, Box<dyn std::error::Er
         #[cfg(debug_assertions)]
         fps_debug: debug::fps::Fps_Console_Printer::new(&Duration::from_secs(2), "game"),
         execution_time: Duration::default(),
+        update_time,
+        smooth_by_extrapolating_velocity,
+        #[cfg(debug_assertions)]
+        extra_frame_sleep_ms,
+        #[cfg(debug_assertions)]
+        record_replay,
         input_provider,
         is_replaying,
-        update_time: Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms"),
-        smooth_by_extrapolating_velocity: Cfg_Var::new(
-            "engine/rendering/smooth_by_extrapolating_velocity",
-        ),
-        #[cfg(debug_assertions)]
-        extra_frame_sleep_ms: Cfg_Var::new("engine/debug/extra_frame_sleep_ms"),
-        #[cfg(debug_assertions)]
-        record_replay: Cfg_Var::new("engine/debug/replay/record"),
         render_system: gfx::render_system::Render_System::new(),
         gameplay_system: gameplay_system::Gameplay_System::new(),
         //state_mgr: states::state_manager::State_Manager::new(),

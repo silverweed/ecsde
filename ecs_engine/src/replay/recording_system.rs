@@ -42,7 +42,7 @@ impl Replay_Recording_System {
             .unwrap_or_else(|| panic!("start_recording_thread called twice!"));
 
         let file_write_interval_secs =
-            Cfg_Var::<f32>::new("engine/debug/replay/file_write_interval");
+            Cfg_Var::<f32>::new("engine/debug/replay/file_write_interval", cfg);
 
         let cfg = recording_thread::Recording_Thread_Config {
             recording_cfg: self.config,

@@ -48,11 +48,11 @@ impl Gameplay_System {
         gres: &mut Gfx_Resources,
         env: &Env_Info,
         rng: &mut rand::Default_Rng,
+        cfg: &cfg::Config,
     ) -> common::Maybe_Error {
         self.register_all_components();
 
-        self.init_demo_entities(gres, env, rng);
-        //self.init_demo_sprites(cfg);
+        self.init_demo_entities(gres, env, rng, cfg);
 
         Ok(())
     }
@@ -188,51 +188,12 @@ impl Gameplay_System {
         camera.transform.translate_v(delta);
     }
 
-    // #DEMO
-    fn init_demo_sprites(&mut self) {
-        let em = &mut self.entity_manager;
-        let yv = em.new_entity();
-        self.entities.push(yv);
-        {
-            let mut s = em.add_component::<C_Spatial2D>(yv);
-            s.local_transform.set_position(300.0, 200.0);
-            s.local_transform.set_scale(3.0, 3.0);
-        }
-        //{
-        //let mut rend = em.add_component::<C_Renderable>(yv);
-        //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
-        //assert!(rend.texture.is_some(), "Could not load yv texture!");
-        //rend.rect = Rect::new(0, 0, 148, 125);
-        //}
-
-        let plant = em.new_entity();
-        self.entities.push(plant);
-        {
-            let mut s = em.add_component::<C_Spatial2D>(plant);
-            s.local_transform.set_position(400.0, 500.0);
-        }
-        //{
-        //let mut rend = em.add_component::<C_Renderable>(plant);
-        //rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
-        //assert!(rend.texture.is_some(), "Could not load plant texture!");
-        //rend.rect = Rect::new(0, 0, 96, 96);
-        //}
-        {
-            let mut asprite = em.add_component::<C_Animated_Sprite>(plant);
-            asprite.n_frames = 4;
-            asprite.frame_time = 0.1;
-        }
-        {
-            let mut ctrl = em.add_component::<C_Controllable>(plant);
-            ctrl.speed = Cfg_Var::new("gameplay/player/player_speed");
-        }
-    }
-
     fn init_demo_entities(
         &mut self,
         rsrc: &mut Gfx_Resources,
         env: &Env_Info,
         rng: &mut rand::Default_Rng,
+        cfg: &cfg::Config,
     ) {
         // #DEMO
         let em = &mut self.entity_manager;
@@ -245,7 +206,7 @@ impl Gameplay_System {
 
         {
             let mut ctrl = em.add_component::<C_Controllable>(self.camera);
-            ctrl.speed = Cfg_Var::new("gameplay/player/player_speed");
+            ctrl.speed = Cfg_Var::new("gameplay/player/player_speed", cfg);
         }
 
         let mut prev_entity: Option<Entity> = None;

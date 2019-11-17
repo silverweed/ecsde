@@ -92,7 +92,8 @@ pub fn init_engine_systems(engine_state: &mut Engine_State) -> Maybe_Error {
 #[cfg(debug_assertions)]
 pub fn start_recording(engine_state: &mut Engine_State) -> Maybe_Error {
     if engine_state.replay_data.is_none()
-        && Cfg_Var::<bool>::new("engine/debug/replay/record").read(&engine_state.config)
+        && Cfg_Var::<bool>::new("engine/debug/replay/record", &engine_state.config)
+            .read(&engine_state.config)
     {
         engine_state
             .debug_systems
@@ -179,6 +180,7 @@ pub fn init_engine_debug(engine_state: &mut Engine_State<'_>) -> Maybe_Error {
 
 pub fn create_input_provider(
     replay_data: &mut Option<replay_data::Replay_Data>,
+    cfg: &cfg::Config,
 ) -> Box<dyn input::provider::Input_Provider> {
     // Consumes self.replay_data!
     let replay_data = replay_data.take();
@@ -186,6 +188,7 @@ pub fn create_input_provider(
         let config = replay_input_provider::Replay_Input_Provider_Config {
             disable_input_during_replay: Cfg_Var::new(
                 "engine/debug/replay/disable_input_during_replay",
+                cfg,
             ),
         };
         Box::new(replay_input_provider::Replay_Input_Provider::new(

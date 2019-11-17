@@ -39,6 +39,7 @@ impl Debug_Systems {
                 recording_system::Replay_Recording_System_Config {
                     ms_per_frame: crate::cfg::Cfg_Var::<i32>::new(
                         "engine/gameplay/gameplay_update_tick_ms",
+                        cfg,
                     )
                     .read(cfg),
                 },

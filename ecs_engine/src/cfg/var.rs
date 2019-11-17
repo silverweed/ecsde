@@ -36,8 +36,17 @@ impl<T> Default for Cfg_Var<T>
 where
     T: Default + Into<Cfg_Value> + TryFrom<Cfg_Value>,
 {
+    #[cfg(debug_assertions)]
     fn default() -> Self {
-        Self::new("")
+        Cfg_Var {
+            id: String_Id::from(""),
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn default() -> Self {
+        Cfg_Var(T::default())
     }
 }
 
@@ -54,7 +63,7 @@ where
     T: Default + Into<Cfg_Value> + TryFrom<Cfg_Value>,
 {
     #[cfg(debug_assertions)]
-    pub fn new(path: &str) -> Cfg_Var<T> {
+    pub fn new(path: &str, _cfg: &Config) -> Cfg_Var<T> {
         Cfg_Var {
             id: String_Id::from(path),
             _marker: std::marker::PhantomData,
@@ -62,9 +71,9 @@ where
     }
 
     #[cfg(not(debug_assertions))]
-    pub fn new(path: &str) -> Cfg_Var<T> {
+    pub fn new(path: &str, cfg: &Config) -> Cfg_Var<T> {
         let id = String_Id::from(path);
-        Cfg_Var(read_cfg(id))
+        Cfg_Var(read_cfg(id, cfg))
     }
 
     #[cfg(debug_assertions)]

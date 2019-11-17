@@ -1,5 +1,5 @@
 use crate::states::state::Persistent_Game_State;
-use ecs_engine::cfg::Cfg_Var;
+use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::core::common::stringid::String_Id;
 use ecs_engine::core::time;
@@ -20,7 +20,7 @@ pub struct Debug_Base_State {
 const CHANGE_SPEED_DELTA: f32 = 0.1;
 
 impl Debug_Base_State {
-    pub fn new() -> Debug_Base_State {
+    pub fn new(cfg: &cfg::Config) -> Debug_Base_State {
         Debug_Base_State {
             sid_game_speed_up: String_Id::from("game_speed_up"),
             sid_game_speed_down: String_Id::from("game_speed_down"),
@@ -28,7 +28,7 @@ impl Debug_Base_State {
             sid_step_sim: String_Id::from("step_sim"),
             sid_print_em_debug_info: String_Id::from("print_em_debug_info"),
             sid_quit: String_Id::from("quit"),
-            fps: Cfg_Var::new("engine/fps"),
+            fps: Cfg_Var::new("engine/fps", cfg),
         }
     }
 }
