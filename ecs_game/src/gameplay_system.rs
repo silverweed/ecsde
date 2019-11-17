@@ -237,7 +237,7 @@ impl Gameplay_System {
         }
 
         let mut prev_entity: Option<Entity> = None;
-        for i in 0..5000 {
+        for i in 0..1000 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);

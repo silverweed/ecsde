@@ -35,7 +35,7 @@ impl Component_Manager {
         }
     }
 
-    pub fn register_component<T>(&mut self) -> Component_Handle {
+    pub(self) fn register_component<T>(&mut self) -> Component_Handle {
         let handle = self.last_comp_handle;
 
         self.components
@@ -47,7 +47,11 @@ impl Component_Manager {
         handle
     }
 
-    pub fn add_component(&mut self, entity: Entity, comp_handle: Component_Handle) -> *mut u8 {
+    pub(self) fn add_component(
+        &mut self,
+        entity: Entity,
+        comp_handle: Component_Handle,
+    ) -> *mut u8 {
         let storage = self
             .components
             .get_mut(comp_handle as usize)
@@ -75,7 +79,7 @@ impl Component_Manager {
         unsafe { storage.data.as_mut_ptr().add(index * individual_size) }
     }
 
-    pub fn get_component(
+    pub(self) fn get_component(
         &self,
         entity: Entity,
         comp_handle: Component_Handle,
@@ -100,7 +104,7 @@ impl Component_Manager {
         }
     }
 
-    pub fn get_component_mut(
+    pub(self) fn get_component_mut(
         &mut self,
         entity: Entity,
         comp_handle: Component_Handle,
@@ -130,15 +134,23 @@ impl Component_Manager {
         }
     }
 
-    pub fn remove_component(&mut self, entity: Entity, comp_handle: Component_Handle) {
+    pub(self) fn remove_component(&mut self, entity: Entity, comp_handle: Component_Handle) {
         self.entity_comp_set[entity.index].set(comp_handle as usize, false);
         self.components[comp_handle as usize]
             .comp_idx
             .remove(&entity.index);
     }
 
-    pub fn has_component(&self, entity: Entity, comp_handle: Component_Handle) -> bool {
+    pub(self) fn has_component(&self, entity: Entity, comp_handle: Component_Handle) -> bool {
         self.entity_comp_set[entity.index].get(comp_handle as usize)
+    }
+
+    pub(self) fn get_components(&self, comp_handle: Component_Handle) -> &[u8] {
+        &self.components[comp_handle as usize].data
+    }
+
+    pub(self) fn get_components_mut(&mut self, comp_handle: Component_Handle) -> &mut [u8] {
+        &mut self.components[comp_handle as usize].data
     }
 }
 
@@ -283,6 +295,30 @@ impl Ecs_World {
         }
         let handle = self.component_handles.get(&TypeId::of::<T>()).unwrap();
         self.component_manager.has_component(entity, *handle)
+    }
+
+    pub fn get_components<T: 'static + Copy>(&self) -> &[T] {
+        // Note: this should be able to be const, but a pesky compiler error
+        // prevents it. Investigate on this later.
+        let comp_size = std::mem::size_of::<T>();
+        if comp_size == 0 {
+            return &[];
+        }
+        let handle = self.component_handles.get(&TypeId::of::<T>()).unwrap();
+        let data = self.component_manager.get_components(*handle);
+        let n_elems = data.len() / comp_size;
+        unsafe { std::slice::from_raw_parts(data.as_ptr() as *const T, n_elems) }
+    }
+
+    pub fn get_components_mut<T: 'static + Copy>(&mut self) -> &[T] {
+        let comp_size = std::mem::size_of::<T>();
+        if comp_size == 0 {
+            return &[];
+        }
+        let handle = self.component_handles.get(&TypeId::of::<T>()).unwrap();
+        let data = self.component_manager.get_components_mut(*handle);
+        let n_elems = data.len() / comp_size;
+        unsafe { std::slice::from_raw_parts(data.as_ptr() as *mut T, n_elems) }
     }
 }
 
@@ -521,6 +557,80 @@ mod tests {
         em.destroy_entity(e);
         em.new_entity();
         em.remove_component::<C_Test>(e);
+    }
+
+    #[test]
+    fn get_components_size() {
+        let mut em = Ecs_World::new();
+        em.register_component::<C_Test>();
+        for _i in 0..10 {
+            let e = em.new_entity();
+            em.add_component::<C_Test>(e);
+        }
+        assert_eq!(em.get_components::<C_Test>().len(), 10);
+    }
+
+    #[test]
+    fn get_components_size_zst() {
+        let mut em = Ecs_World::new();
+        em.register_component::<C_ZST>();
+        for _i in 0..10 {
+            let e = em.new_entity();
+            em.add_component::<C_ZST>(e);
+        }
+        // get_components on a ZST component should always be zero-length
+        assert_eq!(em.get_components::<C_ZST>().len(), 0);
+    }
+
+    #[test]
+    fn get_components_size_empty() {
+        let mut em = Ecs_World::new();
+        em.register_component::<C_Test>();
+        assert_eq!(em.get_components::<C_Test>().len(), 0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn get_unregistered_components() {
+        let em = Ecs_World::new();
+        em.get_components::<C_Test>();
+    }
+
+    #[test]
+    fn get_components_mut_size() {
+        let mut em = Ecs_World::new();
+        em.register_component::<C_Test>();
+        for _i in 0..10 {
+            let e = em.new_entity();
+            em.add_component::<C_Test>(e);
+        }
+        assert_eq!(em.get_components_mut::<C_Test>().len(), 10);
+    }
+
+    #[test]
+    fn get_components_mut_size_zst() {
+        let mut em = Ecs_World::new();
+        em.register_component::<C_ZST>();
+        for _i in 0..10 {
+            let e = em.new_entity();
+            em.add_component::<C_ZST>(e);
+        }
+        // get_components on a ZST component should always be zero-length
+        assert_eq!(em.get_components_mut::<C_ZST>().len(), 0);
+    }
+
+    #[test]
+    fn get_components_mut_size_empty() {
+        let mut em = Ecs_World::new();
+        em.register_component::<C_Test>();
+        assert_eq!(em.get_components_mut::<C_Test>().len(), 0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn get_unregistered_components_mut() {
+        let mut em = Ecs_World::new();
+        em.get_components_mut::<C_Test>();
     }
 
     #[test]

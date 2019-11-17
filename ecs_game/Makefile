@@ -1,3 +1,4 @@
+SHELL = bash
 all: build
 
 run:
