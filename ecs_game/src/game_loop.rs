@@ -33,6 +33,7 @@ pub fn tick_game<'a>(
 
     let (dt, real_dt) = (engine_state.time.dt(), engine_state.time.real_dt());
     let systems = &mut engine_state.systems;
+    #[cfg(debug_assertions)]
     let debug_systems = &mut engine_state.debug_systems;
 
     #[cfg(debug_assertions)]

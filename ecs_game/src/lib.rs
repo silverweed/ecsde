@@ -19,12 +19,14 @@ mod states;
 use ecs_engine::cfg::Cfg_Var;
 use ecs_engine::core::common::{colors, rand};
 use ecs_engine::core::{app, app_config};
-use ecs_engine::debug;
 use ecs_engine::gfx::{self as ngfx, window};
 use ecs_engine::input;
 use ecs_engine::resources;
 use std::env;
 use std::time::Duration;
+
+#[cfg(debug_assertions)]
+use ecs_engine::debug;
 
 #[repr(C)]
 pub struct Game_State<'a> {

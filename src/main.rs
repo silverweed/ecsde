@@ -88,20 +88,21 @@ fn main() -> ecs_engine::core::common::Maybe_Error {
     let game_dll_abs_path = format!("{}/{}", GAME_DLL_FOLDER, GAME_DLL_FILE);
     let (game_lib, _) = lib_load(&game_dll_abs_path);
     let game_api = unsafe { game_load(&game_lib)? };
-    let game_state = unsafe { (game_api.init)() };
+    let game_api::Game_Bundle {
+        game_state,
+        game_resources,
+    } = unsafe { (game_api.init)() };
 
     loop {
         unsafe {
-            if !(game_api.update)(game_state) {
+            if !(game_api.update)(game_state, game_resources) {
                 break;
             }
         }
-
-        std::thread::sleep(std::time::Duration::from_millis(16));
     }
 
     unsafe {
-        (game_api.shutdown)(game_state);
+        (game_api.shutdown)(game_state, game_resources);
     }
 
     Ok(())
