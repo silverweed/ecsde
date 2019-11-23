@@ -48,17 +48,20 @@ fn main() -> ecs_engine::core::common::Maybe_Error {
 
     let (mut game_lib, mut unique_lib_path) = lib_load(&game_dll_abs_path);
     let mut game_api = unsafe { game_load(&game_lib)? };
-    let game_state = unsafe { (game_api.init)() };
+    let game_api::Game_Bundle {
+        game_state,
+        game_resources,
+    } = unsafe { (game_api.init)() };
 
     loop {
         if reload_pending_recv.try_recv().is_ok() {
             unsafe {
-                (game_api.unload)(game_state);
+                (game_api.unload)(game_state, game_resources);
             }
             game_lib = lib_reload(&game_dll_abs_path, &mut unique_lib_path);
             unsafe {
                 game_api = game_load(&game_lib)?;
-                (game_api.reload)(game_state);
+                (game_api.reload)(game_state, game_resources);
                 eprintln!(
                     "[ OK ] Reloaded API and game state from {:?}.",
                     unique_lib_path
@@ -67,14 +70,14 @@ fn main() -> ecs_engine::core::common::Maybe_Error {
         }
 
         unsafe {
-            if !(game_api.update)(game_state) {
+            if !(game_api.update)(game_state, game_resources) {
                 break;
             }
         }
     }
 
     unsafe {
-        (game_api.shutdown)(game_state);
+        (game_api.shutdown)(game_state, game_resources);
     }
 
     Ok(())

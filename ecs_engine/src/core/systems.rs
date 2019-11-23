@@ -8,9 +8,9 @@ use crate::debug::debug_ui_system;
 #[cfg(debug_assertions)]
 use crate::replay::recording_system;
 
-pub struct Core_Systems {
+pub struct Core_Systems<'r> {
     pub input_system: input_system::Input_System,
-    pub audio_system: audio_system::Audio_System,
+    pub audio_system: audio_system::Audio_System<'r>,
 }
 
 #[cfg(debug_assertions)]
@@ -19,8 +19,8 @@ pub struct Debug_Systems {
     pub replay_recording_system: recording_system::Replay_Recording_System,
 }
 
-impl Core_Systems {
-    pub fn new(env: &Env_Info) -> Core_Systems {
+impl Core_Systems<'_> {
+    pub fn new(env: &Env_Info) -> Self {
         Core_Systems {
             input_system: input_system::Input_System::new(env),
             audio_system: audio_system::Audio_System::new(&audio_system::Audio_System_Config {

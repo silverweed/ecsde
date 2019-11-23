@@ -1,4 +1,4 @@
-use super::Game_State;
+use super::{Game_Resources, Game_State};
 use ecs_engine::core::app;
 use ecs_engine::core::common::colors;
 use ecs_engine::core::common::stringid::String_Id;
@@ -7,12 +7,16 @@ use ecs_engine::core::time;
 use ecs_engine::gfx;
 use ecs_engine::input;
 use ecs_engine::input::input_system::Action_Kind;
+use ecs_engine::resources::gfx::Gfx_Resources;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use ecs_engine::debug;
 
-pub fn tick_game(game_state: &mut Game_State) -> Result<bool, Box<dyn std::error::Error>> {
+pub fn tick_game<'a>(
+    game_state: &'a mut Game_State<'a>,
+    game_resources: &'a mut Game_Resources<'a>,
+) -> Result<bool, Box<dyn std::error::Error>> {
     // @Speed: these should all be computed at compile time.
     // Probably will do that when either const fn or proc macros/syntax extensions are stable.
     #[cfg(debug_assertions)]
@@ -102,19 +106,6 @@ pub fn tick_game(game_state: &mut Game_State) -> Result<bool, Box<dyn std::error
             engine_state.should_close = true;
         }
 
-        if actions.contains(&(String_Id::from("sound_test"), Action_Kind::Pressed)) {
-            let sound =
-                engine_state
-                    .audio_resources
-                    .load_sound(&ecs_engine::resources::audio::sound_path(
-                        &engine_state.env,
-                        "coin.ogg",
-                    ));
-            systems
-                .audio_system
-                .play_sound(&engine_state.audio_resources, sound);
-        }
-
         // Update game systems
         {
             #[cfg(feature = "prof_gameplay")]
@@ -134,7 +125,7 @@ pub fn tick_game(game_state: &mut Game_State) -> Result<bool, Box<dyn std::error
     }
 
     // Update audio
-    //systems.audio_system.update();
+    systems.audio_system.update();
 
     #[cfg(debug_assertions)]
     update_fps_debug_overlay(
@@ -151,6 +142,7 @@ pub fn tick_game(game_state: &mut Game_State) -> Result<bool, Box<dyn std::error
         .read(&engine_state.config);
     update_graphics(
         game_state,
+        &mut game_resources.gfx,
         real_dt,
         time::duration_ratio(&game_state.execution_time, &update_time) as f32,
         smooth_by_extrapolating_velocity,
@@ -177,6 +169,7 @@ pub fn tick_game(game_state: &mut Game_State) -> Result<bool, Box<dyn std::error
 
 fn update_graphics(
     game_state: &mut Game_State,
+    gres: &mut Gfx_Resources,
     real_dt: Duration,
     frame_lag_normalized: f32,
     smooth_by_extrapolating_velocity: bool,
@@ -186,7 +179,7 @@ fn update_graphics(
     gfx::window::clear(window);
     game_state.render_system.update(
         window,
-        &game_state.engine_state.gfx_resources,
+        gres,
         &game_state.gameplay_system.get_camera(),
         &game_state.gameplay_system.get_renderable_entities(),
         frame_lag_normalized,
@@ -198,7 +191,7 @@ fn update_graphics(
         .engine_state
         .debug_systems
         .debug_ui_system
-        .update(&real_dt, window, &mut game_state.engine_state.gfx_resources);
+        .update(&real_dt, window, gres);
 
     gfx::window::display(window);
 

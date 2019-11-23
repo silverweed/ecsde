@@ -1,4 +1,6 @@
-#![cfg(test)]
+// Note: if the following line is uncommented, dependant crates won't import the module
+// correctly. Investigate on this.
+//#![cfg(test)]
 
 use crate::core::env::Env_Info;
 use crate::resources::audio::Audio_Resources;

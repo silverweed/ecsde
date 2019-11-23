@@ -1,4 +1,3 @@
-#![warn(clippy::all)]
 #![allow(clippy::new_without_default)]
 #![allow(non_camel_case_types)]
 #![cfg_attr(debug_assertions, allow(dead_code))]
@@ -23,6 +22,7 @@ use ecs_engine::core::{app, app_config};
 use ecs_engine::debug;
 use ecs_engine::gfx::{self as ngfx, window};
 use ecs_engine::input;
+use ecs_engine::resources;
 use std::env;
 use std::time::Duration;
 
@@ -53,27 +53,50 @@ pub struct Game_State<'a> {
     pub rng: rand::Default_Rng,
 }
 
+#[repr(C)]
+pub struct Game_Resources<'a> {
+    pub gfx: resources::gfx::Gfx_Resources<'a>,
+    pub audio: resources::audio::Audio_Resources<'a>,
+}
+
+#[repr(C)]
+pub struct Game_Bundle<'a> {
+    pub game_state: *mut Game_State<'a>,
+    pub game_resources: *mut Game_Resources<'a>,
+}
+
 /////////////////////////////////////////////////////////////////////////////
 //                        FOREIGN FUNCTION API                             //
 /////////////////////////////////////////////////////////////////////////////
 
-// Note: the lifetime is actually ignored. The Game_State's lifetime management is manual
-// and it's performed by the game runner (the Game_State stays alive from game_init()
+// Note: the lifetime is actually ignored. The Game_State/Resources's lifetime management is manual
+// and it's performed by the game runner (the Game_State/Resources stay alive from game_init()
 // to game_shutdown()).
 #[no_mangle]
-pub extern "C" fn game_init<'a>() -> *mut Game_State<'a> {
+pub extern "C" fn game_init<'a>() -> Game_Bundle<'a> {
     eprintln!("[ INFO ] Initializing game...");
-    if let Ok(game_state) = internal_game_init() {
-        Box::into_raw(game_state)
+    if let Ok((game_state, game_resources)) = internal_game_init() {
+        Game_Bundle {
+            game_state: Box::into_raw(game_state),
+            game_resources: Box::into_raw(game_resources),
+        }
     } else {
-        std::ptr::null_mut()
+        Game_Bundle {
+            game_state: std::ptr::null_mut(),
+            game_resources: std::ptr::null_mut(),
+        }
     }
 }
 
+/// # Safety
+/// Neither pointer is allowed to be null.
 #[no_mangle]
-pub unsafe extern "C" fn game_update(game_state: *mut Game_State) -> bool {
-    if game_state.is_null() {
-        panic!("[ FATAL ] game_update: game state is null!");
+pub unsafe extern "C" fn game_update<'a>(
+    game_state: *mut Game_State<'a>,
+    game_resources: *mut Game_Resources<'a>,
+) -> bool {
+    if game_state.is_null() || game_resources.is_null() {
+        panic!("[ FATAL ] game_update: game state and/or resources are null!");
     }
 
     let game_state = &mut *game_state;
@@ -81,7 +104,8 @@ pub unsafe extern "C" fn game_update(game_state: *mut Game_State) -> bool {
         return false;
     }
 
-    if let Ok(true) = game_loop::tick_game(game_state) {
+    let game_resources = &mut *game_resources;
+    if let Ok(true) = game_loop::tick_game(game_state, game_resources) {
         // All green
     } else {
         return false;
@@ -90,45 +114,67 @@ pub unsafe extern "C" fn game_update(game_state: *mut Game_State) -> bool {
     true
 }
 
+/// # Safety
+/// Neither pointer is allowed to be null.
+/// After calling this function, both pointers become invalid and must not be used anymore.
 #[no_mangle]
-pub unsafe extern "C" fn game_shutdown(game_state: *mut Game_State) {
-    if game_state.is_null() {
-        panic!("[ FATAL ] game_shutdown: game state is null!");
+pub unsafe extern "C" fn game_shutdown(
+    game_state: *mut Game_State,
+    game_resources: *mut Game_Resources,
+) {
+    use std::alloc::{dealloc, Layout};
+
+    if game_state.is_null() || game_resources.is_null() {
+        panic!("[ FATAL ] game_shutdown: game state and/or resources are null!");
     }
 
     std::ptr::drop_in_place(game_state);
+    dealloc(game_state as *mut u8, Layout::new::<Game_State>());
+
+    std::ptr::drop_in_place(game_resources);
+    dealloc(game_resources as *mut u8, Layout::new::<Game_Resources>());
 
     eprintln!("[ OK ] Game was shut down.");
 }
 
+/// # Safety
+/// Neither pointer is allowed to be null.
 #[no_mangle]
-pub unsafe extern "C" fn game_unload(_game_state: *mut Game_State) {}
+pub unsafe extern "C" fn game_unload(_game_state: *mut Game_State, _game_res: *mut Game_Resources) {
+}
 
+/// # Safety
+/// Neither pointer is allowed to be null.
 #[no_mangle]
-pub unsafe extern "C" fn game_reload(game_state: *mut Game_State) {
-    use ecs_engine::core::common::stringid::String_Id;
+pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mut Game_Resources) {
+    #[cfg(debug_assertions)]
+    {
+        use ecs_engine::core::common::stringid::String_Id;
 
-    if game_state.is_null() {
-        panic!("[ FATAL ] game_reload: game state is null!");
+        if game_state.is_null() {
+            panic!("[ FATAL ] game_reload: game state is null!");
+        }
+
+        let game_state = &mut *game_state;
+        game_state
+            .engine_state
+            .debug_systems
+            .debug_ui_system
+            .get_fadeout_overlay(String_Id::from("msg"))
+            .add_line_color("+++ GAME RELOADED +++", colors::rgb(255, 128, 0));
     }
-
-    let game_state = &mut *game_state;
-    game_state
-        .engine_state
-        .debug_systems
-        .debug_ui_system
-        .get_fadeout_overlay(String_Id::from("msg"))
-        .add_line_color("+++ GAME RELOADED +++", colors::rgb(255, 128, 0));
 }
 
 /////////////////////////////////////////////////////////////////////////////
 //                      END FOREIGN FUNCTION API                           //
 /////////////////////////////////////////////////////////////////////////////
 
-fn internal_game_init<'a>() -> Result<Box<Game_State<'a>>, Box<dyn std::error::Error>> {
-    let mut game_state = create_game_state()?;
+fn internal_game_init<'a>(
+) -> Result<(Box<Game_State<'a>>, Box<Game_Resources<'a>>), Box<dyn std::error::Error>> {
+    let mut game_resources = create_game_resources()?;
+    let mut game_state = create_game_state(&mut game_resources)?;
     let env = &game_state.engine_state.env;
-    let gres = &mut game_state.engine_state.gfx_resources;
+    let gres = &mut game_resources.gfx;
     let cfg = &game_state.engine_state.config;
 
     game_state
@@ -141,10 +187,12 @@ fn internal_game_init<'a>() -> Result<Box<Game_State<'a>>, Box<dyn std::error::E
         })?;
     //init_states(&mut game_state.state_mgr, &mut game_state.engine_state)?;
 
-    Ok(game_state)
+    Ok((game_state, game_resources))
 }
 
-fn create_game_state<'a>() -> Result<Box<Game_State<'a>>, Box<dyn std::error::Error>> {
+fn create_game_state<'a>(
+    game_resources: &mut Game_Resources<'_>,
+) -> Result<Box<Game_State<'a>>, Box<dyn std::error::Error>> {
     let cfg = app_config::App_Config::new(env::args());
 
     let window = ngfx::window::create_render_window(&(), cfg.target_win_size, &cfg.title);
@@ -161,7 +209,7 @@ fn create_game_state<'a>() -> Result<Box<Game_State<'a>>, Box<dyn std::error::Er
 
     #[cfg(debug_assertions)]
     {
-        app::init_engine_debug(&mut engine_state)?;
+        app::init_engine_debug(&mut engine_state, &mut game_resources.gfx)?;
         app::start_recording(&mut engine_state)?;
     }
 
@@ -194,6 +242,15 @@ fn create_game_state<'a>() -> Result<Box<Game_State<'a>>, Box<dyn std::error::Er
         gameplay_system: gameplay_system::Gameplay_System::new(),
         //state_mgr: states::state_manager::State_Manager::new(),
         rng: rand::new_rng()?,
+    }))
+}
+
+fn create_game_resources<'a>() -> Result<Box<Game_Resources<'a>>, Box<dyn std::error::Error>> {
+    let gfx_resources = resources::gfx::Gfx_Resources::new();
+    let audio_resources = resources::audio::Audio_Resources::new();
+    Ok(Box::new(Game_Resources {
+        gfx: gfx_resources,
+        audio: audio_resources,
     }))
 }
 

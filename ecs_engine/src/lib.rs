@@ -30,7 +30,9 @@ pub mod input;
 pub mod replay;
 pub mod resources;
 
-#[cfg(debug_assertions)]
+// Note: if the following line is uncommented, dependant crates won't import the module
+// correctly. Investigate on this.
+//#[cfg(any(test, debug_assertions))]
 pub mod test_common;
 
 #[cfg(debug_assertions)]

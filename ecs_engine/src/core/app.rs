@@ -10,7 +10,7 @@ use crate::gfx;
 use crate::gfx::align;
 use crate::input;
 use crate::replay::{replay_data, replay_input_provider};
-use crate::resources;
+use crate::resources::{self, gfx::Gfx_Resources};
 use notify::RecursiveMode;
 use std::time::Duration;
 
@@ -31,14 +31,11 @@ pub struct Engine_State<'r> {
 
     pub time: time::Time,
 
-    pub systems: Core_Systems,
+    pub systems: Core_Systems<'r>,
     #[cfg(debug_assertions)]
     pub debug_systems: Debug_Systems,
 
     pub replay_data: Option<replay_data::Replay_Data>,
-
-    pub gfx_resources: resources::gfx::Gfx_Resources<'r>,
-    pub audio_resources: resources::audio::Audio_Resources<'r>,
 }
 
 pub fn create_engine_state<'r>(app_config: App_Config) -> Engine_State<'r> {
@@ -49,8 +46,6 @@ pub fn create_engine_state<'r>(app_config: App_Config) -> Engine_State<'r> {
     let debug_systems = Debug_Systems::new(&config);
     let time = time::Time::new();
     let replay_data = maybe_create_replay_data(&app_config);
-    let gfx_resources = resources::gfx::Gfx_Resources::new();
-    let audio_resources = resources::audio::Audio_Resources::new();
 
     Engine_State {
         should_close: false,
@@ -58,8 +53,6 @@ pub fn create_engine_state<'r>(app_config: App_Config) -> Engine_State<'r> {
         config,
         time,
         app_config,
-        gfx_resources,
-        audio_resources,
         systems,
         #[cfg(debug_assertions)]
         debug_systems,
@@ -105,15 +98,16 @@ pub fn start_recording(engine_state: &mut Engine_State) -> Maybe_Error {
 }
 
 #[cfg(debug_assertions)]
-pub fn init_engine_debug(engine_state: &mut Engine_State<'_>) -> Maybe_Error {
+pub fn init_engine_debug(
+    engine_state: &mut Engine_State<'_>,
+    gfx_resources: &mut Gfx_Resources<'_>,
+) -> Maybe_Error {
     use crate::core::common::vector::Vec2f;
     use debug::{fadeout_overlay, overlay};
 
     const FONT: &str = "Hack-Regular.ttf";
 
-    let font = engine_state
-        .gfx_resources
-        .load_font(&resources::gfx::font_path(&engine_state.env, FONT));
+    let font = gfx_resources.load_font(&resources::gfx::font_path(&engine_state.env, FONT));
 
     // @Robustness: add font validity check
 
