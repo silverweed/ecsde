@@ -5,7 +5,6 @@
 
 extern crate byteorder;
 extern crate cgmath;
-extern crate ears;
 extern crate notify;
 extern crate num_enum;
 

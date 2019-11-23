@@ -1,16 +1,17 @@
 use crate::resources::loaders;
-use ears::SoundData;
-use std::cell::RefCell;
-use std::rc::Rc;
+use sfml::audio as sfaud;
 
-pub(super) type Sound_Buffer = Rc<RefCell<SoundData>>;
+pub(super) type Sound<'a> = sfaud::Sound<'a>;
+pub(super) type Sound_Buffer = sfaud::SoundBuffer;
 pub(super) struct Sound_Loader;
 
 impl<'l> loaders::Resource_Loader<'l, Sound_Buffer> for Sound_Loader {
     type Args = str;
 
     fn load(&'l self, fname: &str) -> Result<Sound_Buffer, String> {
-        Ok(Rc::new(RefCell::new(SoundData::new(fname)?)))
+        let buf = sfaud::SoundBuffer::from_file(fname)
+            .ok_or_else(|| format!("[ WARNING ] Failed to load sound from {}", fname))?;
+        Ok(buf)
     }
 }
 

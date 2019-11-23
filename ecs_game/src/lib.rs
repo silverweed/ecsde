@@ -6,6 +6,7 @@
 extern crate anymap;
 extern crate cgmath;
 extern crate ecs_engine;
+#[cfg(test)]
 extern crate float_cmp;
 
 mod controllable_system;
@@ -104,7 +105,21 @@ pub unsafe extern "C" fn game_shutdown(game_state: *mut Game_State) {
 pub unsafe extern "C" fn game_unload(_game_state: *mut Game_State) {}
 
 #[no_mangle]
-pub unsafe extern "C" fn game_reload(_game_state: *mut Game_State) {}
+pub unsafe extern "C" fn game_reload(game_state: *mut Game_State) {
+    use ecs_engine::core::common::stringid::String_Id;
+
+    if game_state.is_null() {
+        panic!("[ FATAL ] game_reload: game state is null!");
+    }
+
+    let game_state = &mut *game_state;
+    game_state
+        .engine_state
+        .debug_systems
+        .debug_ui_system
+        .get_fadeout_overlay(String_Id::from("msg"))
+        .add_line_color("+++ GAME RELOADED +++", colors::rgb(255, 128, 0));
+}
 
 /////////////////////////////////////////////////////////////////////////////
 //                      END FOREIGN FUNCTION API                           //

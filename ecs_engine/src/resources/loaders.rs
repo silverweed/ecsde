@@ -39,7 +39,7 @@ where
                     .load(fname)
                     .unwrap_or_else(|err| panic!("Error loading {}: {}", fname, err));
                 v.insert(res);
-                eprintln!("Loaded resource {}", fname);
+                eprintln!("[ OK ] Loaded resource {}", fname);
                 Some(id)
             }
         }

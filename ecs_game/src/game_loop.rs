@@ -6,6 +6,7 @@ use ecs_engine::core::common::Maybe_Error;
 use ecs_engine::core::time;
 use ecs_engine::gfx;
 use ecs_engine::input;
+use ecs_engine::input::input_system::Action_Kind;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
@@ -96,6 +97,24 @@ pub fn tick_game(game_state: &mut Game_State) -> Result<bool, Box<dyn std::error
         //return Ok(false);
         //}
 
+        // @Refactor: move this to a state
+        if actions.contains(&(String_Id::from("quit"), Action_Kind::Pressed)) {
+            engine_state.should_close = true;
+        }
+
+        if actions.contains(&(String_Id::from("sound_test"), Action_Kind::Pressed)) {
+            let sound =
+                engine_state
+                    .audio_resources
+                    .load_sound(&ecs_engine::resources::audio::sound_path(
+                        &engine_state.env,
+                        "coin.ogg",
+                    ));
+            systems
+                .audio_system
+                .play_sound(&engine_state.audio_resources, sound);
+        }
+
         // Update game systems
         {
             #[cfg(feature = "prof_gameplay")]
@@ -115,7 +134,7 @@ pub fn tick_game(game_state: &mut Game_State) -> Result<bool, Box<dyn std::error
     }
 
     // Update audio
-    systems.audio_system.update();
+    //systems.audio_system.update();
 
     #[cfg(debug_assertions)]
     update_fps_debug_overlay(

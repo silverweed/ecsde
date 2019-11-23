@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use crate::core::env::Env_Info;
 use crate::resources::audio::Audio_Resources;
 use crate::resources::gfx::Gfx_Resources;

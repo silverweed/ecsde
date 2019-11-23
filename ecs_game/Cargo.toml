@@ -9,7 +9,6 @@ crate-type = ["dylib"]
 
 [dependencies]
 anymap = "0.12.1"
-float-cmp = "0.5.2"
 
 [dependencies.ecs_engine]
 features = ["use-sfml"]
@@ -23,3 +22,6 @@ prof_update = []
 prof_scene_tree = []
 prof_gameplay = []
 prof_game_render = []
+
+[dev-dependencies]
+float-cmp = "0.5.2"

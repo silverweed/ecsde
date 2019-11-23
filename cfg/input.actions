@@ -13,3 +13,4 @@ move_right: D, Joy_Dpad_Right
 
 # Other
 print_em_debug_info: M
+sound_test: K

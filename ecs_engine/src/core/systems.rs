@@ -1,5 +1,5 @@
 use super::env::Env_Info;
-use crate::audio;
+use crate::audio::audio_system;
 use crate::cfg;
 use crate::input::input_system;
 
@@ -10,7 +10,7 @@ use crate::replay::recording_system;
 
 pub struct Core_Systems {
     pub input_system: input_system::Input_System,
-    pub audio_system: audio::system::Audio_System,
+    pub audio_system: audio_system::Audio_System,
 }
 
 #[cfg(debug_assertions)]
@@ -23,7 +23,7 @@ impl Core_Systems {
     pub fn new(env: &Env_Info) -> Core_Systems {
         Core_Systems {
             input_system: input_system::Input_System::new(env),
-            audio_system: audio::system::Audio_System::new(&audio::system::Audio_System_Config {
+            audio_system: audio_system::Audio_System::new(&audio_system::Audio_System_Config {
                 max_concurrent_sounds: 10,
             }),
         }
