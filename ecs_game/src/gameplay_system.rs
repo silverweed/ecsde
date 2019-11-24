@@ -77,7 +77,7 @@ impl Gameplay_System {
         }
         controllable_system::update(&dt, actions, axes, &mut self.ecs_world, cfg);
 
-        #[cfg(any(feature = "prof_scene_tree", feature = "prof_update"))]
+        #[cfg(any(feature = "prof_scene_tree", feature = "prof_entities_update"))]
         use std::time::Instant;
 
         #[cfg(feature = "prof_scene_tree")]
@@ -92,8 +92,8 @@ impl Gameplay_System {
         #[cfg(feature = "prof_scene_tree")]
         {
             println!(
-                "[prof_scene_tree] copying took {:?}",
-                Instant::now().duration_since(now).as_micros() as f32 * 0.001
+                "[prof_scene_tree] copying took {:?} ms",
+                now.elapsed().as_micros() as f32 * 0.001
             );
             now = Instant::now();
         }
@@ -104,7 +104,7 @@ impl Gameplay_System {
         {
             println!(
                 "[prof_scene_tree] computing took {:.3} ms",
-                Instant::now().duration_since(now).as_micros() as f32 * 0.001
+                now.elapsed().as_micros() as f32 * 0.001
             );
             now = Instant::now();
         }
@@ -118,18 +118,18 @@ impl Gameplay_System {
         #[cfg(feature = "prof_scene_tree")]
         println!(
             "[prof_scene_tree] backcopying took {:.3} ms",
-            Instant::now().duration_since(now).as_micros() as f32 * 0.001
+            now.elapsed().as_micros() as f32 * 0.001
         );
 
-        #[cfg(feature = "prof_update")]
+        #[cfg(feature = "prof_entities_update")]
         let now = Instant::now();
 
         self.update_demo_entites(&dt);
 
-        #[cfg(feature = "prof_update")]
+        #[cfg(feature = "prof_entities_update")]
         println!(
-            "[prof_update] update took {:.3} ms",
-            Instant::now().duration_since(now).as_micros() as f32 * 0.001
+            "[prof_entities_update] update took {:.3} ms",
+            now.elapsed().as_micros() as f32 * 0.001
         );
     }
 
@@ -247,7 +247,7 @@ impl Gameplay_System {
 
         let mut prev_entity: Option<Entity> = None;
         let n_frames = 4;
-        for i in 0..1000 {
+        for i in 0..20000 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
@@ -317,9 +317,9 @@ impl Gameplay_System {
             .enumerate()
         {
             let speed = 1.0;
-            if i % 10 == 0 {
-                t.local_transform.rotate(Deg(dt_secs * speed));
-            }
+            //if i % 10 == 0 {
+            t.local_transform.rotate(Deg(dt_secs * speed));
+            //}
         }
     }
 }

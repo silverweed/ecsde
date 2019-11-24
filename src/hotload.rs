@@ -61,6 +61,7 @@ pub fn lib_load(lib_path: &str) -> (ll::Library, PathBuf) {
     };
     std::fs::copy(&lib_path, &unique_name).expect("[ ERROR ] Failed to copy lib to unique path");
     let unique_lib_path = Path::new(&unique_name).canonicalize().unwrap();
+    eprintln!("[ INFO ] Loading lib {:?}", unique_lib_path);
     (
         ll::Library::new(unique_lib_path.as_os_str()).unwrap_or_else(|err| {
             panic!(

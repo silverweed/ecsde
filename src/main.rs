@@ -11,7 +11,11 @@ mod hotload;
 
 use hotload::*;
 
+#[cfg(debug_assertions)]
 const GAME_DLL_FOLDER: &str = "ecs_game/target/debug";
+#[cfg(not(debug_assertions))]
+const GAME_DLL_FOLDER: &str = "ecs_game/target/release";
+
 #[cfg(target_os = "linux")]
 const GAME_DLL_FILE: &str = "libecs_game.so";
 #[cfg(target_os = "windows")]

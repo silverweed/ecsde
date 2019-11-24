@@ -10,7 +10,7 @@ release:
 	cargo build --release
 
 run_release:
-	LD_LIBRARY_PATH=ecs_game/target/release cargo run --release -
+	LD_LIBRARY_PATH=ecs_game/target/release cargo run --release
 
 test:
 	cargo test

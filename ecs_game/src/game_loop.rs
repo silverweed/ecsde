@@ -115,6 +115,8 @@ pub fn tick_game<'a>(
         {
             #[cfg(feature = "prof_gameplay")]
             let gameplay_start_t = std::time::Instant::now();
+            #[cfg(feature = "prof_gameplay")]
+            let mut n_gameplay_updates = 0;
 
             let gameplay_system = &mut game_state.gameplay_system;
 
@@ -122,10 +124,19 @@ pub fn tick_game<'a>(
             while game_state.execution_time > update_time {
                 gameplay_system.update(&update_time, actions, axes, &engine_state.config);
                 game_state.execution_time -= update_time;
+                #[cfg(feature = "prof_gameplay")]
+                {
+                    n_gameplay_updates += 1;
+                }
             }
 
             #[cfg(feature = "prof_gameplay")]
-            println!("Gameplay: {} ms", gameplay_start_t.elapsed().as_millis());
+            println!(
+                "[prof_gameplay] gameplay update took {} ms ({} updates, avg = {})",
+                gameplay_start_t.elapsed().as_millis(),
+                n_gameplay_updates,
+                gameplay_start_t.elapsed().as_millis() / n_gameplay_updates,
+            );
         }
     }
 
@@ -150,7 +161,10 @@ pub fn tick_game<'a>(
     )?;
 
     #[cfg(feature = "prof_game_render")]
-    println!("Render: {} ms", render_start_t.elapsed().as_millis());
+    println!(
+        "[prof_game_render] rendering took {} ms",
+        render_start_t.elapsed().as_millis()
+    );
 
     #[cfg(debug_assertions)]
     {
