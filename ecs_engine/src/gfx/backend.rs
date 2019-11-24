@@ -103,9 +103,22 @@ pub fn get_texture_size(texture: &Texture<'_>) -> (u32, u32) {
 }
 
 #[cfg(feature = "use-sfml")]
-pub fn fill_color_rect<T>(window: &mut Window_Handle, color: Color, rect: Rect<T>)
+pub fn fill_color_rect<T>(window: &mut Window_Handle, color: Color, rect: T)
 where
-    T: std::convert::Into<f32> + Copy + Clone + std::fmt::Debug,
+    T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
     sfml::render::fill_color_rect(window, color, rect);
+}
+
+#[cfg(feature = "use-sfml")]
+pub fn fill_color_rect_ws<T>(
+    window: &mut Window_Handle,
+    color: Color,
+    rect: T,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) where
+    T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
+{
+    sfml::render::fill_color_rect_ws(window, color, rect, transform, camera);
 }

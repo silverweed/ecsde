@@ -1,4 +1,5 @@
 use super::{Game_Resources, Game_State};
+use crate::gfx::render_system;
 use ecs_engine::core::app;
 use ecs_engine::core::common::colors;
 use ecs_engine::core::common::stringid::String_Id;
@@ -41,8 +42,11 @@ pub fn tick_game<'a>(
         debug_systems.debug_ui_system.get_overlay(sid_time),
         &engine_state.time,
     );
-    let update_time =
-        Duration::from_millis(game_state.update_time.read(&engine_state.config) as u64);
+    let update_time = Duration::from_millis(
+        game_state
+            .gameplay_update_tick_ms
+            .read(&engine_state.config) as u64,
+    );
 
     game_state.execution_time += dt;
 
@@ -138,15 +142,11 @@ pub fn tick_game<'a>(
     #[cfg(feature = "prof_game_render")]
     let render_start_t = std::time::Instant::now();
 
-    let smooth_by_extrapolating_velocity = game_state
-        .smooth_by_extrapolating_velocity
-        .read(&engine_state.config);
     update_graphics(
         game_state,
         &mut game_resources.gfx,
         real_dt,
         time::duration_ratio(&game_state.execution_time, &update_time) as f32,
-        smooth_by_extrapolating_velocity,
     )?;
 
     #[cfg(feature = "prof_game_render")]
@@ -173,18 +173,29 @@ fn update_graphics(
     gres: &mut Gfx_Resources,
     real_dt: Duration,
     frame_lag_normalized: f32,
-    smooth_by_extrapolating_velocity: bool,
 ) -> Maybe_Error {
     let window = &mut game_state.window;
+    let cfg = &game_state.engine_state.config;
     gfx::window::set_clear_color(window, colors::rgb(0, 0, 0));
     gfx::window::clear(window);
-    game_state.render_system.update(
+    let render_cfg = render_system::Render_System_Config {
+        clear_color: colors::color_from_hex(game_state.clear_color.read(cfg) as u32),
+        smooth_by_extrapolating_velocity: game_state.smooth_by_extrapolating_velocity.read(cfg),
+        #[cfg(debug_assertions)]
+        draw_sprites_bg: game_state.draw_sprites_bg.read(cfg),
+        #[cfg(debug_assertions)]
+        draw_sprites_bg_color: colors::color_from_hex(
+            game_state.draw_sprites_bg_color.read(cfg) as u32
+        ),
+    };
+    render_system::update(
         window,
         gres,
         &game_state.gameplay_system.get_camera(),
-        &game_state.gameplay_system.get_renderable_entities(),
+        game_state.gameplay_system.get_renderable_entities(),
+        &game_state.gameplay_system.ecs_world,
         frame_lag_normalized,
-        smooth_by_extrapolating_velocity,
+        render_cfg,
     );
 
     #[cfg(debug_assertions)]

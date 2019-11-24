@@ -1,22 +1,49 @@
-use super::entity_manager_new::{Ecs_World, Entity};
+use super::entity_manager::{Ecs_World, Entity};
 use ecs_engine::core::common::bitset::Bit_Set;
 use std::any::type_name;
 
-pub struct Entity_Stream<'a> {
-    world: &'a Ecs_World,
+pub struct Entity_Stream {
     required_components: Bit_Set,
     cur_idx: usize,
 }
 
-impl<'a> Entity_Stream<'a> {
-    pub fn new(world: &'a Ecs_World) -> Self {
+impl Entity_Stream {
+    pub fn new(required_components: Bit_Set) -> Self {
         Entity_Stream {
-            world,
-            required_components: Bit_Set::default(),
+            required_components,
             cur_idx: 0,
         }
     }
+}
 
+impl Entity_Stream {
+    pub fn next(&mut self, world: &Ecs_World) -> Option<Entity> {
+        let i = self.cur_idx;
+        let req_comps = &self.required_components;
+        let entity_comp_set = &world.component_manager.entity_comp_set;
+        for (i, comp_set) in entity_comp_set.iter().enumerate().skip(self.cur_idx) {
+            if &(comp_set & req_comps) != req_comps {
+                continue;
+            }
+
+            self.cur_idx = i + 1;
+            return Some(Entity {
+                index: i,
+                gen: world.entity_manager.cur_gen(i),
+            });
+        }
+
+        self.cur_idx = i;
+        None
+    }
+}
+
+pub struct Entity_Stream_Builder<'a> {
+    pub(self) world: &'a Ecs_World,
+    pub(self) required_components: Bit_Set,
+}
+
+impl Entity_Stream_Builder<'_> {
     /// Adds component 'T' to the required components
     pub fn require<T: 'static + Copy>(mut self) -> Self {
         let handle = self
@@ -27,29 +54,19 @@ impl<'a> Entity_Stream<'a> {
         self.required_components.set(*handle as usize, true);
         self
     }
+
+    pub fn build(self) -> Entity_Stream {
+        Entity_Stream {
+            required_components: self.required_components,
+            cur_idx: 0,
+        }
+    }
 }
 
-impl Iterator for Entity_Stream<'_> {
-    type Item = Entity;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let i = self.cur_idx;
-        let req_comps = &self.required_components;
-        let entity_comp_set = &self.world.component_manager.entity_comp_set;
-        for (i, comp_set) in entity_comp_set.iter().enumerate().skip(self.cur_idx) {
-            if &(comp_set & req_comps) != req_comps {
-                continue;
-            }
-
-            self.cur_idx = i + 1;
-            return Some(Entity {
-                index: i,
-                gen: self.world.entity_manager.cur_gen(i),
-            });
-        }
-
-        self.cur_idx = i;
-        None
+pub fn new_entity_stream<'a>(world: &'a Ecs_World) -> Entity_Stream_Builder {
+    Entity_Stream_Builder {
+        world,
+        required_components: Bit_Set::default(),
     }
 }
 
@@ -57,12 +74,12 @@ impl Iterator for Entity_Stream<'_> {
 mod tests {
     use super::*;
 
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, Default)]
     struct C_Test {
         pub foo: u32,
     }
 
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, Default)]
     struct C_Test2 {}
 
     #[test]
@@ -84,12 +101,13 @@ mod tests {
         let e5 = world.new_entity();
         world.add_component::<C_Test2>(e5);
 
-        let mut stream = Entity_Stream::new(&world)
+        let mut stream = new_entity_stream(&world)
             .require::<C_Test>()
-            .require::<C_Test2>();
+            .require::<C_Test2>()
+            .build();
 
-        assert_eq!(stream.next(), Some(e));
-        assert_eq!(stream.next(), Some(e4));
-        assert_eq!(stream.next(), None);
+        assert_eq!(stream.next(&world), Some(e));
+        assert_eq!(stream.next(&world), Some(e4));
+        assert_eq!(stream.next(&world), None);
     }
 }

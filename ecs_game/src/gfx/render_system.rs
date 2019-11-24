@@ -1,67 +1,70 @@
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Camera2D, C_Renderable};
-use ecs_engine::core::common::colors::{self, Color};
-use ecs_engine::core::common::Maybe_Error;
+use crate::ecs::entity_manager::Ecs_World;
+use crate::ecs::entity_stream::Entity_Stream;
+use ecs_engine::core::common::colors::Color;
 use ecs_engine::gfx as ngfx;
 use ecs_engine::resources;
-use std::cell::Ref;
 
+#[derive(Copy, Clone)]
 pub struct Render_System_Config {
     pub clear_color: Color,
+    pub smooth_by_extrapolating_velocity: bool,
+    #[cfg(debug_assertions)]
+    pub draw_sprites_bg: bool,
+    #[cfg(debug_assertions)]
+    pub draw_sprites_bg_color: Color,
 }
 
-pub struct Render_System {
-    config: Render_System_Config,
-}
+pub fn update(
+    window: &mut ngfx::window::Window_Handle,
+    resources: &resources::gfx::Gfx_Resources,
+    camera: &C_Camera2D,
+    mut renderables: Entity_Stream,
+    ecs_world: &Ecs_World,
+    frame_lag_normalized: f32,
+    cfg: Render_System_Config,
+) {
+    ngfx::window::set_clear_color(window, cfg.clear_color);
+    ngfx::window::clear(window);
 
-impl Render_System {
-    pub fn new() -> Self {
-        Render_System {
-            config: Self::default_config(),
+    loop {
+        let entity = renderables.next(ecs_world);
+        if entity.is_none() {
+            break;
         }
-    }
+        let entity = entity.unwrap();
 
-    fn default_config() -> Render_System_Config {
-        Render_System_Config {
-            clear_color: colors::rgb(0, 0, 0),
+        let rend = ecs_world.get_component::<C_Renderable>(entity).unwrap();
+        let spatial = ecs_world.get_component::<C_Spatial2D>(entity).unwrap();
+
+        let C_Renderable {
+            texture: tex_id,
+            rect: src_rect,
+            ..
+        } = rend;
+
+        let texture = resources.get_texture(*tex_id);
+        let sprite = ngfx::render::create_sprite(texture, *src_rect);
+
+        let mut rend_transform = spatial.global_transform;
+        if cfg.smooth_by_extrapolating_velocity {
+            let v = spatial.velocity;
+            rend_transform.translate(v.x * frame_lag_normalized, v.y * frame_lag_normalized);
         }
-    }
 
-    pub fn init(&mut self, cfg: Render_System_Config) -> Maybe_Error {
-        self.config = cfg;
-        Ok(())
-    }
-
-    pub fn update(
-        &mut self,
-        window: &mut ngfx::window::Window_Handle,
-        resources: &resources::gfx::Gfx_Resources,
-        camera: &C_Camera2D,
-        renderables: &[(Ref<'_, C_Renderable>, Ref<'_, C_Spatial2D>)],
-        frame_lag_normalized: f32,
-        smooth_by_extrapolating_velocity: bool,
-    ) {
-        ngfx::window::set_clear_color(window, self.config.clear_color);
-        ngfx::window::clear(window);
-
-        for (rend, spatial) in renderables {
-            let rend: &C_Renderable = &*rend;
-            let C_Renderable {
-                texture: tex_id,
-                rect: src_rect,
-                ..
-            } = rend;
-
-            let texture = resources.get_texture(*tex_id);
-            let sprite = ngfx::render::create_sprite(texture, *src_rect);
-
-            let mut rend_transform = spatial.global_transform;
-            if smooth_by_extrapolating_velocity {
-                let v = spatial.velocity;
-                rend_transform.translate(v.x * frame_lag_normalized, v.y * frame_lag_normalized);
+        #[cfg(debug_assertions)]
+        {
+            if cfg.draw_sprites_bg {
+                ngfx::render::fill_color_rect_ws(
+                    window,
+                    cfg.draw_sprites_bg_color,
+                    sprite.global_bounds(),
+                    &rend_transform,
+                    &camera.transform,
+                );
             }
-
-            ngfx::render::render_sprite(window, &sprite, &rend_transform, &camera.transform);
         }
+        ngfx::render::render_sprite(window, &sprite, &rend_transform, &camera.transform);
     }
 }

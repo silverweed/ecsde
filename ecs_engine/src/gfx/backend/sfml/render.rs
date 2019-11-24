@@ -111,17 +111,45 @@ pub fn render_text(window: &mut Window_Handle, text: &Text<'_>) {
     window.handle.draw(text);
 }
 
-pub fn fill_color_rect<T>(window: &mut Window_Handle, color: Color, rect: Rect<T>)
+pub fn fill_color_rect<T>(window: &mut Window_Handle, color: Color, rect: T)
 where
-    T: std::convert::Into<f32> + Copy + Clone + std::fmt::Debug,
+    T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
     let render_states = RenderStates {
         blend_mode: get_blend_mode(window),
         ..Default::default()
     };
     let mut rectangle_shape = RectangleShape::new();
-    rectangle_shape.set_position(Vector2f::new(rect.x().into(), rect.y().into()));
-    rectangle_shape.set_size(Vector2f::new(rect.width().into(), rect.height().into()));
+    let rect = rect.into();
+    rectangle_shape.set_position(Vector2f::new(rect.x(), rect.y()));
+    rectangle_shape.set_size(Vector2f::new(rect.width(), rect.height()));
+    rectangle_shape.set_fill_color(&color);
+    window
+        .handle
+        .draw_rectangle_shape(&rectangle_shape, render_states);
+}
+
+pub fn fill_color_rect_ws<T>(
+    window: &mut Window_Handle,
+    color: Color,
+    rect: T,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) where
+    T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
+{
+    let mut render_transform = camera.get_matrix_sfml().inverse();
+    render_transform.combine(&mut transform.get_matrix_sfml());
+
+    let render_states = RenderStates {
+        transform: render_transform,
+        blend_mode: get_blend_mode(window),
+        ..Default::default()
+    };
+    let mut rectangle_shape = RectangleShape::new();
+    let rect = rect.into();
+    rectangle_shape.set_position(Vector2f::new(rect.x(), rect.y()));
+    rectangle_shape.set_size(Vector2f::new(rect.width(), rect.height()));
     rectangle_shape.set_fill_color(&color);
     window
         .handle

@@ -2,7 +2,8 @@ use super::controllable_system::C_Controllable;
 use crate::controllable_system;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
-use crate::ecs::entity_manager::{Entity, Entity_Manager};
+use crate::ecs::entity_manager::{Ecs_World, Entity};
+use crate::ecs::entity_stream::{new_entity_stream, Entity_Stream};
 use crate::gfx;
 use crate::scene_tree;
 use cgmath::{Deg, InnerSpace};
@@ -19,11 +20,10 @@ use ecs_engine::gfx as ngfx;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::input_system::Game_Action;
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
-use std::cell::Ref;
 use std::time::Duration;
 
 pub struct Gameplay_System {
-    entity_manager: Entity_Manager,
+    pub ecs_world: Ecs_World,
     entities: Vec<Entity>,
     camera: Entity,
     latest_frame_actions: Vec<Game_Action>,
@@ -34,7 +34,7 @@ pub struct Gameplay_System {
 impl Gameplay_System {
     pub fn new() -> Gameplay_System {
         Gameplay_System {
-            entity_manager: Entity_Manager::new(),
+            ecs_world: Ecs_World::new(),
             entities: vec![],
             camera: Entity::INVALID,
             latest_frame_actions: vec![],
@@ -68,17 +68,24 @@ impl Gameplay_System {
         self.latest_frame_actions = actions.to_vec();
 
         ///// Update all game systems /////
-        gfx::animation_system::update(&dt, &mut self.entity_manager);
-        controllable_system::update(&dt, actions, axes, &mut self.entity_manager, cfg);
+        {
+            let stream = new_entity_stream(&self.ecs_world)
+                .require::<C_Renderable>()
+                .require::<C_Animated_Sprite>()
+                .build();
+            gfx::animation_system::update(&dt, &mut self.ecs_world, stream);
+        }
+        controllable_system::update(&dt, actions, axes, &mut self.ecs_world, cfg);
 
+        #[cfg(any(feature = "prof_scene_tree", feature = "prof_update"))]
         use std::time::Instant;
 
         #[cfg(feature = "prof_scene_tree")]
         let mut now = Instant::now();
 
-        for e in &self.entities {
-            if let Some(t) = self.entity_manager.get_component::<C_Spatial2D>(*e) {
-                self.scene_tree.set_local_transform(*e, &t.local_transform);
+        for e in self.entities.iter().copied() {
+            if let Some(t) = self.ecs_world.get_component::<C_Spatial2D>(e) {
+                self.scene_tree.set_local_transform(e, &t.local_transform);
             }
         }
 
@@ -102,11 +109,12 @@ impl Gameplay_System {
             now = Instant::now();
         }
 
-        for e in &self.entities {
-            if let Some(mut t) = self.entity_manager.get_component_mut::<C_Spatial2D>(*e) {
-                t.global_transform = *self.scene_tree.get_global_transform(*e).unwrap();
+        for e in self.entities.iter().copied() {
+            if let Some(t) = self.ecs_world.get_component_mut::<C_Spatial2D>(e) {
+                t.global_transform = *self.scene_tree.get_global_transform(e).unwrap();
             }
         }
+
         #[cfg(feature = "prof_scene_tree")]
         println!(
             "[prof_scene_tree] backcopying took {:.3} ms",
@@ -142,7 +150,7 @@ impl Gameplay_System {
 
     #[cfg(debug_assertions)]
     pub fn print_debug_info(&self) {
-        self.entity_manager.print_debug_info();
+        //self.ecs_world.print_debug_info();
     }
 
     fn update_with_latest_frame_actions(&mut self, dt: &Duration, cfg: &cfg::Config) {
@@ -153,22 +161,23 @@ impl Gameplay_System {
         self.update(&dt, &actions, &axes, cfg);
     }
 
-    pub fn get_renderable_entities(&self) -> Vec<(Ref<'_, C_Renderable>, Ref<'_, C_Spatial2D>)> {
-        self.entity_manager
-            .get_component_tuple::<C_Renderable, C_Spatial2D>()
-            .collect()
+    pub fn get_renderable_entities(&self) -> Entity_Stream {
+        new_entity_stream(&self.ecs_world)
+            .require::<C_Renderable>()
+            .require::<C_Spatial2D>()
+            .build()
     }
 
     pub fn get_camera(&self) -> C_Camera2D {
-        **self
-            .entity_manager
+        *self
+            .ecs_world
             .get_components::<C_Camera2D>()
             .first()
             .unwrap()
     }
 
     fn register_all_components(&mut self) {
-        let em = &mut self.entity_manager;
+        let em = &mut self.ecs_world;
 
         em.register_component::<C_Spatial2D>();
         em.register_component::<Transform2D>();
@@ -188,7 +197,7 @@ impl Gameplay_System {
         // @Incomplete
         let movement = get_movement_from_input(axes);
         let camera_ctrl = self
-            .entity_manager
+            .ecs_world
             .get_component_mut::<C_Controllable>(self.camera);
         if camera_ctrl.is_none() {
             return;
@@ -208,8 +217,8 @@ impl Gameplay_System {
     }
 
     fn apply_camera_translation(&mut self, delta: Vec2f) {
-        let mut camera = self
-            .entity_manager
+        let camera = self
+            .ecs_world
             .get_component_mut::<C_Camera2D>(self.camera)
             .unwrap();
         camera.transform.translate_v(delta);
@@ -223,11 +232,11 @@ impl Gameplay_System {
         cfg: &cfg::Config,
     ) {
         // #DEMO
-        let em = &mut self.entity_manager;
+        let em = &mut self.ecs_world;
 
         self.camera = em.new_entity();
         {
-            let mut cam = em.add_component::<C_Camera2D>(self.camera);
+            let cam = em.add_component::<C_Camera2D>(self.camera);
             cam.transform.set_scale(2.5, 2.5);
         }
 
@@ -237,26 +246,32 @@ impl Gameplay_System {
         }
 
         let mut prev_entity: Option<Entity> = None;
+        let n_frames = 4;
         for i in 0..1000 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
-                rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
-                assert!(rend.texture.is_some(), "Could not load yv texture!");
+                rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
+                assert!(rend.texture.is_some(), "Could not load plant texture!");
                 let (sw, sh) = ngfx::render::get_texture_size(rsrc.get_texture(rend.texture));
-                rend.rect = Rect::new(0, 0, sw as i32, sh as i32);
+                rend.rect = Rect::new(0, 0, sw as i32 / (n_frames as i32), sh as i32);
                 (sw, sh)
             };
             {
-                let mut t = em.add_component::<C_Spatial2D>(entity);
+                let t = em.add_component::<C_Spatial2D>(entity);
                 let x = rand::rand_01(rng);
                 let y = rand::rand_01(rng);
                 t.local_transform
-                    .set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
+                    .set_origin((sw / n_frames) as f32 * 0.5, (sh / n_frames) as f32 * 0.5);
                 if i > 0 {
-                    t.local_transform.set_position(x * 50.0, y * 50.0);
+                    t.local_transform.set_position(x * 48.0, y * 48.0);
                 }
                 self.scene_tree.add(entity, prev_entity, &t.local_transform);
+            }
+            {
+                let s = em.add_component::<C_Animated_Sprite>(entity);
+                s.n_frames = n_frames;
+                s.frame_time = 0.16;
             }
             prev_entity = Some(entity);
             //{
@@ -275,12 +290,22 @@ impl Gameplay_System {
 
     fn update_demo_entites(&mut self, dt: &Duration) {
         // #DEMO
-        let em = &mut self.entity_manager;
+        let em = &mut self.ecs_world;
         let dt_secs = time::to_secs_frac(dt);
 
-        for (ctrl, spat) in em.get_component_tuple_mut::<C_Controllable, C_Spatial2D>() {
-            let transl = ctrl.borrow().translation_this_frame;
-            let mut spat = spat.borrow_mut();
+        let mut stream = new_entity_stream(em)
+            .require::<C_Controllable>()
+            .require::<C_Spatial2D>()
+            .build();
+        loop {
+            let entity = stream.next(em);
+            if entity.is_none() {
+                break;
+            }
+            let entity = entity.unwrap();
+            let ctrl = em.get_component::<C_Controllable>(entity).unwrap();
+            let transl = ctrl.translation_this_frame;
+            let spat = em.get_component_mut::<C_Spatial2D>(entity).unwrap();
             spat.local_transform.translate_v(transl);
             spat.velocity.x = transl.x;
             spat.velocity.y = transl.y;
@@ -292,7 +317,9 @@ impl Gameplay_System {
             .enumerate()
         {
             let speed = 1.0;
-            t.local_transform.rotate(Deg(dt_secs * speed));
+            if i % 10 == 0 {
+                t.local_transform.rotate(Deg(dt_secs * speed));
+            }
         }
     }
 }

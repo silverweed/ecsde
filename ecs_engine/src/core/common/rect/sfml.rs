@@ -77,3 +77,12 @@ where
         )
     }
 }
+
+impl<T> std::convert::From<sfml::graphics::Rect<T>> for Rect<T>
+where
+    T: Copy + Clone + Debug,
+{
+    fn from(r: sfml::graphics::Rect<T>) -> Self {
+        Rect::new(r.left, r.top, r.width, r.height)
+    }
+}

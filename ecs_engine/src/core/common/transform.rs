@@ -27,6 +27,14 @@ impl Transform2D {
         Transform2D::default()
     }
 
+    pub fn from_pos_rot_scale<T: Into<Rad<f32>>>(pos: Vec2f, rot: T, scale: Vec2f) -> Transform2D {
+        let mut t = Transform2D::new();
+        t.set_position_v(pos);
+        t.set_rotation(rot);
+        t.set_scale_v(scale);
+        t
+    }
+
     pub fn new_from_matrix(m: &Matrix3<f32>) -> Transform2D {
         let sx = (m[0][0] * m[0][0] + m[0][1] * m[0][1]).sqrt();
         let sy = (m[1][0] * m[1][0] + m[1][1] * m[1][1]).sqrt();
@@ -56,6 +64,11 @@ impl Transform2D {
         self.position.y = y;
     }
 
+    pub fn set_position_v(&mut self, p: Vec2f) {
+        self.position.x = p.x;
+        self.position.y = p.y;
+    }
+
     pub fn position(&self) -> Vec2f {
         self.position
     }
@@ -68,6 +81,11 @@ impl Transform2D {
     pub fn set_scale(&mut self, x: f32, y: f32) {
         self.scale.x = x;
         self.scale.y = y;
+    }
+
+    pub fn set_scale_v(&mut self, s: Vec2f) {
+        self.scale.x = s.x;
+        self.scale.y = s.y;
     }
 
     pub fn scale(&self) -> Vec2f {
@@ -123,6 +141,19 @@ impl Transform2D {
         // R | 0
         // T | 1
         sfml::graphics::Transform::new(sxc, sys, tx, -sxs, syc, ty, 0.0, 0.0, 1.0)
+    }
+
+    pub fn combine(&self, other: &Transform2D) -> Transform2D {
+        Transform2D::new_from_matrix(&(self.get_matrix() * other.get_matrix()))
+    }
+
+    pub fn inverse(&self) -> Transform2D {
+        let s = self.scale();
+        Transform2D::from_pos_rot_scale(
+            -self.position(),
+            -self.rotation(),
+            Vec2f::new(1.0 / s.x, 1.0 / s.y),
+        )
     }
 }
 

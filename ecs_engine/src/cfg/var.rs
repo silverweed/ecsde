@@ -15,8 +15,9 @@ where
 
     T::try_from(value.clone()).unwrap_or_else(|_| {
         panic!(
-            "[ FATAL ] Error dereferencing Cfg_Var<{}>: incompatible value {:?}",
+            "[ FATAL ] Error dereferencing Cfg_Var<{}>({}): incompatible value {:?}",
             type_name::<T>(),
+            path_id,
             value
         )
     })
@@ -124,6 +125,18 @@ impl Cfg_Var<i32> {
     }
 }
 
+impl Cfg_Var<u32> {
+    #[cfg(debug_assertions)]
+    pub fn read(self, cfg: &Config) -> u32 {
+        read_cfg(self.id, cfg)
+    }
+
+    #[cfg(not(debug_assertions))]
+    pub fn read(self, _: &Config) -> u32 {
+        self.0
+    }
+}
+
 impl Cfg_Var<f32> {
     #[cfg(debug_assertions)]
     pub fn read(self, cfg: &Config) -> f32 {
@@ -171,6 +184,12 @@ mod tests {
         let entry_int = Cfg_Var::<i32>::new("test/entry_int", &config);
         assert_eq!(entry_int.read(&config), 42);
 
+        let entry_uint_hex = Cfg_Var::<u32>::new("test/entry_uint", &config);
+        assert_eq!(entry_uint_hex.read(&config), 0x42);
+
+        let entry_uint_color = Cfg_Var::<u32>::new("test/entry_color", &config);
+        assert_eq!(entry_uint_color.read(&config), 0xFFFF0000);
+
         let entry_bool = Cfg_Var::<bool>::new("test/entry_bool", &config);
         assert_eq!(entry_bool.read(&config), true);
 
@@ -196,7 +215,7 @@ mod tests {
         let (_, _, env) = create_test_resources_and_env();
         let mut config = cfg::Config::new_from_dir(env.get_test_cfg_root());
 
-        let var = Cfg_Var::new_from_val(42, &mut config);
+        let var: Cfg_Var<i32> = Cfg_Var::new_from_val(42, &mut config);
         assert_eq!(var.read(&config), 42);
 
         let var = Cfg_Var::new_from_val(String::from("foo"), &mut config);

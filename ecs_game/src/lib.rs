@@ -33,7 +33,6 @@ pub struct Game_State<'a> {
     pub window: window::Window_Handle,
     pub engine_state: app::Engine_State<'a>,
 
-    pub render_system: gfx::render_system::Render_System,
     pub gameplay_system: gameplay_system::Gameplay_System,
 
     //pub state_mgr: states::state_manager::State_Manager,
@@ -45,12 +44,17 @@ pub struct Game_State<'a> {
     pub is_replaying: bool,
 
     //// Cfg vars
-    pub update_time: Cfg_Var<i32>,
+    pub gameplay_update_tick_ms: Cfg_Var<i32>,
     pub smooth_by_extrapolating_velocity: Cfg_Var<bool>,
+    pub clear_color: Cfg_Var<u32>,
+    #[cfg(debug_assertions)]
+    pub draw_sprites_bg: Cfg_Var<bool>,
+    #[cfg(debug_assertions)]
+    pub draw_sprites_bg_color: Cfg_Var<u32>,
     #[cfg(debug_assertions)]
     pub extra_frame_sleep_ms: Cfg_Var<i32>,
     #[cfg(debug_assertions)]
-    pub record_replay: Cfg_Var<bool>,
+    pub record_replay: Cfg_Var<bool>, // /engine/debug/replay/record
 
     pub rng: rand::Default_Rng,
 }
@@ -182,11 +186,6 @@ fn internal_game_init<'a>(
     game_state
         .gameplay_system
         .init(gres, env, &mut game_state.rng, cfg)?;
-    game_state
-        .render_system
-        .init(gfx::render_system::Render_System_Config {
-            clear_color: colors::rgb(22, 0, 22),
-        })?;
     //init_states(&mut game_state.state_mgr, &mut game_state.engine_state)?;
 
     Ok((game_state, game_resources))
@@ -218,9 +217,14 @@ fn create_game_state<'a>(
     let cfg = &engine_state.config;
     let input_provider = app::create_input_provider(&mut engine_state.replay_data, cfg);
     let is_replaying = !input_provider.is_realtime_player_input();
-    let update_time = Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg);
+    let gameplay_update_tick_ms = Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg);
     let smooth_by_extrapolating_velocity =
         Cfg_Var::new("engine/rendering/smooth_by_extrapolating_velocity", cfg);
+    let clear_color = Cfg_Var::new("engine/rendering/clear_color", cfg);
+    #[cfg(debug_assertions)]
+    let draw_sprites_bg = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg", cfg);
+    #[cfg(debug_assertions)]
+    let draw_sprites_bg_color = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg_color", cfg);
     #[cfg(debug_assertions)]
     let extra_frame_sleep_ms = Cfg_Var::new("engine/debug/extra_frame_sleep_ms", cfg);
     #[cfg(debug_assertions)]
@@ -232,18 +236,24 @@ fn create_game_state<'a>(
         #[cfg(debug_assertions)]
         fps_debug: debug::fps::Fps_Console_Printer::new(&Duration::from_secs(2), "game"),
         execution_time: Duration::default(),
-        update_time,
+        input_provider,
+        is_replaying,
+        gameplay_system: gameplay_system::Gameplay_System::new(),
+        //state_mgr: states::state_manager::State_Manager::new(),
+        rng: rand::new_rng()?,
+
+        // Cfg_Vars
+        gameplay_update_tick_ms,
         smooth_by_extrapolating_velocity,
+        clear_color,
+        #[cfg(debug_assertions)]
+        draw_sprites_bg,
+        #[cfg(debug_assertions)]
+        draw_sprites_bg_color,
         #[cfg(debug_assertions)]
         extra_frame_sleep_ms,
         #[cfg(debug_assertions)]
         record_replay,
-        input_provider,
-        is_replaying,
-        render_system: gfx::render_system::Render_System::new(),
-        gameplay_system: gameplay_system::Gameplay_System::new(),
-        //state_mgr: states::state_manager::State_Manager::new(),
-        rng: rand::new_rng()?,
     }))
 }
 

@@ -1,4 +1,4 @@
-use crate::ecs::entity_manager::Entity_Manager;
+use crate::ecs::entity_manager::Ecs_World;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::core::common::vector::Vec2f;
 use ecs_engine::core::time;
@@ -25,12 +25,12 @@ pub fn update(
     dt: &Duration,
     _actions: &[Game_Action],
     axes: &Virtual_Axes,
-    em: &mut Entity_Manager,
+    ecs_world: &mut Ecs_World,
     cfg: &cfg::Config,
 ) {
     let movement = super::gameplay_system::get_normalized_movement_from_input(axes);
     let dt_secs = time::to_secs_frac(&dt);
-    let controllables = em.get_components_mut::<C_Controllable>();
+    let controllables = ecs_world.get_components_mut::<C_Controllable>();
 
     for mut ctrl in controllables {
         let speed = ctrl.speed.read(cfg);

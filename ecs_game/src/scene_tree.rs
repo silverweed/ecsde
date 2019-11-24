@@ -154,13 +154,13 @@ impl Scene_Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ecs::entity_manager::Entity_Manager;
+    use crate::ecs::entity_manager::Ecs_World;
     use cgmath::Deg;
     use float_cmp::ApproxEq;
 
     #[test]
     fn simple_tree() {
-        let mut em = Entity_Manager::new();
+        let mut em = Ecs_World::new();
         em.register_component::<Transform2D>();
 
         let mut tree = Scene_Tree::new();
@@ -172,7 +172,7 @@ mod tests {
         }
         let child_e = em.new_entity();
         {
-            let mut child_t = em.add_component::<Transform2D>(child_e);
+            let child_t = em.add_component::<Transform2D>(child_e);
             child_t.set_position(100.0, 0.0);
             tree.add(child_e, Some(root_e), &child_t);
         }
@@ -182,7 +182,7 @@ mod tests {
         let new_child_t = tree.get_global_transform(child_e).unwrap();
         assert!(new_child_t.position().x.approx_eq(100.0, (0.0, 2)));
 
-        let mut root_t = em.get_component_mut::<Transform2D>(root_e).unwrap();
+        let root_t = em.get_component_mut::<Transform2D>(root_e).unwrap();
         root_t.rotate(Deg(90.0));
         tree.set_local_transform(root_e, &root_t);
 
