@@ -247,7 +247,7 @@ impl Gameplay_System {
 
         let mut prev_entity: Option<Entity> = None;
         let n_frames = 4;
-        for i in 0..20000 {
+        for i in 0..1000 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
