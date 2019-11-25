@@ -6,12 +6,12 @@ use crate::gfx::window::Window_Handle;
 use cgmath::Rad;
 use sfml::graphics::Shape;
 use sfml::graphics::{RectangleShape, RenderStates, RenderTarget, Transform, Transformable};
-use sfml::system::Vector2f;
+use sfml::system::{SfBox, Vector2f};
 
 pub type Blend_Mode = sfml::graphics::blend_mode::BlendMode;
 
 pub struct Texture<'a> {
-    texture: sfml::graphics::Texture,
+    texture: SfBox<sfml::graphics::Texture>,
     _marker: &'a std::marker::PhantomData<()>,
 }
 
@@ -41,7 +41,7 @@ impl std::ops::DerefMut for Texture<'_> {
 pub type Text<'a> = sfml::graphics::Text<'a>;
 
 pub struct Font<'a> {
-    font: sfml::graphics::Font,
+    font: SfBox<sfml::graphics::Font>,
     _marker: &'a std::marker::PhantomData<()>,
 }
 
@@ -123,7 +123,7 @@ where
     let rect = rect.into();
     rectangle_shape.set_position(Vector2f::new(rect.x(), rect.y()));
     rectangle_shape.set_size(Vector2f::new(rect.width(), rect.height()));
-    rectangle_shape.set_fill_color(&color);
+    rectangle_shape.set_fill_color(color);
     window
         .handle
         .draw_rectangle_shape(&rectangle_shape, render_states);
@@ -150,7 +150,7 @@ pub fn fill_color_rect_ws<T>(
     let rect = rect.into();
     rectangle_shape.set_position(Vector2f::new(rect.x(), rect.y()));
     rectangle_shape.set_size(Vector2f::new(rect.width(), rect.height()));
-    rectangle_shape.set_fill_color(&color);
+    rectangle_shape.set_fill_color(color);
     window
         .handle
         .draw_rectangle_shape(&rectangle_shape, render_states);

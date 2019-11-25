@@ -1,8 +1,9 @@
 use crate::resources::loaders;
 use sfml::audio as sfaud;
+use sfml::system::SfBox;
 
 pub(super) type Sound<'a> = sfaud::Sound<'a>;
-pub(super) type Sound_Buffer = sfaud::SoundBuffer;
+pub(super) type Sound_Buffer = SfBox<sfaud::SoundBuffer>;
 pub(super) struct Sound_Loader;
 
 impl<'l> loaders::Resource_Loader<'l, Sound_Buffer> for Sound_Loader {
