@@ -1,16 +1,17 @@
+SHELL = bash
 all: build
 
 run:
-	LD_LIBRARY_PATH=ecs_game/target/debug cargo run
+	pushd ecs_game && cargo build && popd && cargo run
 
 build:
-	cargo build
+	pushd ecs_game && cargo build && popd && cargo build
 
 release:
-	cargo build --release
+	pushd ecs_game && cargo build --release && popd && cargo build --release
 
 run_release:
-	LD_LIBRARY_PATH=ecs_game/target/release cargo run --release
+	pushd ecs_game && cargo build --release && popd && cargo run --release
 
 test:
 	cargo test
