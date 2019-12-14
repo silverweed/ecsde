@@ -180,6 +180,10 @@ impl Entity_Manager {
     pub(super) fn cur_gen(&self, idx: Index_Type) -> Gen_Type {
         self.alloc.cur_gen(idx)
     }
+
+    pub fn n_live_entities(&self) -> usize {
+        self.alloc.live_size()
+    }
 }
 
 pub struct Ecs_World {

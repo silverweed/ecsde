@@ -121,7 +121,7 @@ pub fn init_engine_debug(
     {
         let mut debug_overlay_config = overlay::Debug_Overlay_Config {
             row_spacing: 2.0,
-            font_size: 20,
+            font_size: 14,
             pad_x: 5.0,
             pad_y: 5.0,
             background: colors::rgba(25, 25, 25, 210),

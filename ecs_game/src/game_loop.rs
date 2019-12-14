@@ -21,11 +21,12 @@ pub fn tick_game<'a>(
     // @Speed: these should all be computed at compile time.
     // Probably will do that when either const fn or proc macros/syntax extensions are stable.
     #[cfg(debug_assertions)]
-    let (sid_joysticks, sid_msg, sid_time, sid_fps) = (
+    let (sid_joysticks, sid_msg, sid_time, sid_fps, sid_entities) = (
         String_Id::from("joysticks"),
         String_Id::from("msg"),
         String_Id::from("time"),
         String_Id::from("fps"),
+        String_Id::from("entities"),
     );
 
     let window = &mut game_state.window;
@@ -144,10 +145,16 @@ pub fn tick_game<'a>(
     systems.audio_system.update();
 
     #[cfg(debug_assertions)]
-    update_fps_debug_overlay(
-        debug_systems.debug_ui_system.get_overlay(sid_fps),
-        &game_state.fps_debug,
-    );
+    {
+        update_fps_debug_overlay(
+            debug_systems.debug_ui_system.get_overlay(sid_fps),
+            &game_state.fps_debug,
+        );
+        update_entities_debug_overlay(
+            debug_systems.debug_ui_system.get_overlay(sid_entities),
+            &game_state.gameplay_system.ecs_world,
+        );
+    }
 
     // Render
     #[cfg(feature = "prof_game_render")]
@@ -278,5 +285,17 @@ fn update_fps_debug_overlay(
     debug_overlay.add_line_color(
         &format!("FPS: {}", fps.get_fps() as u32),
         colors::rgba(180, 180, 180, 200),
+    );
+}
+
+#[cfg(debug_assertions)]
+fn update_entities_debug_overlay(
+    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    ecs_world: &crate::ecs::entity_manager::Ecs_World,
+) {
+    debug_overlay.clear();
+    debug_overlay.add_line_color(
+        &format!("Entities: {}", ecs_world.entity_manager.n_live_entities()),
+        colors::rgba(220, 100, 180, 220),
     );
 }

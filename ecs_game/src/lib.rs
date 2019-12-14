@@ -17,6 +17,7 @@ mod scene_tree;
 mod states;
 
 use ecs_engine::cfg::Cfg_Var;
+use ecs_engine::core::common::stringid::String_Id;
 use ecs_engine::core::common::{colors, rand};
 use ecs_engine::core::{app, app_config};
 use ecs_engine::gfx::{self as ngfx, window};
@@ -155,8 +156,6 @@ pub unsafe extern "C" fn game_unload(_game_state: *mut Game_State, _game_res: *m
 pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mut Game_Resources) {
     #[cfg(debug_assertions)]
     {
-        use ecs_engine::core::common::stringid::String_Id;
-
         if game_state.is_null() {
             panic!("[ FATAL ] game_reload: game state is null!");
         }
@@ -179,14 +178,22 @@ fn internal_game_init<'a>(
 ) -> Result<(Box<Game_State<'a>>, Box<Game_Resources<'a>>), Box<dyn std::error::Error>> {
     let mut game_resources = create_game_resources()?;
     let mut game_state = create_game_state(&mut game_resources)?;
-    let env = &game_state.engine_state.env;
-    let gres = &mut game_resources.gfx;
-    let cfg = &game_state.engine_state.config;
 
-    game_state
-        .gameplay_system
-        .init(gres, env, &mut game_state.rng, cfg)?;
-    //init_states(&mut game_state.state_mgr, &mut game_state.engine_state)?;
+    {
+        let env = &game_state.engine_state.env;
+        let gres = &mut game_resources.gfx;
+        let cfg = &game_state.engine_state.config;
+
+        game_state
+            .gameplay_system
+            .init(gres, env, &mut game_state.rng, cfg)?;
+        //init_states(&mut game_state.state_mgr, &mut game_state.engine_state)?;
+
+        #[cfg(debug_assertions)]
+        {
+            init_game_debug(&mut game_state, &mut game_resources);
+        }
+    }
 
     Ok((game_state, game_resources))
 }
@@ -195,7 +202,6 @@ fn create_game_state<'a>(
     game_resources: &mut Game_Resources<'_>,
 ) -> Result<Box<Game_State<'a>>, Box<dyn std::error::Error>> {
     let cfg = app_config::App_Config::new(env::args());
-
     let window = ngfx::window::create_render_window(&(), cfg.target_win_size, &cfg.title);
     let mut engine_state = app::create_engine_state(cfg);
 
@@ -280,3 +286,34 @@ fn create_game_resources<'a>() -> Result<Box<Game_Resources<'a>>, Box<dyn std::e
 //}
 //Ok(())
 //}
+
+#[cfg(debug_assertions)]
+fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resources) {
+    use ecs_engine::core::common::vector::Vec2f;
+    use ecs_engine::debug::overlay::Debug_Overlay_Config;
+    use ecs_engine::gfx::align::Align;
+
+    const FONT: &str = "Hack-Regular.ttf";
+
+    let debug_ui = &mut game_state.engine_state.debug_systems.debug_ui_system;
+    let font = game_resources.gfx.load_font(&resources::gfx::font_path(
+        &game_state.engine_state.env,
+        FONT,
+    ));
+
+    // Entities overlay
+    let overlay_cfg = Debug_Overlay_Config {
+        row_spacing: 20.0,
+        font_size: 16,
+        pad_x: 5.0,
+        pad_y: 5.0,
+        background: colors::rgba(25, 25, 25, 210),
+    };
+    let mut overlay = debug_ui.create_overlay(String_Id::from("entities"), overlay_cfg, font);
+    overlay.vert_align = Align::End;
+    overlay.horiz_align = Align::Begin;
+    overlay.position = Vec2f::new(
+        80.0,
+        game_state.engine_state.app_config.target_win_size.1 as f32,
+    );
+}
