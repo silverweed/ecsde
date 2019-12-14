@@ -4,6 +4,7 @@
 
 extern crate anymap;
 extern crate cgmath;
+#[macro_use]
 extern crate ecs_engine;
 #[cfg(test)]
 extern crate float_cmp;
@@ -39,6 +40,8 @@ pub struct Game_State<'a> {
     //pub state_mgr: states::state_manager::State_Manager,
     #[cfg(debug_assertions)]
     pub fps_debug: debug::fps::Fps_Console_Printer,
+    #[cfg(debug_assertions)]
+    pub trace_debug_redraw_t: f32,
 
     pub execution_time: Duration,
     pub input_provider: Box<dyn input::provider::Input_Provider>,
@@ -106,16 +109,41 @@ pub unsafe extern "C" fn game_update<'a>(
         panic!("[ FATAL ] game_update: game state and/or resources are null!");
     }
 
-    let game_state = &mut *game_state;
-    if game_state.engine_state.should_close {
-        return false;
+    {
+        let game_state = &mut *game_state;
+        if game_state.engine_state.should_close {
+            return false;
+        }
+
+        #[cfg(debug_assertions)]
+        {
+            game_state
+                .engine_state
+                .debug_systems
+                .tracer
+                .borrow_mut()
+                .start_frame();
+        }
+
+        {
+            let game_resources = &mut *game_resources;
+            if let Ok(true) = game_loop::tick_game(game_state, game_resources) {
+                // All green
+            } else {
+                return false;
+            }
+        }
     }
 
-    let game_resources = &mut *game_resources;
-    if let Ok(true) = game_loop::tick_game(game_state, game_resources) {
-        // All green
-    } else {
-        return false;
+    #[cfg(debug_assertions)]
+    {
+        let game_state = &mut *game_state;
+        game_state.trace_debug_redraw_t -=
+            ecs_engine::core::time::to_secs_frac(&game_state.engine_state.time.real_dt());
+        if game_state.trace_debug_redraw_t <= 0. {
+            debug_update_trace_overlay(game_state);
+            game_state.trace_debug_redraw_t = 0.05;
+        }
     }
 
     true
@@ -241,6 +269,8 @@ fn create_game_state<'a>(
         engine_state,
         #[cfg(debug_assertions)]
         fps_debug: debug::fps::Fps_Console_Printer::new(&Duration::from_secs(2), "game"),
+        #[cfg(debug_assertions)]
+        trace_debug_redraw_t: 0.,
         execution_time: Duration::default(),
         input_provider,
         is_replaying,
@@ -316,4 +346,63 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         80.0,
         game_state.engine_state.app_config.target_win_size.1 as f32,
     );
+}
+
+#[cfg(debug_assertions)]
+fn debug_update_trace_overlay(game_state: &mut Game_State) {
+    use ecs_engine::debug::overlay::Debug_Overlay;
+    use ecs_engine::debug::tracer::{sort_trace_trees, Debug_Tracer_Node, Trace_Tree};
+
+    let tracer = game_state.engine_state.debug_systems.tracer.borrow_mut();
+    let overlay = game_state
+        .engine_state
+        .debug_systems
+        .debug_ui_system
+        .get_overlay(String_Id::from("trace"));
+
+    overlay.clear();
+
+    fn add_node_line(
+        node: &Debug_Tracer_Node,
+        total_traced_time: &Duration,
+        indent: usize,
+        overlay: &mut Debug_Overlay,
+    ) {
+        let duration = node.info.duration();
+        let ratio = ecs_engine::core::time::duration_ratio(&duration, total_traced_time);
+        let color = colors::lerp_col(colors::GREEN, colors::RED, ratio);
+        let mut line = String::new();
+        for _ in 0..indent {
+            line.push(' ');
+        }
+        line.push_str(&format!(
+            "{:width$}: {:>6.3}ms ({:3}%)",
+            node.info.tag,
+            node.info.duration().as_micros() as f32 * 0.001,
+            (ratio * 100.0) as u32,
+            width = 40 - indent
+        ));
+        overlay.add_line_color(&line, color);
+    }
+
+    fn add_tree_lines(
+        tree: &Trace_Tree,
+        total_traced_time: &Duration,
+        indent: usize,
+        overlay: &mut Debug_Overlay,
+    ) {
+        add_node_line(&tree.node, total_traced_time, indent, overlay);
+        for t in &tree.children {
+            add_tree_lines(t, total_traced_time, indent + 1, overlay);
+        }
+    };
+
+    let mut trace_trees = tracer.get_trace_trees();
+    sort_trace_trees(&mut trace_trees);
+
+    let total_traced_time = tracer.total_traced_time();
+
+    for tree in &trace_trees {
+        add_tree_lines(tree, &total_traced_time, 0, overlay);
+    }
 }

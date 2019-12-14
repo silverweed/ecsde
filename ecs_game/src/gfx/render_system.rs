@@ -2,7 +2,9 @@ use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Camera2D, C_Renderable};
 use crate::ecs::entity_manager::Ecs_World;
 use crate::ecs::entity_stream::Entity_Stream;
+use ecs_engine::core::app::Engine_State;
 use ecs_engine::core::common::colors::Color;
+use ecs_engine::debug::tracer::*;
 use ecs_engine::gfx as ngfx;
 use ecs_engine::resources;
 
@@ -24,7 +26,10 @@ pub fn update(
     ecs_world: &Ecs_World,
     frame_lag_normalized: f32,
     cfg: Render_System_Config,
+    engine_state: &Engine_State,
 ) {
+    trace!("render_system::update", engine_state.debug_systems.tracer);
+
     ngfx::window::set_clear_color(window, cfg.clear_color);
     ngfx::window::clear(window);
 

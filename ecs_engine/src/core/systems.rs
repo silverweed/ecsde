@@ -1,7 +1,10 @@
 use super::env::Env_Info;
 use crate::audio::audio_system;
 use crate::cfg;
+use crate::debug::tracer;
 use crate::input::input_system;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[cfg(debug_assertions)]
 use crate::debug::debug_ui_system;
@@ -17,6 +20,7 @@ pub struct Core_Systems<'r> {
 pub struct Debug_Systems {
     pub debug_ui_system: debug_ui_system::Debug_Ui_System,
     pub replay_recording_system: recording_system::Replay_Recording_System,
+    pub tracer: Rc<RefCell<tracer::Debug_Tracer>>,
 }
 
 impl Core_Systems<'_> {
@@ -44,6 +48,7 @@ impl Debug_Systems {
                     .read(cfg),
                 },
             ),
+            tracer: Rc::new(RefCell::new(tracer::Debug_Tracer::new())),
         }
     }
 }

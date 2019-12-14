@@ -146,6 +146,16 @@ pub fn init_engine_debug(
             debug_ui_system.create_overlay(String_Id::from("fps"), debug_overlay_config, font);
         fps_overlay.vert_align = align::Align::End;
         fps_overlay.position = Vec2f::new(0.0, target_win_size_y as f32);
+
+        debug_overlay_config.font_size = 11;
+        let mut trace_overlay =
+            debug_ui_system.create_overlay(String_Id::from("trace"), debug_overlay_config, font);
+        trace_overlay.vert_align = align::Align::Middle;
+        trace_overlay.horiz_align = align::Align::Middle;
+        trace_overlay.position = Vec2f::new(
+            target_win_size_x as f32 * 0.5,
+            target_win_size_y as f32 * 0.5,
+        );
     }
 
     // Debug fadeout overlays

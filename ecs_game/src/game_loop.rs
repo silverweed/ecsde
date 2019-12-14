@@ -5,6 +5,7 @@ use ecs_engine::core::common::colors;
 use ecs_engine::core::common::stringid::String_Id;
 use ecs_engine::core::common::Maybe_Error;
 use ecs_engine::core::time;
+use ecs_engine::debug::tracer::*;
 use ecs_engine::gfx;
 use ecs_engine::input;
 use ecs_engine::input::input_system::Action_Kind;
@@ -18,6 +19,9 @@ pub fn tick_game<'a>(
     game_state: &'a mut Game_State<'a>,
     game_resources: &'a mut Game_Resources<'a>,
 ) -> Result<bool, Box<dyn std::error::Error>> {
+    let tracer = game_state.engine_state.debug_systems.tracer.clone();
+    trace!("tick_game", tracer);
+
     // @Speed: these should all be computed at compile time.
     // Probably will do that when either const fn or proc macros/syntax extensions are stable.
     #[cfg(debug_assertions)]
@@ -62,16 +66,22 @@ pub fn tick_game<'a>(
     }
 
     // Update input
-    systems.input_system.update(
-        window,
-        &mut *game_state.input_provider,
-        &engine_state.config,
-    );
+    {
+        trace!("input_system::update", tracer);
+        systems.input_system.update(
+            window,
+            &mut *game_state.input_provider,
+            &engine_state.config,
+        );
+    }
 
     // Handle actions
-    if app::handle_core_actions(systems.input_system.get_core_actions(), window) {
-        engine_state.should_close = true;
-        return Ok(false);
+    {
+        trace!("app::handle_core_actions", tracer);
+        if app::handle_core_actions(systems.input_system.get_core_actions(), window) {
+            engine_state.should_close = true;
+            return Ok(false);
+        }
     }
 
     {
@@ -114,6 +124,8 @@ pub fn tick_game<'a>(
 
         // Update game systems
         {
+            trace!("game_update", tracer);
+
             #[cfg(feature = "prof_gameplay")]
             let gameplay_start_t = std::time::Instant::now();
             #[cfg(feature = "prof_gameplay")]
@@ -121,9 +133,21 @@ pub fn tick_game<'a>(
 
             let gameplay_system = &mut game_state.gameplay_system;
 
-            gameplay_system.realtime_update(&real_dt, actions, axes, &engine_state.config);
+            gameplay_system.realtime_update(
+                &real_dt,
+                actions,
+                axes,
+                &engine_state.config,
+                tracer.clone(),
+            );
             while game_state.execution_time > update_time {
-                gameplay_system.update(&update_time, actions, axes, &engine_state.config);
+                gameplay_system.update(
+                    &update_time,
+                    actions,
+                    axes,
+                    &engine_state.config,
+                    tracer.clone(),
+                );
                 game_state.execution_time -= update_time;
                 #[cfg(feature = "prof_gameplay")]
                 {
@@ -142,7 +166,10 @@ pub fn tick_game<'a>(
     }
 
     // Update audio
-    systems.audio_system.update();
+    {
+        trace!("audio_system_update", tracer);
+        systems.audio_system.update();
+    }
 
     #[cfg(debug_assertions)]
     {
@@ -195,6 +222,11 @@ fn update_graphics(
     real_dt: Duration,
     frame_lag_normalized: f32,
 ) -> Maybe_Error {
+    trace!(
+        "update_graphics",
+        game_state.engine_state.debug_systems.tracer
+    );
+
     let window = &mut game_state.window;
     let cfg = &game_state.engine_state.config;
     gfx::window::set_clear_color(window, colors::rgb(0, 0, 0));
@@ -217,16 +249,26 @@ fn update_graphics(
         &game_state.gameplay_system.ecs_world,
         frame_lag_normalized,
         render_cfg,
+        &game_state.engine_state,
     );
 
     #[cfg(debug_assertions)]
-    game_state
-        .engine_state
-        .debug_systems
-        .debug_ui_system
-        .update(&real_dt, window, gres);
+    {
+        trace!(
+            "debug_ui_system::update",
+            game_state.engine_state.debug_systems.tracer
+        );
+        game_state
+            .engine_state
+            .debug_systems
+            .debug_ui_system
+            .update(&real_dt, window, gres);
+    }
 
-    gfx::window::display(window);
+    {
+        trace!("vsync", game_state.engine_state.debug_systems.tracer);
+        gfx::window::display(window);
+    }
 
     Ok(())
 }

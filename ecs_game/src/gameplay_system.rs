@@ -16,10 +16,13 @@ use ecs_engine::core::common::transform::Transform2D;
 use ecs_engine::core::common::vector::Vec2f;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::time;
+use ecs_engine::debug::tracer::*;
 use ecs_engine::gfx as ngfx;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::input_system::Game_Action;
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 
 pub struct Gameplay_System {
@@ -63,7 +66,9 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
+        tracer: Rc<RefCell<Debug_Tracer>>,
     ) {
+        trace!("gameplay_system::update", tracer);
         // Used for stepping
         self.latest_frame_actions = actions.to_vec();
 
@@ -139,13 +144,15 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
+        tracer: Rc<RefCell<Debug_Tracer>>,
     ) {
+        trace!("gameplay_system::realtime_update", tracer);
         self.update_camera(real_dt, actions, axes, cfg);
     }
 
     #[cfg(debug_assertions)]
-    pub fn step(&mut self, dt: &Duration, cfg: &cfg::Config) {
-        self.update_with_latest_frame_actions(dt, cfg);
+    pub fn step(&mut self, dt: &Duration, cfg: &cfg::Config, tracer: Rc<RefCell<Debug_Tracer>>) {
+        self.update_with_latest_frame_actions(dt, cfg, tracer);
     }
 
     #[cfg(debug_assertions)]
@@ -153,12 +160,17 @@ impl Gameplay_System {
         //self.ecs_world.print_debug_info();
     }
 
-    fn update_with_latest_frame_actions(&mut self, dt: &Duration, cfg: &cfg::Config) {
+    fn update_with_latest_frame_actions(
+        &mut self,
+        dt: &Duration,
+        cfg: &cfg::Config,
+        tracer: Rc<RefCell<Debug_Tracer>>,
+    ) {
         let mut actions = vec![];
         std::mem::swap(&mut self.latest_frame_actions, &mut actions);
         let mut axes = Virtual_Axes::default();
         std::mem::swap(&mut self.latest_frame_axes, &mut axes);
-        self.update(&dt, &actions, &axes, cfg);
+        self.update(&dt, &actions, &axes, cfg, tracer);
     }
 
     pub fn get_renderable_entities(&self) -> Entity_Stream {
