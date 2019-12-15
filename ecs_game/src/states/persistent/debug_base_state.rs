@@ -86,7 +86,7 @@ impl Persistent_Game_State for Debug_Base_State {
                 gs.step(
                     &step_delta,
                     &engine_state.config,
-                    engine_state.debug_systems.tracer.clone(),
+                    clone_tracer!(engine_state.tracer),
                 );
             } else if action.0 == self.sid_print_em_debug_info && action.1 == Action_Kind::Pressed {
                 gs.print_debug_info();

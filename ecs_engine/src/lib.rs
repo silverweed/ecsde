@@ -37,3 +37,5 @@ pub mod test_common;
 
 #[cfg(debug_assertions)]
 pub mod debug;
+
+pub mod prelude;

@@ -94,12 +94,9 @@ impl Generational_Allocator {
             if idx.index >= self.gens.len() {
                 panic!("Tried to deallocate a Generational_Index whose index is greater than biggest one!");
             }
-        }
 
-        let gen = self.gens[idx.index];
+            let gen = self.gens[idx.index];
 
-        #[cfg(debug_assertions)]
-        {
             if gen > idx.gen {
                 panic!("Tried to deallocate an old Generational_Index! Double free?");
             }

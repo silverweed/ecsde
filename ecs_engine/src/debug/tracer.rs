@@ -228,17 +228,3 @@ pub fn build_trace_trees(traces: &[Tracer_Node]) -> Vec<Trace_Tree<'_>> {
 
     forest
 }
-
-#[cfg(debug_assertions)]
-#[macro_export]
-macro_rules! trace {
-    ($tag: expr, $tracer: expr) => {
-        let _trace_var = debug_trace($tag, $tracer.clone());
-    };
-}
-
-#[cfg(not(debug_assertions))]
-#[macro_export]
-macro_rules! trace {
-    ($tag: expr, $ng_state: expr) => {};
-}

@@ -2,23 +2,24 @@ use super::{Game_Resources, Game_State};
 use crate::gfx::render_system;
 use ecs_engine::core::app;
 use ecs_engine::core::common::colors;
-use ecs_engine::core::common::stringid::String_Id;
 use ecs_engine::core::common::Maybe_Error;
 use ecs_engine::core::time;
-use ecs_engine::debug::tracer::*;
 use ecs_engine::gfx;
-use ecs_engine::input;
 use ecs_engine::resources::gfx::Gfx_Resources;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
+use ecs_engine::core::common::stringid::String_Id;
+#[cfg(debug_assertions)]
 use ecs_engine::debug;
+#[cfg(debug_assertions)]
+use ecs_engine::input;
 
 pub fn tick_game<'a>(
     game_state: &'a mut Game_State<'a>,
     game_resources: &'a mut Game_Resources<'a>,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    let tracer = game_state.engine_state.debug_systems.tracer.clone();
+    let tracer = clone_tracer!(game_state.engine_state.tracer);
     trace!("tick_game", tracer);
 
     // @Speed: these should all be computed at compile time.
@@ -36,7 +37,8 @@ pub fn tick_game<'a>(
     let engine_state = &mut game_state.engine_state;
     engine_state.time.update();
 
-    let (dt, real_dt) = (engine_state.time.dt(), engine_state.time.real_dt());
+    let dt = engine_state.time.dt();
+    let real_dt = engine_state.time.real_dt();
     let systems = &mut engine_state.systems;
     #[cfg(debug_assertions)]
     let debug_systems = &mut engine_state.debug_systems;
@@ -85,8 +87,12 @@ pub fn tick_game<'a>(
 
     {
         let actions = systems.input_system.extract_game_actions();
+
+        #[cfg(debug_assertions)]
         let input_system = &systems.input_system;
+        #[cfg(debug_assertions)]
         let raw_events = input_system.get_raw_events();
+        #[cfg(debug_assertions)]
         let (real_axes, joy_mask) = input_system.get_all_real_axes();
 
         #[cfg(debug_assertions)]
@@ -139,7 +145,7 @@ pub fn tick_game<'a>(
                 &actions,
                 axes,
                 &engine_state.config,
-                tracer.clone(),
+                clone_tracer!(tracer),
             );
             while game_state.execution_time > update_time {
                 gameplay_system.update(
@@ -147,7 +153,7 @@ pub fn tick_game<'a>(
                     &actions,
                     axes,
                     &engine_state.config,
-                    tracer.clone(),
+                    clone_tracer!(tracer),
                 );
                 game_state.execution_time -= update_time;
                 #[cfg(feature = "prof_gameplay")]
@@ -222,10 +228,7 @@ fn update_graphics(
     real_dt: Duration,
     frame_lag_normalized: f32,
 ) -> Maybe_Error {
-    trace!(
-        "update_graphics",
-        game_state.engine_state.debug_systems.tracer
-    );
+    trace!("update_graphics", game_state.engine_state.tracer);
 
     let window = &mut game_state.window;
     let cfg = &game_state.engine_state.config;
@@ -249,15 +252,12 @@ fn update_graphics(
         &game_state.gameplay_system.ecs_world,
         frame_lag_normalized,
         render_cfg,
-        &game_state.engine_state,
+        clone_tracer!(game_state.engine_state.tracer),
     );
 
     #[cfg(debug_assertions)]
     {
-        trace!(
-            "debug_ui_system::update",
-            game_state.engine_state.debug_systems.tracer
-        );
+        trace!("debug_ui_system::update", game_state.engine_state.tracer);
         game_state
             .engine_state
             .debug_systems
@@ -266,7 +266,7 @@ fn update_graphics(
     }
 
     {
-        trace!("vsync", game_state.engine_state.debug_systems.tracer);
+        trace!("vsync", game_state.engine_state.tracer);
         gfx::window::display(window);
     }
 

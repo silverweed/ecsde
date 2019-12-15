@@ -1,5 +1,4 @@
 use super::app_config::App_Config;
-use super::common::colors;
 use super::common::Maybe_Error;
 use super::env::Env_Info;
 use super::time;
@@ -7,10 +6,9 @@ use crate::cfg::{self, Cfg_Var};
 use crate::core::systems::Core_Systems;
 use crate::fs;
 use crate::gfx;
-use crate::gfx::align;
 use crate::input;
+use crate::prelude::{new_debug_tracer, Debug_Tracer};
 use crate::replay::{replay_data, replay_input_provider};
-use crate::resources::{self, gfx::Gfx_Resources};
 use notify::RecursiveMode;
 use std::time::Duration;
 
@@ -18,6 +16,8 @@ use std::time::Duration;
 use super::common::stringid::String_Id;
 #[cfg(debug_assertions)]
 use crate::core::systems::Debug_Systems;
+#[cfg(debug_assertions)]
+use crate::resources::{self, gfx::Gfx_Resources};
 
 #[cfg(debug_assertions)]
 use crate::debug;
@@ -34,6 +34,8 @@ pub struct Engine_State<'r> {
     pub systems: Core_Systems<'r>,
     #[cfg(debug_assertions)]
     pub debug_systems: Debug_Systems,
+
+    pub tracer: Debug_Tracer,
 
     pub replay_data: Option<replay_data::Replay_Data>,
 }
@@ -57,6 +59,7 @@ pub fn create_engine_state<'r>(app_config: App_Config) -> Engine_State<'r> {
         #[cfg(debug_assertions)]
         debug_systems,
         replay_data,
+        tracer: new_debug_tracer(),
     }
 }
 
@@ -102,7 +105,9 @@ pub fn init_engine_debug(
     engine_state: &mut Engine_State<'_>,
     gfx_resources: &mut Gfx_Resources<'_>,
 ) -> Maybe_Error {
+    use crate::core::common::colors;
     use crate::core::common::vector::Vec2f;
+    use crate::gfx::align;
     use debug::{fadeout_overlay, overlay};
 
     const FONT: &str = "Hack-Regular.ttf";
@@ -264,10 +269,11 @@ pub fn maybe_update_trace_overlay(engine_state: &mut Engine_State, refresh_rate:
 
 #[cfg(debug_assertions)]
 fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
+    use crate::core::common::colors;
     use crate::debug::overlay::Debug_Overlay;
     use crate::debug::tracer::{build_trace_trees, sort_trace_trees, Trace_Tree, Tracer_Node};
 
-    let mut tracer = engine_state.debug_systems.tracer.borrow_mut();
+    let mut tracer = engine_state.tracer.borrow_mut();
     let overlay = engine_state
         .debug_systems
         .debug_ui_system

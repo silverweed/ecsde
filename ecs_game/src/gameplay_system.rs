@@ -16,13 +16,11 @@ use ecs_engine::core::common::transform::Transform2D;
 use ecs_engine::core::common::vector::Vec2f;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::time;
-use ecs_engine::debug::tracer::*;
 use ecs_engine::gfx as ngfx;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::input_system::Game_Action;
+use ecs_engine::prelude::*;
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::time::Duration;
 
 pub struct Gameplay_System {
@@ -66,7 +64,7 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
-        tracer: Rc<RefCell<Tracer>>,
+        tracer: Debug_Tracer,
     ) {
         trace!("gameplay_system::update", tracer);
         // Used for stepping
@@ -153,14 +151,14 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
-        tracer: Rc<RefCell<Tracer>>,
+        tracer: Debug_Tracer,
     ) {
         trace!("gameplay_system::realtime_update", tracer);
         self.update_camera(real_dt, actions, axes, cfg);
     }
 
     #[cfg(debug_assertions)]
-    pub fn step(&mut self, dt: &Duration, cfg: &cfg::Config, tracer: Rc<RefCell<Tracer>>) {
+    pub fn step(&mut self, dt: &Duration, cfg: &cfg::Config, tracer: Debug_Tracer) {
         self.update_with_latest_frame_actions(dt, cfg, tracer);
     }
 
@@ -173,7 +171,7 @@ impl Gameplay_System {
         &mut self,
         dt: &Duration,
         cfg: &cfg::Config,
-        tracer: Rc<RefCell<Tracer>>,
+        tracer: Debug_Tracer,
     ) {
         let mut actions = vec![];
         std::mem::swap(&mut self.latest_frame_actions, &mut actions);
@@ -338,9 +336,9 @@ impl Gameplay_System {
             .enumerate()
         {
             let speed = 1.0;
-            //if i % 10 == 0 {
-            t.local_transform.rotate(Deg(dt_secs * speed));
-            //}
+            if i % 10 == 0 {
+                t.local_transform.rotate(Deg(dt_secs * speed));
+            }
         }
     }
 }

@@ -18,8 +18,7 @@ mod scene_tree;
 mod states;
 
 use ecs_engine::cfg::Cfg_Var;
-use ecs_engine::core::common::stringid::String_Id;
-use ecs_engine::core::common::{colors, rand};
+use ecs_engine::core::common::rand;
 use ecs_engine::core::{app, app_config};
 use ecs_engine::gfx::{self as ngfx, window};
 use ecs_engine::input;
@@ -27,6 +26,10 @@ use ecs_engine::resources;
 use std::env;
 use std::time::Duration;
 
+#[cfg(debug_assertions)]
+use ecs_engine::core::common::colors;
+#[cfg(debug_assertions)]
+use ecs_engine::core::common::stringid::String_Id;
 #[cfg(debug_assertions)]
 use ecs_engine::debug;
 
@@ -117,12 +120,7 @@ pub unsafe extern "C" fn game_update<'a>(
 
         #[cfg(debug_assertions)]
         {
-            game_state
-                .engine_state
-                .debug_systems
-                .tracer
-                .borrow_mut()
-                .start_frame();
+            game_state.engine_state.tracer.borrow_mut().start_frame();
         }
 
         {
