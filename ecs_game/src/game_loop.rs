@@ -8,7 +8,6 @@ use ecs_engine::core::time;
 use ecs_engine::debug::tracer::*;
 use ecs_engine::gfx;
 use ecs_engine::input;
-use ecs_engine::input::input_system::Action_Kind;
 use ecs_engine::resources::gfx::Gfx_Resources;
 use std::time::Duration;
 
@@ -78,16 +77,15 @@ pub fn tick_game<'a>(
     // Handle actions
     {
         trace!("app::handle_core_actions", tracer);
-        if app::handle_core_actions(systems.input_system.get_core_actions(), window) {
+        if app::handle_core_actions(&systems.input_system.extract_core_actions(), window) {
             engine_state.should_close = true;
             return Ok(false);
         }
     }
 
     {
+        let actions = systems.input_system.extract_game_actions();
         let input_system = &systems.input_system;
-        let actions = input_system.get_game_actions();
-        let axes = input_system.get_virtual_axes();
         let raw_events = input_system.get_raw_events();
         let (real_axes, joy_mask) = input_system.get_all_real_axes();
 
@@ -112,34 +110,23 @@ pub fn tick_game<'a>(
             }
         }
 
-        //if game_state.state_mgr.handle_actions(&actions, engine_state) {
-        //engine_state.should_close = true;
-        //return Ok(false);
-        //}
-
-        // @Refactor: move this to a state
-        if actions.contains(&(String_Id::from("quit"), Action_Kind::Pressed)) {
-            engine_state.should_close = true;
-        }
-        // @Refactor: move this to a state
-        if actions.contains(&(String_Id::from("pause_toggle"), Action_Kind::Pressed)) {
-            engine_state.time.pause_toggle();
-        }
-        // @Refactor: move this to a state
-        if actions.contains(&(
-            String_Id::from("toggle_trace_overlay"),
-            Action_Kind::Pressed,
-        )) {
-            game_state.show_trace_overlay = !game_state.show_trace_overlay;
-            debug_systems
-                .debug_ui_system
-                .set_overlay_enabled(String_Id::from("trace"), game_state.show_trace_overlay);
+        {
+            trace!("state_mgr::handle_actions", tracer);
+            if game_state.state_mgr.handle_actions(
+                &actions,
+                engine_state,
+                &mut game_state.gameplay_system,
+            ) {
+                engine_state.should_close = true;
+                return Ok(false);
+            }
         }
 
         // Update game systems
         {
             trace!("game_update", tracer);
 
+            let axes = engine_state.systems.input_system.get_virtual_axes();
             #[cfg(feature = "prof_gameplay")]
             let gameplay_start_t = std::time::Instant::now();
             #[cfg(feature = "prof_gameplay")]
@@ -149,7 +136,7 @@ pub fn tick_game<'a>(
 
             gameplay_system.realtime_update(
                 &real_dt,
-                actions,
+                &actions,
                 axes,
                 &engine_state.config,
                 tracer.clone(),
@@ -157,7 +144,7 @@ pub fn tick_game<'a>(
             while game_state.execution_time > update_time {
                 gameplay_system.update(
                     &update_time,
-                    actions,
+                    &actions,
                     axes,
                     &engine_state.config,
                     tracer.clone(),
@@ -182,11 +169,12 @@ pub fn tick_game<'a>(
     // Update audio
     {
         trace!("audio_system_update", tracer);
-        systems.audio_system.update();
+        engine_state.systems.audio_system.update();
     }
 
     #[cfg(debug_assertions)]
     {
+        let debug_systems = &mut engine_state.debug_systems;
         update_fps_debug_overlay(
             debug_systems.debug_ui_system.get_overlay(sid_fps),
             &game_state.fps_debug,
@@ -220,13 +208,10 @@ pub fn tick_game<'a>(
             .extra_frame_sleep_ms
             .read(&game_state.engine_state.config) as u64;
         std::thread::sleep(Duration::from_millis(sleep));
+
+        game_state.engine_state.config.update();
+        game_state.fps_debug.tick(&real_dt);
     }
-
-    #[cfg(debug_assertions)]
-    game_state.engine_state.config.update();
-
-    #[cfg(debug_assertions)]
-    game_state.fps_debug.tick(&real_dt);
 
     Ok(true)
 }

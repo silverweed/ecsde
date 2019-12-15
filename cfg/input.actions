@@ -1,7 +1,7 @@
 # General
 quit: Q
-game_speed_up: Num2, Equal
-game_speed_down: Num1, Dash
+game_speed_up: Num2, Equal, PageUp
+game_speed_down: Num1, Dash, PageDown
 pause_toggle: Period
 step_sim: Slash
 

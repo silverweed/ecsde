@@ -56,12 +56,16 @@ impl Input_System {
         self.joystick_mgr.init()
     }
 
-    pub fn get_game_actions(&self) -> &[Game_Action] {
-        &self.game_actions
+    pub fn extract_game_actions(&mut self) -> Vec<Game_Action> {
+        let mut v = vec![];
+        std::mem::swap(&mut self.game_actions, &mut v);
+        v
     }
 
-    pub fn get_core_actions(&self) -> &[Core_Action] {
-        &self.core_actions
+    pub fn extract_core_actions(&mut self) -> Vec<Core_Action> {
+        let mut v = vec![];
+        std::mem::swap(&mut self.core_actions, &mut v);
+        v
     }
 
     pub fn get_virtual_axes(&self) -> &axes::Virtual_Axes {

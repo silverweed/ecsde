@@ -1,4 +1,5 @@
 use super::state::{Game_State, Persistent_Game_State, State_Transition};
+use crate::gameplay_system::Gameplay_System;
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::input::input_system::Game_Action;
 use std::vec::Vec;
@@ -22,28 +23,19 @@ impl State_Manager {
         }
     }
 
-    pub fn with_initial_state(
-        engine_state: &mut Engine_State,
-        mut state: Box<dyn Game_State>,
-    ) -> State_Manager {
-        state.on_start(engine_state);
-        State_Manager {
-            state_stack: vec![state],
-            persistent_states: vec![],
-        }
-    }
-
-    pub fn update(&mut self, engine_state: &mut Engine_State) {
+    pub fn update(&mut self, engine_state: &mut Engine_State, gs: &mut Gameplay_System) {
         for state in &mut self.persistent_states {
-            state.update(engine_state);
+            state.update(engine_state, gs);
         }
 
         if let Some(state) = self.current_state() {
-            match state.update(engine_state) {
+            match state.update(engine_state, gs) {
                 State_Transition::None => {}
-                State_Transition::Push(new_state) => self.push_state(engine_state, new_state),
-                State_Transition::Replace(new_state) => self.replace_state(engine_state, new_state),
-                State_Transition::Pop => self.pop_state(engine_state),
+                State_Transition::Push(new_state) => self.push_state(engine_state, gs, new_state),
+                State_Transition::Replace(new_state) => {
+                    self.replace_state(engine_state, gs, new_state)
+                }
+                State_Transition::Pop => self.pop_state(engine_state, gs),
             }
         }
     }
@@ -53,15 +45,16 @@ impl State_Manager {
         &mut self,
         actions: &[Game_Action],
         engine_state: &mut Engine_State,
+        gs: &mut Gameplay_System,
     ) -> bool {
         let mut should_quit = false;
 
         if let Some(state) = self.current_state() {
-            should_quit |= state.handle_actions(actions, engine_state);
+            should_quit |= state.handle_actions(actions, engine_state, gs);
         }
 
         for state in &mut self.persistent_states {
-            should_quit |= state.handle_actions(actions, engine_state);
+            should_quit |= state.handle_actions(actions, engine_state, gs);
         }
 
         should_quit
@@ -70,9 +63,10 @@ impl State_Manager {
     pub fn add_persistent_state(
         &mut self,
         engine_state: &mut Engine_State,
+        gs: &mut Gameplay_System,
         mut state: Box<dyn Persistent_Game_State>,
     ) {
-        state.on_start(engine_state);
+        state.on_start(engine_state, gs);
         self.persistent_states.push(state);
     }
 
@@ -86,32 +80,42 @@ impl State_Manager {
         }
     }
 
-    fn push_state(&mut self, engine_state: &mut Engine_State, mut state: Box<dyn Game_State>) {
+    fn push_state(
+        &mut self,
+        engine_state: &mut Engine_State,
+        gs: &mut Gameplay_System,
+        mut state: Box<dyn Game_State>,
+    ) {
         if let Some(s) = self.current_state() {
-            s.on_pause(engine_state);
+            s.on_pause(engine_state, gs);
         }
-        state.on_start(engine_state);
+        state.on_start(engine_state, gs);
         self.state_stack.push(state);
     }
 
-    fn pop_state(&mut self, engine_state: &mut Engine_State) {
+    fn pop_state(&mut self, engine_state: &mut Engine_State, gs: &mut Gameplay_System) {
         if let Some(mut prev_state) = self.state_stack.pop() {
-            prev_state.on_end(engine_state);
+            prev_state.on_end(engine_state, gs);
         } else {
             eprintln!("[ ERROR ] Tried to pop state, but state stack is empty!");
         }
 
         if let Some(state) = self.current_state() {
-            state.on_resume(engine_state);
+            state.on_resume(engine_state, gs);
         }
     }
 
-    fn replace_state(&mut self, engine_state: &mut Engine_State, mut state: Box<dyn Game_State>) {
+    fn replace_state(
+        &mut self,
+        engine_state: &mut Engine_State,
+        gs: &mut Gameplay_System,
+        mut state: Box<dyn Game_State>,
+    ) {
         if let Some(mut prev_state) = self.state_stack.pop() {
-            prev_state.on_end(engine_state);
+            prev_state.on_end(engine_state, gs);
         }
 
-        state.on_start(engine_state);
+        state.on_start(engine_state, gs);
         self.state_stack.push(state);
     }
 }
@@ -138,19 +142,23 @@ mod tests {
     }
 
     impl Game_State for Test_State_1 {
-        fn on_start(&mut self, _state: &mut Engine_State) {
+        fn on_start(&mut self, _state: &mut Engine_State, _gs: &mut Gameplay_System) {
             self.data.borrow_mut().started = true;
         }
-        fn on_end(&mut self, _state: &mut Engine_State) {
+        fn on_end(&mut self, _state: &mut Engine_State, _gs: &mut Gameplay_System) {
             self.data.borrow_mut().ended = true;
         }
-        fn on_pause(&mut self, _state: &mut Engine_State) {
+        fn on_pause(&mut self, _state: &mut Engine_State, _gs: &mut Gameplay_System) {
             self.data.borrow_mut().paused = true;
         }
-        fn on_resume(&mut self, _state: &mut Engine_State) {
+        fn on_resume(&mut self, _state: &mut Engine_State, _gs: &mut Gameplay_System) {
             self.data.borrow_mut().resumed = true;
         }
-        fn update(&mut self, _state: &mut Engine_State) -> State_Transition {
+        fn update(
+            &mut self,
+            _state: &mut Engine_State,
+            _gs: &mut Gameplay_System,
+        ) -> State_Transition {
             self.data.borrow_mut().updated += 1;
             if self.data.borrow().updated < 2 {
                 State_Transition::None
@@ -158,7 +166,12 @@ mod tests {
                 State_Transition::Pop
             }
         }
-        fn handle_actions(&mut self, _actions: &[Game_Action], _state: &mut Engine_State) -> bool {
+        fn handle_actions(
+            &mut self,
+            _actions: &[Game_Action],
+            _state: &mut Engine_State,
+            _gs: &mut Gameplay_System,
+        ) -> bool {
             self.data.borrow_mut().handled_actions += 1;
             false
         }
@@ -175,7 +188,9 @@ mod tests {
                 target_win_size: (0, 0),
                 replay_file: None,
             });
-        let mut smgr = State_Manager::with_initial_state(&mut engine_state, state);
+        let mut gs = Gameplay_System::new();
+        let mut smgr = State_Manager::new();
+        smgr.push_state(state, &mut engine_state, &mut gs);
 
         assert!(data.borrow().started, "State was not started");
         assert!(!data.borrow().ended, "State was ended");
@@ -184,26 +199,26 @@ mod tests {
         assert_eq!(data.borrow().updated, 0);
         assert_eq!(data.borrow().handled_actions, 0);
 
-        smgr.update(&mut engine_state);
+        smgr.update(&mut engine_state, &mut gs);
         assert_eq!(data.borrow().updated, 1);
         assert_eq!(data.borrow().handled_actions, 0);
 
         let actions = [];
-        smgr.handle_actions(&actions, &mut engine_state);
+        smgr.handle_actions(&actions, &mut engine_state, &mut gs);
         assert_eq!(data.borrow().handled_actions, 1);
 
-        smgr.update(&mut engine_state); // this pops the state
+        smgr.update(&mut engine_state, &mut gs); // this pops the state
         assert_eq!(data.borrow().updated, 2, "State was not updated");
         assert!(data.borrow().ended, "State was not ended");
 
-        smgr.handle_actions(&actions, &mut engine_state);
+        smgr.handle_actions(&actions, &mut engine_state, &mut gs);
         assert_eq!(
             data.borrow().handled_actions,
             1,
             "State was handled but should have been popped"
         );
 
-        smgr.update(&mut engine_state);
+        smgr.update(&mut engine_state, &mut gs);
         assert_eq!(
             data.borrow().updated,
             2,

@@ -19,8 +19,12 @@ pub struct Core_Systems<'r> {
 #[cfg(debug_assertions)]
 pub struct Debug_Systems {
     pub debug_ui_system: debug_ui_system::Debug_Ui_System,
+
     pub replay_recording_system: recording_system::Replay_Recording_System,
+
     pub tracer: Rc<RefCell<tracer::Tracer>>,
+    pub show_trace_overlay: bool,
+    pub trace_overlay_update_t: f32,
 }
 
 impl Core_Systems<'_> {
@@ -49,6 +53,8 @@ impl Debug_Systems {
                 },
             ),
             tracer: Rc::new(RefCell::new(tracer::Tracer::new())),
+            show_trace_overlay: false,
+            trace_overlay_update_t: 0.0,
         }
     }
 }

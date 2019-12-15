@@ -156,6 +156,8 @@ pub fn init_engine_debug(
             target_win_size_x as f32 * 0.5,
             target_win_size_y as f32 * 0.5,
         );
+        // Trace overlay starts disabled
+        debug_ui_system.set_overlay_enabled(String_Id::from("trace"), false);
     }
 
     // Debug fadeout overlays
@@ -204,6 +206,7 @@ pub fn create_input_provider(
     }
 }
 
+/// Returns true if the engine should quit
 pub fn handle_core_actions(
     actions: &[input::core_actions::Core_Action],
     window: &mut gfx::window::Window_Handle,
@@ -243,4 +246,85 @@ fn maybe_create_replay_data(cfg: &App_Config) -> Option<replay_data::Replay_Data
 #[cfg(not(debug_assertions))]
 fn maybe_create_replay_data(cfg: &App_Config) -> Option<replay_data::Replay_Data> {
     None
+}
+
+#[cfg(debug_assertions)]
+pub fn maybe_update_trace_overlay(engine_state: &mut Engine_State, refresh_rate: &Cfg_Var<f32>) {
+    if engine_state.debug_systems.show_trace_overlay && !engine_state.time.paused {
+        let t = &mut engine_state.debug_systems.trace_overlay_update_t;
+        *t -= time::to_secs_frac(&engine_state.time.real_dt());
+
+        if *t <= 0. {
+            debug_update_trace_overlay(engine_state);
+            engine_state.debug_systems.trace_overlay_update_t =
+                refresh_rate.read(&engine_state.config);
+        }
+    }
+}
+
+#[cfg(debug_assertions)]
+fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
+    use crate::debug::overlay::Debug_Overlay;
+    use crate::debug::tracer::{build_trace_trees, sort_trace_trees, Trace_Tree, Tracer_Node};
+
+    let mut tracer = engine_state.debug_systems.tracer.borrow_mut();
+    let overlay = engine_state
+        .debug_systems
+        .debug_ui_system
+        .get_overlay(String_Id::from("trace"));
+
+    overlay.clear();
+
+    fn add_node_line(
+        node: &Tracer_Node,
+        total_traced_time: &Duration,
+        indent: usize,
+        overlay: &mut Debug_Overlay,
+    ) {
+        let duration = node.info.duration();
+        let ratio = time::duration_ratio(&duration, total_traced_time);
+        let color = colors::lerp_col(colors::GREEN, colors::RED, ratio);
+        let mut line = String::new();
+        for _ in 0..indent {
+            line.push(' ');
+        }
+        line.push_str(&format!(
+            "{:width$}: {:>6.3}ms ({:3}%): {:>7}",
+            node.info.tag,
+            node.info.duration().as_micros() as f32 * 0.001,
+            (ratio * 100.0) as u32,
+            node.info.n_calls,
+            width = 40 - indent
+        ));
+        overlay.add_line_color(&line, color);
+    }
+
+    fn add_tree_lines(
+        tree: &Trace_Tree,
+        total_traced_time: &Duration,
+        indent: usize,
+        overlay: &mut Debug_Overlay,
+    ) {
+        add_node_line(&tree.node, total_traced_time, indent, overlay);
+        for t in &tree.children {
+            add_tree_lines(t, total_traced_time, indent + 1, overlay);
+        }
+    };
+
+    let total_traced_time = tracer.total_traced_time();
+    let traces = tracer.collate_traces();
+    let mut trace_trees = build_trace_trees(traces);
+    sort_trace_trees(&mut trace_trees);
+
+    overlay.add_line_color(
+        &format!(
+            "{:40}: {:15}: {:7}",
+            "procedure_name", "tot_time", "n_calls"
+        ),
+        colors::rgb(204, 0, 102),
+    );
+    overlay.add_line_color(&format!("{:─^60}", ""), colors::rgba(60, 60, 60, 180));
+    for tree in &trace_trees {
+        add_tree_lines(tree, &total_traced_time, 0, overlay);
+    }
 }
