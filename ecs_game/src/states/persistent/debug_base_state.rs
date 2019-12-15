@@ -46,7 +46,7 @@ impl Persistent_Game_State for Debug_Base_State {
             if (action.0 == self.sid_game_speed_up || action.0 == self.sid_game_speed_down)
                 && action.1 == Action_Kind::Pressed
             {
-                let ts = state.time.get_time_scale()
+                let ts = state.time.time_scale
                     + CHANGE_SPEED_DELTA
                         * if action.0 == self.sid_game_speed_up {
                             1.0
@@ -54,13 +54,16 @@ impl Persistent_Game_State for Debug_Base_State {
                             -1.0
                         };
                 if ts > 0.0 {
-                    state.time.set_time_scale(ts);
+                    state.time.time_scale = ts;
                 }
-                msg_overlay.add_line(&format!("Time scale: {:.2}", state.time.get_time_scale()));
+                msg_overlay.add_line(&format!("Time scale: {:.2}", state.time.time_scale));
             } else if action.0 == self.sid_pause_toggle && action.1 == Action_Kind::Pressed {
-                let paused = state.time.is_paused();
-                state.time.set_paused(!paused);
-                msg_overlay.add_line(if !paused { "Paused" } else { "Resumed" });
+                state.time.pause_toggle();
+                msg_overlay.add_line(if state.time.paused {
+                    "Paused"
+                } else {
+                    "Resumed"
+                });
             } else if action.0 == self.sid_step_sim && action.1 == Action_Kind::Pressed {
                 let target_fps = self.fps.read(&state.config);
                 let step_delta =
@@ -69,7 +72,7 @@ impl Persistent_Game_State for Debug_Base_State {
                     "Stepping of: {:.2} ms",
                     time::to_secs_frac(&step_delta) * 1000.0
                 ));
-                state.time.set_paused(true);
+                state.time.paused = true;
                 state.time.step(&step_delta);
             //state.systems.gameplay_system.step(&step_delta);
             } else if action.0 == self.sid_print_em_debug_info && action.1 == Action_Kind::Pressed {

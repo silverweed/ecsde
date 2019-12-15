@@ -42,6 +42,8 @@ pub struct Game_State<'a> {
     pub fps_debug: debug::fps::Fps_Console_Printer,
     #[cfg(debug_assertions)]
     pub trace_debug_redraw_t: f32,
+    #[cfg(debug_assertions)]
+    pub show_trace_overlay: bool,
 
     pub execution_time: Duration,
     pub input_provider: Box<dyn input::provider::Input_Provider>,
@@ -59,6 +61,8 @@ pub struct Game_State<'a> {
     pub extra_frame_sleep_ms: Cfg_Var<i32>,
     #[cfg(debug_assertions)]
     pub record_replay: Cfg_Var<bool>, // /engine/debug/replay/record
+    #[cfg(debug_assertions)]
+    pub trace_overlay_refresh_rate: Cfg_Var<f32>,
 
     pub rng: rand::Default_Rng,
 }
@@ -138,11 +142,15 @@ pub unsafe extern "C" fn game_update<'a>(
     #[cfg(debug_assertions)]
     {
         let game_state = &mut *game_state;
-        game_state.trace_debug_redraw_t -=
-            ecs_engine::core::time::to_secs_frac(&game_state.engine_state.time.real_dt());
-        if game_state.trace_debug_redraw_t <= 0. {
-            debug_update_trace_overlay(game_state);
-            game_state.trace_debug_redraw_t = 0.05;
+        if game_state.show_trace_overlay && !game_state.engine_state.time.paused {
+            game_state.trace_debug_redraw_t -=
+                ecs_engine::core::time::to_secs_frac(&game_state.engine_state.time.real_dt());
+            if game_state.trace_debug_redraw_t <= 0. {
+                debug_update_trace_overlay(game_state);
+                game_state.trace_debug_redraw_t = game_state
+                    .trace_overlay_refresh_rate
+                    .read(&game_state.engine_state.config);
+            }
         }
     }
 
@@ -263,14 +271,20 @@ fn create_game_state<'a>(
     let extra_frame_sleep_ms = Cfg_Var::new("engine/debug/extra_frame_sleep_ms", cfg);
     #[cfg(debug_assertions)]
     let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
+    #[cfg(debug_assertions)]
+    let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
 
     Ok(Box::new(Game_State {
         window,
         engine_state,
+
         #[cfg(debug_assertions)]
         fps_debug: debug::fps::Fps_Console_Printer::new(&Duration::from_secs(2), "game"),
         #[cfg(debug_assertions)]
         trace_debug_redraw_t: 0.,
+        #[cfg(debug_assertions)]
+        show_trace_overlay: false,
+
         execution_time: Duration::default(),
         input_provider,
         is_replaying,
@@ -290,6 +304,8 @@ fn create_game_state<'a>(
         extra_frame_sleep_ms,
         #[cfg(debug_assertions)]
         record_replay,
+        #[cfg(debug_assertions)]
+        trace_overlay_refresh_rate,
     }))
 }
 
@@ -351,9 +367,9 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
 #[cfg(debug_assertions)]
 fn debug_update_trace_overlay(game_state: &mut Game_State) {
     use ecs_engine::debug::overlay::Debug_Overlay;
-    use ecs_engine::debug::tracer::{sort_trace_trees, Debug_Tracer_Node, Trace_Tree};
+    use ecs_engine::debug::tracer::{build_trace_trees, sort_trace_trees, Trace_Tree, Tracer_Node};
 
-    let tracer = game_state.engine_state.debug_systems.tracer.borrow_mut();
+    let mut tracer = game_state.engine_state.debug_systems.tracer.borrow_mut();
     let overlay = game_state
         .engine_state
         .debug_systems
@@ -363,7 +379,7 @@ fn debug_update_trace_overlay(game_state: &mut Game_State) {
     overlay.clear();
 
     fn add_node_line(
-        node: &Debug_Tracer_Node,
+        node: &Tracer_Node,
         total_traced_time: &Duration,
         indent: usize,
         overlay: &mut Debug_Overlay,
@@ -376,10 +392,11 @@ fn debug_update_trace_overlay(game_state: &mut Game_State) {
             line.push(' ');
         }
         line.push_str(&format!(
-            "{:width$}: {:>6.3}ms ({:3}%)",
+            "{:width$}: {:>6.3}ms ({:3}%): {:>7}",
             node.info.tag,
             node.info.duration().as_micros() as f32 * 0.001,
             (ratio * 100.0) as u32,
+            node.info.n_calls,
             width = 40 - indent
         ));
         overlay.add_line_color(&line, color);
@@ -397,11 +414,19 @@ fn debug_update_trace_overlay(game_state: &mut Game_State) {
         }
     };
 
-    let mut trace_trees = tracer.get_trace_trees();
+    let total_traced_time = tracer.total_traced_time();
+    let traces = tracer.collate_traces();
+    let mut trace_trees = build_trace_trees(traces);
     sort_trace_trees(&mut trace_trees);
 
-    let total_traced_time = tracer.total_traced_time();
-
+    overlay.add_line_color(
+        &format!(
+            "{:40}: {:15}: {:7}",
+            "procedure_name", "tot_time", "n_calls"
+        ),
+        colors::rgb(204, 0, 102),
+    );
+    overlay.add_line_color(&format!("{:─^60}", ""), colors::rgba(60, 60, 60, 180));
     for tree in &trace_trees {
         add_tree_lines(tree, &total_traced_time, 0, overlay);
     }

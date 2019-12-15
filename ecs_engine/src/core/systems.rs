@@ -20,7 +20,7 @@ pub struct Core_Systems<'r> {
 pub struct Debug_Systems {
     pub debug_ui_system: debug_ui_system::Debug_Ui_System,
     pub replay_recording_system: recording_system::Replay_Recording_System,
-    pub tracer: Rc<RefCell<tracer::Debug_Tracer>>,
+    pub tracer: Rc<RefCell<tracer::Tracer>>,
 }
 
 impl Core_Systems<'_> {
@@ -48,7 +48,7 @@ impl Debug_Systems {
                     .read(cfg),
                 },
             ),
-            tracer: Rc::new(RefCell::new(tracer::Debug_Tracer::new())),
+            tracer: Rc::new(RefCell::new(tracer::Tracer::new())),
         }
     }
 }

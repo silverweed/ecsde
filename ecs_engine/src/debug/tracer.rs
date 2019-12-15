@@ -3,50 +3,53 @@ use std::fmt::Debug;
 use std::rc::Rc;
 use std::time;
 
-pub struct Debug_Tracer {
-    // Tree of Debug_Tracer_Nodes representing the call tree.
-    saved_traces: Vec<Debug_Tracer_Node>,
-    running_traces: Vec<Debug_Tracer_Node>,
+pub struct Tracer {
+    // Tree of Tracer_Nodes representing the call tree.
+    saved_traces: Vec<Tracer_Node>,
+    // Latest pushed (and not-yet-popped) node index
+    cur_active: Option<usize>,
 }
 
 /// Represents a traced scope with its info and a link to its parent.
 #[derive(Debug)]
-pub struct Debug_Tracer_Node {
-    pub info: Debug_Scope_Trace_Info,
+pub struct Tracer_Node {
+    pub info: Scope_Trace_Info,
     pub parent_idx: Option<usize>,
 }
 
 /// The actual trace information for a single scope.
 #[derive(Clone)]
-pub struct Debug_Scope_Trace_Info {
-    start_t: time::Instant,
-    end_t: time::Instant,
+pub struct Scope_Trace_Info {
+    pub start_t: time::Instant,
+    pub end_t: time::Instant,
     pub tag: &'static str,
+    pub n_calls: usize,
 }
 
-impl Debug_Scope_Trace_Info {
+impl Scope_Trace_Info {
     pub fn duration(&self) -> time::Duration {
         self.end_t.duration_since(self.start_t)
     }
 }
 
-impl Debug for Debug_Scope_Trace_Info {
+impl Debug for Scope_Trace_Info {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
-            "[{}: {:?}]",
+            "[{}: {:?} (x{})]",
             self.tag,
-            self.end_t.duration_since(self.start_t)
+            self.duration(),
+            self.n_calls
         )
     }
 }
 
 /// This is used to automatically add a Trace_Info to the Tracer via RAII.
-pub struct Debug_Scope_Trace {
-    tracer: Rc<RefCell<Debug_Tracer>>,
+pub struct Scope_Trace {
+    tracer: Rc<RefCell<Tracer>>,
 }
 
-impl Drop for Debug_Scope_Trace {
+impl Drop for Scope_Trace {
     fn drop(&mut self) {
         self.tracer.borrow_mut().pop_scope_trace();
     }
@@ -54,12 +57,12 @@ impl Drop for Debug_Scope_Trace {
 
 #[derive(Clone, Debug)]
 pub struct Trace_Tree<'a> {
-    pub node: &'a Debug_Tracer_Node,
+    pub node: &'a Tracer_Node,
     pub children: Vec<Trace_Tree<'a>>,
 }
 
 impl Trace_Tree<'_> {
-    pub fn new(node: &Debug_Tracer_Node) -> Trace_Tree {
+    pub fn new(node: &Tracer_Node) -> Trace_Tree {
         Trace_Tree {
             node,
             children: vec![],
@@ -67,44 +70,70 @@ impl Trace_Tree<'_> {
     }
 }
 
-impl Debug_Tracer {
-    pub fn new() -> Debug_Tracer {
-        Debug_Tracer {
+impl Tracer {
+    pub fn new() -> Tracer {
+        Tracer {
             saved_traces: vec![],
-            running_traces: vec![],
+            cur_active: None,
         }
     }
 
-    pub fn push_scope_trace(&mut self, tag: &'static str) {
+    fn push_scope_trace(&mut self, tag: &'static str) {
         let now = time::Instant::now();
-        let cur_running_traces = self.running_traces.len();
-        self.running_traces.push(Debug_Tracer_Node {
-            info: Debug_Scope_Trace_Info {
+        self.saved_traces.push(Tracer_Node {
+            info: Scope_Trace_Info {
                 start_t: now,
                 end_t: now,
                 tag,
+                n_calls: 1,
             },
-            parent_idx: if cur_running_traces == 0 {
-                None
-            } else {
-                Some(cur_running_traces - 1)
-            },
+            parent_idx: self.cur_active,
         });
+        self.cur_active = Some(self.saved_traces.len() - 1);
     }
 
-    pub fn pop_scope_trace(&mut self) {
+    fn pop_scope_trace(&mut self) {
         let now = time::Instant::now();
-        let mut active_node = self
-            .running_traces
-            .pop()
-            .expect("Called pop_scope_trace without an active node!");
+        let mut active_node = &mut self.saved_traces[self
+            .cur_active
+            .expect("[ ERROR ] Popped scope trace while none is active!")];
         active_node.info.end_t = now;
-        self.saved_traces.push(active_node);
+        self.cur_active = active_node.parent_idx;
+    }
+
+    /// Deduplicates tracer nodes and returns a reference to the final traces.
+    pub fn collate_traces(&mut self) -> &[Tracer_Node] {
+        use std::collections::hash_map::Entry;
+        use std::collections::HashMap;
+
+        // Map { tag => (index_into_saved_traces, tot_n_calls) }
+        let mut tag_map: HashMap<&'static str, (usize, usize)> = HashMap::new();
+
+        // Accumulate n_calls of all nodes with the same tag in the first one found,
+        // and leave all others with n_calls = 0.
+        for (i, node) in self.saved_traces.iter_mut().enumerate() {
+            match tag_map.entry(&node.info.tag) {
+                Entry::Vacant(v) => {
+                    v.insert((i, 1));
+                }
+                Entry::Occupied(mut o) => {
+                    let (idx, n_calls) = *o.get();
+                    o.insert((idx, n_calls + 1));
+                    node.info.n_calls = 0;
+                }
+            }
+        }
+
+        for (_, (idx, tot_calls)) in tag_map {
+            self.saved_traces[idx].info.n_calls = tot_calls;
+        }
+
+        &self.saved_traces
     }
 
     pub fn start_frame(&mut self) {
-        self.running_traces.clear();
         self.saved_traces.clear();
+        self.cur_active = None;
     }
 
     pub fn debug_print(&self) {
@@ -134,99 +163,12 @@ impl Debug_Tracer {
         self.saved_traces
             .sort_by(|a, b| b.info.duration().cmp(&a.info.duration()));
     }
-
-    /// Construct a forest of Trace_Trees from the saved_traces array.
-    pub fn get_trace_trees(&self) -> Vec<Trace_Tree<'_>> {
-        let mut forest = vec![];
-
-        if self.saved_traces.is_empty() {
-            return forest;
-        }
-        println!("-----");
-        for node in &self.saved_traces {
-            println!("{:?}", node);
-        }
-        // Note: we exploit the fact that saved_traces elements are ordered as
-        // a reversed tree. i.e.:
-        //
-        //      A
-        //    /   \
-        //   B     C
-        //  / \     \
-        // D   E     F
-        //
-        // saved_traces = [F, C, E, D, B, A]
-        //
-
-        // First, split saved_traces into multiple arrays, each containing one tree.
-        let mut trees = vec![];
-        {
-            let mut i = 0;
-            for node in &self.saved_traces {
-                if trees.len() <= i {
-                    trees.push(vec![]);
-                }
-                trees[i].push(Some(Trace_Tree::new(node)));
-                if node.parent_idx.is_none() {
-                    i += 1;
-                }
-            }
-        }
-
-        // Then, for each tree, fill the `children` vecs.
-        {
-            let mut traces_idx = 0;
-            let mut tree_idx = 0;
-            let mut subtree_idx = 0;
-
-            loop {
-                let tree = &mut trees[tree_idx];
-                let tlen = tree.len();
-                let node = &self.saved_traces[traces_idx];
-                if let Some(p_idx) = node.parent_idx {
-                    let subtree = tree[subtree_idx].take();
-                    println!(
-                        "taking [{}]([{}] ->  [{}])",
-                        tree_idx,
-                        subtree_idx,
-                        tlen - 1 - p_idx
-                    );
-                    tree[tlen - 1 - p_idx]
-                        .as_mut()
-                        .unwrap()
-                        .children
-                        .push(subtree.unwrap());
-                }
-
-                if traces_idx == self.saved_traces.len() - 1 {
-                    break;
-                }
-
-                traces_idx += 1;
-
-                if subtree_idx == tree.len() - 1 {
-                    assert!(tree_idx < trees.len() - 1);
-                    tree_idx += 1;
-                    subtree_idx = 0;
-                } else {
-                    subtree_idx += 1;
-                }
-            }
-        }
-
-        for mut tree in trees {
-            let tlen = tree.len() - 1;
-            forest.push(tree[tlen].take().unwrap());
-        }
-
-        forest
-    }
 }
 
 #[inline]
-pub fn debug_trace(tag: &'static str, tracer: Rc<RefCell<Debug_Tracer>>) -> Debug_Scope_Trace {
+pub fn debug_trace(tag: &'static str, tracer: Rc<RefCell<Tracer>>) -> Scope_Trace {
     tracer.borrow_mut().push_scope_trace(tag);
-    Debug_Scope_Trace { tracer }
+    Scope_Trace { tracer }
 }
 
 pub fn sort_trace_trees(trees: &mut [Trace_Tree]) {
@@ -241,6 +183,50 @@ pub fn sort_trace_trees(trees: &mut [Trace_Tree]) {
     for tree in trees {
         sort_tree_internal(tree);
     }
+}
+
+/// Construct a forest of Trace_Trees from the saved_traces array.
+pub fn build_trace_trees(traces: &[Tracer_Node]) -> Vec<Trace_Tree<'_>> {
+    let mut forest = vec![];
+
+    if traces.is_empty() {
+        return forest;
+    }
+
+    // Note: we exploit the fact that saved_traces elements are ordered as
+    // a reversed tree. i.e.:
+    //
+    //      A
+    //    /   \
+    //   B     C
+    //  / \     \
+    // D   E     F
+    //
+    // saved_traces = [F, C, E, D, B, A]
+    //
+
+    let mut trees: Vec<Option<Trace_Tree>> = traces
+        .iter()
+        .map(|node| Some(Trace_Tree::new(node)))
+        .collect();
+
+    // Fill the `children` vecs.
+    // Here we iterate in reverse on both saved_traces and trees, and during each iteration
+    // we take() one tree out of the `trees` array. Since the nodes are ordered, we always
+    // remove children before their parent, so we never try to unwrap() an already-taken node.
+    for (i, node) in traces.iter().enumerate().rev() {
+        let trace_tree = trees[i].take().unwrap();
+        if node.info.n_calls == 0 {
+            continue;
+        }
+        if let Some(p_idx) = node.parent_idx {
+            trees[p_idx].as_mut().unwrap().children.push(trace_tree);
+        } else {
+            forest.push(trace_tree);
+        }
+    }
+
+    forest
 }
 
 #[cfg(debug_assertions)]

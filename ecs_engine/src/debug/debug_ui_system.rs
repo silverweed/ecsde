@@ -13,6 +13,7 @@ use std::time::Duration;
 pub struct Debug_Ui_System {
     overlays: HashMap<String_Id, overlay::Debug_Overlay>,
     fadeout_overlays: HashMap<String_Id, fadeout_overlay::Fadeout_Debug_Overlay>,
+    disabled_overlays: HashMap<String_Id, overlay::Debug_Overlay>,
 }
 
 impl Debug_Ui_System {
@@ -20,6 +21,7 @@ impl Debug_Ui_System {
         Debug_Ui_System {
             overlays: HashMap::new(),
             fadeout_overlays: HashMap::new(),
+            disabled_overlays: HashMap::new(),
         }
     }
 
@@ -76,6 +78,21 @@ impl Debug_Ui_System {
         self.fadeout_overlays
             .get_mut(&id)
             .unwrap_or_else(|| panic!("Invalid fadout debug overlay: {}", id))
+    }
+
+    pub fn set_overlay_enabled(&mut self, id: String_Id, enabled: bool) {
+        let (source_map, target_map, action) = if enabled {
+            (&mut self.disabled_overlays, &mut self.overlays, "enable")
+        } else {
+            (&mut self.overlays, &mut self.disabled_overlays, "disable")
+        };
+
+        if let Some(overlay) = source_map.remove(&id) {
+            assert!(target_map.get(&id).is_none());
+            target_map.insert(id, overlay);
+        } else {
+            eprintln!("[ WARNING ] Failed to {} overlay {}: either already in that state or not existing.", action, id);
+        }
     }
 
     pub fn update(&mut self, dt: &Duration, window: &mut Window_Handle, gres: &mut Gfx_Resources) {

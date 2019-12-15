@@ -121,6 +121,20 @@ pub fn tick_game<'a>(
         if actions.contains(&(String_Id::from("quit"), Action_Kind::Pressed)) {
             engine_state.should_close = true;
         }
+        // @Refactor: move this to a state
+        if actions.contains(&(String_Id::from("pause_toggle"), Action_Kind::Pressed)) {
+            engine_state.time.pause_toggle();
+        }
+        // @Refactor: move this to a state
+        if actions.contains(&(
+            String_Id::from("toggle_trace_overlay"),
+            Action_Kind::Pressed,
+        )) {
+            game_state.show_trace_overlay = !game_state.show_trace_overlay;
+            debug_systems
+                .debug_ui_system
+                .set_overlay_enabled(String_Id::from("trace"), game_state.show_trace_overlay);
+        }
 
         // Update game systems
         {
@@ -208,6 +222,7 @@ pub fn tick_game<'a>(
         std::thread::sleep(Duration::from_millis(sleep));
     }
 
+    #[cfg(debug_assertions)]
     game_state.engine_state.config.update();
 
     #[cfg(debug_assertions)]
@@ -304,15 +319,17 @@ fn update_joystick_debug_overlay(
 
 #[cfg(debug_assertions)]
 fn update_time_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, time: &time::Time) {
+    use ecs_engine::core::time::to_secs_frac;
+
     debug_overlay.clear();
 
     debug_overlay.add_line_color(
         &format!(
             "[time] game: {:.2}, real: {:.2}, scale: {:.2}, paused: {}",
-            time.get_game_time(),
-            time.get_real_time(),
-            time.get_time_scale(),
-            if time.is_paused() { "yes" } else { "no" }
+            to_secs_frac(&time.get_game_time()),
+            to_secs_frac(&time.get_real_time()),
+            time.time_scale,
+            if time.paused { "yes" } else { "no" }
         ),
         colors::rgb(100, 200, 200),
     );

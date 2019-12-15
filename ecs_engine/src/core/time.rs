@@ -9,8 +9,8 @@ pub struct Time {
     start_time: SystemTime,
     real_time: SystemTime,
     prev_real_time: SystemTime,
-    time_scale: f32,
-    paused: bool,
+    pub time_scale: f32,
+    pub paused: bool,
 }
 
 impl Time {
@@ -72,28 +72,16 @@ impl Time {
         self.real_time.duration_since(self.prev_real_time).unwrap()
     }
 
-    pub fn set_time_scale(&mut self, scale: f32) {
-        self.time_scale = scale;
+    pub fn pause_toggle(&mut self) {
+        self.paused = !self.paused;
     }
 
-    pub fn get_time_scale(&self) -> f32 {
-        self.time_scale
+    pub fn get_real_time(&self) -> Duration {
+        self.real_time.duration_since(self.start_time).unwrap()
     }
 
-    pub fn is_paused(&self) -> bool {
-        self.paused
-    }
-
-    pub fn set_paused(&mut self, p: bool) {
-        self.paused = p;
-    }
-
-    pub fn get_real_time(&self) -> f32 {
-        to_secs_frac(&self.real_time.duration_since(self.start_time).unwrap())
-    }
-
-    pub fn get_game_time(&self) -> f32 {
-        (self.game_time as f32) * 0.000_001
+    pub fn get_game_time(&self) -> Duration {
+        Duration::from_micros(self.game_time)
     }
 }
 

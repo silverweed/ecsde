@@ -11,6 +11,7 @@ move_left: A, Joy_Dpad_Left
 move_down: S, Joy_Dpad_Bottom
 move_right: D, Joy_Dpad_Right
 
-# Other
+# Debug
 print_em_debug_info: M
 sound_test: K
+toggle_trace_overlay: Tab

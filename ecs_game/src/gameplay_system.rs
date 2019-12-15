@@ -66,7 +66,7 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
-        tracer: Rc<RefCell<Debug_Tracer>>,
+        tracer: Rc<RefCell<Tracer>>,
     ) {
         trace!("gameplay_system::update", tracer);
         // Used for stepping
@@ -88,9 +88,12 @@ impl Gameplay_System {
         #[cfg(feature = "prof_scene_tree")]
         let mut now = Instant::now();
 
-        for e in self.entities.iter().copied() {
-            if let Some(t) = self.ecs_world.get_component::<C_Spatial2D>(e) {
-                self.scene_tree.set_local_transform(e, &t.local_transform);
+        {
+            trace!("scene_tree::copy_transforms", tracer);
+            for e in self.entities.iter().copied() {
+                if let Some(t) = self.ecs_world.get_component::<C_Spatial2D>(e) {
+                    self.scene_tree.set_local_transform(e, &t.local_transform);
+                }
             }
         }
 
@@ -103,7 +106,10 @@ impl Gameplay_System {
             now = Instant::now();
         }
 
-        self.scene_tree.compute_global_transforms();
+        {
+            trace!("scene_tree::compute_global_transforms", tracer);
+            self.scene_tree.compute_global_transforms();
+        }
 
         #[cfg(feature = "prof_scene_tree")]
         {
@@ -114,9 +120,12 @@ impl Gameplay_System {
             now = Instant::now();
         }
 
-        for e in self.entities.iter().copied() {
-            if let Some(t) = self.ecs_world.get_component_mut::<C_Spatial2D>(e) {
-                t.global_transform = *self.scene_tree.get_global_transform(e).unwrap();
+        {
+            trace!("scene_tree::backcopy_transforms", tracer);
+            for e in self.entities.iter().copied() {
+                if let Some(t) = self.ecs_world.get_component_mut::<C_Spatial2D>(e) {
+                    t.global_transform = *self.scene_tree.get_global_transform(e).unwrap();
+                }
             }
         }
 
@@ -144,14 +153,14 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
-        tracer: Rc<RefCell<Debug_Tracer>>,
+        tracer: Rc<RefCell<Tracer>>,
     ) {
         trace!("gameplay_system::realtime_update", tracer);
         self.update_camera(real_dt, actions, axes, cfg);
     }
 
     #[cfg(debug_assertions)]
-    pub fn step(&mut self, dt: &Duration, cfg: &cfg::Config, tracer: Rc<RefCell<Debug_Tracer>>) {
+    pub fn step(&mut self, dt: &Duration, cfg: &cfg::Config, tracer: Rc<RefCell<Tracer>>) {
         self.update_with_latest_frame_actions(dt, cfg, tracer);
     }
 
@@ -164,7 +173,7 @@ impl Gameplay_System {
         &mut self,
         dt: &Duration,
         cfg: &cfg::Config,
-        tracer: Rc<RefCell<Debug_Tracer>>,
+        tracer: Rc<RefCell<Tracer>>,
     ) {
         let mut actions = vec![];
         std::mem::swap(&mut self.latest_frame_actions, &mut actions);
