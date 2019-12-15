@@ -2,7 +2,6 @@
 #![allow(clippy::new_without_default)]
 #![allow(non_camel_case_types)]
 
-extern crate ecs_engine;
 extern crate libloading as ll;
 extern crate notify;
 
@@ -24,8 +23,7 @@ const GAME_DLL_FILE: &str = "ecs_game.dll";
 const GAME_DLL_FILE: &str = "libecs_game.dylib";
 
 #[cfg(debug_assertions)]
-fn main() -> ecs_engine::core::common::Maybe_Error {
-    use ecs_engine::fs::file_watcher;
+fn main() -> std::io::Result<()> {
     use std::path::PathBuf;
     use std::sync::mpsc::sync_channel;
 
@@ -88,7 +86,7 @@ fn main() -> ecs_engine::core::common::Maybe_Error {
 }
 
 #[cfg(not(debug_assertions))]
-fn main() -> ecs_engine::core::common::Maybe_Error {
+fn main() -> std::io::Result<()> {
     let game_dll_abs_path = format!("{}/{}", GAME_DLL_FOLDER, GAME_DLL_FILE);
     let (game_lib, _) = lib_load(&game_dll_abs_path);
     let game_api = unsafe { game_load(&game_lib)? };

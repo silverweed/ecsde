@@ -1,8 +1,9 @@
+#[cfg(debug_assertions)]
+pub mod file_watcher;
+
 use super::game_api::Game_Api;
 use std::path::{Path, PathBuf};
 
-#[cfg(debug_assertions)]
-use ecs_engine::fs::file_watcher;
 #[cfg(debug_assertions)]
 use notify::DebouncedEvent;
 #[cfg(debug_assertions)]
