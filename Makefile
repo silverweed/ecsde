@@ -1,17 +1,17 @@
 SHELL = bash
 all: build
 
-run:
-	pushd ecs_game && cargo build && popd && cargo run
+run: build
+	cargo run
 
 build:
-	pushd ecs_game && cargo build && popd && cargo build
+	cargo build --all
 
 release:
-	pushd ecs_game && cargo build --release && popd && cargo build --release
+	cargo build --all --release
 
-run_release:
-	pushd ecs_game && cargo build --release && popd && cargo run --release
+run_release: release
+	cargo run --release
 
 test:
 	cargo test
@@ -21,12 +21,12 @@ clippy:
 
 link:
 	@exec &>/dev/null; \
-	pushd target/debug && ln -s ../../cfg && ln -s ../../assets; \
-	pushd deps && ln -s ../../cfg && ln -s ../../assets && ln -s ../../test_resources; \
+	pushd target/debug && ln -s ../../../cfg && ln -s ../../../assets; \
+	pushd deps && ln -s ../../../cfg && ln -s ../../../assets && ln -s ../../../test_resources; \
 	popd
 
 link_release:
 	@exec &>/dev/null; \
-	pushd target/release && ln -s ../../cfg && ln -s ../../assets; \
-	pushd deps && ln -s ../../cfg && ln -s ../../assets && ln -s ../../test_resources; \
+	pushd target/release && ln -s ../../../cfg && ln -s ../../../assets; \
+	pushd deps && ln -s ../../../cfg && ln -s ../../../assets && ln -s ../../../test_resources; \
 	popd

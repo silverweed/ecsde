@@ -42,10 +42,10 @@ pub const fn rgb(r: u8, g: u8, b: u8) -> Color {
 pub fn lerp_col(a: Color, b: Color, t: f32) -> Color {
     let omt = 1. - t;
     rgba(
-        (a.r as f32 * omt + b.r as f32 * t) as u8,
-        (a.g as f32 * omt + b.g as f32 * t) as u8,
-        (a.b as f32 * omt + b.b as f32 * t) as u8,
-        (a.a as f32 * omt + b.a as f32 * t) as u8,
+        (f32::from(a.r) * omt + f32::from(b.r) * t) as u8,
+        (f32::from(a.g) * omt + f32::from(b.g) * t) as u8,
+        (f32::from(a.b) * omt + f32::from(b.b) * t) as u8,
+        (f32::from(a.a) * omt + f32::from(b.a) * t) as u8,
     )
 }
 

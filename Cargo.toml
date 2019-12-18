@@ -1,10 +1,2 @@
-[package]
-edition = "2018"
-name = "ecs"
-version = "0.1.0"
-authors = ["silverweed <silverweed1991@gmail.com>"]
-build = "build.rs"
-
-[dependencies]
-libloading = "0.5"
-notify = "4.0"
+[workspace]
+members = ["ecs_runner", "ecs_engine", "ecs_game"]

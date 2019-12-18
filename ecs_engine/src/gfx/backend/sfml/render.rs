@@ -84,7 +84,7 @@ pub fn render_sprite(
 ) {
     //let origin = vector::from_framework_vec(sprite.origin());
     let mut render_transform = camera.get_matrix_sfml().inverse();
-    render_transform.combine(&mut transform.get_matrix_sfml());
+    render_transform.combine(&transform.get_matrix_sfml());
 
     let render_states = RenderStates {
         transform: render_transform,
@@ -139,7 +139,7 @@ pub fn fill_color_rect_ws<T>(
     T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
     let mut render_transform = camera.get_matrix_sfml().inverse();
-    render_transform.combine(&mut transform.get_matrix_sfml());
+    render_transform.combine(&transform.get_matrix_sfml());
 
     let render_states = RenderStates {
         transform: render_transform,
@@ -169,6 +169,8 @@ pub fn get_texture_size(texture: &sfml::graphics::Texture) -> (u32, u32) {
     (s.x, s.y)
 }
 
+// @Dirty
+// who's using this? Do we need it?
 fn calc_render_transform(
     transform: &Transform2D,
     camera: &Transform2D,
@@ -206,9 +208,9 @@ fn calc_render_transform(
     );
     println!("translation = {:?}", translation);
     let mut rotation = Transform::new(cos, sin, 0.0, -sin, cos, 0.0, 0.0, 0.0, 1.0);
-    rotation.combine(&mut translation.inverse());
+    rotation.combine(&translation.inverse());
     println!("rotation = {:?}", rotation);
-    translation.combine(&mut rotation);
+    translation.combine(&rotation);
     let mut t = translation;
     //}
     println!("t = {:?}", t);
@@ -229,9 +231,9 @@ fn calc_render_transform(
             1.0,
         );
         let mut scale_mat = Transform::new(scale.x, 0.0, 0.0, 0.0, scale.y, 0.0, 0.0, 0.0, 1.0);
-        scale_mat.combine(&mut scale_translation.inverse());
-        scale_translation.combine(&mut scale_mat);
-        t.combine(&mut scale_translation);
+        scale_mat.combine(&scale_translation.inverse());
+        scale_translation.combine(&scale_mat);
+        t.combine(&scale_translation);
     }
 
     t

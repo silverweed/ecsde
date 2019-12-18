@@ -138,7 +138,7 @@ pub unsafe extern "C" fn game_update<'a>(
         let game_state = &mut *game_state;
         app::maybe_update_trace_overlay(
             &mut game_state.engine_state,
-            &game_state.trace_overlay_refresh_rate,
+            game_state.trace_overlay_refresh_rate,
         );
     }
 

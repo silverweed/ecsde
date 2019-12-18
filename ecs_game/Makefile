@@ -7,6 +7,9 @@ run:
 watch:
 	cargo watch -i src -x build
 
+clean:
+	cargo clean && rm -f target/debug/*.so target/release/*.so
+
 build:
 	cargo build
 

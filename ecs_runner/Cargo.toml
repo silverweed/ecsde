@@ -1,0 +1,10 @@
+[package]
+edition = "2018"
+name = "ecs"
+version = "0.1.0"
+authors = ["silverweed <silverweed1991@gmail.com>"]
+
+[dependencies]
+libloading = "0.5"
+notify = "4.0"
+

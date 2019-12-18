@@ -63,7 +63,7 @@ impl Entity_Stream_Builder<'_> {
     }
 }
 
-pub fn new_entity_stream<'a>(world: &'a Ecs_World) -> Entity_Stream_Builder {
+pub fn new_entity_stream(world: &Ecs_World) -> Entity_Stream_Builder {
     Entity_Stream_Builder {
         world,
         required_components: Bit_Set::default(),

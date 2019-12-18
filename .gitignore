@@ -11,3 +11,4 @@ cfg/*
 .vs/
 .gdb_history
 replay.bin
+fuzz/

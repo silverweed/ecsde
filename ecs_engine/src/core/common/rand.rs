@@ -40,6 +40,7 @@ impl Rand_Xoshiro256 {
         Rand_Xoshiro256 { state }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> u64 {
         let s = &mut self.state;
         let res = rand_xoshi256_rotate(s[1].wrapping_mul(5), 7).wrapping_mul(9);

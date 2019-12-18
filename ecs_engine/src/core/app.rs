@@ -254,7 +254,7 @@ fn maybe_create_replay_data(cfg: &App_Config) -> Option<replay_data::Replay_Data
 }
 
 #[cfg(debug_assertions)]
-pub fn maybe_update_trace_overlay(engine_state: &mut Engine_State, refresh_rate: &Cfg_Var<f32>) {
+pub fn maybe_update_trace_overlay(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
     if engine_state.debug_systems.show_trace_overlay && !engine_state.time.paused {
         let t = &mut engine_state.debug_systems.trace_overlay_update_t;
         *t -= time::to_secs_frac(&engine_state.time.real_dt());

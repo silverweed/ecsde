@@ -147,6 +147,10 @@ pub fn tick_game<'a>(
                 &engine_state.config,
                 clone_tracer!(tracer),
             );
+            // @Robustness: limit or control somehow the number of updates done here
+            // (maybe skip some frames if needed), or we can have a kind of "positive feedback"
+            // where we keep losing time while attempting to update the game too many times
+            // in the same frame.
             while game_state.execution_time > update_time {
                 gameplay_system.update(
                     &update_time,

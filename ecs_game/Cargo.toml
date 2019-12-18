@@ -15,7 +15,8 @@ features = ["use-sfml"]
 path = "../ecs_engine"
 
 [dependencies.cgmath]
-path = "../third_party/cgmath"
+git = "https://github.com/rustgd/cgmath"
+rev = "50a345b"
 
 [features]
 prof_entities_update = []
