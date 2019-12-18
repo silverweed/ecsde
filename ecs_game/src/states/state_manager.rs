@@ -31,7 +31,7 @@ impl State_Manager {
         if let Some(state) = self.current_state() {
             match state.update(engine_state, gs) {
                 State_Transition::None => {}
-                State_Transition::Push(new_state) => self.push_state(engine_state, gs, new_state),
+                State_Transition::Push(new_state) => self.push_state(new_state, engine_state, gs),
                 State_Transition::Replace(new_state) => {
                     self.replace_state(engine_state, gs, new_state)
                 }
@@ -82,9 +82,9 @@ impl State_Manager {
 
     fn push_state(
         &mut self,
+        mut state: Box<dyn Game_State>,
         engine_state: &mut Engine_State,
         gs: &mut Gameplay_System,
-        mut state: Box<dyn Game_State>,
     ) {
         if let Some(s) = self.current_state() {
             s.on_pause(engine_state, gs);
