@@ -69,19 +69,28 @@ pub fn display(window: &mut Window_Handle) {
 
 pub fn resize_keep_ratio(window: &mut Window_Handle, new_width: u32, new_height: u32) {
     use sfml::graphics as sfgfx;
+    use std::cmp::Ordering;
 
     let (target_width, target_height) = window.target_size;
     let screen_width = new_width as f32 / target_width as f32;
     let screen_height = new_height as f32 / target_height as f32;
 
+    // @Robustness: what do we do if width or height are zero?
+    debug_assert!(screen_width.is_normal());
+    debug_assert!(screen_height.is_normal());
+
     let mut viewport = sfgfx::FloatRect::new(0.0, 0.0, 1.0, 1.0);
-    if screen_width > screen_height {
-        viewport.width = screen_height / screen_width;
-        viewport.left = 0.5 * (1.0 - viewport.width);
-    } else if screen_width < screen_height {
-        viewport.height = screen_width / screen_height;
-        viewport.top = 0.5 * (1.0 - viewport.height);
-    };
+    match screen_width.partial_cmp(&screen_height) {
+        Some(Ordering::Greater) => {
+            viewport.width = screen_height / screen_width;
+            viewport.left = 0.5 * (1.0 - viewport.width);
+        }
+        Some(Ordering::Less) => {
+            viewport.height = screen_width / screen_height;
+            viewport.top = 0.5 * (1.0 - viewport.height);
+        }
+        _ => {}
+    }
     let mut view = sfgfx::View::from_rect(&sfgfx::FloatRect::new(
         0.0,
         0.0,
