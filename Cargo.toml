@@ -1,2 +1,2 @@
 [workspace]
-members = ["ecs_runner", "ecs_engine", "ecs_game"]
+members = ["ecs_runner", "ecs_game", "ecs_engine"]

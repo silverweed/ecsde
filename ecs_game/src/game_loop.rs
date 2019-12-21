@@ -299,7 +299,7 @@ fn update_joystick_debug_overlay(
                 });
                 debug_overlay.add_line_color(
                     &format!("{:?}: {:.2}", axis, axes[i as usize]),
-                    colors::rgb(255, 255, 0),
+                    colors::rgb(255, 0, 0),
                 );
             }
         }
