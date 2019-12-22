@@ -95,7 +95,7 @@ fn main() -> std::io::Result<()> {
 #[cfg(not(debug_assertions))]
 fn main() -> std::io::Result<()> {
     let game_dll_abs_path = format!("{}/{}", GAME_DLL_FOLDER, GAME_DLL_FILE);
-    let (game_lib, unique_lib_path) = lib_load(&game_dll_abs_path);
+    let game_lib = lib_load(&game_dll_abs_path);
     let game_api = unsafe { game_load(&game_lib)? };
     let game_api::Game_Bundle {
         game_state,
@@ -112,13 +112,6 @@ fn main() -> std::io::Result<()> {
 
     unsafe {
         (game_api.shutdown)(game_state, game_resources);
-    }
-
-    if let Err(err) = std::fs::remove_file(&unique_lib_path) {
-        eprintln!(
-            "[ WARNING ] Failed to remove old lib {:?}: {:?}",
-            unique_lib_path, err
-        );
     }
 
     Ok(())

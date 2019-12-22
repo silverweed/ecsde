@@ -50,6 +50,7 @@ impl file_watcher::File_Watcher_Event_Handler for Game_Dll_File_Watcher {
     }
 }
 
+#[cfg(debug_assertions)]
 pub fn lib_load(lib_path: &str) -> (ll::Library, PathBuf) {
     let unique_name = {
         let timestamp = std::time::SystemTime::now()
@@ -72,6 +73,16 @@ pub fn lib_load(lib_path: &str) -> (ll::Library, PathBuf) {
         }),
         unique_lib_path,
     )
+}
+
+#[cfg(not(debug_assertions))]
+pub fn lib_load(lib_path: &str) -> ll::Library {
+    ll::Library::new(lib_path).unwrap_or_else(|err| {
+        panic!(
+            "[ ERROR ] Failed to load library '{:?}': {:?}",
+            lib_path, err
+        )
+    })
 }
 
 #[cfg(debug_assertions)]
