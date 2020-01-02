@@ -22,6 +22,9 @@ extern crate bitflags;
 #[cfg(features = "use-sfml")]
 extern crate sfml;
 
+#[macro_use]
+pub mod prelude;
+
 pub mod alloc;
 pub mod audio;
 pub mod cfg;
@@ -41,5 +44,3 @@ pub mod test_common;
 
 #[cfg(debug_assertions)]
 pub mod debug;
-
-pub mod prelude;

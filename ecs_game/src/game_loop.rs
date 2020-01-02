@@ -141,12 +141,12 @@ pub fn tick_game<'a>(
                 }
             }
 
-            trace!("collisions", tracer);
+            trace!("collision_system::update", tracer);
 
-            engine_state
-                .systems
-                .collision_system
-                .update(&mut game_state.gameplay_system.ecs_world);
+            engine_state.systems.collision_system.update(
+                &mut game_state.gameplay_system.ecs_world,
+                clone_tracer!(tracer),
+            );
         }
 
         // Update game systems
@@ -283,14 +283,6 @@ fn update_graphics(
     #[cfg(debug_assertions)]
     {
         {
-            trace!("debug_ui_system::update", game_state.engine_state.tracer);
-            game_state
-                .engine_state
-                .debug_systems
-                .debug_ui_system
-                .update(&real_dt, window, gres);
-        }
-        {
             trace!("debug_painter::update", game_state.engine_state.tracer);
             game_state
                 .engine_state
@@ -298,6 +290,14 @@ fn update_graphics(
                 .debug_painter
                 .draw(window, &game_state.gameplay_system.get_camera().transform);
             game_state.engine_state.debug_systems.debug_painter.clear();
+        }
+        {
+            trace!("debug_ui_system::update", game_state.engine_state.tracer);
+            game_state
+                .engine_state
+                .debug_systems
+                .debug_ui_system
+                .update(&real_dt, window, gres);
         }
     }
 
