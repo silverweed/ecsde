@@ -6,7 +6,7 @@ use crate::input::input_system;
 #[cfg(debug_assertions)]
 use crate::cfg;
 #[cfg(debug_assertions)]
-use crate::debug::debug_ui_system;
+use crate::debug::{debug_painter::Debug_Painter, debug_ui_system};
 #[cfg(debug_assertions)]
 use crate::replay::recording_system;
 
@@ -21,6 +21,7 @@ pub struct Debug_Systems {
     pub debug_ui_system: debug_ui_system::Debug_Ui_System,
 
     pub replay_recording_system: recording_system::Replay_Recording_System,
+    pub debug_painter: Debug_Painter,
 
     pub show_trace_overlay: bool,
     pub trace_overlay_update_t: f32,
@@ -52,6 +53,7 @@ impl Debug_Systems {
                     .read(cfg),
                 },
             ),
+            debug_painter: Debug_Painter::new(),
             show_trace_overlay: false,
             trace_overlay_update_t: 0.0,
         }

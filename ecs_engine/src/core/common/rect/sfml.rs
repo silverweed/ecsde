@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter, Result};
+use std::ops::{Add, Sub};
 
 #[derive(Copy, Clone)]
 pub struct Rect<T: Copy + Clone>(sfml::graphics::Rect<T>);
@@ -51,6 +52,13 @@ where
     pub fn set_height(&mut self, h: T) {
         self.0.height = h;
     }
+}
+
+pub fn rects_intersect<T>(a: &Rect<T>, b: &Rect<T>) -> bool
+where
+    T: PartialOrd + Add<Output = T> + Sub<Output = T> + Copy,
+{
+    a.0.intersection(&b.0).is_some()
 }
 
 impl<T> std::ops::Deref for Rect<T>

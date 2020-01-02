@@ -128,6 +128,27 @@ pub fn tick_game<'a>(
             }
         }
 
+        // Update collisions
+        {
+            #[cfg(debug_assertions)]
+            {
+                let draw_colliders = game_state.draw_colliders.read(&engine_state.config);
+                if draw_colliders {
+                    debug_draw_colliders(
+                        &game_state.gameplay_system.ecs_world,
+                        &mut engine_state.debug_systems.debug_painter,
+                    );
+                }
+            }
+
+            trace!("collisions", tracer);
+
+            engine_state
+                .systems
+                .collision_system
+                .update(&mut game_state.gameplay_system.ecs_world);
+        }
+
         // Update game systems
         {
             trace!("game_update", tracer);
@@ -261,12 +282,23 @@ fn update_graphics(
 
     #[cfg(debug_assertions)]
     {
-        trace!("debug_ui_system::update", game_state.engine_state.tracer);
-        game_state
-            .engine_state
-            .debug_systems
-            .debug_ui_system
-            .update(&real_dt, window, gres);
+        {
+            trace!("debug_ui_system::update", game_state.engine_state.tracer);
+            game_state
+                .engine_state
+                .debug_systems
+                .debug_ui_system
+                .update(&real_dt, window, gres);
+        }
+        {
+            trace!("debug_painter::update", game_state.engine_state.tracer);
+            game_state
+                .engine_state
+                .debug_systems
+                .debug_painter
+                .draw(window, &game_state.gameplay_system.get_camera().transform);
+            game_state.engine_state.debug_systems.debug_painter.clear();
+        }
     }
 
     {
@@ -346,4 +378,46 @@ fn update_entities_debug_overlay(
         &format!("Entities: {}", ecs_world.entity_manager.n_live_entities()),
         colors::rgba(220, 100, 180, 220),
     );
+}
+
+#[cfg(debug_assertions)]
+fn debug_draw_colliders(
+    ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
+    debug_painter: &mut ecs_engine::debug::debug_painter::Debug_Painter,
+) {
+    use ecs_engine::collisions::collider::{Collider, Collider_Shape};
+    use ecs_engine::core::common::rect::Rect;
+    use ecs_engine::ecs::components::base::C_Spatial2D;
+
+    let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
+        .require::<Collider>()
+        .require::<C_Spatial2D>()
+        .build();
+    loop {
+        let entity = stream.next(ecs_world);
+        if entity.is_none() {
+            break;
+        }
+        let entity = entity.unwrap();
+        let collider = ecs_world.get_component::<Collider>(entity).unwrap();
+        let transform = &ecs_world
+            .get_component::<C_Spatial2D>(entity)
+            .unwrap()
+            .global_transform;
+        let pos = transform.position();
+
+        match collider.shape {
+            Collider_Shape::Rect { width, height } => {
+                debug_painter.add_rect(
+                    Rect::new(0., 0., width, height),
+                    transform,
+                    if collider.colliding {
+                        colors::rgba(255, 0, 0, 100)
+                    } else {
+                        colors::rgba(255, 255, 0, 100)
+                    },
+                );
+            }
+        }
+    }
 }

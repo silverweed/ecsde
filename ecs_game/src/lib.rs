@@ -60,6 +60,8 @@ pub struct Game_State<'a> {
     pub record_replay: Cfg_Var<bool>, // /engine/debug/replay/record
     #[cfg(debug_assertions)]
     pub trace_overlay_refresh_rate: Cfg_Var<f32>,
+    #[cfg(debug_assertions)]
+    pub draw_colliders: Cfg_Var<bool>,
 
     pub rng: rand::Default_Rng,
 }
@@ -263,6 +265,8 @@ fn create_game_state<'a>(
     let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
     #[cfg(debug_assertions)]
     let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
+    #[cfg(debug_assertions)]
+    let draw_colliders = Cfg_Var::new("engine/debug/collisions/draw_colliders", cfg);
 
     Ok(Box::new(Game_State {
         window,
@@ -292,6 +296,8 @@ fn create_game_state<'a>(
         record_replay,
         #[cfg(debug_assertions)]
         trace_overlay_refresh_rate,
+        #[cfg(debug_assertions)]
+        draw_colliders,
     }))
 }
 

@@ -15,4 +15,5 @@ impl Default for Collider_Shape {
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Collider {
     pub shape: Collider_Shape,
+    pub colliding: bool,
 }

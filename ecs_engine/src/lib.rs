@@ -5,7 +5,9 @@
 
 extern crate byteorder;
 extern crate cgmath;
+extern crate crossbeam;
 extern crate notify;
+extern crate num_cpus;
 extern crate num_enum;
 
 #[macro_use]

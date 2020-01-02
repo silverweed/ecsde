@@ -267,8 +267,9 @@ impl Gameplay_System {
         }
 
         let mut prev_entity: Option<Entity> = None;
+        let mut fst_entity: Option<Entity> = None;
         let n_frames = 4;
-        for i in 0..1000 {
+        for i in 0..100 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
@@ -285,9 +286,16 @@ impl Gameplay_System {
                 t.local_transform
                     .set_origin((sw / n_frames) as f32 * 0.5, (sh / n_frames) as f32 * 0.5);
                 if i > 0 {
-                    t.local_transform.set_position(x * 48.0, y * 48.0);
+                    t.local_transform.set_position(x * 4248.0, y * 4248.0);
                 }
-                self.scene_tree.add(entity, prev_entity, &t.local_transform);
+                self.scene_tree.add(entity, fst_entity, &t.local_transform);
+            }
+            {
+                let c = em.add_component::<collider::Collider>(entity);
+                c.shape = collider::Collider_Shape::Rect {
+                    width: (sw / n_frames) as f32,
+                    height: sh as f32,
+                };
             }
             {
                 let s = em.add_component::<C_Animated_Sprite>(entity);
@@ -295,6 +303,9 @@ impl Gameplay_System {
                 s.frame_time = 0.16;
             }
             prev_entity = Some(entity);
+            if fst_entity.is_none() {
+                fst_entity = Some(entity);
+            }
             //{
             //    let mut t = em.add_component::<C_Spatial2D>(entity);
             //    t.transform.set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
@@ -338,7 +349,7 @@ impl Gameplay_System {
             .enumerate()
         {
             let speed = 1.0;
-            if i % 10 == 0 {
+            if i % 10 == 1 {
                 t.local_transform.rotate(Deg(dt_secs * speed));
             }
         }
