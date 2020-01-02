@@ -37,9 +37,9 @@ impl Axis_Emulation_Type {
 }
 
 pub(super) struct Axis_Bindings {
-    pub(self) axes_names: Vec<String_Id>,
-    pub(self) real: [Vec<String_Id>; joystick::Joystick_Axis::_Count as usize],
-    pub(self) emulated: HashMap<Input_Action, Vec<(String_Id, Axis_Emulation_Type)>>,
+    axes_names: Vec<String_Id>,
+    real: [Vec<String_Id>; joystick::Joystick_Axis::_Count as usize],
+    emulated: HashMap<Input_Action, Vec<(String_Id, Axis_Emulation_Type)>>,
 }
 
 /// Struct containing the mappings between input and user-defined actions and axes_mappings.

@@ -1,5 +1,5 @@
-use ecs_engine::core::common::transform::Transform2D;
-use ecs_engine::core::common::vector::Vec2f;
+use crate::core::common::transform::Transform2D;
+use crate::core::common::vector::Vec2f;
 
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct C_Velocity2D {

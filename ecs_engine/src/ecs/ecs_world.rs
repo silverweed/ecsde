@@ -1,7 +1,7 @@
-use ecs_engine::alloc::generational_allocator::{
+use crate::alloc::generational_allocator::{
     Gen_Type, Generational_Allocator, Generational_Index, Index_Type,
 };
-use ecs_engine::core::common::bitset::Bit_Set;
+use crate::core::common::bitset::Bit_Set;
 use std::any::{type_name, TypeId};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -19,7 +19,7 @@ struct Component_Storage {
     pub comp_idx: HashMap<Entity_Index, usize>,
 }
 
-pub struct Component_Manager {
+pub(super) struct Component_Manager {
     components: Vec<Component_Storage>,
     last_comp_handle: Component_Handle,
     // Indexed by entity index
@@ -27,7 +27,7 @@ pub struct Component_Manager {
 }
 
 impl Component_Manager {
-    pub fn new() -> Component_Manager {
+    fn new() -> Component_Manager {
         Component_Manager {
             components: vec![],
             last_comp_handle: 0,
@@ -35,7 +35,7 @@ impl Component_Manager {
         }
     }
 
-    pub(self) fn register_component<T>(&mut self) -> Component_Handle {
+    fn register_component<T>(&mut self) -> Component_Handle {
         let handle = self.last_comp_handle;
 
         self.components
@@ -47,11 +47,7 @@ impl Component_Manager {
         handle
     }
 
-    pub(self) fn add_component(
-        &mut self,
-        entity: Entity,
-        comp_handle: Component_Handle,
-    ) -> *mut u8 {
+    fn add_component(&mut self, entity: Entity, comp_handle: Component_Handle) -> *mut u8 {
         let storage = self
             .components
             .get_mut(comp_handle as usize)
@@ -79,11 +75,7 @@ impl Component_Manager {
         unsafe { storage.data.as_mut_ptr().add(index * individual_size) }
     }
 
-    pub(self) fn get_component(
-        &self,
-        entity: Entity,
-        comp_handle: Component_Handle,
-    ) -> Option<*const u8> {
+    fn get_component(&self, entity: Entity, comp_handle: Component_Handle) -> Option<*const u8> {
         let storage = &self.components[comp_handle as usize];
 
         if storage.individual_size == 0 {
@@ -104,7 +96,7 @@ impl Component_Manager {
         }
     }
 
-    pub(self) fn get_component_mut(
+    fn get_component_mut(
         &mut self,
         entity: Entity,
         comp_handle: Component_Handle,
@@ -134,22 +126,22 @@ impl Component_Manager {
         }
     }
 
-    pub(self) fn remove_component(&mut self, entity: Entity, comp_handle: Component_Handle) {
+    fn remove_component(&mut self, entity: Entity, comp_handle: Component_Handle) {
         self.entity_comp_set[entity.index].set(comp_handle as usize, false);
         self.components[comp_handle as usize]
             .comp_idx
             .remove(&entity.index);
     }
 
-    pub(self) fn has_component(&self, entity: Entity, comp_handle: Component_Handle) -> bool {
+    fn has_component(&self, entity: Entity, comp_handle: Component_Handle) -> bool {
         self.entity_comp_set[entity.index].get(comp_handle as usize)
     }
 
-    pub(self) fn get_components(&self, comp_handle: Component_Handle) -> &[u8] {
+    fn get_components(&self, comp_handle: Component_Handle) -> &[u8] {
         &self.components[comp_handle as usize].data
     }
 
-    pub(self) fn get_components_mut(&mut self, comp_handle: Component_Handle) -> &mut [u8] {
+    fn get_components_mut(&mut self, comp_handle: Component_Handle) -> &mut [u8] {
         &mut self.components[comp_handle as usize].data
     }
 }
@@ -189,7 +181,7 @@ impl Entity_Manager {
 pub struct Ecs_World {
     pub component_handles: HashMap<TypeId, Component_Handle>,
     pub entity_manager: Entity_Manager,
-    pub component_manager: Component_Manager,
+    pub(super) component_manager: Component_Manager,
 }
 
 impl Ecs_World {

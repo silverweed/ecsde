@@ -339,7 +339,7 @@ fn update_fps_debug_overlay(
 #[cfg(debug_assertions)]
 fn update_entities_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
-    ecs_world: &crate::ecs::entity_manager::Ecs_World,
+    ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
 ) {
     debug_overlay.clear();
     debug_overlay.add_line_color(

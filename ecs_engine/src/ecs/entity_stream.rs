@@ -1,5 +1,5 @@
-use super::entity_manager::{Ecs_World, Entity};
-use ecs_engine::core::common::bitset::Bit_Set;
+use super::ecs_world::{Ecs_World, Entity};
+use crate::core::common::bitset::Bit_Set;
 use std::any::type_name;
 
 pub struct Entity_Stream {
@@ -39,8 +39,8 @@ impl Entity_Stream {
 }
 
 pub struct Entity_Stream_Builder<'a> {
-    pub(self) world: &'a Ecs_World,
-    pub(self) required_components: Bit_Set,
+    world: &'a Ecs_World,
+    required_components: Bit_Set,
 }
 
 impl Entity_Stream_Builder<'_> {

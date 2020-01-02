@@ -1,13 +1,10 @@
 use super::controllable_system::C_Controllable;
 use crate::controllable_system;
-use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
-use crate::ecs::entity_manager::{Ecs_World, Entity};
-use crate::ecs::entity_stream::{new_entity_stream, Entity_Stream};
 use crate::gfx;
-use crate::scene_tree;
 use cgmath::{Deg, InnerSpace};
 use ecs_engine::cfg::{self, Cfg_Var};
+use ecs_engine::collisions::collider;
 use ecs_engine::core::common;
 use ecs_engine::core::common::rand;
 use ecs_engine::core::common::rect::Rect;
@@ -15,7 +12,11 @@ use ecs_engine::core::common::stringid::String_Id;
 use ecs_engine::core::common::transform::Transform2D;
 use ecs_engine::core::common::vector::Vec2f;
 use ecs_engine::core::env::Env_Info;
+use ecs_engine::core::scene_tree;
 use ecs_engine::core::time;
+use ecs_engine::ecs::components::base::C_Spatial2D;
+use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
+use ecs_engine::ecs::entity_stream::{new_entity_stream, Entity_Stream};
 use ecs_engine::gfx as ngfx;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::input_system::Game_Action;
@@ -204,6 +205,7 @@ impl Gameplay_System {
         em.register_component::<C_Renderable>();
         em.register_component::<C_Animated_Sprite>();
         em.register_component::<C_Controllable>();
+        em.register_component::<collider::Collider>();
     }
 
     fn update_camera(

@@ -13,7 +13,6 @@ mod ecs;
 mod game_loop;
 mod gameplay_system;
 mod gfx;
-mod scene_tree;
 mod states;
 
 use ecs_engine::cfg::Cfg_Var;

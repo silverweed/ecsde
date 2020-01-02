@@ -12,34 +12,42 @@ where
         Rect(sfml::graphics::Rect::new(x, y, w, h))
     }
 
+    #[inline]
     pub fn x(&self) -> T {
         self.0.left
     }
 
+    #[inline]
     pub fn y(&self) -> T {
         self.0.top
     }
 
+    #[inline]
     pub fn set_x(&mut self, x: T) {
         self.0.left = x;
     }
 
+    #[inline]
     pub fn set_y(&mut self, y: T) {
         self.0.top = y;
     }
 
+    #[inline]
     pub fn width(&self) -> T {
         self.0.width
     }
 
+    #[inline]
     pub fn height(&self) -> T {
         self.0.height
     }
 
+    #[inline]
     pub fn set_width(&mut self, w: T) {
         self.0.width = w;
     }
 
+    #[inline]
     pub fn set_height(&mut self, h: T) {
         self.0.height = h;
     }

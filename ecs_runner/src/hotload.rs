@@ -28,7 +28,6 @@ impl Game_Dll_File_Watcher {
 #[cfg(debug_assertions)]
 impl file_watcher::File_Watcher_Event_Handler for Game_Dll_File_Watcher {
     fn handle(&mut self, event: &DebouncedEvent) {
-        eprintln!("EVENT = {:?}", event);
         match event {
             DebouncedEvent::Write(path)
             | DebouncedEvent::Create(path)

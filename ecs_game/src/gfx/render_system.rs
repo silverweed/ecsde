@@ -1,8 +1,8 @@
-use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Camera2D, C_Renderable};
-use crate::ecs::entity_manager::Ecs_World;
-use crate::ecs::entity_stream::Entity_Stream;
 use ecs_engine::core::common::colors::Color;
+use ecs_engine::ecs::components::base::C_Spatial2D;
+use ecs_engine::ecs::ecs_world::Ecs_World;
+use ecs_engine::ecs::entity_stream::Entity_Stream;
 use ecs_engine::gfx as ngfx;
 use ecs_engine::prelude::*;
 use ecs_engine::resources;

@@ -238,8 +238,8 @@ impl std::iter::IntoIterator for Replay_Data {
 }
 
 pub struct Replay_Data_Iter {
-    pub(self) replay: Replay_Data,
-    pub(self) idx: usize,
+    replay: Replay_Data,
+    idx: usize,
 }
 
 impl std::iter::Iterator for Replay_Data_Iter {

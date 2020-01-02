@@ -1,7 +1,7 @@
-use crate::ecs::entity_manager::Ecs_World;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::core::common::vector::Vec2f;
 use ecs_engine::core::time;
+use ecs_engine::ecs::ecs_world::Ecs_World;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::input_system::Game_Action;
 use std::time::Duration;

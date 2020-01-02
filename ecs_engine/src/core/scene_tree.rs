@@ -1,7 +1,6 @@
-use crate::ecs::entity_manager::Entity;
-use ecs_engine::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
-use ecs_engine::core::common::transform::Transform2D;
-use std::vec::Vec;
+use crate::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
+use crate::core::common::transform::Transform2D;
+use crate::ecs::ecs_world::Entity;
 
 type Node = Generational_Index;
 
@@ -154,7 +153,7 @@ impl Scene_Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ecs::entity_manager::Ecs_World;
+    use crate::ecs::ecs_world::Ecs_World;
     use cgmath::Deg;
     use float_cmp::ApproxEq;
 
