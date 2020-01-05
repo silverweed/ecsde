@@ -6,12 +6,16 @@ pub struct Rand_Xoshiro256 {
     state: [u64; 4],
 }
 
-pub fn new_rng() -> std::io::Result<Rand_Xoshiro256> {
+pub fn new_rng_with_random_seed() -> std::io::Result<Rand_Xoshiro256> {
     let mut seed_buf = [0u8; 32];
     get_entropy_from_os(&mut seed_buf)?;
     // @Robustness: consider hashing in the system time
     // or something like that.
     Ok(Rand_Xoshiro256::new_with_seed(seed_buf))
+}
+
+pub fn new_rng_with_seed(seed: [u8; 32]) -> std::io::Result<Rand_Xoshiro256> {
+    Ok(Rand_Xoshiro256::new_with_seed(seed))
 }
 
 pub fn rand_01(rng: &mut Rand_Xoshiro256) -> f32 {

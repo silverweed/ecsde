@@ -16,7 +16,7 @@ mod gfx;
 mod states;
 
 use ecs_engine::cfg::Cfg_Var;
-use ecs_engine::core::common::rand;
+use ecs_engine::core::rand;
 use ecs_engine::core::{app, app_config};
 use ecs_engine::gfx::{self as ngfx, window};
 use ecs_engine::input;
@@ -285,7 +285,14 @@ fn create_game_state<'a>(
         is_replaying,
         gameplay_system: gameplay_system::Gameplay_System::new(),
         state_mgr: states::state_manager::State_Manager::new(),
-        rng: rand::new_rng()?,
+        #[cfg(debug_assertions)]
+        rng: rand::new_rng_with_seed([
+            0x12, 0x23, 0x33, 0x44, 0x44, 0xab, 0xbc, 0xcc, 0x45, 0x21, 0x72, 0x21, 0xfe, 0x31,
+            0xdf, 0x46, 0xfe, 0xb4, 0x2a, 0xa9, 0x47, 0xdd, 0xd1, 0x37, 0x80, 0xfc, 0x22, 0xa1,
+            0xa2, 0xb3, 0xc0, 0xfe,
+        ])?,
+        #[cfg(not(debug_assertions))]
+        rng: rand::new_rng_with_random_seed()?,
 
         // Cfg_Vars
         gameplay_update_tick_ms,

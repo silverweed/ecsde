@@ -6,12 +6,12 @@ use cgmath::{Deg, InnerSpace};
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider;
 use ecs_engine::core::common;
-use ecs_engine::core::common::rand;
 use ecs_engine::core::common::rect::Rect;
 use ecs_engine::core::common::stringid::String_Id;
 use ecs_engine::core::common::transform::Transform2D;
 use ecs_engine::core::common::vector::Vec2f;
 use ecs_engine::core::env::Env_Info;
+use ecs_engine::core::rand;
 use ecs_engine::core::scene_tree;
 use ecs_engine::core::time;
 use ecs_engine::ecs::components::base::C_Spatial2D;
@@ -291,7 +291,7 @@ impl Gameplay_System {
         let mut prev_entity: Option<Entity> = None;
         let mut fst_entity: Option<Entity> = None;
         let n_frames = 4;
-        for i in 0..1000 {
+        for i in 0..20 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
@@ -308,9 +308,9 @@ impl Gameplay_System {
                 t.local_transform
                     .set_origin((sw / n_frames) as f32 * 0.5, (sh / n_frames) as f32 * 0.5);
                 if i > 0 {
-                    t.local_transform.set_position(x * 42.0, y * 42.0);
+                    t.local_transform.set_position(x * 1042.0, y * 1042.0);
                 }
-                self.scene_tree.add(entity, prev_entity, &t.local_transform);
+                self.scene_tree.add(entity, fst_entity, &t.local_transform);
             }
             {
                 let c = em.add_component::<collider::Collider>(entity);
@@ -365,16 +365,16 @@ impl Gameplay_System {
             spat.velocity.y = transl.y;
         }
 
-        for (i, t) in em
-            .get_components_mut::<C_Spatial2D>()
-            .iter_mut()
-            .enumerate()
-        {
-            let speed = 1.0;
-            if i % 10 == 1 {
-                t.local_transform.rotate(Deg(dt_secs * speed));
-            }
-        }
+        //for (i, t) in em
+        //.get_components_mut::<C_Spatial2D>()
+        //.iter_mut()
+        //.enumerate()
+        //{
+        //let speed = 1.0;
+        //if i % 10 == 1 {
+        //t.local_transform.rotate(Deg(dt_secs * speed));
+        //}
+        //}
     }
 }
 
