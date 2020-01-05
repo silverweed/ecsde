@@ -1,11 +1,14 @@
 use crate::core::common::rect::Rect;
+use crate::core::common::shapes;
 use crate::core::common::transform::Transform2D;
 use crate::core::common::vector::{to_framework_vec, Vec2f};
 use crate::gfx::render::Paint_Properties;
 use crate::gfx::window::Window_Handle;
 use cgmath::Rad;
 use sfml::graphics::Shape;
-use sfml::graphics::{RectangleShape, RenderStates, RenderTarget, Transform, Transformable};
+use sfml::graphics::{
+    CircleShape, RectangleShape, RenderStates, RenderTarget, Transform, Transformable,
+};
 use sfml::system::{SfBox, Vector2f};
 
 pub type Blend_Mode = sfml::graphics::blend_mode::BlendMode;
@@ -78,14 +81,18 @@ pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect<i32>) -> Sprite<'a
 
 pub fn render_sprite(
     window: &mut Window_Handle,
-    sprite: &Sprite<'_>,
+    sprite: &mut Sprite,
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
     // @Incomplete? Do we need this?
     //let origin = vector::from_framework_vec(sprite.origin());
     let mut render_transform = camera.get_matrix_sfml().inverse();
-    render_transform.combine(&transform.get_matrix_sfml());
+    //render_transform.combine(&transform.get_matrix_sfml());
+
+    sprite.set_position(to_framework_vec(transform.position() - transform.origin()));
+    sprite.set_rotation(transform.rotation().0);
+    sprite.set_scale(to_framework_vec(transform.scale()));
 
     let render_states = RenderStates {
         transform: render_transform,
@@ -108,29 +115,42 @@ pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: R
         .draw_rectangle_shape(&rectangle_shape, render_states);
 }
 
-pub fn render_text(window: &mut Window_Handle, text: &mut Text, world_pos: Vec2f) {
-    text.set_position(to_framework_vec(world_pos));
+pub fn render_text(window: &mut Window_Handle, text: &mut Text, screen_pos: Vec2f) {
+    text.set_position(to_framework_vec(screen_pos));
     window.handle.draw(text);
+}
+
+pub fn render_text_ws(
+    window: &mut Window_Handle,
+    text: &Text,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) {
+    let mut render_transform = camera.get_matrix_sfml().inverse();
+    render_transform.combine(&transform.get_matrix_sfml());
+
+    let render_states = RenderStates {
+        transform: render_transform,
+        blend_mode: get_blend_mode(window),
+        ..Default::default()
+    };
+
+    window.handle.draw_with_renderstates(text, render_states);
 }
 
 pub fn fill_color_rect<T>(window: &mut Window_Handle, paint_props: &Paint_Properties, rect: T)
 where
     T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
-    let render_states = RenderStates {
-        blend_mode: get_blend_mode(window),
-        ..Default::default()
-    };
-    let mut rectangle_shape = RectangleShape::new();
-    let rect = rect.into();
-    rectangle_shape.set_position(Vector2f::new(rect.x(), rect.y()));
-    rectangle_shape.set_size(Vector2f::new(rect.width(), rect.height()));
-    rectangle_shape.set_fill_color(paint_props.color);
-    rectangle_shape.set_outline_thickness(paint_props.border_thick);
-    rectangle_shape.set_outline_color(paint_props.border_color);
-    window
-        .handle
-        .draw_rectangle_shape(&rectangle_shape, render_states);
+    fill_color_rect_internal(
+        window,
+        paint_props,
+        rect,
+        RenderStates {
+            blend_mode: get_blend_mode(window),
+            ..Default::default()
+        },
+    );
 }
 
 pub fn fill_color_rect_ws<T>(
@@ -150,6 +170,18 @@ pub fn fill_color_rect_ws<T>(
         blend_mode: get_blend_mode(window),
         ..Default::default()
     };
+
+    fill_color_rect_internal(window, paint_props, rect, render_states);
+}
+
+fn fill_color_rect_internal<T>(
+    window: &mut Window_Handle,
+    paint_props: &Paint_Properties,
+    rect: T,
+    render_states: RenderStates,
+) where
+    T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
+{
     let mut rectangle_shape = RectangleShape::new();
     let rect = rect.into();
     rectangle_shape.set_position(Vector2f::new(rect.x(), rect.y()));
@@ -160,6 +192,41 @@ pub fn fill_color_rect_ws<T>(
     window
         .handle
         .draw_rectangle_shape(&rectangle_shape, render_states);
+}
+
+pub fn fill_color_circle_ws(
+    window: &mut Window_Handle,
+    paint_props: &Paint_Properties,
+    circle: shapes::Circle,
+    camera: &Transform2D,
+) {
+    let transform = Transform2D::from_pos_rot_scale(circle.center, Rad(0.), Vec2f::new(1., 1.));
+    let mut render_transform = camera.get_matrix_sfml().inverse();
+    render_transform.combine(&transform.get_matrix_sfml());
+
+    let render_states = RenderStates {
+        transform: render_transform,
+        blend_mode: get_blend_mode(window),
+        ..Default::default()
+    };
+
+    fill_color_circle_internal(window, paint_props, circle, render_states);
+}
+
+fn fill_color_circle_internal(
+    window: &mut Window_Handle,
+    paint_props: &Paint_Properties,
+    circle: shapes::Circle,
+    render_states: RenderStates,
+) {
+    let mut circle_shape = CircleShape::new(circle.radius, paint_props.point_count);
+    circle_shape.set_position(Vector2f::new(circle.center.x, circle.center.y));
+    circle_shape.set_fill_color(paint_props.color);
+    circle_shape.set_outline_thickness(paint_props.border_thick);
+    circle_shape.set_outline_color(paint_props.border_color);
+    window
+        .handle
+        .draw_circle_shape(&circle_shape, render_states);
 }
 
 pub fn get_blend_mode(window: &Window_Handle) -> Blend_Mode {

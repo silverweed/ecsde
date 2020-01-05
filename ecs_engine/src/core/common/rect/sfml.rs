@@ -1,3 +1,4 @@
+use cgmath::Vector2;
 use std::fmt::{Debug, Formatter, Result};
 use std::ops::{Add, Sub};
 
@@ -51,6 +52,11 @@ where
     #[inline]
     pub fn set_height(&mut self, h: T) {
         self.0.height = h;
+    }
+
+    #[inline]
+    pub fn size(&self) -> Vector2<T> {
+        Vector2::new(self.0.width, self.0.height)
     }
 }
 

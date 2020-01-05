@@ -49,7 +49,7 @@ pub fn update(
         } = rend;
 
         let texture = resources.get_texture(*tex_id);
-        let sprite = ngfx::render::create_sprite(texture, *src_rect);
+        let mut sprite = ngfx::render::create_sprite(texture, *src_rect);
 
         let mut rend_transform = spatial.global_transform;
         if cfg.smooth_by_extrapolating_velocity {
@@ -72,6 +72,6 @@ pub fn update(
                 );
             }
         }
-        ngfx::render::render_sprite(window, &sprite, &rend_transform, &camera.transform);
+        ngfx::render::render_sprite(window, &mut sprite, &rend_transform, &camera.transform);
     }
 }

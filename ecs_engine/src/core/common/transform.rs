@@ -109,6 +109,10 @@ impl Transform2D {
         self.rotation
     }
 
+    pub fn origin(&self) -> Vec2f {
+        self.origin
+    }
+
     pub fn set_origin(&mut self, x: f32, y: f32) {
         self.origin = Vec2f::new(x, y);
     }

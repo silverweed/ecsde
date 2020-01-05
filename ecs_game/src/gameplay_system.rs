@@ -63,6 +63,7 @@ impl Gameplay_System {
     pub fn update(
         &mut self,
         dt: &Duration,
+        time: &time::Time,
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
@@ -82,12 +83,6 @@ impl Gameplay_System {
         }
         controllable_system::update(&dt, actions, axes, &mut self.ecs_world, cfg);
 
-        #[cfg(any(feature = "prof_scene_tree", feature = "prof_entities_update"))]
-        use std::time::Instant;
-
-        #[cfg(feature = "prof_scene_tree")]
-        let mut now = Instant::now();
-
         {
             trace!("scene_tree::copy_transforms", tracer);
             for e in self.entities.iter().copied() {
@@ -97,27 +92,9 @@ impl Gameplay_System {
             }
         }
 
-        #[cfg(feature = "prof_scene_tree")]
-        {
-            println!(
-                "[prof_scene_tree] copying took {:?} ms",
-                now.elapsed().as_micros() as f32 * 0.001
-            );
-            now = Instant::now();
-        }
-
         {
             trace!("scene_tree::compute_global_transforms", tracer);
             self.scene_tree.compute_global_transforms();
-        }
-
-        #[cfg(feature = "prof_scene_tree")]
-        {
-            println!(
-                "[prof_scene_tree] computing took {:.3} ms",
-                now.elapsed().as_micros() as f32 * 0.001
-            );
-            now = Instant::now();
         }
 
         {
@@ -129,27 +106,13 @@ impl Gameplay_System {
             }
         }
 
-        #[cfg(feature = "prof_scene_tree")]
-        println!(
-            "[prof_scene_tree] backcopying took {:.3} ms",
-            now.elapsed().as_micros() as f32 * 0.001
-        );
-
-        #[cfg(feature = "prof_entities_update")]
-        let now = Instant::now();
-
-        self.update_demo_entites(&dt);
-
-        #[cfg(feature = "prof_entities_update")]
-        println!(
-            "[prof_entities_update] update took {:.3} ms",
-            now.elapsed().as_micros() as f32 * 0.001
-        );
+        self.update_demo_entites(&dt, time);
     }
 
     pub fn realtime_update(
         &mut self,
         real_dt: &Duration,
+        _time: &time::Time,
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
@@ -160,18 +123,26 @@ impl Gameplay_System {
     }
 
     #[cfg(debug_assertions)]
-    pub fn step(&mut self, dt: &Duration, cfg: &cfg::Config, tracer: Debug_Tracer) {
-        self.update_with_latest_frame_actions(dt, cfg, tracer);
+    pub fn step(
+        &mut self,
+        dt: &Duration,
+        time: &time::Time,
+        cfg: &cfg::Config,
+        tracer: Debug_Tracer,
+    ) {
+        self.update_with_latest_frame_actions(dt, time, cfg, tracer);
     }
 
     #[cfg(debug_assertions)]
     pub fn print_debug_info(&self) {
+        // @Incomplete
         //self.ecs_world.print_debug_info();
     }
 
     fn update_with_latest_frame_actions(
         &mut self,
         dt: &Duration,
+        time: &time::Time,
         cfg: &cfg::Config,
         tracer: Debug_Tracer,
     ) {
@@ -179,7 +150,7 @@ impl Gameplay_System {
         std::mem::swap(&mut self.latest_frame_actions, &mut actions);
         let mut axes = Virtual_Axes::default();
         std::mem::swap(&mut self.latest_frame_axes, &mut axes);
-        self.update(&dt, &actions, &axes, cfg, tracer);
+        self.update(&dt, time, &actions, &axes, cfg, tracer);
     }
 
     pub fn get_renderable_entities(&self) -> Entity_Stream {
@@ -290,13 +261,14 @@ impl Gameplay_System {
 
         let mut prev_entity: Option<Entity> = None;
         let mut fst_entity: Option<Entity> = None;
-        let n_frames = 4;
-        for i in 0..20 {
+        let n_frames = 1;
+        for i in 0..3 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
-                rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
-                assert!(rend.texture.is_some(), "Could not load plant texture!");
+                rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
+                //rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
+                assert!(rend.texture.is_some(), "Could not load texture!");
                 let (sw, sh) = ngfx::render::get_texture_size(rsrc.get_texture(rend.texture));
                 rend.rect = Rect::new(0, 0, sw as i32 / (n_frames as i32), sh as i32);
                 (sw, sh)
@@ -308,7 +280,7 @@ impl Gameplay_System {
                 t.local_transform
                     .set_origin((sw / n_frames) as f32 * 0.5, (sh / n_frames) as f32 * 0.5);
                 if i > 0 {
-                    t.local_transform.set_position(x * 1042.0, y * 1042.0);
+                    t.local_transform.set_position(x * 142.0, y * 402.0);
                 }
                 self.scene_tree.add(entity, fst_entity, &t.local_transform);
             }
@@ -342,7 +314,7 @@ impl Gameplay_System {
         }
     }
 
-    fn update_demo_entites(&mut self, dt: &Duration) {
+    fn update_demo_entites(&mut self, dt: &Duration, time: &time::Time) {
         // #DEMO
         let em = &mut self.ecs_world;
         let dt_secs = time::to_secs_frac(dt);
@@ -365,16 +337,20 @@ impl Gameplay_System {
             spat.velocity.y = transl.y;
         }
 
-        //for (i, t) in em
-        //.get_components_mut::<C_Spatial2D>()
-        //.iter_mut()
-        //.enumerate()
-        //{
-        //let speed = 1.0;
-        //if i % 10 == 1 {
-        //t.local_transform.rotate(Deg(dt_secs * speed));
-        //}
-        //}
+        for (i, t) in em
+            .get_components_mut::<C_Spatial2D>()
+            .iter_mut()
+            .enumerate()
+        {
+            let speed = 10.0;
+            //if i % 10 == 1 {
+            //t.local_transform.rotate(Deg(dt_secs * speed));
+            //}
+            t.local_transform.set_position(
+                (time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
+                3.,
+            );
+        }
     }
 }
 

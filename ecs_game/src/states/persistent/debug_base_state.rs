@@ -89,6 +89,7 @@ impl Persistent_Game_State for Debug_Base_State {
                     engine_state.time.step(&step_delta);
                     gs.step(
                         &step_delta,
+                        &engine_state.time,
                         &engine_state.config,
                         clone_tracer!(engine_state.tracer),
                     );

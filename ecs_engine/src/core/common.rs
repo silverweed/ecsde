@@ -3,6 +3,7 @@ pub mod colors;
 pub mod direction;
 pub mod rect;
 pub mod serialize;
+pub mod shapes;
 pub mod stringid;
 pub mod transform;
 pub mod vector;

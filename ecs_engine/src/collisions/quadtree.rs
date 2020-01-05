@@ -179,6 +179,7 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
 #[cfg(debug_assertions)]
 pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
     use crate::core::common::colors;
+    use crate::core::common::vector::Vec2f;
     use crate::gfx::render;
 
     fn draw_quadtree_internal(quadtree: &Quad_Tree, painter: &mut Debug_Painter, level: i32) {
@@ -186,10 +187,15 @@ pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
             color: colors::rgba(102, 204, 255, 20),
             border_thick: (66. - 6. * level as f32).max(1.),
             border_color: colors::rgba(255, 0, 255, 150),
+            ..Default::default()
         };
-        let transform = Transform2D::default();
+        let transform = Transform2D::from_pos_rot_scale(
+            Vec2f::new(quadtree.bounds.x(), quadtree.bounds.y()),
+            cgmath::Rad(0.),
+            Vec2f::new(1., 1.),
+        );
 
-        painter.add_rect(quadtree.bounds, &transform, &props);
+        painter.add_rect(quadtree.bounds.size(), &transform, &props);
         if let Some(subnodes) = &quadtree.subnodes {
             for subnode in subnodes {
                 draw_quadtree_internal(subnode, painter, level + 1);

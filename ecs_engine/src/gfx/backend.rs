@@ -4,6 +4,7 @@ mod sfml;
 use super::render::Paint_Properties;
 use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
+use crate::core::common::shapes::Circle;
 use crate::core::common::transform::Transform2D;
 use crate::core::common::vector::Vec2f;
 
@@ -72,7 +73,7 @@ pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect<i32>) -> Sprite<'a
 #[cfg(feature = "use-sfml")]
 pub fn render_sprite(
     window: &mut Window_Handle,
-    sprite: &Sprite,
+    sprite: &mut Sprite,
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
@@ -85,8 +86,18 @@ pub fn render_texture(window: &mut Window_Handle, texture: &Texture, rect: Rect<
 }
 
 #[cfg(feature = "use-sfml")]
-pub fn render_text(window: &mut Window_Handle, text: &mut Text, world_pos: Vec2f) {
-    sfml::render::render_text(window, text, world_pos);
+pub fn render_text(window: &mut Window_Handle, text: &mut Text, screen_pos: Vec2f) {
+    sfml::render::render_text(window, text, screen_pos);
+}
+
+#[cfg(feature = "use-sfml")]
+pub fn render_text_ws(
+    window: &mut Window_Handle,
+    text: &Text,
+    world_transform: &Transform2D,
+    camera: &Transform2D,
+) {
+    sfml::render::render_text_ws(window, text, world_transform, camera);
 }
 
 #[cfg(feature = "use-sfml")]
@@ -123,4 +134,14 @@ pub fn fill_color_rect_ws<T>(
     T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
     sfml::render::fill_color_rect_ws(window, paint_props, rect, transform, camera);
+}
+
+#[cfg(feature = "use-sfml")]
+pub fn fill_color_circle_ws(
+    window: &mut Window_Handle,
+    paint_props: &Paint_Properties,
+    circle: Circle,
+    camera: &Transform2D,
+) {
+    sfml::render::fill_color_circle_ws(window, paint_props, circle, camera);
 }

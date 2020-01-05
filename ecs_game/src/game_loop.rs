@@ -174,6 +174,7 @@ pub fn tick_game<'a>(
 
             gameplay_system.realtime_update(
                 &real_dt,
+                &engine_state.time,
                 &actions,
                 axes,
                 &engine_state.config,
@@ -186,6 +187,7 @@ pub fn tick_game<'a>(
             while game_state.execution_time > update_time {
                 gameplay_system.update(
                     &update_time,
+                    &engine_state.time,
                     &actions,
                     axes,
                     &engine_state.config,
@@ -298,11 +300,11 @@ fn update_graphics(
     #[cfg(debug_assertions)]
     {
         {
-            trace!("debug_painter::update", game_state.engine_state.tracer);
             game_state.engine_state.debug_systems.debug_painter.draw(
                 window,
                 gres,
                 &game_state.gameplay_system.get_camera().transform,
+                clone_tracer!(game_state.engine_state.tracer),
             );
             game_state.engine_state.debug_systems.debug_painter.clear();
         }
@@ -419,7 +421,10 @@ fn debug_draw_colliders(
 ) {
     use ecs_engine::collisions::collider::{Collider, Collider_Shape};
     use ecs_engine::core::common::rect::Rect;
+    use ecs_engine::core::common::shapes::Circle;
+    use ecs_engine::core::common::vector::Vec2f;
     use ecs_engine::ecs::components::base::C_Spatial2D;
+    use ecs_engine::gfx::render::Paint_Properties;
 
     let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
         .require::<Collider>()
@@ -440,9 +445,9 @@ fn debug_draw_colliders(
         match collider.shape {
             Collider_Shape::Rect { width, height } => {
                 debug_painter.add_rect(
-                    Rect::new(0., 0., width, height),
+                    Vec2f::new(width, height),
                     transform,
-                    &ecs_engine::gfx::render::Paint_Properties {
+                    &Paint_Properties {
                         color: if collider.colliding {
                             colors::rgba(255, 0, 0, 100)
                         } else {
@@ -453,5 +458,32 @@ fn debug_draw_colliders(
                 );
             }
         }
+
+        debug_painter.add_circle(
+            Circle {
+                radius: 5.,
+                center: transform.position(),
+            },
+            &Paint_Properties {
+                color: colors::rgb(50, 100, 200),
+                ..Default::default()
+            },
+        );
+
+        debug_painter.add_text(
+            &format!(
+                "{:.2},{:.2}",
+                transform.position().x,
+                transform.position().y
+            ),
+            transform.position() + Vec2f::new(2., 2.),
+            10,
+            &Paint_Properties {
+                color: colors::WHITE,
+                border_thick: 1.,
+                border_color: colors::BLACK,
+                ..Default::default()
+            },
+        );
     }
 }

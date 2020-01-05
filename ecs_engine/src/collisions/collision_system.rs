@@ -130,11 +130,12 @@ impl Collision_System {
                 }
             }
 
-            println!(
-                "tot collisions: {}, average: {}",
-                n_collisions_total.load(std::sync::atomic::Ordering::SeqCst),
-                n_collisions_total.load(std::sync::atomic::Ordering::SeqCst) / n_entities
-            );
+            //println!(
+            //"tot collisions: {}, average: {}",
+            //n_collisions_total.load(std::sync::atomic::Ordering::SeqCst),
+            //n_collisions_total.load(std::sync::atomic::Ordering::SeqCst) / n_entities
+            //);
+            ();
         }
     }
 }
