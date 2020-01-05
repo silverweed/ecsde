@@ -5,7 +5,7 @@ use std::path::Path;
 use std::vec::Vec;
 
 pub mod joystick;
-pub mod keymap;
+pub mod keyboard;
 pub mod mouse;
 
 mod parsing;
@@ -15,9 +15,13 @@ use mouse::Mouse_Button;
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum Input_Action {
-    Key(keymap::Key),
+    Key(keyboard::Key),
     Joystick(Joystick_Button),
     Mouse(Mouse_Button),
+    /// positive is up, negative is down.
+    Mouse_Wheel {
+        positive: bool,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -72,7 +76,7 @@ impl Input_Bindings {
         &self.axis_bindings.real[real_axis as usize]
     }
 
-    pub(super) fn get_key_actions(&self, code: keymap::Key) -> Option<&Vec<String_Id>> {
+    pub(super) fn get_key_actions(&self, code: keyboard::Key) -> Option<&Vec<String_Id>> {
         self.action_bindings.get(&Input_Action::Key(code))
     }
 
@@ -99,9 +103,14 @@ impl Input_Bindings {
         self.action_bindings.get(&Input_Action::Mouse(button))
     }
 
+    pub(super) fn get_mouse_wheel_actions(&self, positive: bool) -> Option<&Vec<String_Id>> {
+        self.action_bindings
+            .get(&Input_Action::Mouse_Wheel { positive })
+    }
+
     pub(super) fn get_key_emulated_axes(
         &self,
-        code: keymap::Key,
+        code: keyboard::Key,
     ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
         self.axis_bindings.emulated.get(&Input_Action::Key(code))
     }
@@ -133,5 +142,14 @@ impl Input_Bindings {
         self.axis_bindings
             .emulated
             .get(&Input_Action::Mouse(button))
+    }
+
+    pub(super) fn get_mouse_wheel_emulated_axes(
+        &self,
+        positive: bool,
+    ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
+        self.axis_bindings
+            .emulated
+            .get(&Input_Action::Mouse_Wheel { positive })
     }
 }

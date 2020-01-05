@@ -15,3 +15,5 @@ move_right: D, Joy_Dpad_Right
 print_em_debug_info: M
 sound_test: K
 toggle_trace_overlay: Tab
+camera_zoom_up: Wheel_Up
+camera_zoom_down: Wheel_Down

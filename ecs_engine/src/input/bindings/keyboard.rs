@@ -13,3 +13,7 @@ pub fn string_to_key(s: &str) -> Option<Key> {
 pub fn num_to_key(num: usize) -> Option<Key> {
     backend::num_to_key(num)
 }
+
+pub fn is_key_pressed(key: Key) -> bool {
+    backend::is_key_pressed(key)
+}

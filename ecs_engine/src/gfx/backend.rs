@@ -1,9 +1,11 @@
 #[cfg(feature = "use-sfml")]
 mod sfml;
 
+use super::render::Paint_Properties;
 use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
 use crate::core::common::transform::Transform2D;
+use crate::core::common::vector::Vec2f;
 
 // -----------------------------------------------------------------------------
 // ----------------------------- Backend: SFML ---------------------------------
@@ -70,7 +72,7 @@ pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect<i32>) -> Sprite<'a
 #[cfg(feature = "use-sfml")]
 pub fn render_sprite(
     window: &mut Window_Handle,
-    sprite: &Sprite<'_>,
+    sprite: &Sprite,
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
@@ -78,13 +80,13 @@ pub fn render_sprite(
 }
 
 #[cfg(feature = "use-sfml")]
-pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: Rect<i32>) {
+pub fn render_texture(window: &mut Window_Handle, texture: &Texture, rect: Rect<i32>) {
     sfml::render::render_texture(window, texture, rect);
 }
 
 #[cfg(feature = "use-sfml")]
-pub fn render_text(window: &mut Window_Handle, text: &Text<'_>) {
-    sfml::render::render_text(window, text);
+pub fn render_text(window: &mut Window_Handle, text: &mut Text, world_pos: Vec2f) {
+    sfml::render::render_text(window, text, world_pos);
 }
 
 #[cfg(feature = "use-sfml")]
@@ -98,27 +100,27 @@ pub fn set_blend_mode(window: &mut Window_Handle, blend_mode: Blend_Mode) {
 }
 
 #[cfg(feature = "use-sfml")]
-pub fn get_texture_size(texture: &Texture<'_>) -> (u32, u32) {
+pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
     sfml::render::get_texture_size(texture)
 }
 
 #[cfg(feature = "use-sfml")]
-pub fn fill_color_rect<T>(window: &mut Window_Handle, color: Color, rect: T)
+pub fn fill_color_rect<T>(window: &mut Window_Handle, paint_props: &Paint_Properties, rect: T)
 where
     T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
-    sfml::render::fill_color_rect(window, color, rect);
+    sfml::render::fill_color_rect(window, paint_props, rect);
 }
 
 #[cfg(feature = "use-sfml")]
 pub fn fill_color_rect_ws<T>(
     window: &mut Window_Handle,
-    color: Color,
+    paint_props: &Paint_Properties,
     rect: T,
     transform: &Transform2D,
     camera: &Transform2D,
 ) where
     T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
-    sfml::render::fill_color_rect_ws(window, color, rect, transform, camera);
+    sfml::render::fill_color_rect_ws(window, paint_props, rect, transform, camera);
 }

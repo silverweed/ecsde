@@ -1,18 +1,14 @@
 use crate::core;
 use crate::core::common::colors::{self, Color};
 use crate::core::common::rect::Rect;
-use crate::core::common::vector::{to_framework_vec, Vec2f};
+use crate::core::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
+use crate::gfx::render::Text;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
 use std::time::Duration;
-
-#[cfg(feature = "use-sfml")]
-use sfml::graphics::Text;
-#[cfg(feature = "use-sfml")]
-use sfml::graphics::Transformable;
 
 struct Fadeout_Text {
     pub text: String,
@@ -107,7 +103,10 @@ impl Fadeout_Debug_Overlay {
         // Draw background
         gfx::render::fill_color_rect(
             window,
-            self.config.background,
+            &gfx::render::Paint_Properties {
+                color: self.config.background,
+                ..Default::default()
+            },
             Rect::new(
                 position.x
                     + self
@@ -126,9 +125,7 @@ impl Fadeout_Debug_Overlay {
                 self.vert_align.aligned_pos(pad_y, tot_height)
                     + (i as f32) * (max_row_height + row_spacing),
             );
-            text.set_position(to_framework_vec(position + pos));
-
-            gfx::render::render_text(window, &text);
+            gfx::render::render_text(window, text, position + pos);
         }
     }
 

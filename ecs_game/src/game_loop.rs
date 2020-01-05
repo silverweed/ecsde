@@ -25,12 +25,13 @@ pub fn tick_game<'a>(
     // @Speed: these should all be computed at compile time.
     // Probably will do that when either const fn or proc macros/syntax extensions are stable.
     #[cfg(debug_assertions)]
-    let (sid_joysticks, sid_msg, sid_time, sid_fps, sid_entities) = (
+    let (sid_joysticks, sid_msg, sid_time, sid_fps, sid_entities, sid_camera) = (
         String_Id::from("joysticks"),
         String_Id::from("msg"),
         String_Id::from("time"),
         String_Id::from("fps"),
         String_Id::from("entities"),
+        String_Id::from("camera"),
     );
 
     let window = &mut game_state.window;
@@ -139,6 +140,16 @@ pub fn tick_game<'a>(
                         &mut engine_state.debug_systems.debug_painter,
                     );
                 }
+
+                let draw_collision_quadtree = game_state
+                    .draw_collision_quadtree
+                    .read(&engine_state.config);
+                if draw_collision_quadtree {
+                    engine_state
+                        .systems
+                        .collision_system
+                        .debug_draw_quadtree(&mut engine_state.debug_systems.debug_painter);
+                }
             }
 
             trace!("collision_system::update", tracer);
@@ -214,6 +225,10 @@ pub fn tick_game<'a>(
             debug_systems.debug_ui_system.get_overlay(sid_entities),
             &game_state.gameplay_system.ecs_world,
         );
+        update_camera_debug_overlay(
+            debug_systems.debug_ui_system.get_overlay(sid_camera),
+            &game_state.gameplay_system.get_camera(),
+        );
     }
 
     // Render
@@ -272,7 +287,7 @@ fn update_graphics(
     render_system::update(
         window,
         gres,
-        &game_state.gameplay_system.get_camera(),
+        game_state.gameplay_system.get_camera(),
         game_state.gameplay_system.get_renderable_entities(),
         &game_state.gameplay_system.ecs_world,
         frame_lag_normalized,
@@ -284,11 +299,11 @@ fn update_graphics(
     {
         {
             trace!("debug_painter::update", game_state.engine_state.tracer);
-            game_state
-                .engine_state
-                .debug_systems
-                .debug_painter
-                .draw(window, &game_state.gameplay_system.get_camera().transform);
+            game_state.engine_state.debug_systems.debug_painter.draw(
+                window,
+                gres,
+                &game_state.gameplay_system.get_camera().transform,
+            );
             game_state.engine_state.debug_systems.debug_painter.clear();
         }
         {
@@ -331,7 +346,7 @@ fn update_joystick_debug_overlay(
                 });
                 debug_overlay.add_line_color(
                     &format!("{:?}: {:.2}", axis, axes[i as usize]),
-                    colors::rgb(255, 0, 0),
+                    colors::rgb(255, 255, 0),
                 );
             }
         }
@@ -381,6 +396,23 @@ fn update_entities_debug_overlay(
 }
 
 #[cfg(debug_assertions)]
+fn update_camera_debug_overlay(
+    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    camera: &crate::ecs::components::gfx::C_Camera2D,
+) {
+    debug_overlay.clear();
+    debug_overlay.add_line_color(
+        &format!(
+            "[cam] pos: {:.2},{:.2}, scale: {:.1}",
+            camera.transform.position().x,
+            camera.transform.position().y,
+            camera.transform.scale().x
+        ),
+        colors::rgba(220, 180, 100, 220),
+    );
+}
+
+#[cfg(debug_assertions)]
 fn debug_draw_colliders(
     ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
     debug_painter: &mut ecs_engine::debug::debug_painter::Debug_Painter,
@@ -404,17 +436,19 @@ fn debug_draw_colliders(
             .get_component::<C_Spatial2D>(entity)
             .unwrap()
             .global_transform;
-        let pos = transform.position();
 
         match collider.shape {
             Collider_Shape::Rect { width, height } => {
                 debug_painter.add_rect(
                     Rect::new(0., 0., width, height),
                     transform,
-                    if collider.colliding {
-                        colors::rgba(255, 0, 0, 100)
-                    } else {
-                        colors::rgba(255, 255, 0, 100)
+                    &ecs_engine::gfx::render::Paint_Properties {
+                        color: if collider.colliding {
+                            colors::rgba(255, 0, 0, 100)
+                        } else {
+                            colors::rgba(255, 255, 0, 100)
+                        },
+                        ..Default::default()
                     },
                 );
             }

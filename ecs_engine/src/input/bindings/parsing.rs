@@ -1,5 +1,5 @@
 use super::joystick;
-use super::keymap;
+use super::keyboard;
 use super::mouse;
 use super::Input_Action;
 use crate::core::common::stringid::String_Id;
@@ -100,8 +100,12 @@ fn parse_action(s: &str) -> Option<Input_Action> {
         joystick::string_to_joy_btn(&s["Joy_".len()..]).map(Input_Action::Joystick)
     } else if s.starts_with("Mouse_") {
         mouse::string_to_mouse_btn(&s["Mouse_".len()..]).map(Input_Action::Mouse)
+    } else if s == "Wheel_Up" {
+        Some(Input_Action::Mouse_Wheel { positive: true })
+    } else if s == "Wheel_Down" {
+        Some(Input_Action::Mouse_Wheel { positive: false })
     } else {
-        keymap::string_to_key(s).map(Input_Action::Key)
+        keyboard::string_to_key(s).map(Input_Action::Key)
     }
 }
 

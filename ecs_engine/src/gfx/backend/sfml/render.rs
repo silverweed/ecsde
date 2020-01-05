@@ -1,7 +1,7 @@
-use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
 use crate::core::common::transform::Transform2D;
-use crate::core::common::vector::Vec2f;
+use crate::core::common::vector::{to_framework_vec, Vec2f};
+use crate::gfx::render::Paint_Properties;
 use crate::gfx::window::Window_Handle;
 use cgmath::Rad;
 use sfml::graphics::Shape;
@@ -82,6 +82,7 @@ pub fn render_sprite(
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
+    // @Incomplete? Do we need this?
     //let origin = vector::from_framework_vec(sprite.origin());
     let mut render_transform = camera.get_matrix_sfml().inverse();
     render_transform.combine(&transform.get_matrix_sfml());
@@ -107,11 +108,12 @@ pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: R
         .draw_rectangle_shape(&rectangle_shape, render_states);
 }
 
-pub fn render_text(window: &mut Window_Handle, text: &Text<'_>) {
+pub fn render_text(window: &mut Window_Handle, text: &mut Text, world_pos: Vec2f) {
+    text.set_position(to_framework_vec(world_pos));
     window.handle.draw(text);
 }
 
-pub fn fill_color_rect<T>(window: &mut Window_Handle, color: Color, rect: T)
+pub fn fill_color_rect<T>(window: &mut Window_Handle, paint_props: &Paint_Properties, rect: T)
 where
     T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
@@ -123,7 +125,9 @@ where
     let rect = rect.into();
     rectangle_shape.set_position(Vector2f::new(rect.x(), rect.y()));
     rectangle_shape.set_size(Vector2f::new(rect.width(), rect.height()));
-    rectangle_shape.set_fill_color(color);
+    rectangle_shape.set_fill_color(paint_props.color);
+    rectangle_shape.set_outline_thickness(paint_props.border_thick);
+    rectangle_shape.set_outline_color(paint_props.border_color);
     window
         .handle
         .draw_rectangle_shape(&rectangle_shape, render_states);
@@ -131,7 +135,7 @@ where
 
 pub fn fill_color_rect_ws<T>(
     window: &mut Window_Handle,
-    color: Color,
+    paint_props: &Paint_Properties,
     rect: T,
     transform: &Transform2D,
     camera: &Transform2D,
@@ -150,7 +154,9 @@ pub fn fill_color_rect_ws<T>(
     let rect = rect.into();
     rectangle_shape.set_position(Vector2f::new(rect.x(), rect.y()));
     rectangle_shape.set_size(Vector2f::new(rect.width(), rect.height()));
-    rectangle_shape.set_fill_color(color);
+    rectangle_shape.set_fill_color(paint_props.color);
+    rectangle_shape.set_outline_thickness(paint_props.border_thick);
+    rectangle_shape.set_outline_color(paint_props.border_color);
     window
         .handle
         .draw_rectangle_shape(&rectangle_shape, render_states);

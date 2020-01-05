@@ -198,6 +198,15 @@ impl Input_System {
                         handle_axis_released(&mut self.axes, names);
                     }
                 }
+                Event::MouseWheelScrolled { delta, .. } => {
+                    if let Some(names) = bindings.get_mouse_wheel_actions(delta > 0.) {
+                        // Note: MouseWheel actions always count as 'Pressed'.
+                        handle_actions(&mut self.game_actions, Action_Kind::Pressed, names);
+                    }
+                    if let Some(names) = bindings.get_mouse_wheel_emulated_axes(delta > 0.) {
+                        handle_axis_pressed(&mut self.axes, names);
+                    }
+                }
                 Event::JoystickConnected { joystickid } => {
                     self.joystick_mgr.register(joystickid);
                 }

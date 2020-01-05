@@ -62,7 +62,10 @@ pub fn update(
             if cfg.draw_sprites_bg {
                 ngfx::render::fill_color_rect_ws(
                     window,
-                    cfg.draw_sprites_bg_color,
+                    &ngfx::render::Paint_Properties {
+                        color: cfg.draw_sprites_bg_color,
+                        ..Default::default()
+                    },
                     sprite.global_bounds(),
                     &rend_transform,
                     &camera.transform,

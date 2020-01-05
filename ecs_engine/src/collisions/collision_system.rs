@@ -1,6 +1,7 @@
 use super::collider::{Collider, Collider_Shape};
-use super::quadtree::Quad_Tree;
+use super::quadtree;
 use crate::core::common::rect::{self, Rect};
+use crate::debug::debug_painter::Debug_Painter;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Ecs_World, Entity};
 use crate::ecs::entity_stream::new_entity_stream;
@@ -8,18 +9,23 @@ use crate::prelude::*;
 use crossbeam::thread;
 
 pub struct Collision_System {
-    quadtree: Quad_Tree,
+    quadtree: quadtree::Quad_Tree,
     entities_buf: Vec<Entity>,
 }
 
 impl Collision_System {
     pub fn new() -> Self {
         // @Incomplete
-        let world_rect = Rect::new(-100000., -100000., 200000., 200000.);
+        let world_rect = Rect::new(-100_000., -100_000., 200_000., 200_000.);
         Collision_System {
-            quadtree: Quad_Tree::new(world_rect),
+            quadtree: quadtree::Quad_Tree::new(world_rect),
             entities_buf: vec![],
         }
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn debug_draw_quadtree(&self, painter: &mut Debug_Painter) {
+        quadtree::draw_quadtree(&self.quadtree, painter);
     }
 
     pub fn update(&mut self, ecs_world: &mut Ecs_World, tracer: Debug_Tracer) {
@@ -42,7 +48,7 @@ impl Collision_System {
                 let collider = {
                     let collider = ecs_world.get_component_mut::<Collider>(entity).unwrap();
                     collider.colliding = false;
-                    collider.clone()
+                    *collider
                 };
 
                 let transform = &ecs_world
@@ -87,7 +93,7 @@ impl Collision_System {
                     let collided_entities = collided_entities.clone();
                     let ecs_world = ecs_world as &Ecs_World;
                     s.spawn(move |_| {
-                        for entity in ent_chunk.into_iter() {
+                        for entity in ent_chunk {
                             let collider = ecs_world.get_component::<Collider>(*entity).unwrap();
                             let transform = &ecs_world
                                 .get_component::<C_Spatial2D>(*entity)

@@ -220,6 +220,11 @@ pub(super) fn num_to_key(num: usize) -> Option<Key> {
     }
 }
 
+#[inline(always)]
+pub(super) fn is_key_pressed(key: Key) -> bool {
+    key.is_pressed()
+}
+
 // @Cleanup @Temporary: make this a macro
 #[inline(always)]
 pub fn keypressed(code: Key) -> Event {

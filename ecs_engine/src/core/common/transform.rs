@@ -78,6 +78,11 @@ impl Transform2D {
         self.scale.y += y;
     }
 
+    pub fn add_scale_v(&mut self, s: Vec2f) {
+        self.scale.x += s.x;
+        self.scale.y += s.y;
+    }
+
     pub fn set_scale(&mut self, x: f32, y: f32) {
         self.scale.x = x;
         self.scale.y = y;

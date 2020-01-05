@@ -77,10 +77,15 @@ pub fn start_config_watch(env: &Env_Info, config: &mut cfg::Config) -> Maybe_Err
     Ok(())
 }
 
-pub fn init_engine_systems(engine_state: &mut Engine_State) -> Maybe_Error {
-    let systems = &mut engine_state.systems;
-
-    systems.input_system.init()?;
+pub fn init_engine_systems(
+    engine_state: &mut Engine_State,
+    gres: &mut Gfx_Resources,
+) -> Maybe_Error {
+    engine_state.systems.input_system.init()?;
+    engine_state
+        .debug_systems
+        .debug_painter
+        .init(gres, &engine_state.env);
 
     Ok(())
 }
@@ -140,7 +145,7 @@ pub fn init_engine_debug(
         joy_overlay.horiz_align = align::Align::End;
         joy_overlay.position = Vec2f::new(target_win_size_x, 0.0);
 
-        debug_overlay_config.font_size = 16;
+        debug_overlay_config.font_size = 13;
         let mut time_overlay =
             debug_ui_system.create_overlay(String_Id::from("time"), debug_overlay_config, font);
         time_overlay.horiz_align = align::Align::End;

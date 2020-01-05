@@ -1,5 +1,5 @@
 use crate::core::common::serialize::{Binary_Serializable, Byte_Stream};
-use crate::input::bindings::{keymap, mouse};
+use crate::input::bindings::{keyboard, mouse};
 use sfml::window::Event;
 use std::io;
 
@@ -52,13 +52,13 @@ impl Binary_Serializable for Event {
         match prelude {
             PRE_KEY_PRESSED => {
                 let code = input.read_u16()?;
-                let code = keymap::num_to_key(code as usize).ok_or(io::ErrorKind::InvalidData)?;
-                Ok(keymap::sfml::keypressed(code))
+                let code = keyboard::num_to_key(code as usize).ok_or(io::ErrorKind::InvalidData)?;
+                Ok(keyboard::sfml::keypressed(code))
             }
             PRE_KEY_RELEASED => {
                 let code = input.read_u16()?;
-                let code = keymap::num_to_key(code as usize).ok_or(io::ErrorKind::InvalidData)?;
-                Ok(keymap::sfml::keyreleased(code))
+                let code = keyboard::num_to_key(code as usize).ok_or(io::ErrorKind::InvalidData)?;
+                Ok(keyboard::sfml::keyreleased(code))
             }
             PRE_JOY_PRESSED => {
                 let joystickid = input.read_u8()?.into();
@@ -93,7 +93,7 @@ impl Binary_Serializable for Event {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use keymap::sfml::{keypressed, keyreleased};
+    use keyboard::sfml::{keypressed, keyreleased};
     use mouse::sfml::{mousepressed, mousereleased};
     use sfml::window::mouse::Button;
     use sfml::window::Key;

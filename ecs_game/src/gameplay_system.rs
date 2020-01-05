@@ -19,7 +19,8 @@ use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::ecs::entity_stream::{new_entity_stream, Entity_Stream};
 use ecs_engine::gfx as ngfx;
 use ecs_engine::input::axes::Virtual_Axes;
-use ecs_engine::input::input_system::Game_Action;
+use ecs_engine::input::bindings::keyboard;
+use ecs_engine::input::input_system::{Action_Kind, Game_Action};
 use ecs_engine::prelude::*;
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 use std::time::Duration;
@@ -188,9 +189,8 @@ impl Gameplay_System {
             .build()
     }
 
-    pub fn get_camera(&self) -> C_Camera2D {
-        *self
-            .ecs_world
+    pub fn get_camera(&self) -> &C_Camera2D {
+        self.ecs_world
             .get_components::<C_Camera2D>()
             .first()
             .unwrap()
@@ -211,7 +211,7 @@ impl Gameplay_System {
     fn update_camera(
         &mut self,
         real_dt: &Duration,
-        _actions: &[Game_Action],
+        actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
     ) {
@@ -234,15 +234,37 @@ impl Gameplay_System {
             v
         };
 
-        self.apply_camera_translation(v);
-    }
-
-    fn apply_camera_translation(&mut self, delta: Vec2f) {
         let camera = self
             .ecs_world
             .get_component_mut::<C_Camera2D>(self.camera)
             .unwrap();
-        camera.transform.translate_v(delta);
+
+        let sx = camera.transform.scale().x;
+        let v = v * sx;
+
+        let mut add_scale = Vec2f::new(0., 0.);
+        const BASE_CAM_DELTA_ZOOM_PER_SCROLL: f32 = 0.2;
+
+        if keyboard::is_key_pressed(keyboard::Key::LControl) {
+            for action in actions {
+                match action {
+                    (name, Action_Kind::Pressed) if *name == String_Id::from("camera_zoom_up") => {
+                        add_scale.x -= BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
+                        add_scale.y = add_scale.x;
+                    }
+                    (name, Action_Kind::Pressed)
+                        if *name == String_Id::from("camera_zoom_down") =>
+                    {
+                        add_scale.x += BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
+                        add_scale.y = add_scale.x;
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        camera.transform.translate_v(v);
+        camera.transform.add_scale_v(add_scale);
     }
 
     fn init_demo_entities(
@@ -286,9 +308,9 @@ impl Gameplay_System {
                 t.local_transform
                     .set_origin((sw / n_frames) as f32 * 0.5, (sh / n_frames) as f32 * 0.5);
                 if i > 0 {
-                    t.local_transform.set_position(x * 4248.0, y * 4248.0);
+                    t.local_transform.set_position(x * 42.0, y * 42.0);
                 }
-                self.scene_tree.add(entity, fst_entity, &t.local_transform);
+                self.scene_tree.add(entity, prev_entity, &t.local_transform);
             }
             {
                 let c = em.add_component::<collider::Collider>(entity);

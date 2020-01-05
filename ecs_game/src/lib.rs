@@ -62,6 +62,8 @@ pub struct Game_State<'a> {
     pub trace_overlay_refresh_rate: Cfg_Var<f32>,
     #[cfg(debug_assertions)]
     pub draw_colliders: Cfg_Var<bool>,
+    #[cfg(debug_assertions)]
+    pub draw_collision_quadtree: Cfg_Var<bool>,
 
     pub rng: rand::Default_Rng,
 }
@@ -239,7 +241,7 @@ fn create_game_state<'a>(
         engine_state.env.get_exe()
     );
 
-    app::init_engine_systems(&mut engine_state)?;
+    app::init_engine_systems(&mut engine_state, &mut game_resources.gfx)?;
     app::start_config_watch(&engine_state.env, &mut engine_state.config)?;
 
     #[cfg(debug_assertions)]
@@ -267,6 +269,9 @@ fn create_game_state<'a>(
     let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
     #[cfg(debug_assertions)]
     let draw_colliders = Cfg_Var::new("engine/debug/collisions/draw_colliders", cfg);
+    #[cfg(debug_assertions)]
+    let draw_collision_quadtree =
+        Cfg_Var::new("engine/debug/collisions/draw_collision_quadtree", cfg);
 
     Ok(Box::new(Game_State {
         window,
@@ -298,6 +303,8 @@ fn create_game_state<'a>(
         trace_overlay_refresh_rate,
         #[cfg(debug_assertions)]
         draw_colliders,
+        #[cfg(debug_assertions)]
+        draw_collision_quadtree,
     }))
 }
 
@@ -340,19 +347,27 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         FONT,
     ));
 
-    // Entities overlay
     let overlay_cfg = Debug_Overlay_Config {
         row_spacing: 20.0,
-        font_size: 16,
+        font_size: 13,
         pad_x: 5.0,
         pad_y: 5.0,
         background: colors::rgba(25, 25, 25, 210),
     };
+    // Entities overlay
     let mut overlay = debug_ui.create_overlay(String_Id::from("entities"), overlay_cfg, font);
     overlay.vert_align = Align::End;
     overlay.horiz_align = Align::Begin;
     overlay.position = Vec2f::new(
-        80.0,
-        game_state.engine_state.app_config.target_win_size.1 as f32,
+        0.0,
+        game_state.engine_state.app_config.target_win_size.1 as f32 - 20.,
+    );
+    // Camera overlay
+    let mut overlay = debug_ui.create_overlay(String_Id::from("camera"), overlay_cfg, font);
+    overlay.vert_align = Align::End;
+    overlay.horiz_align = Align::End;
+    overlay.position = Vec2f::new(
+        game_state.engine_state.app_config.target_win_size.0 as f32,
+        game_state.engine_state.app_config.target_win_size.1 as f32 - 20.,
     );
 }

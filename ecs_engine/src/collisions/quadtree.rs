@@ -1,15 +1,19 @@
 use super::collider::{Collider, Collider_Shape};
 use crate::core::common::rect::{Rect, Rectf};
 use crate::core::common::transform::Transform2D;
+use crate::debug::debug_painter::Debug_Painter;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Ecs_World, Entity};
 
 const MAX_OBJECTS: usize = 8;
+const MAX_DEPTH: u8 = 10;
 
 pub struct Quad_Tree {
     bounds: Rectf,
     objects: Vec<Entity>,
     subnodes: Option<[Box<Quad_Tree>; 4]>,
+    /// level of nesting of this tree
+    level: u8,
 }
 
 impl Quad_Tree {
@@ -18,6 +22,16 @@ impl Quad_Tree {
             bounds,
             objects: vec![],
             subnodes: None,
+            level: 0,
+        }
+    }
+
+    fn new_nested(bounds: Rectf, level: u8) -> Self {
+        Quad_Tree {
+            bounds,
+            objects: vec![],
+            subnodes: None,
+            level,
         }
     }
 
@@ -40,8 +54,7 @@ impl Quad_Tree {
             }
         } else {
             self.objects.push(entity);
-            // @Audit: should we add a MAX_DEPTH to the tree?
-            if self.objects.len() > MAX_OBJECTS {
+            if self.objects.len() > MAX_OBJECTS && self.level < MAX_DEPTH {
                 if self.subnodes.is_none() {
                     self.split();
                 }
@@ -95,12 +108,22 @@ impl Quad_Tree {
         let subh = bounds.height() * 0.5;
         let x = bounds.x();
         let y = bounds.y();
+        let lv = self.level + 1;
 
         self.subnodes = Some([
-            Box::new(Quad_Tree::new(Rect::new(x, y, subw, subh))),
-            Box::new(Quad_Tree::new(Rect::new(x + subw, y, subw, subh))),
-            Box::new(Quad_Tree::new(Rect::new(x, y + subh, subw, subh))),
-            Box::new(Quad_Tree::new(Rect::new(x + subw, y + subh, subw, subh))),
+            Box::new(Quad_Tree::new_nested(Rect::new(x, y, subw, subh), lv)),
+            Box::new(Quad_Tree::new_nested(
+                Rect::new(x + subw, y, subw, subh),
+                lv,
+            )),
+            Box::new(Quad_Tree::new_nested(
+                Rect::new(x, y + subh, subw, subh),
+                lv,
+            )),
+            Box::new(Quad_Tree::new_nested(
+                Rect::new(x + subw, y + subh, subw, subh),
+                lv,
+            )),
         ]);
     }
 }
@@ -151,6 +174,30 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
     }
 
     idx
+}
+
+#[cfg(debug_assertions)]
+pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
+    use crate::core::common::colors;
+    use crate::gfx::render;
+
+    fn draw_quadtree_internal(quadtree: &Quad_Tree, painter: &mut Debug_Painter, level: i32) {
+        let props = render::Paint_Properties {
+            color: colors::rgba(102, 204, 255, 20),
+            border_thick: (66. - 6. * level as f32).max(1.),
+            border_color: colors::rgba(255, 0, 255, 150),
+        };
+        let transform = Transform2D::default();
+
+        painter.add_rect(quadtree.bounds, &transform, &props);
+        if let Some(subnodes) = &quadtree.subnodes {
+            for subnode in subnodes {
+                draw_quadtree_internal(subnode, painter, level + 1);
+            }
+        }
+    }
+
+    draw_quadtree_internal(quadtree, painter, 0);
 }
 
 #[cfg(test)]
