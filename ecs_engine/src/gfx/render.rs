@@ -11,6 +11,8 @@ pub type Texture<'a> = backend::Texture<'a>;
 pub type Sprite<'a> = backend::Sprite<'a>;
 pub type Text<'a> = backend::Text<'a>;
 pub type Font<'a> = backend::Font<'a>;
+pub type Vertex_Buffer = backend::Vertex_Buffer;
+pub type Vertex = backend::Vertex;
 
 #[derive(Copy, Clone)]
 pub struct Paint_Properties {
@@ -102,4 +104,25 @@ pub fn render_text_ws(
     camera: &Transform2D,
 ) {
     backend::render_text_ws(window, text, world_transform, camera);
+}
+
+pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer {
+    backend::start_draw_quads(n_quads)
+}
+
+pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
+    backend::add_quad(vbuf, v1, v2, v3, v4);
+}
+
+pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
+    backend::new_vertex(pos, col, tex_coords)
+}
+
+pub fn render_vbuf_ws(
+    window: &mut Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) {
+    backend::render_vbuf_ws(window, vbuf, transform, camera);
 }

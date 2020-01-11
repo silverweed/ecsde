@@ -69,6 +69,7 @@ impl Debug_Painter {
 
         for (size, transform, props) in &self.rects {
             let rect = Rect::new(0., 0., size.x, size.y);
+            trace!("debug_painter::fill_rect", tracer);
             render::fill_color_rect_ws(window, props, rect, transform, camera);
         }
 

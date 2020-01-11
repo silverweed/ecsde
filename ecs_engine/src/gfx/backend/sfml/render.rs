@@ -1,3 +1,4 @@
+use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
 use crate::core::common::shapes;
 use crate::core::common::transform::Transform2D;
@@ -12,6 +13,8 @@ use sfml::graphics::{
 use sfml::system::{SfBox, Vector2f};
 
 pub type Blend_Mode = sfml::graphics::blend_mode::BlendMode;
+pub type Vertex_Buffer = sfml::graphics::VertexArray;
+pub type Vertex = sfml::graphics::Vertex;
 
 pub struct Texture<'a> {
     texture: SfBox<sfml::graphics::Texture>,
@@ -87,7 +90,7 @@ pub fn render_sprite(
 ) {
     // @Incomplete? Do we need this?
     //let origin = vector::from_framework_vec(sprite.origin());
-    let mut render_transform = camera.get_matrix_sfml().inverse();
+    let render_transform = camera.get_matrix_sfml().inverse();
     //render_transform.combine(&transform.get_matrix_sfml());
 
     sprite.set_position(to_framework_vec(transform.position()));
@@ -310,4 +313,44 @@ fn calc_render_transform(
     }
 
     t
+}
+
+pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer {
+    sfml::graphics::VertexArray::new(sfml::graphics::PrimitiveType::Quads, n_quads * 4)
+}
+
+pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
+    vbuf.append(v1);
+    vbuf.append(v2);
+    vbuf.append(v3);
+    vbuf.append(v4);
+}
+
+pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
+    Vertex::new(to_framework_vec(pos), col, to_framework_vec(tex_coords))
+}
+
+pub fn render_vbuf_ws(
+    window: &mut Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) {
+    let mut render_transform = camera.get_matrix_sfml().inverse();
+    render_transform.combine(&transform.get_matrix_sfml());
+
+    let render_states = RenderStates {
+        transform: render_transform,
+        blend_mode: get_blend_mode(window),
+        ..Default::default()
+    };
+    render_vbuf_internal(window, vbuf, render_states);
+}
+
+fn render_vbuf_internal(
+    window: &mut Window_Handle,
+    vbuf: &Vertex_Buffer,
+    render_states: RenderStates,
+) {
+    window.draw_vertex_array(vbuf, render_states);
 }

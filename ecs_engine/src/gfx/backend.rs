@@ -25,6 +25,10 @@ pub type Sprite<'a> = sfml::render::Sprite<'a>;
 pub type Text<'a> = sfml::render::Text<'a>;
 #[cfg(feature = "use-sfml")]
 pub type Font<'a> = sfml::render::Font<'a>;
+#[cfg(feature = "use-sfml")]
+pub type Vertex_Buffer = sfml::render::Vertex_Buffer;
+#[cfg(feature = "use-sfml")]
+pub type Vertex = sfml::render::Vertex;
 
 #[cfg(feature = "use-sfml")]
 #[allow(clippy::trivially_copy_pass_by_ref)]
@@ -144,4 +148,29 @@ pub fn fill_color_circle_ws(
     camera: &Transform2D,
 ) {
     sfml::render::fill_color_circle_ws(window, paint_props, circle, camera);
+}
+
+#[cfg(feature = "use-sfml")]
+pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer {
+    sfml::render::start_draw_quads(n_quads)
+}
+
+#[cfg(feature = "use-sfml")]
+pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
+    sfml::render::add_quad(vbuf, v1, v2, v3, v4);
+}
+
+#[cfg(feature = "use-sfml")]
+pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
+    sfml::render::new_vertex(pos, col, tex_coords)
+}
+
+#[cfg(feature = "use-sfml")]
+pub fn render_vbuf_ws(
+    window: &mut Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) {
+    sfml::render::render_vbuf_ws(window, vbuf, transform, camera);
 }
