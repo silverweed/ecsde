@@ -2,7 +2,7 @@ use super::controllable_system::C_Controllable;
 use crate::controllable_system;
 use crate::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
 use crate::gfx;
-use cgmath::{Deg, InnerSpace};
+use cgmath::InnerSpace;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider;
 use ecs_engine::core::common;
@@ -262,7 +262,7 @@ impl Gameplay_System {
         let mut prev_entity: Option<Entity> = None;
         let mut fst_entity: Option<Entity> = None;
         let n_frames = 1;
-        for i in 0..1 {
+        for i in 0..4 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
@@ -282,7 +282,7 @@ impl Gameplay_System {
                 if i > 0 {
                     t.local_transform.set_position(x * 142.0, y * 402.0);
                 }
-                self.scene_tree.add(entity, fst_entity, &t.local_transform);
+                self.scene_tree.add(entity, prev_entity, &t.local_transform);
             }
             {
                 let c = em.add_component::<collider::Collider>(entity);
@@ -350,7 +350,8 @@ impl Gameplay_System {
                 (time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
                 3.,
             );
-            //t.local_transform.set_rotation(cgmath::Deg(45.));
+            t.local_transform.set_origin(0., 0.);
+            t.local_transform.set_rotation(cgmath::Deg(45.));
         }
     }
 }

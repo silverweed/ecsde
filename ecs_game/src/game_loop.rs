@@ -459,7 +459,6 @@ fn debug_draw_colliders(
     debug_painter: &mut ecs_engine::debug::debug_painter::Debug_Painter,
 ) {
     use ecs_engine::collisions::collider::{Collider, Collider_Shape};
-    use ecs_engine::core::common::rect::Rect;
     use ecs_engine::core::common::shapes::Circle;
     use ecs_engine::ecs::components::base::C_Spatial2D;
 
@@ -478,12 +477,15 @@ fn debug_draw_colliders(
             .get_component::<C_Spatial2D>(entity)
             .unwrap()
             .global_transform;
+        // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
+        let mut transform = *transform;
+        transform.set_rotation(cgmath::Rad(0.));
 
         match collider.shape {
             Collider_Shape::Rect { width, height } => {
                 debug_painter.add_rect(
                     Vec2f::new(width, height),
-                    transform,
+                    &transform,
                     &Paint_Properties {
                         color: if collider.colliding {
                             colors::rgba(255, 0, 0, 100)
@@ -550,10 +552,8 @@ fn draw_debug_grid(
 
     for j in 0..n_vert {
         for i in 0..n_horiz {
-            let transf = Transform2D::from_pos_rot_scale(
+            let transf = Transform2D::from_pos(
                 sq_coord + Vec2f::new(i as f32 * square_size, j as f32 * square_size),
-                cgmath::Rad(0.),
-                Vec2f::new(1., 1.),
             );
             let color = if ((i as i32 - (sq_coord.x / square_size) as i32)
                 + (j as i32 - (sq_coord.y / square_size) as i32))

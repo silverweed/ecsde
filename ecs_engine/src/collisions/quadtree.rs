@@ -189,11 +189,7 @@ pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
             border_color: colors::rgba(255, 0, 255, 150),
             ..Default::default()
         };
-        let transform = Transform2D::from_pos_rot_scale(
-            Vec2f::new(quadtree.bounds.x(), quadtree.bounds.y()),
-            cgmath::Rad(0.),
-            Vec2f::new(1., 1.),
-        );
+        let transform = Transform2D::from_pos(Vec2f::new(quadtree.bounds.x(), quadtree.bounds.y()));
 
         painter.add_rect(quadtree.bounds.size(), &transform, &props);
         if let Some(subnodes) = &quadtree.subnodes {

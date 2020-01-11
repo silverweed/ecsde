@@ -141,12 +141,13 @@ impl Scene_Tree {
         global_transforms[0] = local_transforms[0];
 
         for i in 1..global_transforms.len() {
-            //let parent_index = hierarchy[i].index as usize - 1;
-            //// @Speed: this recalculates matrices every time! Optimize this!
-            //global_transforms[i] = Transform2D::new_from_matrix(
-            //&(global_transforms[parent_index].get_matrix() * local_transforms[i].get_matrix()),
-            //);
-            global_transforms[i] = local_transforms[i];
+            let parent_index = hierarchy[i].index as usize - 1;
+            // @Speed: this recalculates matrices every time! Optimize this!
+            global_transforms[i] = Transform2D::new_from_matrix(
+                &(global_transforms[parent_index].get_matrix() * local_transforms[i].get_matrix()),
+            );
+            // To disable parenting for debug:
+            //global_transforms[i] = local_transforms[i];
         }
     }
 }

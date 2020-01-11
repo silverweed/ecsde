@@ -205,7 +205,7 @@ pub fn fill_color_circle_ws(
     circle: shapes::Circle,
     camera: &Transform2D,
 ) {
-    let mut render_transform = camera.get_matrix_sfml().inverse();
+    let render_transform = camera.get_matrix_sfml().inverse();
 
     let render_states = RenderStates {
         transform: render_transform,

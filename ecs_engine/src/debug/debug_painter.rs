@@ -84,8 +84,7 @@ impl Debug_Painter {
             txt.set_fill_color(props.color);
             txt.set_outline_thickness(props.border_thick);
             txt.set_outline_color(props.border_color);
-            let transform =
-                Transform2D::from_pos_rot_scale(*world_pos, cgmath::Rad(0.), Vec2f::new(1., 1.));
+            let transform = Transform2D::from_pos(*world_pos);
             render::render_text_ws(window, &txt, &transform, camera);
         }
     }

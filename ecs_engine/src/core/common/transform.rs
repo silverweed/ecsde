@@ -35,6 +35,12 @@ impl Transform2D {
         t
     }
 
+    pub fn from_pos(pos: Vec2f) -> Transform2D {
+        let mut t = Transform2D::new();
+        t.set_position_v(pos);
+        t
+    }
+
     pub fn new_from_matrix(m: &Matrix3<f32>) -> Transform2D {
         let sx = (m[0][0] * m[0][0] + m[0][1] * m[0][1]).sqrt();
         let sy = (m[1][0] * m[1][0] + m[1][1] * m[1][1]).sqrt();
