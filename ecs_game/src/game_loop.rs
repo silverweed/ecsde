@@ -2,6 +2,7 @@ use super::{Game_Resources, Game_State};
 use crate::gfx::render_system;
 use ecs_engine::core::app;
 use ecs_engine::core::common::colors;
+use ecs_engine::core::common::vector::Vec2f;
 use ecs_engine::core::common::Maybe_Error;
 use ecs_engine::core::time;
 use ecs_engine::gfx;
@@ -11,7 +12,11 @@ use std::time::Duration;
 #[cfg(debug_assertions)]
 use ecs_engine::core::common::stringid::String_Id;
 #[cfg(debug_assertions)]
+use ecs_engine::core::common::transform::Transform2D;
+#[cfg(debug_assertions)]
 use ecs_engine::debug;
+#[cfg(debug_assertions)]
+use ecs_engine::gfx::render::Paint_Properties;
 #[cfg(debug_assertions)]
 use ecs_engine::input;
 
@@ -108,7 +113,10 @@ pub fn tick_game<'a>(
             if debug_systems.replay_recording_system.is_recording()
                 && game_state.input_provider.is_realtime_player_input()
             {
-                let record_replay_data = game_state.record_replay.read(&engine_state.config);
+                let record_replay_data = game_state
+                    .debug_cvars
+                    .record_replay
+                    .read(&engine_state.config);
                 if record_replay_data {
                     debug_systems
                         .replay_recording_system
@@ -133,7 +141,10 @@ pub fn tick_game<'a>(
         {
             #[cfg(debug_assertions)]
             {
-                let draw_colliders = game_state.draw_colliders.read(&engine_state.config);
+                let draw_colliders = game_state
+                    .debug_cvars
+                    .draw_colliders
+                    .read(&engine_state.config);
                 if draw_colliders {
                     debug_draw_colliders(
                         &game_state.gameplay_system.ecs_world,
@@ -142,6 +153,7 @@ pub fn tick_game<'a>(
                 }
 
                 let draw_collision_quadtree = game_state
+                    .debug_cvars
                     .draw_collision_quadtree
                     .read(&engine_state.config);
                 if draw_collision_quadtree {
@@ -231,6 +243,29 @@ pub fn tick_game<'a>(
             debug_systems.debug_ui_system.get_overlay(sid_camera),
             &game_state.gameplay_system.get_camera(),
         );
+
+        // Debug grid
+        if game_state
+            .debug_cvars
+            .draw_debug_grid
+            .read(&engine_state.config)
+        {
+            let square_size = game_state
+                .debug_cvars
+                .debug_grid_square_size
+                .read(&engine_state.config);
+            let opacity = game_state
+                .debug_cvars
+                .debug_grid_opacity
+                .read(&engine_state.config);
+            draw_debug_grid(
+                &mut engine_state.debug_systems.debug_painter,
+                &game_state.gameplay_system.get_camera().transform,
+                engine_state.app_config.target_win_size,
+                square_size,
+                opacity as u8,
+            );
+        }
     }
 
     // Render
@@ -253,6 +288,7 @@ pub fn tick_game<'a>(
     #[cfg(debug_assertions)]
     {
         let sleep = game_state
+            .debug_cvars
             .extra_frame_sleep_ms
             .read(&game_state.engine_state.config) as u64;
         std::thread::sleep(Duration::from_millis(sleep));
@@ -280,10 +316,10 @@ fn update_graphics(
         clear_color: colors::color_from_hex(game_state.clear_color.read(cfg) as u32),
         smooth_by_extrapolating_velocity: game_state.smooth_by_extrapolating_velocity.read(cfg),
         #[cfg(debug_assertions)]
-        draw_sprites_bg: game_state.draw_sprites_bg.read(cfg),
+        draw_sprites_bg: game_state.debug_cvars.draw_sprites_bg.read(cfg),
         #[cfg(debug_assertions)]
         draw_sprites_bg_color: colors::color_from_hex(
-            game_state.draw_sprites_bg_color.read(cfg) as u32
+            game_state.debug_cvars.draw_sprites_bg_color.read(cfg) as u32,
         ),
     };
     render_system::update(
@@ -299,6 +335,7 @@ fn update_graphics(
 
     #[cfg(debug_assertions)]
     {
+        // Draw debug painter
         {
             game_state.engine_state.debug_systems.debug_painter.draw(
                 window,
@@ -308,6 +345,8 @@ fn update_graphics(
             );
             game_state.engine_state.debug_systems.debug_painter.clear();
         }
+
+        // Draw debug UI
         {
             trace!("debug_ui_system::update", game_state.engine_state.tracer);
             game_state
@@ -422,9 +461,7 @@ fn debug_draw_colliders(
     use ecs_engine::collisions::collider::{Collider, Collider_Shape};
     use ecs_engine::core::common::rect::Rect;
     use ecs_engine::core::common::shapes::Circle;
-    use ecs_engine::core::common::vector::Vec2f;
     use ecs_engine::ecs::components::base::C_Spatial2D;
-    use ecs_engine::gfx::render::Paint_Properties;
 
     let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
         .require::<Collider>()
@@ -476,7 +513,7 @@ fn debug_draw_colliders(
                 transform.position().x,
                 transform.position().y
             ),
-            transform.position() + Vec2f::new(2., 2.),
+            transform.position(),
             10,
             &Paint_Properties {
                 color: colors::WHITE,
@@ -485,5 +522,66 @@ fn debug_draw_colliders(
                 ..Default::default()
             },
         );
+    }
+}
+
+/// Draws a grid made of squares, each of size `square_size`.
+#[cfg(debug_assertions)]
+fn draw_debug_grid(
+    debug_painter: &mut ecs_engine::debug::debug_painter::Debug_Painter,
+    camera_transform: &Transform2D,
+    (screen_width, screen_height): (u32, u32),
+    square_size: f32,
+    grid_opacity: u8,
+) {
+    let Vec2f { x: cx, y: cy } = camera_transform.position();
+    let Vec2f {
+        x: cam_sx,
+        y: cam_sy,
+    } = camera_transform.scale();
+    let n_horiz = (screen_width as f32 * cam_sx / square_size).floor() as usize + 2;
+    let n_vert = (screen_height as f32 * cam_sy / square_size).floor() as usize + 2;
+    let col_gray = colors::rgba(200, 200, 200, grid_opacity);
+    let col_white = colors::rgba(255, 255, 255, grid_opacity);
+    let sq_coord = Vec2f::new(
+        (cx / square_size).floor() * square_size,
+        (cy / square_size).floor() * square_size,
+    );
+
+    for j in 0..n_vert {
+        for i in 0..n_horiz {
+            let transf = Transform2D::from_pos_rot_scale(
+                sq_coord + Vec2f::new(i as f32 * square_size, j as f32 * square_size),
+                cgmath::Rad(0.),
+                Vec2f::new(1., 1.),
+            );
+            let color = if ((i as i32 - (sq_coord.x / square_size) as i32)
+                + (j as i32 - (sq_coord.y / square_size) as i32))
+                % 2
+                == 0
+            {
+                col_white
+            } else {
+                col_gray
+            };
+            debug_painter.add_rect(
+                Vec2f::new(square_size, square_size),
+                &transf,
+                &Paint_Properties {
+                    color,
+                    ..Default::default()
+                },
+            );
+            let pos = transf.position();
+            debug_painter.add_text(
+                &format!("{},{}", pos.x, pos.y),
+                pos + Vec2f::new(5., 5.),
+                (square_size as i32 / 6).max(8) as u16,
+                &Paint_Properties {
+                    color,
+                    ..Default::default()
+                },
+            );
+        }
     }
 }

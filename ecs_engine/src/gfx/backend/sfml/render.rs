@@ -90,8 +90,10 @@ pub fn render_sprite(
     let mut render_transform = camera.get_matrix_sfml().inverse();
     //render_transform.combine(&transform.get_matrix_sfml());
 
-    sprite.set_position(to_framework_vec(transform.position() - transform.origin()));
-    sprite.set_rotation(transform.rotation().0);
+    sprite.set_position(to_framework_vec(transform.position()));
+    sprite.set_origin(to_framework_vec(transform.origin()));
+    let cgmath::Deg(angle) = transform.rotation().into();
+    sprite.set_rotation(angle);
     sprite.set_scale(to_framework_vec(transform.scale()));
 
     let render_states = RenderStates {
@@ -200,9 +202,7 @@ pub fn fill_color_circle_ws(
     circle: shapes::Circle,
     camera: &Transform2D,
 ) {
-    let transform = Transform2D::from_pos_rot_scale(circle.center, Rad(0.), Vec2f::new(1., 1.));
     let mut render_transform = camera.get_matrix_sfml().inverse();
-    render_transform.combine(&transform.get_matrix_sfml());
 
     let render_states = RenderStates {
         transform: render_transform,

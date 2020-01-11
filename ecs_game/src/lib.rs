@@ -50,22 +50,30 @@ pub struct Game_State<'a> {
     pub gameplay_update_tick_ms: Cfg_Var<i32>,
     pub smooth_by_extrapolating_velocity: Cfg_Var<bool>,
     pub clear_color: Cfg_Var<u32>,
+
     #[cfg(debug_assertions)]
-    pub draw_sprites_bg: Cfg_Var<bool>,
-    #[cfg(debug_assertions)]
-    pub draw_sprites_bg_color: Cfg_Var<u32>,
-    #[cfg(debug_assertions)]
-    pub extra_frame_sleep_ms: Cfg_Var<i32>,
-    #[cfg(debug_assertions)]
-    pub record_replay: Cfg_Var<bool>, // /engine/debug/replay/record
-    #[cfg(debug_assertions)]
-    pub trace_overlay_refresh_rate: Cfg_Var<f32>,
-    #[cfg(debug_assertions)]
-    pub draw_colliders: Cfg_Var<bool>,
-    #[cfg(debug_assertions)]
-    pub draw_collision_quadtree: Cfg_Var<bool>,
+    pub debug_cvars: Debug_CVars,
 
     pub rng: rand::Default_Rng,
+}
+
+#[cfg(debug_assertions)]
+pub struct Debug_CVars {
+    pub draw_sprites_bg: Cfg_Var<bool>,
+    pub draw_sprites_bg_color: Cfg_Var<u32>,
+
+    pub extra_frame_sleep_ms: Cfg_Var<i32>,
+
+    pub record_replay: Cfg_Var<bool>,
+
+    pub trace_overlay_refresh_rate: Cfg_Var<f32>,
+
+    pub draw_colliders: Cfg_Var<bool>,
+    pub draw_collision_quadtree: Cfg_Var<bool>,
+
+    pub draw_debug_grid: Cfg_Var<bool>,
+    pub debug_grid_square_size: Cfg_Var<f32>,
+    pub debug_grid_opacity: Cfg_Var<i32>,
 }
 
 #[repr(C)]
@@ -140,7 +148,7 @@ pub unsafe extern "C" fn game_update<'a>(
         let game_state = &mut *game_state;
         app::maybe_update_trace_overlay(
             &mut game_state.engine_state,
-            game_state.trace_overlay_refresh_rate,
+            game_state.debug_cvars.trace_overlay_refresh_rate,
         );
     }
 
@@ -258,20 +266,7 @@ fn create_game_state<'a>(
         Cfg_Var::new("engine/rendering/smooth_by_extrapolating_velocity", cfg);
     let clear_color = Cfg_Var::new("engine/rendering/clear_color", cfg);
     #[cfg(debug_assertions)]
-    let draw_sprites_bg = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg", cfg);
-    #[cfg(debug_assertions)]
-    let draw_sprites_bg_color = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg_color", cfg);
-    #[cfg(debug_assertions)]
-    let extra_frame_sleep_ms = Cfg_Var::new("engine/debug/extra_frame_sleep_ms", cfg);
-    #[cfg(debug_assertions)]
-    let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
-    #[cfg(debug_assertions)]
-    let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
-    #[cfg(debug_assertions)]
-    let draw_colliders = Cfg_Var::new("engine/debug/collisions/draw_colliders", cfg);
-    #[cfg(debug_assertions)]
-    let draw_collision_quadtree =
-        Cfg_Var::new("engine/debug/collisions/draw_collision_quadtree", cfg);
+    let debug_cvars = create_debug_cvars(cfg);
 
     Ok(Box::new(Game_State {
         window,
@@ -299,20 +294,36 @@ fn create_game_state<'a>(
         smooth_by_extrapolating_velocity,
         clear_color,
         #[cfg(debug_assertions)]
-        draw_sprites_bg,
-        #[cfg(debug_assertions)]
-        draw_sprites_bg_color,
-        #[cfg(debug_assertions)]
-        extra_frame_sleep_ms,
-        #[cfg(debug_assertions)]
-        record_replay,
-        #[cfg(debug_assertions)]
-        trace_overlay_refresh_rate,
-        #[cfg(debug_assertions)]
-        draw_colliders,
-        #[cfg(debug_assertions)]
-        draw_collision_quadtree,
+        debug_cvars,
     }))
+}
+
+#[cfg(debug_assertions)]
+fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
+    let draw_sprites_bg = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg", cfg);
+    let draw_sprites_bg_color = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg_color", cfg);
+    let extra_frame_sleep_ms = Cfg_Var::new("engine/debug/extra_frame_sleep_ms", cfg);
+    let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
+    let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
+    let draw_colliders = Cfg_Var::new("engine/debug/collisions/draw_colliders", cfg);
+    let draw_collision_quadtree =
+        Cfg_Var::new("engine/debug/collisions/draw_collision_quadtree", cfg);
+    let draw_debug_grid = Cfg_Var::new("engine/debug/rendering/grid/draw_grid", cfg);
+    let debug_grid_square_size = Cfg_Var::new("engine/debug/rendering/grid/square_size", cfg);
+    let debug_grid_opacity = Cfg_Var::new("engine/debug/rendering/grid/opacity", cfg);
+
+    Debug_CVars {
+        draw_sprites_bg,
+        draw_sprites_bg_color,
+        extra_frame_sleep_ms,
+        record_replay,
+        trace_overlay_refresh_rate,
+        draw_colliders,
+        draw_collision_quadtree,
+        draw_debug_grid,
+        debug_grid_square_size,
+        debug_grid_opacity,
+    }
 }
 
 fn create_game_resources<'a>() -> Result<Box<Game_Resources<'a>>, Box<dyn std::error::Error>> {

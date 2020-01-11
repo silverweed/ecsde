@@ -262,7 +262,7 @@ impl Gameplay_System {
         let mut prev_entity: Option<Entity> = None;
         let mut fst_entity: Option<Entity> = None;
         let n_frames = 1;
-        for i in 0..3 {
+        for i in 0..1 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
@@ -350,6 +350,7 @@ impl Gameplay_System {
                 (time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
                 3.,
             );
+            //t.local_transform.set_rotation(cgmath::Deg(45.));
         }
     }
 }
