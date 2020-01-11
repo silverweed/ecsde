@@ -277,8 +277,9 @@ impl Gameplay_System {
                 let t = em.add_component::<C_Spatial2D>(entity);
                 let x = rand::rand_01(rng);
                 let y = rand::rand_01(rng);
-                t.local_transform
-                    .set_origin((sw / n_frames) as f32 * 0.5, (sh / n_frames) as f32 * 0.5);
+                // FIXME: origin is not working well with collisions (or in general)
+                //t.local_transform
+                //.set_origin((sw / n_frames) as f32 * 0.5, (sh / n_frames) as f32 * 0.5);
                 if i > 0 {
                     t.local_transform.set_position(x * 142.0, y * 402.0);
                 }
@@ -340,6 +341,7 @@ impl Gameplay_System {
         for (i, t) in em
             .get_components_mut::<C_Spatial2D>()
             .iter_mut()
+            .skip(1)
             .enumerate()
         {
             let speed = 10.0;
@@ -350,8 +352,7 @@ impl Gameplay_System {
                 (time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
                 3.,
             );
-            t.local_transform.set_origin(0., 0.);
-            t.local_transform.set_rotation(cgmath::Deg(45.));
+            t.local_transform.set_rotation(cgmath::Deg(90.));
         }
     }
 }

@@ -141,14 +141,25 @@ pub fn tick_game<'a>(
         {
             #[cfg(debug_assertions)]
             {
+                let draw_entities = game_state
+                    .debug_cvars
+                    .draw_entities
+                    .read(&engine_state.config);
+                if draw_entities {
+                    debug_draw_entities(
+                        &mut engine_state.debug_systems.debug_painter,
+                        &game_state.gameplay_system.ecs_world,
+                    );
+                }
+
                 let draw_colliders = game_state
                     .debug_cvars
                     .draw_colliders
                     .read(&engine_state.config);
                 if draw_colliders {
                     debug_draw_colliders(
-                        &game_state.gameplay_system.ecs_world,
                         &mut engine_state.debug_systems.debug_painter,
+                        &game_state.gameplay_system.ecs_world,
                     );
                 }
 
@@ -258,7 +269,7 @@ pub fn tick_game<'a>(
                 .debug_cvars
                 .debug_grid_opacity
                 .read(&engine_state.config);
-            draw_debug_grid(
+            debug_draw_grid(
                 &mut engine_state.debug_systems.debug_painter,
                 &game_state.gameplay_system.get_camera().transform,
                 engine_state.app_config.target_win_size,
@@ -455,8 +466,8 @@ fn update_camera_debug_overlay(
 
 #[cfg(debug_assertions)]
 fn debug_draw_colliders(
-    ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
     debug_painter: &mut ecs_engine::debug::debug_painter::Debug_Painter,
+    ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
 ) {
     use ecs_engine::collisions::collider::{Collider, Collider_Shape};
     use ecs_engine::core::common::shapes::Circle;
@@ -497,7 +508,30 @@ fn debug_draw_colliders(
                 );
             }
         }
+    }
+}
 
+#[cfg(debug_assertions)]
+fn debug_draw_entities(
+    debug_painter: &mut ecs_engine::debug::debug_painter::Debug_Painter,
+    ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
+) {
+    use ecs_engine::core::common::shapes::Circle;
+    use ecs_engine::ecs::components::base::C_Spatial2D;
+
+    let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
+        .require::<C_Spatial2D>()
+        .build();
+    loop {
+        let entity = stream.next(ecs_world);
+        if entity.is_none() {
+            break;
+        }
+        let entity = entity.unwrap();
+        let transform = &ecs_world
+            .get_component::<C_Spatial2D>(entity)
+            .unwrap()
+            .global_transform;
         debug_painter.add_circle(
             Circle {
                 radius: 5.,
@@ -529,7 +563,7 @@ fn debug_draw_colliders(
 
 /// Draws a grid made of squares, each of size `square_size`.
 #[cfg(debug_assertions)]
-fn draw_debug_grid(
+fn debug_draw_grid(
     debug_painter: &mut ecs_engine::debug::debug_painter::Debug_Painter,
     camera_transform: &Transform2D,
     (screen_width, screen_height): (u32, u32),
