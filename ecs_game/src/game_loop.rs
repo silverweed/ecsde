@@ -490,6 +490,7 @@ fn debug_draw_colliders(
         // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
         let mut transform = *transform;
         transform.set_rotation(cgmath::Rad(0.));
+        transform.translate_v(collider.offset);
 
         match collider.shape {
             Collider_Shape::Rect { width, height } => {

@@ -1,4 +1,4 @@
-use cgmath::Vector2;
+use crate::core::common::vector::Vector2;
 use std::fmt::{Debug, Formatter, Result};
 use std::ops::{Add, Sub};
 

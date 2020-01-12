@@ -1,6 +1,7 @@
 pub mod bitset;
 pub mod colors;
 pub mod direction;
+pub mod math;
 pub mod rect;
 pub mod serialize;
 pub mod shapes;

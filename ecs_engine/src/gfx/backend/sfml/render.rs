@@ -93,6 +93,12 @@ pub fn render_sprite(
     let render_transform = camera.get_matrix_sfml().inverse();
     //render_transform.combine(&transform.get_matrix_sfml());
 
+    let (sw, sh) = get_texture_size(sprite.texture().unwrap());
+    sprite.set_origin(to_framework_vec(Vec2f::new(
+        sw as f32 * 0.5,
+        sh as f32 * 0.5,
+    )));
+
     sprite.set_position(to_framework_vec(transform.position()));
     let cgmath::Deg(angle) = transform.rotation().into();
     sprite.set_rotation(angle);

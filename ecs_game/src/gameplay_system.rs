@@ -291,6 +291,7 @@ impl Gameplay_System {
                     width: (sw / n_frames) as f32,
                     height: sh as f32,
                 };
+                c.offset = -Vec2f::new(sw as f32 * 0.5, sh as f32 * 0.5);
             }
             {
                 let s = em.add_component::<C_Animated_Sprite>(entity);
@@ -366,9 +367,5 @@ pub fn get_movement_from_input(axes: &Virtual_Axes) -> Vec2f {
 
 pub fn get_normalized_movement_from_input(axes: &Virtual_Axes) -> Vec2f {
     let m = get_movement_from_input(axes);
-    if m.magnitude2() == 0.0 {
-        m
-    } else {
-        m.normalize()
-    }
+    m.normalized_or_zero()
 }
