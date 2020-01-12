@@ -16,6 +16,8 @@ use ecs_engine::core::common::transform::Transform2D;
 #[cfg(debug_assertions)]
 use ecs_engine::debug;
 #[cfg(debug_assertions)]
+use ecs_engine::debug::debug_painter::Debug_Painter;
+#[cfg(debug_assertions)]
 use ecs_engine::gfx::render::Paint_Properties;
 #[cfg(debug_assertions)]
 use ecs_engine::input;
@@ -137,52 +139,6 @@ pub fn tick_game<'a>(
             }
         }
 
-        // Update collisions
-        {
-            #[cfg(debug_assertions)]
-            {
-                let draw_entities = game_state
-                    .debug_cvars
-                    .draw_entities
-                    .read(&engine_state.config);
-                if draw_entities {
-                    debug_draw_entities(
-                        &mut engine_state.debug_systems.debug_painter,
-                        &game_state.gameplay_system.ecs_world,
-                    );
-                }
-
-                let draw_colliders = game_state
-                    .debug_cvars
-                    .draw_colliders
-                    .read(&engine_state.config);
-                if draw_colliders {
-                    debug_draw_colliders(
-                        &mut engine_state.debug_systems.debug_painter,
-                        &game_state.gameplay_system.ecs_world,
-                    );
-                }
-
-                let draw_collision_quadtree = game_state
-                    .debug_cvars
-                    .draw_collision_quadtree
-                    .read(&engine_state.config);
-                if draw_collision_quadtree {
-                    engine_state
-                        .systems
-                        .collision_system
-                        .debug_draw_quadtree(&mut engine_state.debug_systems.debug_painter);
-                }
-            }
-
-            trace!("collision_system::update", tracer);
-
-            engine_state.systems.collision_system.update(
-                &mut game_state.gameplay_system.ecs_world,
-                clone_tracer!(tracer),
-            );
-        }
-
         // Update game systems
         {
             trace!("game_update", tracer);
@@ -231,6 +187,57 @@ pub fn tick_game<'a>(
                 gameplay_start_t.elapsed().as_millis() / n_gameplay_updates,
             );
         }
+    }
+
+    // Update collisions
+    {
+        #[cfg(debug_assertions)]
+        {
+            let draw_entities = game_state
+                .debug_cvars
+                .draw_entities
+                .read(&engine_state.config);
+            let draw_velocities = game_state
+                .debug_cvars
+                .draw_entities_velocities
+                .read(&engine_state.config);
+            if draw_entities {
+                debug_draw_entities(
+                    &mut engine_state.debug_systems.debug_painter,
+                    &game_state.gameplay_system.ecs_world,
+                    draw_velocities,
+                );
+            }
+
+            let draw_colliders = game_state
+                .debug_cvars
+                .draw_colliders
+                .read(&engine_state.config);
+            if draw_colliders {
+                debug_draw_colliders(
+                    &mut engine_state.debug_systems.debug_painter,
+                    &game_state.gameplay_system.ecs_world,
+                );
+            }
+
+            let draw_collision_quadtree = game_state
+                .debug_cvars
+                .draw_collision_quadtree
+                .read(&engine_state.config);
+            if draw_collision_quadtree {
+                engine_state
+                    .systems
+                    .collision_system
+                    .debug_draw_quadtree(&mut engine_state.debug_systems.debug_painter);
+            }
+        }
+
+        trace!("collision_system::update", tracer);
+
+        engine_state.systems.collision_system.update(
+            &mut game_state.gameplay_system.ecs_world,
+            clone_tracer!(tracer),
+        );
     }
 
     // Update audio
@@ -466,7 +473,7 @@ fn update_camera_debug_overlay(
 
 #[cfg(debug_assertions)]
 fn debug_draw_colliders(
-    debug_painter: &mut ecs_engine::debug::debug_painter::Debug_Painter,
+    debug_painter: &mut Debug_Painter,
     ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
 ) {
     use ecs_engine::collisions::collider::{Collider, Collider_Shape};
@@ -513,10 +520,11 @@ fn debug_draw_colliders(
 
 #[cfg(debug_assertions)]
 fn debug_draw_entities(
-    debug_painter: &mut ecs_engine::debug::debug_painter::Debug_Painter,
+    debug_painter: &mut Debug_Painter,
     ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
+    draw_velocities: bool,
 ) {
-    use ecs_engine::core::common::shapes::Circle;
+    use ecs_engine::core::common::shapes::{Arrow, Circle};
     use ecs_engine::ecs::components::base::C_Spatial2D;
 
     let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
@@ -528,10 +536,8 @@ fn debug_draw_entities(
             break;
         }
         let entity = entity.unwrap();
-        let transform = &ecs_world
-            .get_component::<C_Spatial2D>(entity)
-            .unwrap()
-            .global_transform;
+        let spatial = ecs_world.get_component::<C_Spatial2D>(entity).unwrap();
+        let transform = &spatial.global_transform;
         debug_painter.add_circle(
             Circle {
                 radius: 5.,
@@ -558,13 +564,28 @@ fn debug_draw_entities(
                 ..Default::default()
             },
         );
+
+        if draw_velocities {
+            debug_painter.add_arrow(
+                Arrow {
+                    center: transform.position(),
+                    direction: spatial.velocity * 10.,
+                    thickness: 2.,
+                    arrow_size: 20.,
+                },
+                &Paint_Properties {
+                    color: colors::rgb(100, 0, 120),
+                    ..Default::default()
+                },
+            );
+        }
     }
 }
 
 /// Draws a grid made of squares, each of size `square_size`.
 #[cfg(debug_assertions)]
 fn debug_draw_grid(
-    debug_painter: &mut ecs_engine::debug::debug_painter::Debug_Painter,
+    debug_painter: &mut Debug_Painter,
     camera_transform: &Transform2D,
     (screen_width, screen_height): (u32, u32),
     square_size: f32,

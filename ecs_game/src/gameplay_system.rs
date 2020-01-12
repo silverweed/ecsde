@@ -344,10 +344,12 @@ impl Gameplay_System {
             //if i % 10 == 1 {
             //t.local_transform.rotate(Deg(dt_secs * speed));
             //}
+            let prev_pos = t.local_transform.position();
             t.local_transform.set_position(
                 (time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
                 3.,
             );
+            t.velocity = t.local_transform.position() - prev_pos;
             t.local_transform.set_rotation(cgmath::Deg(30.));
         }
     }

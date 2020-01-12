@@ -161,6 +161,18 @@ impl Transform2D {
     }
 }
 
+impl std::ops::Mul<Vec2f> for Transform2D {
+    type Output = Vec2f;
+
+    fn mul(self, v: Vec2f) -> Self::Output {
+        let m = self.get_matrix();
+        Vec2f::new(
+            m[0][0] * v.x + m[0][1] * v.y + m[0][2],
+            m[1][0] * v.x + m[1][1] * v.y + m[1][2],
+        )
+    }
+}
+
 // Note: Matrix3 is column-major
 pub fn matrix_pretty_print(m: &Matrix3<f32>) {
     println!(

@@ -73,6 +73,7 @@ pub struct Debug_CVars {
     pub draw_collision_quadtree: Cfg_Var<bool>,
 
     pub draw_entities: Cfg_Var<bool>,
+    pub draw_entities_velocities: Cfg_Var<bool>,
 
     pub draw_debug_grid: Cfg_Var<bool>,
     pub debug_grid_square_size: Cfg_Var<f32>,
@@ -266,7 +267,7 @@ fn create_game_state<'a>(
     let mut app_config = {
         let cfg = &config;
         let win_width: Cfg_Var<i32> = Cfg_Var::new("engine/window/width", cfg);
-        let win_height: Cfg_Var<i32> = Cfg_Var::new("engine/window/width", cfg);
+        let win_height: Cfg_Var<i32> = Cfg_Var::new("engine/window/height", cfg);
         let win_title: Cfg_Var<String> = Cfg_Var::new("engine/window/title", cfg);
         app_config::App_Config {
             title: win_title.read(cfg),
@@ -358,6 +359,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
     let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
     let draw_entities = Cfg_Var::new("engine/debug/draw_entities", cfg);
+    let draw_entities_velocities = Cfg_Var::new("engine/debug/draw_entities_velocities", cfg);
     let draw_colliders = Cfg_Var::new("engine/debug/collisions/draw_colliders", cfg);
     let draw_collision_quadtree =
         Cfg_Var::new("engine/debug/collisions/draw_collision_quadtree", cfg);
@@ -372,6 +374,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
         record_replay,
         trace_overlay_refresh_rate,
         draw_entities,
+        draw_entities_velocities,
         draw_colliders,
         draw_collision_quadtree,
         draw_debug_grid,

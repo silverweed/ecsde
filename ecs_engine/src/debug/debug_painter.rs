@@ -1,5 +1,5 @@
 use crate::core::common::rect::Rect;
-use crate::core::common::shapes::Circle;
+use crate::core::common::shapes::{Arrow, Circle};
 use crate::core::common::transform::Transform2D;
 use crate::core::common::vector::Vec2f;
 use crate::core::env::Env_Info;
@@ -13,6 +13,7 @@ pub struct Debug_Painter {
     rects: Vec<(Vec2f, Transform2D, Paint_Properties)>,
     circles: Vec<(Circle, Paint_Properties)>,
     texts: Vec<(String, Vec2f, u16, Paint_Properties)>,
+    arrows: Vec<(Arrow, Paint_Properties)>,
     font: gfx::Font_Handle,
 }
 
@@ -24,6 +25,7 @@ impl Debug_Painter {
             rects: vec![],
             circles: vec![],
             texts: vec![],
+            arrows: vec![],
             font: None,
         }
     }
@@ -38,6 +40,10 @@ impl Debug_Painter {
 
     pub fn add_circle(&mut self, circle: Circle, props: &Paint_Properties) {
         self.circles.push((circle, *props));
+    }
+
+    pub fn add_arrow(&mut self, arrow: Arrow, props: &Paint_Properties) {
+        self.arrows.push((arrow, *props));
     }
 
     pub fn add_text(
@@ -55,6 +61,7 @@ impl Debug_Painter {
         self.rects.clear();
         self.circles.clear();
         self.texts.clear();
+        self.arrows.clear();
     }
 
     pub fn draw(
@@ -76,6 +83,11 @@ impl Debug_Painter {
             render::fill_color_circle_ws(window, props, *circle, camera);
         }
 
+        for (arrow, props) in &self.arrows {
+            trace!("debug_painter::draw_arrow", tracer);
+            draw_arrow(window, arrow, props, camera);
+        }
+
         let font = self.font;
         for (text, world_pos, font_size, props) in &self.texts {
             trace!("debug_painter::draw_text", tracer);
@@ -87,4 +99,60 @@ impl Debug_Painter {
             render::render_text_ws(window, &txt, &transform, camera);
         }
     }
+}
+
+fn draw_arrow(
+    window: &mut Window_Handle,
+    arrow: &Arrow,
+    props: &Paint_Properties,
+    camera: &Transform2D,
+) {
+    let mut vbuf = render::start_draw_quads(3);
+
+    let magnitude = arrow.direction.magnitude();
+    let rot = cgmath::Rad(arrow.direction.y.atan2(arrow.direction.x));
+    let transform = Transform2D::from_pos_rot_scale(arrow.center, rot, Vec2f::new(1., 1.));
+
+    {
+        let v1 = render::new_vertex(
+            Vec2f::new(0., -arrow.thickness * 0.5),
+            props.color,
+            Vec2f::default(),
+        );
+        let v2 = render::new_vertex(
+            Vec2f::new(0., arrow.thickness * 0.5),
+            props.color,
+            Vec2f::default(),
+        );
+        let v3 = render::new_vertex(
+            Vec2f::new(magnitude, arrow.thickness * 0.5),
+            props.color,
+            Vec2f::default(),
+        );
+        let v4 = render::new_vertex(
+            Vec2f::new(magnitude, -arrow.thickness * 0.5),
+            props.color,
+            Vec2f::default(),
+        );
+
+        render::add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
+    }
+
+    {
+        let v5 = render::new_vertex(
+            Vec2f::new(magnitude - arrow.arrow_size * 0.5, -arrow.arrow_size * 0.5),
+            props.color,
+            Vec2f::default(),
+        );
+        let v6 = render::new_vertex(
+            Vec2f::new(magnitude - arrow.arrow_size * 0.5, arrow.arrow_size * 0.5),
+            props.color,
+            Vec2f::default(),
+        );
+        let v7 = render::new_vertex(Vec2f::new(magnitude, 0.), props.color, Vec2f::default());
+
+        render::add_quad(&mut vbuf, &v5, &v7, &v7, &v6);
+    }
+
+    render::render_vbuf_ws(window, &vbuf, &transform, camera);
 }

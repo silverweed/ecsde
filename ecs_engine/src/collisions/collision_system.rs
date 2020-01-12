@@ -129,6 +129,10 @@ impl Collision_System {
                 for entity in cld.iter() {
                     let collider = ecs_world.get_component_mut::<Collider>(*entity).unwrap();
                     collider.colliding = true;
+
+                    // @Incomplete: solve the collision
+                    let spatial = ecs_world.get_component_mut::<C_Spatial2D>(*entity).unwrap();
+                    spatial.local_transform.translate_v(-spatial.velocity);
                 }
             }
 
@@ -142,6 +146,9 @@ impl Collision_System {
     }
 }
 
+/// Given the Entity `entity` with its `collider` and `transform`, and given an array of `neighbours`,
+/// computes collisions between that entity and its neighbours, adding each colliding entity to the
+/// `collided_entities` array and incrementing the total number of collisions.
 fn check_collision_with_neighbours(
     entity: Entity,
     collider: &Collider,
@@ -151,7 +158,7 @@ fn check_collision_with_neighbours(
     collided_entities: Arc<Mutex<Vec<Entity>>>,
     n_collisions_total: Arc<AtomicUsize>,
 ) {
-    let pos = transform.position();
+    let pos = transform.position() + collider.offset;
     let scale = transform.scale();
 
     for neighbour in neighbours {
@@ -164,7 +171,7 @@ fn check_collision_with_neighbours(
             .get_component::<C_Spatial2D>(*neighbour)
             .unwrap()
             .global_transform;
-        let oth_pos = oth_transf.position();
+        let oth_pos = oth_transf.position() + oth_cld.offset;
         let oth_scale = oth_transf.scale();
 
         match collider.shape {
