@@ -11,19 +11,22 @@ pub type Vec2u = Vector2<u32>;
 pub type Vec2f = Vector2<f32>;
 pub type Vec2i = Vector2<i32>;
 
-// @Convenience: this is ugly to use! Think of a better solution
 #[cfg(feature = "use-sfml")]
-pub fn to_framework_vec(v: Vec2f) -> sfml::system::Vector2f {
-    sfml::system::Vector2f::new(v.x, v.y)
+impl From<Vec2f> for sfml::system::Vector2f {
+    fn from(v: Vec2f) -> sfml::system::Vector2f {
+        sfml::system::Vector2f::new(v.x, v.y)
+    }
 }
 
 #[cfg(feature = "use-sfml")]
-pub fn from_framework_vec(v: sfml::system::Vector2f) -> Vec2f {
-    Vec2f::new(v.x, v.y)
+impl From<sfml::system::Vector2f> for Vec2f {
+    fn from(v: sfml::system::Vector2f) -> Vec2f {
+        Vec2f::new(v.x, v.y)
+    }
 }
 
 impl<T> Vector2<T> {
-    pub fn new(x: T, y: T) -> Self {
+    pub const fn new(x: T, y: T) -> Self {
         Self { x, y }
     }
 }
@@ -324,11 +327,11 @@ mod tests {
     #[test]
     fn to_from_framework() {
         let a = Vec2f::new(3., 2.);
-        let b = to_framework_vec(a);
+        let b: sfml::system::Vector2f = a.into();
         assert_eq!(a.x, b.x);
         assert_eq!(a.y, b.y);
 
-        let c = from_framework_vec(b);
+        let c: Vec2f = b.into();
         assert_eq!(c.x, b.x);
         assert_eq!(c.y, b.y);
     }

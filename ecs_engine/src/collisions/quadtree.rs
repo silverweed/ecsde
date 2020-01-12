@@ -28,12 +28,12 @@ impl Quad_Tree {
         }
     }
 
-    fn new_nested(bounds: Rectf, level: u8) -> Self {
+    fn new_nested(bounds: Rectf, parent: &Quad_Tree) -> Self {
         Quad_Tree {
             bounds,
             objects: vec![],
             subnodes: None,
-            level,
+            level: parent.level + 1,
         }
     }
 
@@ -110,21 +110,20 @@ impl Quad_Tree {
         let subh = bounds.height() * 0.5;
         let x = bounds.x();
         let y = bounds.y();
-        let lv = self.level + 1;
 
         self.subnodes = Some([
-            Box::new(Quad_Tree::new_nested(Rect::new(x, y, subw, subh), lv)),
+            Box::new(Quad_Tree::new_nested(Rect::new(x, y, subw, subh), &self)),
             Box::new(Quad_Tree::new_nested(
                 Rect::new(x + subw, y, subw, subh),
-                lv,
+                &self,
             )),
             Box::new(Quad_Tree::new_nested(
                 Rect::new(x, y + subh, subw, subh),
-                lv,
+                &self,
             )),
             Box::new(Quad_Tree::new_nested(
                 Rect::new(x + subw, y + subh, subw, subh),
-                lv,
+                &self,
             )),
         ]);
     }
@@ -136,7 +135,7 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
     let mut idx = -1;
     let horiz_mid = bounds.x() + bounds.width() * 0.5;
     let vert_mid = bounds.y() + bounds.height() * 0.5;
-    let Vec2f { x: obj_x, y: obj_y } = transform.position();
+    let Vec2f { x: obj_x, y: obj_y } = transform.position() + collider.offset;
     let Vec2f {
         x: obj_scale_x,
         y: obj_scale_y,
@@ -184,10 +183,34 @@ pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
     use crate::core::common::vector::Vec2f;
     use crate::gfx::render;
 
-    fn draw_quadtree_internal(quadtree: &Quad_Tree, painter: &mut Debug_Painter, level: i32) {
+    fn calc_quadtree_deepth(quadtree: &Quad_Tree) -> u32 {
+        fn calc_quadtree_deepth_internal(quadtree: &Quad_Tree, depth: u32) -> u32 {
+            if let Some(subnodes) = &quadtree.subnodes {
+                subnodes
+                    .iter()
+                    .map(|subnode| calc_quadtree_deepth_internal(subnode, depth + 1))
+                    .max()
+                    .unwrap_or(depth)
+            } else {
+                depth
+            }
+        }
+
+        calc_quadtree_deepth_internal(quadtree, 1)
+    }
+
+    let depth = calc_quadtree_deepth(quadtree);
+
+    fn draw_quadtree_internal(quadtree: &Quad_Tree, painter: &mut Debug_Painter, depth: u32) {
+        assert!(
+            depth > quadtree.level as u32,
+            "quadtree.level >= quadtree.depth! ({} >= {})",
+            quadtree.level,
+            depth
+        );
         let props = render::Paint_Properties {
             color: colors::rgba(102, 204, 255, 20),
-            border_thick: (66. - 6. * level as f32).max(1.),
+            border_thick: (((depth - quadtree.level as u32) * 2) as f32).max(1.),
             border_color: colors::rgba(255, 0, 255, 150),
             ..Default::default()
         };
@@ -196,12 +219,12 @@ pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
         painter.add_rect(quadtree.bounds.size(), &transform, &props);
         if let Some(subnodes) = &quadtree.subnodes {
             for subnode in subnodes {
-                draw_quadtree_internal(subnode, painter, level + 1);
+                draw_quadtree_internal(subnode, painter, depth);
             }
         }
     }
 
-    draw_quadtree_internal(quadtree, painter, 0);
+    draw_quadtree_internal(quadtree, painter, depth);
 }
 
 #[cfg(test)]

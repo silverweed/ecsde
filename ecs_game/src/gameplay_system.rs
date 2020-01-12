@@ -2,7 +2,6 @@ use super::controllable_system::C_Controllable;
 use crate::controllable_system;
 use crate::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
 use crate::gfx;
-use cgmath::InnerSpace;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider;
 use ecs_engine::core::common;
@@ -261,13 +260,13 @@ impl Gameplay_System {
 
         let mut prev_entity: Option<Entity> = None;
         let mut fst_entity: Option<Entity> = None;
-        let n_frames = 1;
+        let n_frames = 4;
         for i in 0..2 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
-                rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
-                //rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
+                //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
+                rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
                 assert!(rend.texture.is_some(), "Could not load texture!");
                 let (sw, sh) = ngfx::render::get_texture_size(rsrc.get_texture(rend.texture));
                 rend.rect = Rect::new(0, 0, sw as i32 / (n_frames as i32), sh as i32);
@@ -277,9 +276,6 @@ impl Gameplay_System {
                 let t = em.add_component::<C_Spatial2D>(entity);
                 let x = rand::rand_01(rng);
                 let y = rand::rand_01(rng);
-                // FIXME: origin is not working well with collisions (or in general)
-                //t.local_transform
-                //.set_origin((sw / n_frames) as f32 * 0.5, (sh / n_frames) as f32 * 0.5);
                 if i > 0 {
                     t.local_transform.set_position(x * 142.0, y * 402.0);
                 }
@@ -287,11 +283,10 @@ impl Gameplay_System {
             }
             {
                 let c = em.add_component::<collider::Collider>(entity);
-                c.shape = collider::Collider_Shape::Rect {
-                    width: (sw / n_frames) as f32,
-                    height: sh as f32,
-                };
-                c.offset = -Vec2f::new(sw as f32 * 0.5, sh as f32 * 0.5);
+                let width = (sw / n_frames) as f32;
+                let height = sh as f32;
+                c.shape = collider::Collider_Shape::Rect { width, height };
+                c.offset = -Vec2f::new(width * 0.5, height * 0.5);
             }
             {
                 let s = em.add_component::<C_Animated_Sprite>(entity);
@@ -353,7 +348,7 @@ impl Gameplay_System {
                 (time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
                 3.,
             );
-            t.local_transform.set_rotation(cgmath::Deg(90.));
+            t.local_transform.set_rotation(cgmath::Deg(30.));
         }
     }
 }

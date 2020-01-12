@@ -4,7 +4,7 @@ pub fn fast_invsqrt(n: f32) -> f32 {
     let x2: f32 = n * 0.5;
     let mut i: u32 = unsafe { std::mem::transmute(n) };
     i = 0x5f37_5a86 - (i >> 1);
-    let y: f32 = unsafe { std::mem::transmute(i) };
+    let y: f32 = f32::from_bits(i);
     let y = y * (THREE_HALFS - (x2 * y * y));
     y * (THREE_HALFS - (x2 * y * y))
 }

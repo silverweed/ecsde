@@ -2,7 +2,7 @@ use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
 use crate::core::common::shapes;
 use crate::core::common::transform::Transform2D;
-use crate::core::common::vector::{to_framework_vec, Vec2f};
+use crate::core::common::vector::Vec2f;
 use crate::gfx::render::Paint_Properties;
 use crate::gfx::window::Window_Handle;
 use cgmath::Rad;
@@ -79,6 +79,8 @@ pub type Sprite<'a> = sfml::graphics::Sprite<'a>;
 pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect<i32>) -> Sprite<'a> {
     let mut sprite = Sprite::with_texture(texture);
     sprite.set_texture_rect(&rect);
+    let origin: Vector2f = Vec2f::new(rect.width as f32 * 0.5, rect.height as f32 * 0.5).into();
+    sprite.set_origin(origin);
     sprite
 }
 
@@ -93,16 +95,12 @@ pub fn render_sprite(
     let render_transform = camera.get_matrix_sfml().inverse();
     //render_transform.combine(&transform.get_matrix_sfml());
 
-    let (sw, sh) = get_texture_size(sprite.texture().unwrap());
-    sprite.set_origin(to_framework_vec(Vec2f::new(
-        sw as f32 * 0.5,
-        sh as f32 * 0.5,
-    )));
-
-    sprite.set_position(to_framework_vec(transform.position()));
-    let cgmath::Deg(angle) = transform.rotation().into();
-    sprite.set_rotation(angle);
-    sprite.set_scale(to_framework_vec(transform.scale()));
+    {
+        sprite.set_position(Vector2f::from(transform.position()));
+        let cgmath::Deg(angle) = transform.rotation().into();
+        sprite.set_rotation(angle);
+        sprite.set_scale(Vector2f::from(transform.scale()));
+    }
 
     let render_states = RenderStates {
         transform: render_transform,
@@ -126,7 +124,7 @@ pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: R
 }
 
 pub fn render_text(window: &mut Window_Handle, text: &mut Text, screen_pos: Vec2f) {
-    text.set_position(to_framework_vec(screen_pos));
+    text.set_position(Vector2f::from(screen_pos));
     window.handle.draw(text);
 }
 
@@ -332,7 +330,7 @@ pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex,
 }
 
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
-    Vertex::new(to_framework_vec(pos), col, to_framework_vec(tex_coords))
+    Vertex::new(Vector2f::from(pos), col, Vector2f::from(tex_coords))
 }
 
 pub fn render_vbuf_ws(
