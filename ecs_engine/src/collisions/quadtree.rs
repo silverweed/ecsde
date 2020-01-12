@@ -246,6 +246,7 @@ mod tests {
                     width: w,
                     height: h,
                 },
+                ..Default::default()
             };
             *cld = collider;
 

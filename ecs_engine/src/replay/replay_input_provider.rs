@@ -121,7 +121,7 @@ mod tests {
     use super::*;
     use crate::test_common::create_test_resources_and_env;
 
-    use crate::input::bindings::keymap::sfml::keypressed;
+    use crate::input::bindings::keyboard::sfml::keypressed;
     use crate::input::bindings::mouse::sfml::mousepressed;
     use crate::input::joystick_mgr::Joystick_Manager;
     use sfml::window::mouse::Button;

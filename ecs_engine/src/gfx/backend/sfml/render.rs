@@ -94,7 +94,6 @@ pub fn render_sprite(
     //render_transform.combine(&transform.get_matrix_sfml());
 
     sprite.set_position(to_framework_vec(transform.position()));
-    sprite.set_origin(to_framework_vec(transform.origin()));
     let cgmath::Deg(angle) = transform.rotation().into();
     sprite.set_rotation(angle);
     sprite.set_scale(to_framework_vec(transform.scale()));

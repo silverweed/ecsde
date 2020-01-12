@@ -8,7 +8,6 @@ pub struct Transform2D {
     position: Vec2f,
     rotation: Rad<f32>,
     scale: Vec2f,
-    origin: Vec2f,
 }
 
 impl Default for Transform2D {
@@ -17,7 +16,6 @@ impl Default for Transform2D {
             position: Vec2f::new(0.0, 0.0),
             rotation: Rad(0.0),
             scale: Vec2f::new(1.0, 1.0),
-            origin: Vec2f::new(0.0, 0.0),
         }
     }
 }
@@ -51,7 +49,6 @@ impl Transform2D {
             position: Vec2f::new(tx, ty),
             rotation: Rad(rot),
             scale: Vec2f::new(sx, sy),
-            origin: Vec2f::new(0.0, 0.0), // @Incomplete
         }
     }
 
@@ -115,14 +112,6 @@ impl Transform2D {
         self.rotation
     }
 
-    pub fn origin(&self) -> Vec2f {
-        self.origin
-    }
-
-    pub fn set_origin(&mut self, x: f32, y: f32) {
-        self.origin = Vec2f::new(x, y);
-    }
-
     pub fn get_matrix(&self) -> Matrix3<f32> {
         let Rad(angle) = self.rotation;
         let angle = -angle;
@@ -132,8 +121,8 @@ impl Transform2D {
         let syc = self.scale.y * cosine;
         let sxs = self.scale.x * sine;
         let sys = self.scale.y * sine;
-        let tx = -self.origin.x * sxc - self.origin.y * sys + self.position.x;
-        let ty = self.origin.x * sxs - self.origin.y * syc + self.position.y;
+        let tx = self.position.x;
+        let ty = self.position.y;
 
         // R | T
         // 0 | 1
@@ -150,8 +139,8 @@ impl Transform2D {
         let syc = self.scale.y * cosine;
         let sxs = self.scale.x * sine;
         let sys = self.scale.y * sine;
-        let tx = -self.origin.x * sxc - self.origin.y * sys + self.position.x;
-        let ty = self.origin.x * sxs - self.origin.y * syc + self.position.y;
+        let tx = self.position.x;
+        let ty = self.position.y;
 
         // R | 0
         // T | 1

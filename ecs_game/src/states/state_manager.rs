@@ -182,12 +182,17 @@ mod tests {
     fn state_manager() {
         let data = Rc::new(RefCell::new(Test_State_Data::default()));
         let state = Box::new(Test_State_1 { data: data.clone() });
-        let mut engine_state =
-            ecs_engine::core::app::create_engine_state(ecs_engine::core::app_config::App_Config {
+        let env = ecs_engine::core::env::Env_Info::gather().unwrap();
+        let config = ecs_engine::cfg::Config::new_from_dir(env.get_cfg_root());
+        let mut engine_state = ecs_engine::core::app::create_engine_state(
+            env,
+            config,
+            ecs_engine::core::app_config::App_Config {
                 title: String::from(""),
                 target_win_size: (0, 0),
-                replay_file: None,
-            });
+                in_replay_file: None,
+            },
+        );
         let mut gs = Gameplay_System::new();
         let mut smgr = State_Manager::new();
         smgr.push_state(state, &mut engine_state, &mut gs);
