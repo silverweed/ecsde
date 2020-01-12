@@ -15,13 +15,14 @@ mod gameplay_system;
 mod gfx;
 mod states;
 
+use ecs_engine::cfg;
 use ecs_engine::cfg::Cfg_Var;
+use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::rand;
 use ecs_engine::core::{app, app_config};
 use ecs_engine::gfx::{self as ngfx, window};
 use ecs_engine::input;
 use ecs_engine::resources;
-use std::env;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
@@ -97,10 +98,24 @@ pub struct Game_Bundle<'a> {
 // Note: the lifetime is actually ignored. The Game_State/Resources's lifetime management is manual
 // and it's performed by the game runner (the Game_State/Resources stay alive from game_init()
 // to game_shutdown()).
+/// `raw_args` is a pointer to the first command-line argument given to the game runner,
+/// `args_count` is the total number of arguments.
+/// # Safety
+/// If `args_count` > 0, `raw_args` must point to valid memory.
 #[no_mangle]
-pub extern "C" fn game_init<'a>() -> Game_Bundle<'a> {
+pub unsafe extern "C" fn game_init<'a>(
+    raw_args: *const String,
+    args_count: usize,
+) -> Game_Bundle<'a> {
     eprintln!("[ INFO ] Initializing game...");
-    if let Ok((game_state, game_resources)) = internal_game_init() {
+
+    let mut args: Vec<&String> = Vec::with_capacity(args_count);
+    for i in 0..args_count {
+        let arg = raw_args.add(i);
+        args.push(&*arg);
+    }
+
+    if let Ok((game_state, game_resources)) = internal_game_init(args) {
         Game_Bundle {
             game_state: Box::into_raw(game_state),
             game_resources: Box::into_raw(game_resources),
@@ -211,9 +226,10 @@ pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mu
 /////////////////////////////////////////////////////////////////////////////
 
 fn internal_game_init<'a>(
+    args: Vec<&String>,
 ) -> Result<(Box<Game_State<'a>>, Box<Game_Resources<'a>>), Box<dyn std::error::Error>> {
     let mut game_resources = create_game_resources()?;
-    let mut game_state = create_game_state(&mut game_resources)?;
+    let mut game_state = create_game_state(&mut game_resources, args)?;
 
     {
         let env = &game_state.engine_state.env;
@@ -240,10 +256,39 @@ fn internal_game_init<'a>(
 
 fn create_game_state<'a>(
     game_resources: &mut Game_Resources<'_>,
+    cmdline_args: Vec<&String>,
 ) -> Result<Box<Game_State<'a>>, Box<dyn std::error::Error>> {
-    let cfg = app_config::App_Config::new(env::args());
-    let window = ngfx::window::create_render_window(&(), cfg.target_win_size, &cfg.title);
-    let mut engine_state = app::create_engine_state(cfg);
+    // Load Config first, as it's needed to setup everything that follows.
+    let env = Env_Info::gather().unwrap();
+    let config = cfg::Config::new_from_dir(env.get_cfg_root());
+
+    // Load initial App_Config (some values may be overwritten by cmdline args)
+    let mut app_config = {
+        let cfg = &config;
+        let win_width: Cfg_Var<i32> = Cfg_Var::new("engine/window/width", cfg);
+        let win_height: Cfg_Var<i32> = Cfg_Var::new("engine/window/width", cfg);
+        let win_title: Cfg_Var<String> = Cfg_Var::new("engine/window/title", cfg);
+        app_config::App_Config {
+            title: win_title.read(cfg),
+            target_win_size: (win_width.read(cfg) as u32, win_height.read(cfg) as u32),
+            #[cfg(debug_assertions)]
+            in_replay_file: None,
+        }
+    };
+    app_config::maybe_override_with_cmdline_args(&mut app_config, cmdline_args.into_iter());
+
+    let mut engine_state = app::create_engine_state(env, config, app_config);
+
+    let appcfg = &engine_state.app_config;
+    let window = ngfx::window::create_render_window(&(), appcfg.target_win_size, &appcfg.title);
+
+    #[cfg(debug_assertions)]
+    {
+        if let Some(in_replay_file) = &appcfg.in_replay_file {
+            eprintln!("[ INFO ] Loading replay file {:?}", in_replay_file);
+            engine_state.replay_data = app::try_create_replay_data(in_replay_file);
+        }
+    }
 
     println!(
         "Working dir = {:?}\nExe = {:?}",
@@ -251,7 +296,7 @@ fn create_game_state<'a>(
         engine_state.env.get_exe()
     );
 
-    app::init_engine_systems(&mut engine_state, &mut game_resources.gfx)?;
+    app::init_engine_systems(&mut engine_state)?;
     app::start_config_watch(&engine_state.env, &mut engine_state.config)?;
 
     #[cfg(debug_assertions)]
@@ -261,7 +306,12 @@ fn create_game_state<'a>(
     }
 
     let cfg = &engine_state.config;
+
+    #[cfg(debug_assertions)]
     let input_provider = app::create_input_provider(&mut engine_state.replay_data, cfg);
+    #[cfg(not(debug_assertions))]
+    let input_provider = app::create_input_provider(cfg);
+
     let is_replaying = !input_provider.is_realtime_player_input();
     let gameplay_update_tick_ms = Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg);
     let smooth_by_extrapolating_velocity =

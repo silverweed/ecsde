@@ -2,7 +2,6 @@ use super::collider::{Collider, Collider_Shape};
 use super::quadtree;
 use crate::core::common::rect::{self, Rect};
 use crate::core::common::transform::Transform2D;
-use crate::debug::debug_painter::Debug_Painter;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Ecs_World, Entity};
 use crate::ecs::entity_stream::new_entity_stream;
@@ -10,6 +9,9 @@ use crate::prelude::*;
 use crossbeam::thread;
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
+
+#[cfg(debug_assertions)]
+use crate::debug::debug_painter::Debug_Painter;
 
 pub struct Collision_System {
     quadtree: quadtree::Quad_Tree,

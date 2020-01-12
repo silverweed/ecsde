@@ -19,7 +19,10 @@ pub struct Game_Bundle {
 }
 
 pub struct Game_Api<'lib> {
-    pub init: ll::Symbol<'lib, unsafe extern "C" fn() -> Game_Bundle>,
+    pub init: ll::Symbol<
+        'lib,
+        unsafe extern "C" fn(args: *const String, args_count: usize) -> Game_Bundle,
+    >,
     pub update:
         ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State, *mut Game_Resources) -> bool>,
     pub shutdown: ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State, *mut Game_Resources)>,

@@ -48,12 +48,13 @@ fn main() -> std::io::Result<()> {
         )?;
     }
 
+    let args: Vec<String> = std::env::args().collect();
     let (mut game_lib, mut unique_lib_path) = lib_load(&game_dll_abs_path);
     let mut game_api = unsafe { game_load(&game_lib)? };
     let game_api::Game_Bundle {
         game_state,
         game_resources,
-    } = unsafe { (game_api.init)() };
+    } = unsafe { (game_api.init)(args.as_ptr(), args.len()) };
 
     loop {
         if reload_pending_recv.try_recv().is_ok() {
@@ -97,10 +98,11 @@ fn main() -> std::io::Result<()> {
     let game_dll_abs_path = format!("{}/{}", GAME_DLL_FOLDER, GAME_DLL_FILE);
     let game_lib = lib_load(&game_dll_abs_path);
     let game_api = unsafe { game_load(&game_lib)? };
+    let args: Vec<String> = std::env::args().collect();
     let game_api::Game_Bundle {
         game_state,
         game_resources,
-    } = unsafe { (game_api.init)() };
+    } = unsafe { (game_api.init)(args.as_ptr(), args.len()) };
 
     loop {
         unsafe {

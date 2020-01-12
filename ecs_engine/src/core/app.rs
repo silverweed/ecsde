@@ -32,33 +32,37 @@ pub struct Engine_State<'r> {
     pub time: time::Time,
 
     pub systems: Core_Systems<'r>,
-    #[cfg(debug_assertions)]
-    pub debug_systems: Debug_Systems,
 
     pub tracer: Debug_Tracer,
 
+    #[cfg(debug_assertions)]
+    pub debug_systems: Debug_Systems,
+
+    #[cfg(debug_assertions)]
     pub replay_data: Option<replay_data::Replay_Data>,
 }
 
-pub fn create_engine_state<'r>(app_config: App_Config) -> Engine_State<'r> {
-    let env = Env_Info::gather().unwrap();
-    let config = cfg::Config::new_from_dir(env.get_cfg_root());
+pub fn create_engine_state<'r>(
+    env: Env_Info,
+    config: cfg::Config,
+    app_config: App_Config,
+) -> Engine_State<'r> {
     let systems = Core_Systems::new(&env);
+    let time = time::Time::new();
     #[cfg(debug_assertions)]
     let debug_systems = Debug_Systems::new(&config);
-    let time = time::Time::new();
-    let replay_data = maybe_create_replay_data(&app_config);
 
     Engine_State {
         should_close: false,
         env,
         config,
-        time,
         app_config,
+        time,
         systems,
         #[cfg(debug_assertions)]
         debug_systems,
-        replay_data,
+        #[cfg(debug_assertions)]
+        replay_data: None,
         tracer: new_debug_tracer(),
     }
 }
@@ -77,15 +81,8 @@ pub fn start_config_watch(env: &Env_Info, config: &mut cfg::Config) -> Maybe_Err
     Ok(())
 }
 
-pub fn init_engine_systems(
-    engine_state: &mut Engine_State,
-    gres: &mut Gfx_Resources,
-) -> Maybe_Error {
+pub fn init_engine_systems(engine_state: &mut Engine_State) -> Maybe_Error {
     engine_state.systems.input_system.init()?;
-    engine_state
-        .debug_systems
-        .debug_painter
-        .init(gres, &engine_state.env);
 
     Ok(())
 }
@@ -191,9 +188,15 @@ pub fn init_engine_debug(
         fadeout_overlay.position = Vec2f::new(0.0, 0.0);
     }
 
+    engine_state
+        .debug_systems
+        .debug_painter
+        .init(gfx_resources, &engine_state.env);
+
     Ok(())
 }
 
+#[cfg(debug_assertions)]
 pub fn create_input_provider(
     replay_data: &mut Option<replay_data::Replay_Data>,
     cfg: &cfg::Config,
@@ -216,6 +219,11 @@ pub fn create_input_provider(
     }
 }
 
+#[cfg(not(debug_assertions))]
+pub fn create_input_provider(cfg: &cfg::Config) -> Box<dyn input::provider::Input_Provider> {
+    Box::new(input::default_input_provider::Default_Input_Provider::default())
+}
+
 /// Returns true if the engine should quit
 pub fn handle_core_actions(
     actions: &[input::core_actions::Core_Action],
@@ -236,26 +244,17 @@ pub fn handle_core_actions(
 }
 
 #[cfg(debug_assertions)]
-fn maybe_create_replay_data(cfg: &App_Config) -> Option<replay_data::Replay_Data> {
-    if let Some(path) = &cfg.replay_file {
-        match replay_data::Replay_Data::from_file(&path) {
-            Ok(data) => Some(data),
-            Err(err) => {
-                eprintln!(
-                    "[ ERROR ] Failed to load replay data from {:?}: {}",
-                    path, err
-                );
-                None
-            }
+pub fn try_create_replay_data(replay_file: &std::path::Path) -> Option<replay_data::Replay_Data> {
+    match replay_data::Replay_Data::from_file(replay_file) {
+        Ok(data) => Some(data),
+        Err(err) => {
+            eprintln!(
+                "[ ERROR ] Failed to load replay data from {:?}: {}",
+                replay_file, err
+            );
+            None
         }
-    } else {
-        None
     }
-}
-
-#[cfg(not(debug_assertions))]
-fn maybe_create_replay_data(cfg: &App_Config) -> Option<replay_data::Replay_Data> {
-    None
 }
 
 #[cfg(debug_assertions)]

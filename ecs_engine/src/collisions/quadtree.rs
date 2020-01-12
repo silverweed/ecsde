@@ -1,9 +1,11 @@
 use super::collider::{Collider, Collider_Shape};
 use crate::core::common::rect::{Rect, Rectf};
 use crate::core::common::transform::Transform2D;
-use crate::debug::debug_painter::Debug_Painter;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Ecs_World, Entity};
+
+#[cfg(debug_assertions)]
+use crate::debug::debug_painter::Debug_Painter;
 
 const MAX_OBJECTS: usize = 8;
 const MAX_DEPTH: u8 = 10;

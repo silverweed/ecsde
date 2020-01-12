@@ -470,7 +470,6 @@ fn debug_draw_colliders(
     ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
 ) {
     use ecs_engine::collisions::collider::{Collider, Collider_Shape};
-    use ecs_engine::core::common::shapes::Circle;
     use ecs_engine::ecs::components::base::C_Spatial2D;
 
     let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)

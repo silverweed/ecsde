@@ -251,7 +251,7 @@ impl Gameplay_System {
         self.camera = em.new_entity();
         {
             let cam = em.add_component::<C_Camera2D>(self.camera);
-            cam.transform.set_scale(2.5, 2.5);
+            //cam.transform.set_scale(2.5, 2.5);
         }
 
         {
@@ -262,7 +262,7 @@ impl Gameplay_System {
         let mut prev_entity: Option<Entity> = None;
         let mut fst_entity: Option<Entity> = None;
         let n_frames = 1;
-        for i in 0..4 {
+        for i in 0..2 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);

@@ -43,11 +43,11 @@ impl Replay_Recording_System {
 
         let file_write_interval_secs =
             Cfg_Var::<f32>::new("engine/debug/replay/file_write_interval", cfg);
+        let output_file = Cfg_Var::<String>::new("engine/debug/replay/out_file", cfg);
 
         let cfg = recording_thread::Recording_Thread_Config {
             recording_cfg: self.config,
-            // @Temporary
-            output_file: std::path::Path::new("replay.bin")
+            output_file: std::path::Path::new(&output_file.read(cfg))
                 .to_path_buf()
                 .into_boxed_path(),
             file_write_interval: std::time::Duration::from_millis(
