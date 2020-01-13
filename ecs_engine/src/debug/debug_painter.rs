@@ -107,7 +107,7 @@ fn draw_arrow(
     props: &Paint_Properties,
     camera: &Transform2D,
 ) {
-    let mut vbuf = render::start_draw_quads(3);
+    let mut vbuf = render::start_draw_quads(2);
 
     let magnitude = arrow.direction.magnitude();
     let rot = cgmath::Rad(arrow.direction.y.atan2(arrow.direction.x));
