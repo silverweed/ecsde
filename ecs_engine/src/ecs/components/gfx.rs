@@ -1,6 +1,6 @@
-use ecs_engine::core::common::rect::Rect;
-use ecs_engine::core::common::transform::Transform2D;
-use ecs_engine::resources;
+use crate::core::common::rect::Rect;
+use crate::core::common::transform::Transform2D;
+use crate::resources;
 
 #[derive(Copy, Clone, Debug)]
 pub struct C_Renderable {

@@ -1,11 +1,11 @@
 use super::{Game_Resources, Game_State};
-use crate::gfx::render_system;
 use ecs_engine::core::app;
 use ecs_engine::core::common::colors;
 use ecs_engine::core::common::vector::Vec2f;
 use ecs_engine::core::common::Maybe_Error;
 use ecs_engine::core::time;
 use ecs_engine::gfx;
+use ecs_engine::gfx::render_system;
 use ecs_engine::resources::gfx::Gfx_Resources;
 use std::time::Duration;
 
@@ -286,22 +286,12 @@ pub fn tick_game<'a>(
         }
     }
 
-    // Render
-    #[cfg(feature = "prof_game_render")]
-    let render_start_t = std::time::Instant::now();
-
     update_graphics(
         game_state,
         &mut game_resources.gfx,
         real_dt,
         time::duration_ratio(&game_state.execution_time, &update_time) as f32,
     )?;
-
-    #[cfg(feature = "prof_game_render")]
-    println!(
-        "[prof_game_render] rendering took {} ms",
-        render_start_t.elapsed().as_millis()
-    );
 
     #[cfg(debug_assertions)]
     {
@@ -340,16 +330,18 @@ fn update_graphics(
             game_state.debug_cvars.draw_sprites_bg_color.read(cfg) as u32,
         ),
     };
-    render_system::update(
+    let render_args = render_system::Render_System_Update_Args {
         window,
-        gres,
-        game_state.gameplay_system.get_camera(),
-        game_state.gameplay_system.get_renderable_entities(),
-        &game_state.gameplay_system.ecs_world,
+        resources: gres,
+        camera: game_state.gameplay_system.get_camera(),
+        renderables: game_state.gameplay_system.get_renderable_entities(),
+        ecs_world: &game_state.gameplay_system.ecs_world,
         frame_lag_normalized,
-        render_cfg,
-        clone_tracer!(game_state.engine_state.tracer),
-    );
+        cfg: render_cfg,
+        tracer: clone_tracer!(game_state.engine_state.tracer),
+    };
+
+    render_system::update(render_args);
 
     #[cfg(debug_assertions)]
     {
@@ -457,7 +449,7 @@ fn update_entities_debug_overlay(
 #[cfg(debug_assertions)]
 fn update_camera_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
-    camera: &crate::ecs::components::gfx::C_Camera2D,
+    camera: &ecs_engine::ecs::components::gfx::C_Camera2D,
 ) {
     debug_overlay.clear();
     debug_overlay.add_line_color(

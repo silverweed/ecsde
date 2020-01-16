@@ -9,10 +9,8 @@ extern crate ecs_engine;
 extern crate float_cmp;
 
 mod controllable_system;
-mod ecs;
 mod game_loop;
 mod gameplay_system;
-mod gfx;
 mod states;
 
 use ecs_engine::cfg;

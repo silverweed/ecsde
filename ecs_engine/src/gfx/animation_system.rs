@@ -1,7 +1,7 @@
+use crate::core::time;
 use crate::ecs::components::gfx::{C_Animated_Sprite, C_Renderable};
-use ecs_engine::core::time;
-use ecs_engine::ecs::ecs_world::Ecs_World;
-use ecs_engine::ecs::entity_stream::Entity_Stream;
+use crate::ecs::ecs_world::Ecs_World;
+use crate::ecs::entity_stream::Entity_Stream;
 use std::time::Duration;
 
 pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, mut entity_stream: Entity_Stream) {
@@ -45,10 +45,10 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, mut entity_stream: Entit
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ecs_engine::core::common::rect::Rect;
-    use ecs_engine::ecs::entity_stream::new_entity_stream;
-    use ecs_engine::resources::gfx::tex_path;
-    use ecs_engine::test_common;
+    use crate::core::common::rect::Rect;
+    use crate::ecs::entity_stream::new_entity_stream;
+    use crate::resources::gfx::tex_path;
+    use crate::test_common;
 
     #[test]
     fn animation_system() {

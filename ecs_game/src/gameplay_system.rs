@@ -1,7 +1,5 @@
 use super::controllable_system::C_Controllable;
 use crate::controllable_system;
-use crate::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
-use crate::gfx;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider;
 use ecs_engine::core::common;
@@ -14,8 +12,10 @@ use ecs_engine::core::rand;
 use ecs_engine::core::scene_tree;
 use ecs_engine::core::time;
 use ecs_engine::ecs::components::base::C_Spatial2D;
+use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::ecs::entity_stream::{new_entity_stream, Entity_Stream};
+use ecs_engine::gfx;
 use ecs_engine::gfx as ngfx;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::bindings::keyboard;
