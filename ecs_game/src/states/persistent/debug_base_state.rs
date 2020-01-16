@@ -5,8 +5,6 @@ use ecs_engine::core::app::Engine_State;
 use ecs_engine::core::common::stringid::String_Id;
 use ecs_engine::core::time;
 use ecs_engine::input::input_system::{Action_Kind, Game_Action};
-use std::convert::TryFrom;
-use std::time::Duration;
 
 pub struct Debug_Base_State {
     sid_game_speed_up: String_Id,
@@ -16,7 +14,9 @@ pub struct Debug_Base_State {
     sid_print_em_debug_info: String_Id,
     sid_quit: String_Id,
     sid_toggle_trace_overlay: String_Id,
-    fps: Cfg_Var<i32>,
+    // @Cleanup: this cfg_var is already in Game_State!
+    // Should we perhaps move it into Engine_State and read it from handle_actions?
+    gameplay_update_tick_ms: Cfg_Var<i32>,
 }
 
 const CHANGE_SPEED_DELTA: f32 = 0.1;
@@ -31,7 +31,7 @@ impl Debug_Base_State {
             sid_print_em_debug_info: String_Id::from("print_em_debug_info"),
             sid_quit: String_Id::from("quit"),
             sid_toggle_trace_overlay: String_Id::from("toggle_trace_overlay"),
-            fps: Cfg_Var::new("engine/gameplay/fps", cfg),
+            gameplay_update_tick_ms: Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg),
         }
     }
 }
@@ -78,9 +78,9 @@ impl Persistent_Game_State for Debug_Base_State {
                 (name, Action_Kind::Pressed) if *name == self.sid_step_sim => {
                     // FIXME: game does not resume after calling this
                     let msg_overlay = debug_ui.get_fadeout_overlay(String_Id::from("msg"));
-                    let target_fps = self.fps.read(&engine_state.config);
-                    let step_delta =
-                        Duration::from_nanos(u64::try_from(1_000_000_000 / target_fps).unwrap());
+                    let step_delta = std::time::Duration::from_millis(
+                        self.gameplay_update_tick_ms.read(&engine_state.config) as u64,
+                    );
                     msg_overlay.add_line(&format!(
                         "Stepping of: {:.2} ms",
                         time::to_secs_frac(&step_delta) * 1000.0

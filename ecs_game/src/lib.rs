@@ -47,6 +47,8 @@ pub struct Game_State<'a> {
 
     //// Cfg vars
     pub gameplay_update_tick_ms: Cfg_Var<i32>,
+    pub target_fps: Cfg_Var<i32>,
+    pub vsync: Cfg_Var<bool>,
     pub smooth_by_extrapolating_velocity: Cfg_Var<bool>,
     pub clear_color: Cfg_Var<u32>,
 
@@ -279,7 +281,20 @@ fn create_game_state<'a>(
     let mut engine_state = app::create_engine_state(env, config, app_config);
 
     let appcfg = &engine_state.app_config;
-    let window = ngfx::window::create_render_window(&(), appcfg.target_win_size, &appcfg.title);
+    let cfg = &engine_state.config;
+
+    let vsync = Cfg_Var::<bool>::new("engine/window/vsync", cfg);
+    let target_fps = Cfg_Var::<i32>::new("engine/rendering/target_fps", cfg);
+
+    let window_create_args = ngfx::window::Create_Render_Window_Args {
+        vsync: vsync.read(cfg),
+        framerate_limit: target_fps.read(cfg) as u32,
+    };
+    let window = ngfx::window::create_render_window(
+        &window_create_args,
+        appcfg.target_win_size,
+        &appcfg.title,
+    );
 
     #[cfg(debug_assertions)]
     {
@@ -343,6 +358,8 @@ fn create_game_state<'a>(
         // Cfg_Vars
         gameplay_update_tick_ms,
         smooth_by_extrapolating_velocity,
+        target_fps,
+        vsync,
         clear_color,
         #[cfg(debug_assertions)]
         debug_cvars,

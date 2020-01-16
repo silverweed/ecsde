@@ -51,6 +51,26 @@ pub fn set_clear_color(window: &mut Window_Handle, color: Color) {
 }
 
 #[cfg(feature = "use-sfml")]
+pub fn get_framerate_limit(window: &Window_Handle) -> u32 {
+    sfml::window::get_framerate_limit(window)
+}
+
+#[cfg(feature = "use-sfml")]
+pub fn set_framerate_limit(window: &mut Window_Handle, limit: u32) {
+    sfml::window::set_framerate_limit(window, limit);
+}
+
+#[cfg(feature = "use-sfml")]
+pub fn has_vsync(window: &Window_Handle) -> bool {
+    sfml::window::has_vsync(window)
+}
+
+#[cfg(feature = "use-sfml")]
+pub fn set_vsync(window: &mut Window_Handle, vsync: bool) {
+    sfml::window::set_vsync(window, vsync);
+}
+
+#[cfg(feature = "use-sfml")]
 pub fn clear(window: &mut Window_Handle) {
     sfml::window::clear(window);
 }

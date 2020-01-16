@@ -21,6 +21,22 @@ pub fn set_clear_color(window: &mut Window_Handle, color: Color) {
     backend::set_clear_color(window, color);
 }
 
+pub fn get_framerate_limit(window: &Window_Handle) -> u32 {
+    backend::get_framerate_limit(window)
+}
+
+pub fn set_framerate_limit(window: &mut Window_Handle, limit: u32) {
+    backend::set_framerate_limit(window, limit);
+}
+
+pub fn has_vsync(window: &Window_Handle) -> bool {
+    backend::has_vsync(window)
+}
+
+pub fn set_vsync(window: &mut Window_Handle, vsync: bool) {
+    backend::set_vsync(window, vsync);
+}
+
 pub fn clear(window: &mut Window_Handle) {
     backend::clear(window);
 }
