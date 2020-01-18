@@ -5,7 +5,6 @@ use super::Input_Action;
 use crate::core::common::stringid::String_Id;
 use crate::input::bindings::Axis_Bindings;
 use crate::input::bindings::Axis_Emulation_Type;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -83,12 +82,10 @@ fn parse_action_bindings_lines(
         keys.dedup();
         for key in keys.into_iter() {
             let action_id = String_Id::from(action_name);
-            match bindings.entry(key) {
-                Entry::Occupied(mut o) => o.get_mut().push(action_id),
-                Entry::Vacant(v) => {
-                    v.insert(vec![action_id]);
-                }
-            }
+            bindings
+                .entry(key)
+                .or_insert_with(|| Vec::with_capacity(16))
+                .push(action_id);
         }
     }
 
@@ -166,24 +163,20 @@ fn parse_axis_bindings_lines(lines: impl std::iter::Iterator<Item = String>) -> 
                 Virtual_Axis_Mapping::Axis(axis) => {
                     bindings.real[axis as usize].push(axis_id);
                 }
-                Virtual_Axis_Mapping::Action_Emulate_Min(action) => match bindings
-                    .emulated
-                    .entry(action)
-                {
-                    Entry::Occupied(mut o) => o.get_mut().push((axis_id, Axis_Emulation_Type::Min)),
-                    Entry::Vacant(v) => {
-                        v.insert(vec![(axis_id, Axis_Emulation_Type::Min)]);
-                    }
-                },
-                Virtual_Axis_Mapping::Action_Emulate_Max(action) => match bindings
-                    .emulated
-                    .entry(action)
-                {
-                    Entry::Occupied(mut o) => o.get_mut().push((axis_id, Axis_Emulation_Type::Max)),
-                    Entry::Vacant(v) => {
-                        v.insert(vec![(axis_id, Axis_Emulation_Type::Max)]);
-                    }
-                },
+                Virtual_Axis_Mapping::Action_Emulate_Min(action) => {
+                    bindings
+                        .emulated
+                        .entry(action)
+                        .or_insert_with(|| Vec::with_capacity(8))
+                        .push((axis_id, Axis_Emulation_Type::Min));
+                }
+                Virtual_Axis_Mapping::Action_Emulate_Max(action) => {
+                    bindings
+                        .emulated
+                        .entry(action)
+                        .or_insert_with(|| Vec::with_capacity(8))
+                        .push((axis_id, Axis_Emulation_Type::Max));
+                }
             }
         }
     }
@@ -208,12 +201,10 @@ fn parse_axis(s: &str) -> Option<Virtual_Axis_Mapping> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    // @Temporary since enum variants on type aliases are experimental
     use super::joystick::Joystick_Button;
+    use super::keyboard::Key;
     use super::mouse::Mouse_Button;
-    #[cfg(feature = "use-sfml")]
-    use sfml::window::Key;
+    use super::*;
 
     #[test]
     fn test_parse_action() {

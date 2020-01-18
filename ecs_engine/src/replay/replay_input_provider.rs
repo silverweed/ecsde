@@ -130,7 +130,9 @@ mod tests {
 
     #[test]
     fn poll_replayed_events() {
-        let mut window = crate::gfx::window::create_render_window(&(), (1, 1), "test window");
+        use crate::gfx::window;
+        let wc_args = window::Create_Render_Window_Args::default();
+        let mut window = crate::gfx::window::create_render_window(&wc_args, (1, 1), "test window");
         let evt1 = vec![keypressed(Key::Num0)];
         let evt2 = vec![keypressed(Key::A)];
         let evt3 = vec![keypressed(Key::Z), mousepressed(Button::Left)];

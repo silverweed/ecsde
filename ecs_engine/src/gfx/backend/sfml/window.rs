@@ -9,6 +9,15 @@ pub struct Create_Render_Window_Args {
     pub framerate_limit: u32,
 }
 
+impl Default for Create_Render_Window_Args {
+    fn default() -> Self {
+        Create_Render_Window_Args {
+            vsync: true,
+            framerate_limit: 60,
+        }
+    }
+}
+
 pub struct Window_Handle {
     pub(super) handle: RenderWindow,
     clear_color: Color,
