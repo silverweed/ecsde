@@ -17,3 +17,4 @@ sound_test: K
 toggle_trace_overlay: Tab
 camera_zoom_up: Wheel_Up
 camera_zoom_down: Wheel_Down
+move_camera_to_origin: O

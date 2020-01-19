@@ -13,14 +13,12 @@ use notify::RecursiveMode;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
-use super::common::stringid::String_Id;
-#[cfg(debug_assertions)]
-use crate::core::systems::Debug_Systems;
-#[cfg(debug_assertions)]
-use crate::resources::{self, gfx::Gfx_Resources};
-
-#[cfg(debug_assertions)]
-use crate::debug;
+use {
+    super::common::stringid::String_Id,
+    crate::core::systems::Debug_Systems,
+    crate::debug,
+    crate::resources::{self, gfx::Gfx_Resources},
+};
 
 pub struct Engine_State<'r> {
     pub should_close: bool,

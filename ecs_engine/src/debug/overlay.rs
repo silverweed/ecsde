@@ -62,6 +62,10 @@ impl Debug_Overlay {
     }
 
     pub fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
+        if self.lines.is_empty() {
+            return;
+        }
+
         let font = self.font;
         let Debug_Overlay_Config {
             font_size,

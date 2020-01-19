@@ -5,11 +5,11 @@ use crate::gfx::render_system;
 use crate::input::input_system;
 
 #[cfg(debug_assertions)]
-use crate::cfg;
-#[cfg(debug_assertions)]
-use crate::debug::{debug_painter::Debug_Painter, debug_ui_system};
-#[cfg(debug_assertions)]
-use crate::replay::recording_system;
+use {
+    crate::cfg,
+    crate::debug::{debug_painter::Debug_Painter, debug_ui_system},
+    crate::replay::recording_system,
+};
 
 pub struct Core_Systems<'r> {
     pub input_system: input_system::Input_System,

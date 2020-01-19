@@ -67,6 +67,10 @@ impl Fadeout_Debug_Overlay {
 
     // @Refactor: this is mostly @Cutnpaste from overlay.rs
     pub fn draw(&mut self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
+        if self.fadeout_texts.is_empty() {
+            return;
+        }
+
         let font = self.font;
         let Fadeout_Debug_Overlay_Config {
             font_size,

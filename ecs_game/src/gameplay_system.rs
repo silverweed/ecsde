@@ -159,6 +159,14 @@ impl Gameplay_System {
             .unwrap()
     }
 
+    pub fn move_camera_to(&mut self, pos: Vec2f) {
+        self.ecs_world
+            .get_component_mut::<C_Camera2D>(self.camera)
+            .unwrap()
+            .transform
+            .set_position_v(pos);
+    }
+
     fn register_all_components(&mut self) {
         let em = &mut self.ecs_world;
 
@@ -254,7 +262,7 @@ impl Gameplay_System {
         let mut prev_entity: Option<Entity> = None;
         let mut fst_entity: Option<Entity> = None;
         let n_frames = 4;
-        for i in 0..1000 {
+        for i in 0..2 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);

@@ -3,6 +3,7 @@ use crate::states::state::Persistent_Game_State;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::core::common::stringid::String_Id;
+use ecs_engine::core::common::vector::Vec2f;
 use ecs_engine::core::time;
 use ecs_engine::input::input_system::{Action_Kind, Game_Action};
 
@@ -14,6 +15,7 @@ pub struct Debug_Base_State {
     sid_print_em_debug_info: String_Id,
     sid_quit: String_Id,
     sid_toggle_trace_overlay: String_Id,
+    sid_move_camera_to_origin: String_Id,
     // @Cleanup: this cfg_var is already in Game_State!
     // Should we perhaps move it into Engine_State and read it from handle_actions?
     gameplay_update_tick_ms: Cfg_Var<i32>,
@@ -31,6 +33,7 @@ impl Debug_Base_State {
             sid_print_em_debug_info: String_Id::from("print_em_debug_info"),
             sid_quit: String_Id::from("quit"),
             sid_toggle_trace_overlay: String_Id::from("toggle_trace_overlay"),
+            sid_move_camera_to_origin: String_Id::from("move_camera_to_origin"),
             gameplay_update_tick_ms: Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg),
         }
     }
@@ -104,6 +107,11 @@ impl Persistent_Game_State for Debug_Base_State {
                     let show_trace = &mut engine_state.debug_systems.show_trace_overlay;
                     *show_trace = !*show_trace;
                     debug_ui.set_overlay_enabled(String_Id::from("trace"), *show_trace);
+                }
+                (name, Action_Kind::Pressed) if *name == self.sid_move_camera_to_origin => {
+                    gs.move_camera_to(Vec2f::new(0., 0.));
+                    let msg_overlay = debug_ui.get_fadeout_overlay(String_Id::from("msg"));
+                    msg_overlay.add_line("Moved camera to origin");
                 }
                 _ => {}
             }

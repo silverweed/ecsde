@@ -450,7 +450,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
     overlay.horiz_align = Align::Begin;
     overlay.position = Vec2f::new(
         0.0,
-        game_state.engine_state.app_config.target_win_size.1 as f32 - 20.,
+        game_state.engine_state.app_config.target_win_size.1 as f32 - 22.,
     );
     // Camera overlay
     let mut overlay = debug_ui.create_overlay(String_Id::from("camera"), overlay_cfg, font);

@@ -23,7 +23,7 @@ rev = "50a345b"
 
 [dependencies.sfml]
 version = "0.15.1"
-optional = true 
+optional = true
 features = ["graphics", "audio"]
 
 [dev-dependencies]
