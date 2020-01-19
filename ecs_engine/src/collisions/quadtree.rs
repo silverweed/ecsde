@@ -3,6 +3,7 @@ use crate::core::common::rect::{Rect, Rectf};
 use crate::core::common::transform::Transform2D;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Ecs_World, Entity};
+use crate::prelude::*;
 
 #[cfg(debug_assertions)]
 use crate::debug::debug_painter::Debug_Painter;
@@ -48,16 +49,24 @@ impl Quad_Tree {
         collider: &Collider,
         transform: &Transform2D,
         ecs_world: &Ecs_World,
+        tracer: Debug_Tracer,
     ) {
         if let Some(subnodes) = &mut self.subnodes {
             let index = get_index(collider, transform, &self.bounds);
             if index >= 0 {
-                subnodes[index as usize].add(entity, collider, transform, ecs_world);
+                subnodes[index as usize].add(
+                    entity,
+                    collider,
+                    transform,
+                    ecs_world,
+                    clone_tracer!(tracer),
+                );
             }
         } else {
             self.objects.push(entity);
             if self.objects.len() > MAX_OBJECTS && self.level < MAX_DEPTH {
                 if self.subnodes.is_none() {
+                    trace!("quadtree::split", tracer);
                     self.split();
                 }
 
@@ -77,6 +86,7 @@ impl Quad_Tree {
                             collider,
                             transform,
                             ecs_world,
+                            clone_tracer!(tracer),
                         );
                     } else {
                         i += 1;
@@ -282,19 +292,20 @@ mod tests {
         }
 
         let mut results = vec![];
+        let tracer = new_debug_tracer();
 
         let (e1, c1, t1) = cld(&mut ecs_world, (0., 0.), (1., 1.), (10., 10.));
-        tree.add(e1, &c1, &t1, &ecs_world);
+        tree.add(e1, &c1, &t1, &ecs_world, clone_tracer!(tracer));
 
         tree.get_neighbours(&c1, &t1, &mut results);
         assert_eq!(results.len(), 1);
         assert_eq!(depth(&tree), 1);
 
         let (e2, c2, t2) = cld(&mut ecs_world, (50., 0.), (2., 2.), (3., 3.));
-        tree.add(e2, &c2, &t2, &ecs_world);
+        tree.add(e2, &c2, &t2, &ecs_world, clone_tracer!(tracer));
 
         let (e3, c3, t3) = cld(&mut ecs_world, (-35., -70.), (1.5, 1.5), (2.5, 2.5));
-        tree.add(e3, &c3, &t3, &ecs_world);
+        tree.add(e3, &c3, &t3, &ecs_world, clone_tracer!(tracer));
 
         results.clear();
         tree.get_neighbours(&c1, &t1, &mut results);
@@ -303,7 +314,7 @@ mod tests {
 
         // Check the tree splits after MAX_OBJECTS adds
         for _ in 3..=MAX_OBJECTS {
-            tree.add(e3, &c3, &t3, &ecs_world);
+            tree.add(e3, &c3, &t3, &ecs_world, clone_tracer!(tracer));
         }
 
         assert_eq!(depth(&tree), 2);

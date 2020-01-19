@@ -14,7 +14,7 @@ use ecs_engine::core::time;
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
-use ecs_engine::ecs::entity_stream::{new_entity_stream, Entity_Stream};
+use ecs_engine::ecs::entity_stream::new_entity_stream;
 use ecs_engine::gfx;
 use ecs_engine::gfx as ngfx;
 use ecs_engine::input::axes::Virtual_Axes;
@@ -152,13 +152,6 @@ impl Gameplay_System {
         self.update(&dt, time, &actions, &axes, cfg, tracer);
     }
 
-    pub fn get_renderable_entities(&self) -> Entity_Stream {
-        new_entity_stream(&self.ecs_world)
-            .require::<C_Renderable>()
-            .require::<C_Spatial2D>()
-            .build()
-    }
-
     pub fn get_camera(&self) -> &C_Camera2D {
         self.ecs_world
             .get_components::<C_Camera2D>()
@@ -261,7 +254,7 @@ impl Gameplay_System {
         let mut prev_entity: Option<Entity> = None;
         let mut fst_entity: Option<Entity> = None;
         let n_frames = 4;
-        for i in 0..2 {
+        for i in 0..1000 {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);
@@ -277,7 +270,7 @@ impl Gameplay_System {
                 let x = rand::rand_01(rng);
                 let y = rand::rand_01(rng);
                 if i > 0 {
-                    t.local_transform.set_position(x * 142.0, y * 402.0);
+                    t.local_transform.set_position(x * 542.0, y * 1402.0);
                 }
                 self.scene_tree.add(entity, prev_entity, &t.local_transform);
             }
@@ -345,10 +338,10 @@ impl Gameplay_System {
             //t.local_transform.rotate(Deg(dt_secs * speed));
             //}
             let prev_pos = t.local_transform.position();
-            t.local_transform.set_position(
-                (time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
-                3.,
-            );
+            //t.local_transform.set_position(
+            //(time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
+            //3.,
+            //);
             t.velocity = t.local_transform.position() - prev_pos;
             t.local_transform.set_rotation(cgmath::Deg(30.));
         }

@@ -14,9 +14,7 @@ impl Entity_Stream {
             cur_idx: 0,
         }
     }
-}
 
-impl Entity_Stream {
     pub fn next(&mut self, world: &Ecs_World) -> Option<Entity> {
         let i = self.cur_idx;
         let req_comps = &self.required_components;
@@ -35,6 +33,14 @@ impl Entity_Stream {
 
         self.cur_idx = i;
         None
+    }
+
+    /// Fills `vec` with all entities retrieved calling `next` on self.
+    /// Does not clear the Vec!
+    pub fn collect(&mut self, world: &Ecs_World, vec: &mut Vec<Entity>) {
+        while let Some(entity) = self.next(world) {
+            vec.push(entity);
+        }
     }
 }
 

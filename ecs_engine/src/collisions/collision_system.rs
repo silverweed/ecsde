@@ -40,99 +40,97 @@ impl Collision_System {
             self.quadtree.clear();
         }
 
+        self.entities_buf.clear();
+        new_entity_stream(ecs_world)
+            .require::<Collider>()
+            .require::<C_Spatial2D>()
+            .build()
+            .collect(ecs_world, &mut self.entities_buf);
+
         {
             trace!("collision_system::fill_quadtree", tracer);
-            let mut stream = new_entity_stream(ecs_world)
-                .require::<Collider>()
-                .require::<C_Spatial2D>()
-                .build();
-            loop {
-                let entity = stream.next(ecs_world);
-                if entity.is_none() {
-                    break;
-                }
-                let entity = entity.unwrap();
+            let mut map_collider = ecs_world.get_components_map_unsafe::<Collider>();
+            let map_spatial = ecs_world.get_components_map_unsafe::<C_Spatial2D>();
 
+            for &entity in &self.entities_buf {
                 let collider = {
-                    let collider = ecs_world.get_component_mut::<Collider>(entity).unwrap();
+                    let collider = unsafe { map_collider.get_component_mut(entity) }.unwrap();
                     collider.colliding = false;
                     *collider
                 };
 
-                let transform = &ecs_world
-                    .get_component::<C_Spatial2D>(entity)
+                let transform = &unsafe { map_spatial.get_component(entity) }
                     .unwrap()
                     .global_transform;
 
-                self.quadtree.add(entity, &collider, transform, ecs_world);
+                self.quadtree.add(
+                    entity,
+                    &collider,
+                    transform,
+                    ecs_world,
+                    clone_tracer!(tracer),
+                );
             }
         }
 
         // Step 2: do collision detection
 
         {
-            trace!("collision_system::collision_detection", tracer);
-
-            // @Refactor: can we avoid doing all the queries twice?
-            let mut stream = new_entity_stream(ecs_world)
-                .require::<Collider>()
-                .require::<C_Spatial2D>()
-                .build();
-            self.entities_buf.clear();
-            loop {
-                let entity = stream.next(ecs_world);
-                if entity.is_none() {
-                    break;
-                }
-                self.entities_buf.push(entity.unwrap());
-            }
+            trace!("collision_detection_and_solving", tracer);
 
             let n_collisions_total = Arc::new(AtomicUsize::new(0));
             let n_entities = self.entities_buf.len();
             let collided_entities = Arc::new(Mutex::new(vec![]));
 
-            thread::scope(|s| {
-                let n_threads = num_cpus::get();
-                for ent_chunk in self.entities_buf.chunks(n_entities / n_threads + 1) {
-                    let quadtree = &self.quadtree;
-                    let n_collisions_total = n_collisions_total.clone();
-                    let collided_entities = collided_entities.clone();
-                    let ecs_world = ecs_world as &Ecs_World;
-                    s.spawn(move |_| {
-                        for entity in ent_chunk {
-                            let collider = ecs_world.get_component::<Collider>(*entity).unwrap();
-                            let transform = &ecs_world
-                                .get_component::<C_Spatial2D>(*entity)
-                                .unwrap()
-                                .global_transform;
+            {
+                trace!("collision_detection", tracer);
 
-                            let mut neighbours = vec![];
-                            quadtree.get_neighbours(collider, transform, &mut neighbours);
-                            if !neighbours.is_empty() {
-                                check_collision_with_neighbours(
-                                    *entity,
-                                    collider,
-                                    transform,
-                                    &neighbours,
-                                    ecs_world,
-                                    collided_entities.clone(),
-                                    n_collisions_total.clone(),
-                                );
+                thread::scope(|s| {
+                    let n_threads = num_cpus::get();
+                    for ent_chunk in self.entities_buf.chunks(n_entities / n_threads + 1) {
+                        let quadtree = &self.quadtree;
+                        let n_collisions_total = n_collisions_total.clone();
+                        let collided_entities = collided_entities.clone();
+                        let ecs_world = ecs_world as &Ecs_World;
+                        s.spawn(move |_| {
+                            let map_collider = ecs_world.get_components_map::<Collider>();
+                            let map_spatial = ecs_world.get_components_map::<C_Spatial2D>();
+                            for &entity in ent_chunk {
+                                let collider = map_collider.get_component(entity).unwrap();
+                                let transform =
+                                    &map_spatial.get_component(entity).unwrap().global_transform;
+
+                                let mut neighbours = vec![];
+                                quadtree.get_neighbours(collider, transform, &mut neighbours);
+                                if !neighbours.is_empty() {
+                                    check_collision_with_neighbours(
+                                        entity,
+                                        collider,
+                                        transform,
+                                        &neighbours,
+                                        ecs_world,
+                                        collided_entities.clone(),
+                                        n_collisions_total.clone(),
+                                    );
+                                }
                             }
-                        }
-                    });
-                }
-            })
-            .unwrap();
+                        });
+                    }
+                })
+                .unwrap();
+            }
 
-            if let Ok(cld) = collided_entities.lock() {
-                for entity in cld.iter() {
-                    let collider = ecs_world.get_component_mut::<Collider>(*entity).unwrap();
-                    collider.colliding = true;
+            {
+                trace!("collision_solving", tracer);
+                if let Ok(cld) = collided_entities.lock() {
+                    for entity in cld.iter() {
+                        let collider = ecs_world.get_component_mut::<Collider>(*entity).unwrap();
+                        collider.colliding = true;
 
-                    // @Incomplete: solve the collision
-                    let spatial = ecs_world.get_component_mut::<C_Spatial2D>(*entity).unwrap();
-                    spatial.local_transform.translate_v(-spatial.velocity);
+                        // @Incomplete: solve the collision
+                        let spatial = ecs_world.get_component_mut::<C_Spatial2D>(*entity).unwrap();
+                        spatial.local_transform.translate_v(-spatial.velocity);
+                    }
                 }
             }
 
@@ -141,7 +139,7 @@ impl Collision_System {
             //n_collisions_total.load(std::sync::atomic::Ordering::SeqCst),
             //n_collisions_total.load(std::sync::atomic::Ordering::SeqCst) / n_entities
             //);
-            ();
+            ()
         }
     }
 }

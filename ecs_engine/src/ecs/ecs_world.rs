@@ -19,6 +19,77 @@ struct Component_Storage {
     pub comp_idx: HashMap<Entity_Index, usize>,
 }
 
+#[derive(Clone)]
+pub struct Components_Map_Safe<'a, T> {
+    comp_storage: &'a Component_Storage,
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<'a, T> Components_Map_Safe<'a, T> {
+    fn new(comp_storage: &'a Component_Storage) -> Self {
+        Self {
+            comp_storage,
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    pub fn get_component<'b>(&'b self, entity: Entity) -> Option<&'b T>
+    where
+        'a: 'b,
+    {
+        let storage = &*self.comp_storage;
+        if let Some(index) = storage.comp_idx.get(&entity.index) {
+            let comp = unsafe { storage.data.as_ptr().add(*index * storage.individual_size) };
+            Some(unsafe { &*(comp as *const T) })
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Components_Map_Unsafe<T> {
+    comp_storage: *mut Component_Storage,
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T> Components_Map_Unsafe<T> {
+    fn new(comp_storage: &mut Component_Storage) -> Self {
+        Self {
+            comp_storage: comp_storage as *mut _,
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    /// # Safety
+    /// The Components_Map_Mut must never outlive the Ecs_World, and at most one Components_Map_Mut
+    /// per type is allowed to exist at the same time.
+    /// The suggested usage of a Components_Map_Mut is to limit its existence to a single function.
+    pub unsafe fn get_component(&self, entity: Entity) -> Option<&T> {
+        let storage = &*self.comp_storage;
+        if let Some(index) = storage.comp_idx.get(&entity.index) {
+            let comp = storage.data.as_ptr().add(*index * storage.individual_size);
+            Some(&*(comp as *const T))
+        } else {
+            None
+        }
+    }
+
+    /// # Safety
+    /// The Components_Map_Mut must never outlive the Ecs_World, and at most one Components_Map_Mut
+    /// per type is allowed to exist at the same time.
+    /// The suggested usage of a Components_Map_Mut is to limit its existence to a single function.
+    pub unsafe fn get_component_mut(&mut self, entity: Entity) -> Option<&mut T> {
+        let storage = &*self.comp_storage;
+        if let Some(index) = storage.comp_idx.get(&entity.index) {
+            let comp = storage.data.as_ptr().add(*index * storage.individual_size);
+            Some(&mut *(comp as *mut T))
+        } else {
+            None
+        }
+    }
+}
+
 pub(super) struct Component_Manager {
     components: Vec<Component_Storage>,
     last_comp_handle: Component_Handle,
@@ -144,6 +215,17 @@ impl Component_Manager {
     fn get_components_mut(&mut self, comp_handle: Component_Handle) -> &mut [u8] {
         &mut self.components[comp_handle as usize].data
     }
+
+    fn get_components_storage(&self, comp_handle: Component_Handle) -> &Component_Storage {
+        &self.components[comp_handle as usize]
+    }
+
+    fn get_components_storage_mut(
+        &mut self,
+        comp_handle: Component_Handle,
+    ) -> &mut Component_Storage {
+        &mut self.components[comp_handle as usize]
+    }
 }
 
 pub struct Entity_Manager {
@@ -182,6 +264,14 @@ pub struct Ecs_World {
     pub component_handles: HashMap<TypeId, Component_Handle>,
     pub entity_manager: Entity_Manager,
     pub(super) component_manager: Component_Manager,
+}
+
+macro_rules! get_comp_handle {
+    ($handles: expr, $T: ty, $err: expr) => {
+        $handles
+            .get(&TypeId::of::<$T>())
+            .unwrap_or_else(|| panic!($err, type_name::<$T>()))
+    };
 }
 
 impl Ecs_World {
@@ -229,15 +319,11 @@ impl Ecs_World {
                 entity
             );
         }
-        let handle = self
-            .component_handles
-            .get(&TypeId::of::<T>())
-            .unwrap_or_else(|| {
-                panic!(
-                    "Tried to add unregistered component {:?}!",
-                    std::any::type_name::<T>()
-                )
-            });
+        let handle = get_comp_handle!(
+            self.component_handles,
+            T,
+            "Tried to add inexisting component {:?}!"
+        );
         let t = unsafe { &mut *(self.component_manager.add_component(entity, *handle) as *mut T) };
         *t = T::default();
         t
@@ -251,15 +337,11 @@ impl Ecs_World {
                 entity
             );
         }
-        let handle = self
-            .component_handles
-            .get(&TypeId::of::<T>())
-            .unwrap_or_else(|| {
-                panic!(
-                    "Tried to get unregistered component {:?}!",
-                    std::any::type_name::<T>()
-                )
-            });
+        let handle = get_comp_handle!(
+            self.component_handles,
+            T,
+            "Tried to get unregistered component {:?}!"
+        );
         let maybe_comp = self.component_manager.get_component(entity, *handle);
         if std::mem::size_of::<T>() != 0 {
             // reinterpret cast from *const u8 to *const T
@@ -277,15 +359,11 @@ impl Ecs_World {
                 entity
             );
         }
-        let handle = self
-            .component_handles
-            .get(&TypeId::of::<T>())
-            .unwrap_or_else(|| {
-                panic!(
-                    "Tried to get_mut unregistered component {:?}!",
-                    std::any::type_name::<T>()
-                )
-            });
+        let handle = get_comp_handle!(
+            self.component_handles,
+            T,
+            "Tried to get_mut unregistered component {:?}!"
+        );
         let maybe_comp = self.component_manager.get_component_mut(entity, *handle);
         if std::mem::size_of::<T>() != 0 {
             // reinterpret cast from *mut u8 to *mut T
@@ -303,15 +381,11 @@ impl Ecs_World {
                 entity
             );
         }
-        let handle = self
-            .component_handles
-            .get(&TypeId::of::<T>())
-            .unwrap_or_else(|| {
-                panic!(
-                    "Tried to remove unregistered component {:?}!",
-                    std::any::type_name::<T>()
-                )
-            });
+        let handle = get_comp_handle!(
+            self.component_handles,
+            T,
+            "Tried to remove unregistered component {:?}!"
+        );
         self.component_manager.remove_component(entity, *handle);
     }
 
@@ -323,15 +397,11 @@ impl Ecs_World {
                 entity
             );
         }
-        let handle = self
-            .component_handles
-            .get(&TypeId::of::<T>())
-            .unwrap_or_else(|| {
-                panic!(
-                    "Tried to test 'has' on unregistered component {:?}!",
-                    std::any::type_name::<T>()
-                )
-            });
+        let handle = get_comp_handle!(
+            self.component_handles,
+            T,
+            "Tried to test 'has' on unregistered component {:?}!"
+        );
         self.component_manager.has_component(entity, *handle)
     }
 
@@ -342,15 +412,11 @@ impl Ecs_World {
         if comp_size == 0 {
             return &[];
         }
-        let handle = self
-            .component_handles
-            .get(&TypeId::of::<T>())
-            .unwrap_or_else(|| {
-                panic!(
-                    "Tried to get_all unregistered components {:?}!",
-                    std::any::type_name::<T>()
-                )
-            });
+        let handle = get_comp_handle!(
+            self.component_handles,
+            T,
+            "Tried to get_all unregistered components {:?}!"
+        );
         let data = self.component_manager.get_components(*handle);
         let n_elems = data.len() / comp_size;
         unsafe { std::slice::from_raw_parts(data.as_ptr() as *const T, n_elems) }
@@ -361,18 +427,73 @@ impl Ecs_World {
         if comp_size == 0 {
             return &mut [];
         }
-        let handle = self
-            .component_handles
-            .get(&TypeId::of::<T>())
-            .unwrap_or_else(|| {
-                panic!(
-                    "Tried to get_all_mut unregistered components {:?}!",
-                    std::any::type_name::<T>()
-                )
-            });
+        let handle = get_comp_handle!(
+            self.component_handles,
+            T,
+            "Tried to get_all_mut unregistered components {:?}!"
+        );
         let data = self.component_manager.get_components_mut(*handle);
         let n_elems = data.len() / comp_size;
         unsafe { std::slice::from_raw_parts_mut(data.as_ptr() as *mut T, n_elems) }
+    }
+
+    /// This is an utility function used when `get_component` is used repeatedly on many entities.
+    /// Rather than calling `ecs_world.get_component(entity)` directly, it is more efficient to
+    /// first retrieve the components map and then query it (this avoids one map lookup per entity):
+    /// ```
+    /// # use ecs_engine::ecs::ecs_world::*;
+    /// # let mut ecs_world = Ecs_World::new();
+    /// # #[derive(Copy, Clone, Default)]
+    /// # #[allow(non_camel_case_types)]
+    /// # struct My_Comp { _foo: u32 }
+    /// # ecs_world.register_component::<My_Comp>();
+    /// let comp_map = ecs_world.get_components_map::<My_Comp>();
+    /// # let entities: Vec<Entity> = vec![];
+    /// for entity in entities {
+    ///     let my_comp = comp_map.get_component(entity);
+    ///     // ...
+    /// }
+    /// ```
+    pub fn get_components_map<T: 'static + Copy>(&self) -> Components_Map_Safe<T> {
+        let comp_size = std::mem::size_of::<T>();
+        if comp_size == 0 {
+            panic!(
+                "[ ERROR ] get_components_map_mut cannot be used on Zero Sized Types components!"
+            );
+        }
+        let handle = get_comp_handle!(
+            self.component_handles,
+            T,
+            "Tried to get_components_map_mut for unregistered components {:?}!"
+        );
+        let storage = self.component_manager.get_components_storage(*handle);
+
+        Components_Map_Safe::new(storage)
+    }
+
+    /// Like `get_components_map`, but allows mutating components. This is more unsafe to use
+    /// as it allows the coexistence of maps that allow mutable access to components.
+    /// Note that while a `Components_Map_Unsafe` exists, all other Maps simultaneously
+    /// existing must be created via this method, even if they don't need mutable access.
+    ///
+    /// # Safety
+    /// Only at most one map per type must exist at the same time: it is UB to call
+    /// `get_components_map_mut::<T>()` multiple times with the same `T`.
+    pub fn get_components_map_unsafe<T: 'static + Copy>(&mut self) -> Components_Map_Unsafe<T> {
+        let comp_size = std::mem::size_of::<T>();
+        if comp_size == 0 {
+            panic!(
+                "[ ERROR ] get_components_map_mut cannot be used on Zero Sized Types components!"
+            );
+        }
+        let handle = get_comp_handle!(
+            self.component_handles,
+            T,
+            "Tried to get_components_map_mut for unregistered components {:?}!"
+        );
+        let storage = self.component_manager.get_components_storage_mut(*handle);
+
+        Components_Map_Unsafe::new(storage)
     }
 }
 
@@ -785,5 +906,65 @@ mod tests {
                 assert!(em.get_component::<C_Test2>(e).is_none());
             }
         }
+    }
+
+    #[test]
+    fn components_map() {
+        let mut em = Ecs_World::new();
+        let mut entities: Vec<Entity> = vec![];
+        em.register_component::<C_Test>();
+
+        for _ in 0..10 {
+            let e = em.new_entity();
+            em.add_component::<C_Test>(e);
+            entities.push(e);
+        }
+
+        let map = em.get_components_map::<C_Test>();
+
+        for e in entities {
+            assert!(map.get_component(e).is_some());
+            assert_eq!(map.get_component(e).unwrap().foo, 0);
+        }
+    }
+
+    #[test]
+    fn components_map_unsafe() {
+        let mut em = Ecs_World::new();
+        let mut entities: Vec<Entity> = vec![];
+        em.register_component::<C_Test>();
+
+        for _ in 0..10 {
+            let e = em.new_entity();
+            em.add_component::<C_Test>(e);
+            entities.push(e);
+        }
+
+        let mut map = em.get_components_map_unsafe::<C_Test>();
+
+        for (i, e) in entities.iter().enumerate() {
+            let e = *e;
+            unsafe {
+                assert!(map.get_component(e).is_some());
+                assert!(map.get_component_mut(e).is_some());
+                assert_eq!(map.get_component(e).unwrap().foo, 0);
+
+                map.get_component_mut(e).unwrap().foo = i as i32;
+            }
+        }
+
+        for (i, e) in entities.iter().enumerate() {
+            assert_eq!(unsafe { map.get_component(*e) }.unwrap().foo, i as i32);
+        }
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "[ ERROR ] get_components_map_mut cannot be used on Zero Sized Types components!"
+    )]
+    fn components_map_zst() {
+        let mut em = Ecs_World::new();
+        em.register_component::<C_ZST>();
+        let _map = em.get_components_map::<C_ZST>();
     }
 }

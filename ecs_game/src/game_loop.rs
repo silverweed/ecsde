@@ -284,14 +284,17 @@ fn update_graphics(
         window,
         resources: gres,
         camera: game_state.gameplay_system.get_camera(),
-        renderables: game_state.gameplay_system.get_renderable_entities(),
         ecs_world: &game_state.gameplay_system.ecs_world,
         frame_lag_normalized,
         cfg: render_cfg,
         tracer: clone_tracer!(game_state.engine_state.tracer),
     };
 
-    render_system::update(render_args);
+    game_state
+        .engine_state
+        .systems
+        .render_system
+        .update(render_args);
 
     #[cfg(debug_assertions)]
     {
