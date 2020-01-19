@@ -24,6 +24,10 @@ use ecs_engine::prelude::*;
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 use std::time::Duration;
 
+pub struct Gameplay_System_Config {
+    pub n_entities_to_spawn: usize,
+}
+
 pub struct Gameplay_System {
     pub ecs_world: Ecs_World,
     entities: Vec<Entity>,
@@ -51,10 +55,11 @@ impl Gameplay_System {
         env: &Env_Info,
         rng: &mut rand::Default_Rng,
         cfg: &cfg::Config,
+        gs_cfg: Gameplay_System_Config,
     ) -> common::Maybe_Error {
         self.register_all_components();
 
-        self.init_demo_entities(gres, env, rng, cfg);
+        self.init_demo_entities(gres, env, rng, cfg, gs_cfg);
 
         Ok(())
     }
@@ -244,6 +249,7 @@ impl Gameplay_System {
         env: &Env_Info,
         rng: &mut rand::Default_Rng,
         cfg: &cfg::Config,
+        gs_cfg: Gameplay_System_Config,
     ) {
         // #DEMO
         let em = &mut self.ecs_world;
@@ -262,7 +268,7 @@ impl Gameplay_System {
         let mut prev_entity: Option<Entity> = None;
         let mut fst_entity: Option<Entity> = None;
         let n_frames = 4;
-        for i in 0..2 {
+        for i in 0..gs_cfg.n_entities_to_spawn {
             let entity = em.new_entity();
             let (sw, sh) = {
                 let mut rend = em.add_component::<C_Renderable>(entity);

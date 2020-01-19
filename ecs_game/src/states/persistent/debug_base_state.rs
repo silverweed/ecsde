@@ -13,7 +13,6 @@ pub struct Debug_Base_State {
     sid_pause_toggle: String_Id,
     sid_step_sim: String_Id,
     sid_print_em_debug_info: String_Id,
-    sid_quit: String_Id,
     sid_toggle_trace_overlay: String_Id,
     sid_move_camera_to_origin: String_Id,
     // @Cleanup: this cfg_var is already in Game_State!
@@ -31,7 +30,6 @@ impl Debug_Base_State {
             sid_pause_toggle: String_Id::from("pause_toggle"),
             sid_step_sim: String_Id::from("step_sim"),
             sid_print_em_debug_info: String_Id::from("print_em_debug_info"),
-            sid_quit: String_Id::from("quit"),
             sid_toggle_trace_overlay: String_Id::from("toggle_trace_overlay"),
             sid_move_camera_to_origin: String_Id::from("move_camera_to_origin"),
             gameplay_update_tick_ms: Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg),
@@ -99,9 +97,6 @@ impl Persistent_Game_State for Debug_Base_State {
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_print_em_debug_info => {
                     gs.print_debug_info();
-                }
-                (name, Action_Kind::Pressed) if *name == self.sid_quit => {
-                    return true;
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_toggle_trace_overlay => {
                     let show_trace = &mut engine_state.debug_systems.show_trace_overlay;

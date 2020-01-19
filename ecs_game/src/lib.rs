@@ -8,6 +8,7 @@ extern crate ecs_engine;
 #[cfg(test)]
 extern crate float_cmp;
 
+mod cmdline;
 mod controllable_system;
 mod game_loop;
 mod gameplay_system;
@@ -24,11 +25,12 @@ use ecs_engine::resources;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
-use ecs_engine::core::common::colors;
-#[cfg(debug_assertions)]
-use ecs_engine::core::common::stringid::String_Id;
-#[cfg(debug_assertions)]
-use ecs_engine::debug;
+#[rustfmt::skip]
+use ecs_engine::{
+    core::common::colors,
+    core::common::stringid::String_Id,
+    debug
+};
 
 #[repr(C)]
 pub struct Game_State<'a> {
@@ -230,16 +232,22 @@ fn internal_game_init<'a>(
     args: Vec<&String>,
 ) -> Result<(Box<Game_State<'a>>, Box<Game_Resources<'a>>), Box<dyn std::error::Error>> {
     let mut game_resources = create_game_resources()?;
-    let mut game_state = create_game_state(&mut game_resources, args)?;
+    let (mut game_state, parsed_cmdline_args) = create_game_state(&mut game_resources, args)?;
 
     {
         let env = &game_state.engine_state.env;
         let gres = &mut game_resources.gfx;
         let cfg = &game_state.engine_state.config;
 
-        game_state
-            .gameplay_system
-            .init(gres, env, &mut game_state.rng, cfg)?;
+        game_state.gameplay_system.init(
+            gres,
+            env,
+            &mut game_state.rng,
+            cfg,
+            gameplay_system::Gameplay_System_Config {
+                n_entities_to_spawn: parsed_cmdline_args.n_entities_to_spawn.unwrap_or(2),
+            },
+        )?;
         init_states(
             &mut game_state.state_mgr,
             &mut game_state.engine_state,
@@ -258,7 +266,7 @@ fn internal_game_init<'a>(
 fn create_game_state<'a>(
     game_resources: &mut Game_Resources<'_>,
     cmdline_args: Vec<&String>,
-) -> Result<Box<Game_State<'a>>, Box<dyn std::error::Error>> {
+) -> Result<(Box<Game_State<'a>>, cmdline::Cmdline_Args), Box<dyn std::error::Error>> {
     // Load Config first, as it's needed to setup everything that follows.
     let env = Env_Info::gather().unwrap();
     let config = cfg::Config::new_from_dir(env.get_cfg_root());
@@ -276,7 +284,14 @@ fn create_game_state<'a>(
             in_replay_file: None,
         }
     };
-    app_config::maybe_override_with_cmdline_args(&mut app_config, cmdline_args.into_iter());
+
+    let mut parsed_cmdline_args = cmdline::parse_cmdline_args(cmdline_args.into_iter());
+    #[cfg(debug_assertions)]
+    {
+        if let Some(in_replay_file) = parsed_cmdline_args.in_replay_file.take() {
+            app_config.in_replay_file = Some(in_replay_file);
+        }
+    }
 
     let mut engine_state = app::create_engine_state(env, config, app_config);
 
@@ -334,36 +349,39 @@ fn create_game_state<'a>(
     #[cfg(debug_assertions)]
     let debug_cvars = create_debug_cvars(cfg);
 
-    Ok(Box::new(Game_State {
-        window,
-        engine_state,
+    Ok((
+        Box::new(Game_State {
+            window,
+            engine_state,
 
-        #[cfg(debug_assertions)]
-        fps_debug: debug::fps::Fps_Console_Printer::new(&Duration::from_secs(2), "game"),
+            #[cfg(debug_assertions)]
+            fps_debug: debug::fps::Fps_Console_Printer::new(&Duration::from_secs(2), "game"),
 
-        execution_time: Duration::default(),
-        input_provider,
-        is_replaying,
-        gameplay_system: gameplay_system::Gameplay_System::new(),
-        state_mgr: states::state_manager::State_Manager::new(),
-        #[cfg(debug_assertions)]
-        rng: rand::new_rng_with_seed([
-            0x12, 0x23, 0x33, 0x44, 0x44, 0xab, 0xbc, 0xcc, 0x45, 0x21, 0x72, 0x21, 0xfe, 0x31,
-            0xdf, 0x46, 0xfe, 0xb4, 0x2a, 0xa9, 0x47, 0xdd, 0xd1, 0x37, 0x80, 0xfc, 0x22, 0xa1,
-            0xa2, 0xb3, 0xc0, 0xfe,
-        ])?,
-        #[cfg(not(debug_assertions))]
-        rng: rand::new_rng_with_random_seed()?,
+            execution_time: Duration::default(),
+            input_provider,
+            is_replaying,
+            gameplay_system: gameplay_system::Gameplay_System::new(),
+            state_mgr: states::state_manager::State_Manager::new(),
+            #[cfg(debug_assertions)]
+            rng: rand::new_rng_with_seed([
+                0x12, 0x23, 0x33, 0x44, 0x44, 0xab, 0xbc, 0xcc, 0x45, 0x21, 0x72, 0x21, 0xfe, 0x31,
+                0xdf, 0x46, 0xfe, 0xb4, 0x2a, 0xa9, 0x47, 0xdd, 0xd1, 0x37, 0x80, 0xfc, 0x22, 0xa1,
+                0xa2, 0xb3, 0xc0, 0xfe,
+            ])?,
+            #[cfg(not(debug_assertions))]
+            rng: rand::new_rng_with_random_seed()?,
 
-        // Cfg_Vars
-        gameplay_update_tick_ms,
-        smooth_by_extrapolating_velocity,
-        target_fps,
-        vsync,
-        clear_color,
-        #[cfg(debug_assertions)]
-        debug_cvars,
-    }))
+            // Cfg_Vars
+            gameplay_update_tick_ms,
+            smooth_by_extrapolating_velocity,
+            target_fps,
+            vsync,
+            clear_color,
+            #[cfg(debug_assertions)]
+            debug_cvars,
+        }),
+        parsed_cmdline_args,
+    ))
 }
 
 #[cfg(debug_assertions)]
@@ -412,7 +430,7 @@ fn init_states(
     engine_state: &mut app::Engine_State,
     gs: &mut gameplay_system::Gameplay_System,
 ) {
-    let base_state = Box::new(states::persistent::game_base_state::Game_Base_State {});
+    let base_state = Box::new(states::persistent::game_base_state::Game_Base_State::new());
     state_mgr.add_persistent_state(engine_state, gs, base_state);
     #[cfg(debug_assertions)]
     {
