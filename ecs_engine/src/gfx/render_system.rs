@@ -24,7 +24,7 @@ pub struct Render_System_Update_Args<'a> {
     pub ecs_world: &'a Ecs_World,
     pub frame_lag_normalized: f32,
     pub cfg: Render_System_Config,
-    pub tracer: Debug_Tracer,
+    pub _tracer: Debug_Tracer,
 }
 
 pub struct Render_System {
@@ -46,10 +46,10 @@ impl Render_System {
             ecs_world,
             frame_lag_normalized,
             cfg,
-            tracer,
+            _tracer,
         } = args;
 
-        trace!("render_system::update", tracer);
+        trace!("render_system::update", _tracer);
 
         gfx::window::set_clear_color(window, cfg.clear_color);
         gfx::window::clear(window);
@@ -99,7 +99,7 @@ impl Render_System {
                 }
             }
             {
-                trace!("render_system::render_sprite", tracer);
+                trace!("render_system::render_sprite", _tracer);
                 gfx::render::render_sprite(window, &mut sprite, &rend_transform, &camera.transform);
             }
         }

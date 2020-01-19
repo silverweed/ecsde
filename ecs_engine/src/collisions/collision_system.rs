@@ -33,10 +33,10 @@ impl Collision_System {
         quadtree::draw_quadtree(&self.quadtree, painter);
     }
 
-    pub fn update(&mut self, ecs_world: &mut Ecs_World, tracer: Debug_Tracer) {
+    pub fn update(&mut self, ecs_world: &mut Ecs_World, _tracer: Debug_Tracer) {
         // Step 1: fill quadtree
         {
-            trace!("collision_system::clear_quadtree", tracer);
+            trace!("collision_system::clear_quadtree", _tracer);
             self.quadtree.clear();
         }
 
@@ -48,7 +48,7 @@ impl Collision_System {
             .collect(ecs_world, &mut self.entities_buf);
 
         {
-            trace!("collision_system::fill_quadtree", tracer);
+            trace!("collision_system::fill_quadtree", _tracer);
             let mut map_collider = ecs_world.get_components_map_unsafe::<Collider>();
             let map_spatial = ecs_world.get_components_map_unsafe::<C_Spatial2D>();
 
@@ -68,7 +68,7 @@ impl Collision_System {
                     &collider,
                     transform,
                     ecs_world,
-                    clone_tracer!(tracer),
+                    clone_tracer!(_tracer),
                 );
             }
         }
@@ -76,14 +76,14 @@ impl Collision_System {
         // Step 2: do collision detection
 
         {
-            trace!("collision_detection_and_solving", tracer);
+            trace!("collision_detection_and_solving", _tracer);
 
             let n_collisions_total = Arc::new(AtomicUsize::new(0));
             let n_entities = self.entities_buf.len();
             let collided_entities = Arc::new(Mutex::new(vec![]));
 
             {
-                trace!("collision_detection", tracer);
+                trace!("collision_detection", _tracer);
 
                 thread::scope(|s| {
                     let n_threads = num_cpus::get();
@@ -121,7 +121,7 @@ impl Collision_System {
             }
 
             {
-                trace!("collision_solving", tracer);
+                trace!("collision_solving", _tracer);
                 if let Ok(cld) = collided_entities.lock() {
                     for entity in cld.iter() {
                         let collider = ecs_world.get_component_mut::<Collider>(*entity).unwrap();

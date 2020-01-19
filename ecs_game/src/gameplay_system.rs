@@ -66,9 +66,9 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
-        tracer: Debug_Tracer,
+        _tracer: Debug_Tracer,
     ) {
-        trace!("gameplay_system::update", tracer);
+        trace!("gameplay_system::update", _tracer);
         // Used for stepping
         self.latest_frame_actions = actions.to_vec();
 
@@ -83,7 +83,7 @@ impl Gameplay_System {
         controllable_system::update(&dt, actions, axes, &mut self.ecs_world, cfg);
 
         {
-            trace!("scene_tree::copy_transforms", tracer);
+            trace!("scene_tree::copy_transforms", _tracer);
             for e in self.entities.iter().copied() {
                 if let Some(t) = self.ecs_world.get_component::<C_Spatial2D>(e) {
                     self.scene_tree.set_local_transform(e, &t.local_transform);
@@ -92,12 +92,12 @@ impl Gameplay_System {
         }
 
         {
-            trace!("scene_tree::compute_global_transforms", tracer);
+            trace!("scene_tree::compute_global_transforms", _tracer);
             self.scene_tree.compute_global_transforms();
         }
 
         {
-            trace!("scene_tree::backcopy_transforms", tracer);
+            trace!("scene_tree::backcopy_transforms", _tracer);
             for e in self.entities.iter().copied() {
                 if let Some(t) = self.ecs_world.get_component_mut::<C_Spatial2D>(e) {
                     t.global_transform = *self.scene_tree.get_global_transform(e).unwrap();
@@ -115,9 +115,9 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
-        tracer: Debug_Tracer,
+        _tracer: Debug_Tracer,
     ) {
-        trace!("gameplay_system::realtime_update", tracer);
+        trace!("gameplay_system::realtime_update", _tracer);
         self.update_camera(real_dt, actions, axes, cfg);
     }
 
@@ -127,9 +127,9 @@ impl Gameplay_System {
         dt: &Duration,
         time: &time::Time,
         cfg: &cfg::Config,
-        tracer: Debug_Tracer,
+        _tracer: Debug_Tracer,
     ) {
-        self.update_with_latest_frame_actions(dt, time, cfg, tracer);
+        self.update_with_latest_frame_actions(dt, time, cfg, _tracer);
     }
 
     #[cfg(debug_assertions)]
@@ -143,13 +143,13 @@ impl Gameplay_System {
         dt: &Duration,
         time: &time::Time,
         cfg: &cfg::Config,
-        tracer: Debug_Tracer,
+        _tracer: Debug_Tracer,
     ) {
         let mut actions = vec![];
         std::mem::swap(&mut self.latest_frame_actions, &mut actions);
         let mut axes = Virtual_Axes::default();
         std::mem::swap(&mut self.latest_frame_axes, &mut axes);
-        self.update(&dt, time, &actions, &axes, cfg, tracer);
+        self.update(&dt, time, &actions, &axes, cfg, _tracer);
     }
 
     pub fn get_camera(&self) -> &C_Camera2D {

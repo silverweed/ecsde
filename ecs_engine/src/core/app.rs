@@ -2,21 +2,22 @@ use super::app_config::App_Config;
 use super::common::Maybe_Error;
 use super::env::Env_Info;
 use super::time;
-use crate::cfg::{self, Cfg_Var};
+use crate::cfg;
 use crate::core::systems::Core_Systems;
 use crate::fs;
 use crate::gfx;
 use crate::input;
 use crate::prelude::{new_debug_tracer, Debug_Tracer};
-use crate::replay::{replay_data, replay_input_provider};
 use notify::RecursiveMode;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use {
     super::common::stringid::String_Id,
+    crate::cfg::Cfg_Var,
     crate::core::systems::Debug_Systems,
     crate::debug,
+    crate::replay::{replay_data, replay_input_provider},
     crate::resources::{self, gfx::Gfx_Resources},
 };
 
@@ -218,7 +219,7 @@ pub fn create_input_provider(
 }
 
 #[cfg(not(debug_assertions))]
-pub fn create_input_provider(cfg: &cfg::Config) -> Box<dyn input::provider::Input_Provider> {
+pub fn create_input_provider() -> Box<dyn input::provider::Input_Provider> {
     Box::new(input::default_input_provider::Default_Input_Provider::default())
 }
 

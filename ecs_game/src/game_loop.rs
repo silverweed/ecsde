@@ -1,7 +1,6 @@
 use super::{Game_Resources, Game_State};
 use ecs_engine::core::app;
 use ecs_engine::core::common::colors;
-use ecs_engine::core::common::vector::Vec2f;
 use ecs_engine::core::common::Maybe_Error;
 use ecs_engine::core::time;
 use ecs_engine::gfx;
@@ -13,6 +12,7 @@ use std::time::Duration;
 #[cfg(debug_assertions)]
 use ecs_engine::{
     core::common::stringid::String_Id,
+    core::common::vector::Vec2f,
     core::common::transform::Transform2D,
     debug,
     debug::debug_painter::Debug_Painter,
@@ -24,8 +24,8 @@ pub fn tick_game<'a>(
     game_state: &'a mut Game_State<'a>,
     game_resources: &'a mut Game_Resources<'a>,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    let tracer = clone_tracer!(game_state.engine_state.tracer);
-    trace!("tick_game", tracer);
+    let _tracer = clone_tracer!(game_state.engine_state.tracer);
+    trace!("tick_game", _tracer);
 
     // @Speed: these should all be computed at compile time.
     // Probably will do that when either const fn or proc macros/syntax extensions are stable.
@@ -62,7 +62,7 @@ pub fn tick_game<'a>(
 
     // Update input
     {
-        trace!("input_system::update", tracer);
+        trace!("input_system::update", _tracer);
         systems.input_system.update(
             window,
             &mut *game_state.input_provider,
@@ -72,7 +72,7 @@ pub fn tick_game<'a>(
 
     // Handle actions
     {
-        trace!("app::handle_core_actions", tracer);
+        trace!("app::handle_core_actions", _tracer);
         if app::handle_core_actions(&systems.input_system.extract_core_actions(), window) {
             engine_state.should_close = true;
             return Ok(false);
@@ -114,7 +114,7 @@ pub fn tick_game<'a>(
         }
 
         {
-            trace!("state_mgr::handle_actions", tracer);
+            trace!("state_mgr::handle_actions", _tracer);
             if game_state.state_mgr.handle_actions(
                 &actions,
                 engine_state,
@@ -127,7 +127,7 @@ pub fn tick_game<'a>(
 
         // Update game systems
         {
-            trace!("game_update", tracer);
+            trace!("game_update", _tracer);
 
             let axes = engine_state.systems.input_system.get_virtual_axes();
 
@@ -149,7 +149,7 @@ pub fn tick_game<'a>(
                 &actions,
                 axes,
                 &engine_state.config,
-                clone_tracer!(tracer),
+                clone_tracer!(_tracer),
             );
 
             // @Robustness: limit or control somehow the number of updates done here
@@ -172,7 +172,7 @@ pub fn tick_game<'a>(
                     &actions,
                     axes,
                     &engine_state.config,
-                    clone_tracer!(tracer),
+                    clone_tracer!(_tracer),
                 );
                 game_state.execution_time -= update_time;
 
@@ -197,17 +197,17 @@ pub fn tick_game<'a>(
 
     // Update collisions
     {
-        trace!("collision_system::update", tracer);
+        trace!("collision_system::update", _tracer);
 
         engine_state.systems.collision_system.update(
             &mut game_state.gameplay_system.ecs_world,
-            clone_tracer!(tracer),
+            clone_tracer!(_tracer),
         );
     }
 
     // Update audio
     {
-        trace!("audio_system_update", tracer);
+        trace!("audio_system_update", _tracer);
         engine_state.systems.audio_system.update();
     }
 
@@ -287,7 +287,7 @@ fn update_graphics(
         ecs_world: &game_state.gameplay_system.ecs_world,
         frame_lag_normalized,
         cfg: render_cfg,
-        tracer: clone_tracer!(game_state.engine_state.tracer),
+        _tracer: clone_tracer!(game_state.engine_state.tracer),
     };
 
     game_state

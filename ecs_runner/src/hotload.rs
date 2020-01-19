@@ -2,12 +2,13 @@
 pub mod file_watcher;
 
 use super::game_api::Game_Api;
-use std::path::{Path, PathBuf};
 
 #[cfg(debug_assertions)]
-use notify::DebouncedEvent;
-#[cfg(debug_assertions)]
-use std::sync::mpsc::SyncSender;
+use {
+    notify::DebouncedEvent,
+    std::path::{Path, PathBuf},
+    std::sync::mpsc::SyncSender,
+};
 
 #[cfg(debug_assertions)]
 pub struct Game_Dll_File_Watcher {

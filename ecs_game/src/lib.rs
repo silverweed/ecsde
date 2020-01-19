@@ -324,7 +324,7 @@ fn create_game_state<'a>(
     #[cfg(debug_assertions)]
     let input_provider = app::create_input_provider(&mut engine_state.replay_data, cfg);
     #[cfg(not(debug_assertions))]
-    let input_provider = app::create_input_provider(cfg);
+    let input_provider = app::create_input_provider();
 
     let is_replaying = !input_provider.is_realtime_player_input();
     let gameplay_update_tick_ms = Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg);

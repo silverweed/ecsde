@@ -1,4 +1,6 @@
 use std::iter::Iterator;
+
+#[cfg(debug_assertions)]
 use std::path;
 
 pub struct App_Config {

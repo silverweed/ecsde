@@ -49,7 +49,7 @@ impl Quad_Tree {
         collider: &Collider,
         transform: &Transform2D,
         ecs_world: &Ecs_World,
-        tracer: Debug_Tracer,
+        _tracer: Debug_Tracer,
     ) {
         if let Some(subnodes) = &mut self.subnodes {
             let index = get_index(collider, transform, &self.bounds);
@@ -59,14 +59,14 @@ impl Quad_Tree {
                     collider,
                     transform,
                     ecs_world,
-                    clone_tracer!(tracer),
+                    clone_tracer!(_tracer),
                 );
             }
         } else {
             self.objects.push(entity);
             if self.objects.len() > MAX_OBJECTS && self.level < MAX_DEPTH {
                 if self.subnodes.is_none() {
-                    trace!("quadtree::split", tracer);
+                    trace!("quadtree::split", _tracer);
                     self.split();
                 }
 
@@ -86,7 +86,7 @@ impl Quad_Tree {
                             collider,
                             transform,
                             ecs_world,
-                            clone_tracer!(tracer),
+                            clone_tracer!(_tracer),
                         );
                     } else {
                         i += 1;
