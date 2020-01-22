@@ -170,9 +170,9 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
             {
                 if obj_scale_x != obj_scale_y {
                     eprintln!(
-                    "[ WARNING ] Unsupported non-uniform scale {},{} on circular collider. Will use scale.x.",
-                    obj_scale_x, obj_scale_y
-                );
+                        "[ WARNING ] Unsupported non-uniform scale {},{} on circular collider. Will use scale.x.",
+                        obj_scale_x, obj_scale_y
+                    );
                 }
             }
             let width = radius * obj_scale_x;
