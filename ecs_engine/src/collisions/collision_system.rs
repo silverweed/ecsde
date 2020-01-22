@@ -1,7 +1,9 @@
 use super::collider::{Collider, Collider_Shape};
 use super::quadtree;
 use crate::core::common::rect::{self, Rect};
+use crate::core::common::shapes;
 use crate::core::common::transform::Transform2D;
+use crate::core::common::vector::Vec2f;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Ecs_World, Entity};
 use crate::ecs::entity_stream::new_entity_stream;
@@ -192,6 +194,35 @@ fn check_collision_with_neighbours(
                         n_collisions_total
                             .fetch_add(neighbours.len(), std::sync::atomic::Ordering::Relaxed);
                     }
+                }
+                Collider_Shape::Circle { .. } => {
+                    // @Incomplete
+                    eprintln!("[ TODO ] rect-circle collisions are not implemented yet.");
+                }
+            },
+            Collider_Shape::Circle { radius } => match oth_cld.shape {
+                Collider_Shape::Circle { radius: oth_radius } => {
+                    let me = shapes::Circle {
+                        center: Vec2f::new(pos.x, pos.y),
+                        // Note: we assume uniform scale
+                        radius: radius * scale.x,
+                    };
+                    let him = shapes::Circle {
+                        center: Vec2f::new(oth_pos.x, oth_pos.y),
+                        // Note: we assume uniform scale
+                        radius: oth_radius * oth_scale.x,
+                    };
+                    if me.intersects(&him) {
+                        if let Ok(mut cld) = collided_entities.lock() {
+                            cld.push(entity);
+                        }
+                        n_collisions_total
+                            .fetch_add(neighbours.len(), std::sync::atomic::Ordering::Relaxed);
+                    }
+                }
+                Collider_Shape::Rect { .. } => {
+                    // @Incomplete
+                    eprintln!("[ TODO ] rect-circle collisions are not implemented yet.");
                 }
             },
         }

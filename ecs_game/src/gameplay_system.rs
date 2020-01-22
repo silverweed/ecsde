@@ -292,7 +292,10 @@ impl Gameplay_System {
                 let c = em.add_component::<collider::Collider>(entity);
                 let width = (sw / n_frames) as f32;
                 let height = sh as f32;
-                c.shape = collider::Collider_Shape::Rect { width, height };
+                //c.shape = collider::Collider_Shape::Rect { width, height };
+                c.shape = collider::Collider_Shape::Circle {
+                    radius: width.max(height) * 0.5,
+                };
                 c.offset = -Vec2f::new(width * 0.5, height * 0.5);
             }
             {

@@ -1,5 +1,3 @@
-use std::iter::Iterator;
-
 #[cfg(debug_assertions)]
 use std::path;
 

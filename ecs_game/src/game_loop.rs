@@ -520,6 +520,7 @@ fn debug_draw_colliders(
     ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
 ) {
     use ecs_engine::collisions::collider::{Collider, Collider_Shape};
+    use ecs_engine::core::common::shapes;
     use ecs_engine::ecs::components::base::C_Spatial2D;
 
     let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
@@ -542,19 +543,26 @@ fn debug_draw_colliders(
         transform.set_rotation(cgmath::Rad(0.));
         transform.translate_v(collider.offset);
 
+        let paint_props = Paint_Properties {
+            color: if collider.colliding {
+                colors::rgba(255, 0, 0, 100)
+            } else {
+                colors::rgba(255, 255, 0, 100)
+            },
+            ..Default::default()
+        };
+
         match collider.shape {
             Collider_Shape::Rect { width, height } => {
-                debug_painter.add_rect(
-                    Vec2f::new(width, height),
-                    &transform,
-                    &Paint_Properties {
-                        color: if collider.colliding {
-                            colors::rgba(255, 0, 0, 100)
-                        } else {
-                            colors::rgba(255, 255, 0, 100)
-                        },
-                        ..Default::default()
+                debug_painter.add_rect(Vec2f::new(width, height), &transform, &paint_props);
+            }
+            Collider_Shape::Circle { radius } => {
+                debug_painter.add_circle(
+                    shapes::Circle {
+                        center: transform.position(),
+                        radius,
                     },
+                    &paint_props,
                 );
             }
         }

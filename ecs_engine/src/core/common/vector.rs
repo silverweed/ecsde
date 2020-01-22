@@ -187,6 +187,44 @@ impl<T: Copy + Div<Output = T>> DivAssign<T> for Vector2<T> {
     }
 }
 
+impl Vec2f {
+    // @WaitForStable: make this const as soon as sqrt() is stable as const
+    pub fn distance(&self, other: &Self) -> f32 {
+        self.distance2(other).sqrt()
+    }
+
+    // @WaitForStable: make this const as soon as `-` on f32 is stable as const
+    pub fn distance2(&self, other: &Self) -> f32 {
+        let dx = self.x - other.x;
+        let dy = self.y - other.y;
+        dx * dx + dy * dy
+    }
+}
+
+impl Vec2i {
+    pub fn distance(&self, other: &Self) -> f32 {
+        self.distance2(other).sqrt()
+    }
+
+    pub const fn distance2(&self, other: &Self) -> f32 {
+        let dx = self.x - other.x;
+        let dy = self.y - other.y;
+        (dx * dx + dy * dy) as f32
+    }
+}
+
+impl Vec2u {
+    pub fn distance(&self, other: &Self) -> f32 {
+        self.distance2(other).sqrt()
+    }
+
+    pub const fn distance2(&self, other: &Self) -> f32 {
+        let dx = self.x as i32 - other.x as i32;
+        let dy = self.y as i32 - other.y as i32;
+        (dx * dx + dy * dy) as f32
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -334,5 +372,41 @@ mod tests {
         let c: Vec2f = b.into();
         assert_eq!(c.x, b.x);
         assert_eq!(c.y, b.y);
+    }
+
+    #[test]
+    fn vector_distance_f32() {
+        let a = Vec2f::new(0., 0.);
+        let b = Vec2f::new(3., 4.);
+
+        assert_approx_eq(a.distance(&b), 5.);
+        assert_approx_eq(b.distance(&a), 5.);
+
+        assert_approx_eq(a.distance2(&b), 25.);
+        assert_approx_eq(b.distance2(&a), 25.);
+    }
+
+    #[test]
+    fn vector_distance_i32() {
+        const A: Vec2i = Vec2i::new(0, 0);
+        const B: Vec2i = Vec2i::new(3, 4);
+
+        assert_approx_eq(A.distance(&B), 5.);
+        assert_approx_eq(B.distance(&A), 5.);
+
+        assert_approx_eq(A.distance2(&B), 25.);
+        assert_approx_eq(B.distance2(&A), 25.);
+    }
+
+    #[test]
+    fn vector_distance_u32() {
+        let a = Vec2u::new(0, 0);
+        const B: Vec2u = Vec2u::new(3, 4);
+
+        assert_approx_eq(a.distance(&B), 5.);
+        assert_approx_eq(B.distance(&a), 5.);
+
+        assert_approx_eq(a.distance2(&B), 25.);
+        assert_approx_eq(B.distance2(&a), 25.);
     }
 }

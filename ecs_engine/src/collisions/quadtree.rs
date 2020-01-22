@@ -165,6 +165,23 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
             fits_left = obj_x > bounds.x() && obj_x + width < horiz_mid;
             fits_right = obj_x > horiz_mid && obj_x + width < bounds.x() + bounds.width();
         }
+        Collider_Shape::Circle { radius } => {
+            #[cfg(debug_assertions)]
+            {
+                if obj_scale_x != obj_scale_y {
+                    eprintln!(
+                    "[ WARNING ] Unsupported non-uniform scale {},{} on circular collider. Will use scale.x.",
+                    obj_scale_x, obj_scale_y
+                );
+                }
+            }
+            let width = radius * obj_scale_x;
+            let height = width;
+            fits_top = obj_y > bounds.y() && obj_y + height < vert_mid;
+            fits_bot = obj_y > vert_mid && obj_y + height < bounds.y() + bounds.height();
+            fits_left = obj_x > bounds.x() && obj_x + width < horiz_mid;
+            fits_right = obj_x > horiz_mid && obj_x + width < bounds.x() + bounds.width();
+        }
     }
 
     debug_assert!(!(fits_top && fits_bot));
