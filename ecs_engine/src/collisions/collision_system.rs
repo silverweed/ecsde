@@ -97,12 +97,13 @@ impl Collision_System {
                         s.spawn(move |_| {
                             let map_collider = ecs_world.get_components_map::<Collider>();
                             let map_spatial = ecs_world.get_components_map::<C_Spatial2D>();
+                            let mut neighbours = vec![];
                             for &entity in ent_chunk {
                                 let collider = map_collider.get_component(entity).unwrap();
                                 let transform =
                                     &map_spatial.get_component(entity).unwrap().global_transform;
 
-                                let mut neighbours = vec![];
+                                neighbours.clear();
                                 quadtree.get_neighbours(collider, transform, &mut neighbours);
                                 if !neighbours.is_empty() {
                                     check_collision_with_neighbours(
