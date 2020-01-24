@@ -16,7 +16,7 @@ use ecs_engine::{
     core::common::transform::Transform2D,
     debug,
     debug::debug_painter::Debug_Painter,
-    gfx::render::Paint_Properties,
+    gfx::paint_props::Paint_Properties,
     input,
 };
 
@@ -418,6 +418,11 @@ fn update_debug(game_state: &mut Game_State) {
             .systems
             .collision_system
             .debug_draw_quadtree(debug_painter);
+
+        engine_state
+            .systems
+            .collision_system
+            .debug_draw_entities_quad_id(&game_state.gameplay_system.ecs_world, debug_painter);
     }
 }
 

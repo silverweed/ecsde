@@ -1,5 +1,6 @@
 use super::backend;
-use crate::core::common::colors::{self, Color};
+use super::paint_props::Paint_Properties;
+use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
 use crate::core::common::shapes::Circle;
 use crate::core::common::transform::Transform2D;
@@ -13,25 +14,6 @@ pub type Text<'a> = backend::Text<'a>;
 pub type Font<'a> = backend::Font<'a>;
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
-
-#[derive(Copy, Clone)]
-pub struct Paint_Properties {
-    pub color: Color,
-    pub border_thick: f32,
-    pub border_color: Color,
-    pub point_count: u32, // used for drawing circles
-}
-
-impl Default for Paint_Properties {
-    fn default() -> Self {
-        Paint_Properties {
-            color: colors::WHITE,
-            border_thick: 0.,
-            border_color: colors::BLACK,
-            point_count: 20,
-        }
-    }
-}
 
 pub fn get_blend_mode(window: &Window_Handle) -> Blend_Mode {
     backend::get_blend_mode(window)

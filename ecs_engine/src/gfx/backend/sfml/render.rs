@@ -3,7 +3,7 @@ use crate::core::common::rect::Rect;
 use crate::core::common::shapes;
 use crate::core::common::transform::Transform2D;
 use crate::core::common::vector::Vec2f;
-use crate::gfx::render::Paint_Properties;
+use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::window::Window_Handle;
 use cgmath::Rad;
 use sfml::graphics::Shape;

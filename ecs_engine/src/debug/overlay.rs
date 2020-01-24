@@ -98,7 +98,7 @@ impl Debug_Overlay {
         // Draw background
         gfx::render::fill_color_rect(
             window,
-            &gfx::render::Paint_Properties {
+            &gfx::paint_props::Paint_Properties {
                 color: self.config.background,
                 ..Default::default()
             },

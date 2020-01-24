@@ -1,7 +1,7 @@
 #[cfg(feature = "use-sfml")]
 mod sfml;
 
-use super::render::Paint_Properties;
+use super::paint_props::Paint_Properties;
 use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
 use crate::core::common::shapes::Circle;

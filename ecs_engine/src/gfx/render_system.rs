@@ -88,7 +88,7 @@ impl Render_System {
                 if cfg.draw_sprites_bg {
                     gfx::render::fill_color_rect_ws(
                         window,
-                        &gfx::render::Paint_Properties {
+                        &gfx::paint_props::Paint_Properties {
                             color: cfg.draw_sprites_bg_color,
                             ..Default::default()
                         },

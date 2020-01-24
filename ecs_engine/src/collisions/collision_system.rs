@@ -9,6 +9,7 @@ use crate::ecs::ecs_world::{Ecs_World, Entity};
 use crate::ecs::entity_stream::new_entity_stream;
 use crate::prelude::*;
 use crossbeam::thread;
+use std::collections::HashSet;
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
 
@@ -33,6 +34,30 @@ impl Collision_System {
     #[cfg(debug_assertions)]
     pub fn debug_draw_quadtree(&self, painter: &mut Debug_Painter) {
         quadtree::draw_quadtree(&self.quadtree, painter);
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn debug_draw_entities_quad_id(&self, ecs_world: &Ecs_World, painter: &mut Debug_Painter) {
+        use crate::core::common::colors;
+
+        for &entity in &self.entities_buf {
+            let id = self
+                .quadtree
+                .debug_get_quad_id(entity)
+                .unwrap_or_else(|| String::from("None"));
+
+            let transform = &ecs_world
+                .get_component::<C_Spatial2D>(entity)
+                .unwrap()
+                .global_transform;
+
+            painter.add_text(
+                &id,
+                transform.position(),
+                16,
+                &colors::rgb(0, 50, 200).into(),
+            );
+        }
     }
 
     pub fn update(&mut self, ecs_world: &mut Ecs_World, _tracer: Debug_Tracer) {
@@ -82,7 +107,7 @@ impl Collision_System {
 
             let n_collisions_total = Arc::new(AtomicUsize::new(0));
             let n_entities = self.entities_buf.len();
-            let collided_entities = Arc::new(Mutex::new(vec![]));
+            let collided_entities = Arc::new(Mutex::new(HashSet::new()));
 
             {
                 trace!("collision_detection", _tracer);
@@ -156,20 +181,20 @@ fn check_collision_with_neighbours(
     transform: &Transform2D,
     neighbours: &[Entity],
     ecs_world: &Ecs_World,
-    collided_entities: Arc<Mutex<Vec<Entity>>>,
+    collided_entities: Arc<Mutex<HashSet<Entity>>>,
     n_collisions_total: Arc<AtomicUsize>,
 ) {
     let pos = transform.position() + collider.offset;
     let scale = transform.scale();
 
-    for neighbour in neighbours {
-        if *neighbour == entity {
+    for &neighbour in neighbours {
+        if neighbour == entity {
             continue;
         }
 
-        let oth_cld = ecs_world.get_component::<Collider>(*neighbour).unwrap();
+        let oth_cld = ecs_world.get_component::<Collider>(neighbour).unwrap();
         let oth_transf = &ecs_world
-            .get_component::<C_Spatial2D>(*neighbour)
+            .get_component::<C_Spatial2D>(neighbour)
             .unwrap()
             .global_transform;
         let oth_pos = oth_transf.position() + oth_cld.offset;
@@ -190,7 +215,8 @@ fn check_collision_with_neighbours(
                     );
                     if rect::rects_intersect(&me, &him) {
                         if let Ok(mut cld) = collided_entities.lock() {
-                            cld.push(entity);
+                            cld.insert(entity);
+                            cld.insert(neighbour);
                         }
                         n_collisions_total
                             .fetch_add(neighbours.len(), std::sync::atomic::Ordering::Relaxed);
@@ -215,7 +241,8 @@ fn check_collision_with_neighbours(
                     };
                     if me.intersects(&him) {
                         if let Ok(mut cld) = collided_entities.lock() {
-                            cld.push(entity);
+                            cld.insert(entity);
+                            cld.insert(neighbour);
                         }
                         n_collisions_total
                             .fetch_add(neighbours.len(), std::sync::atomic::Ordering::Relaxed);

@@ -17,6 +17,9 @@ pub struct Quad_Tree {
     subnodes: Option<[Box<Quad_Tree>; 4]>,
     /// level of nesting of this tree
     level: u8,
+
+    #[cfg(debug_assertions)]
+    id: u8, // subnode index into parent
 }
 
 impl Quad_Tree {
@@ -26,9 +29,23 @@ impl Quad_Tree {
             objects: vec![],
             subnodes: None,
             level: 0,
+            #[cfg(debug_assertions)]
+            id: 0,
         }
     }
 
+    #[cfg(debug_assertions)]
+    fn new_nested(bounds: Rectf, parent: &Quad_Tree, id: u8) -> Self {
+        Quad_Tree {
+            bounds,
+            objects: vec![],
+            subnodes: None,
+            level: parent.level + 1,
+            id,
+        }
+    }
+
+    #[cfg(not(debug_assertions))]
     fn new_nested(bounds: Rectf, parent: &Quad_Tree) -> Self {
         Quad_Tree {
             bounds,
@@ -61,36 +78,38 @@ impl Quad_Tree {
                     ecs_world,
                     clone_tracer!(_tracer),
                 );
+                return;
             }
-        } else {
-            self.objects.push(entity);
-            if self.objects.len() > MAX_OBJECTS && self.level < MAX_DEPTH {
-                if self.subnodes.is_none() {
-                    trace!("quadtree::split", _tracer);
-                    self.split();
-                }
+        }
 
-                let mut i = 0;
-                let subnodes = self.subnodes.as_mut().unwrap();
-                while i < self.objects.len() {
-                    let entity = self.objects[i];
-                    let collider = ecs_world.get_component::<Collider>(entity).unwrap();
-                    let transform = &ecs_world
-                        .get_component::<C_Spatial2D>(entity)
-                        .unwrap()
-                        .global_transform;
-                    let index = get_index(collider, transform, &self.bounds);
-                    if index >= 0 {
-                        subnodes[index as usize].add(
-                            self.objects.swap_remove(i),
-                            collider,
-                            transform,
-                            ecs_world,
-                            clone_tracer!(_tracer),
-                        );
-                    } else {
-                        i += 1;
-                    }
+        self.objects.push(entity);
+
+        if self.objects.len() > MAX_OBJECTS && self.level < MAX_DEPTH {
+            if self.subnodes.is_none() {
+                trace!("quadtree::split", _tracer);
+                self.split();
+            }
+
+            let mut i = 0;
+            let subnodes = self.subnodes.as_mut().unwrap();
+            while i < self.objects.len() {
+                let entity = self.objects[i];
+                let collider = ecs_world.get_component::<Collider>(entity).unwrap();
+                let transform = &ecs_world
+                    .get_component::<C_Spatial2D>(entity)
+                    .unwrap()
+                    .global_transform;
+                let index = get_index(collider, transform, &self.bounds);
+                if index >= 0 {
+                    subnodes[index as usize].add(
+                        self.objects.swap_remove(i),
+                        collider,
+                        transform,
+                        ecs_world,
+                        clone_tracer!(_tracer),
+                    );
+                } else {
+                    i += 1;
                 }
             }
         }
@@ -114,6 +133,24 @@ impl Quad_Tree {
         }
     }
 
+    #[cfg(debug_assertions)]
+    pub fn debug_get_quad_id(&self, entity: Entity) -> Option<String> {
+        if self.objects.contains(&entity) {
+            return Some(format!("{}.{}", self.level, self.id));
+        }
+
+        if let Some(subnodes) = &self.subnodes {
+            for node in subnodes {
+                let id = node.debug_get_quad_id(entity);
+                if id.is_some() {
+                    return id;
+                }
+            }
+        }
+
+        None
+    }
+
     fn split(&mut self) {
         let bounds = &self.bounds;
         let subw = bounds.width() * 0.5;
@@ -121,21 +158,45 @@ impl Quad_Tree {
         let x = bounds.x();
         let y = bounds.y();
 
-        self.subnodes = Some([
-            Box::new(Quad_Tree::new_nested(Rect::new(x, y, subw, subh), &self)),
-            Box::new(Quad_Tree::new_nested(
-                Rect::new(x + subw, y, subw, subh),
-                &self,
-            )),
-            Box::new(Quad_Tree::new_nested(
-                Rect::new(x, y + subh, subw, subh),
-                &self,
-            )),
-            Box::new(Quad_Tree::new_nested(
-                Rect::new(x + subw, y + subh, subw, subh),
-                &self,
-            )),
-        ]);
+        #[cfg(debug_assertions)]
+        {
+            self.subnodes = Some([
+                Box::new(Quad_Tree::new_nested(Rect::new(x, y, subw, subh), &self, 0)),
+                Box::new(Quad_Tree::new_nested(
+                    Rect::new(x + subw, y, subw, subh),
+                    &self,
+                    1,
+                )),
+                Box::new(Quad_Tree::new_nested(
+                    Rect::new(x, y + subh, subw, subh),
+                    &self,
+                    2,
+                )),
+                Box::new(Quad_Tree::new_nested(
+                    Rect::new(x + subw, y + subh, subw, subh),
+                    &self,
+                    3,
+                )),
+            ]);
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            self.subnodes = Some([
+                Box::new(Quad_Tree::new_nested(Rect::new(x, y, subw, subh), &self)),
+                Box::new(Quad_Tree::new_nested(
+                    Rect::new(x + subw, y, subw, subh),
+                    &self,
+                )),
+                Box::new(Quad_Tree::new_nested(
+                    Rect::new(x, y + subh, subw, subh),
+                    &self,
+                )),
+                Box::new(Quad_Tree::new_nested(
+                    Rect::new(x + subw, y + subh, subw, subh),
+                    &self,
+                )),
+            ]);
+        }
     }
 }
 
@@ -208,7 +269,6 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
 pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
     use crate::core::common::colors;
     use crate::core::common::vector::Vec2f;
-    use crate::gfx::render;
 
     fn calc_quadtree_deepth(quadtree: &Quad_Tree) -> u32 {
         fn calc_quadtree_deepth_internal(quadtree: &Quad_Tree, depth: u32) -> u32 {
@@ -235,7 +295,7 @@ pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
             quadtree.level,
             depth
         );
-        let props = render::Paint_Properties {
+        let props = crate::gfx::paint_props::Paint_Properties {
             color: colors::rgba(102, 204, 255, 20),
             border_thick: (((depth - quadtree.level as u32) * 2) as f32).max(1.),
             border_color: colors::rgba(255, 0, 255, 150),
@@ -244,6 +304,30 @@ pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
         let transform = Transform2D::from_pos(Vec2f::new(quadtree.bounds.x(), quadtree.bounds.y()));
 
         painter.add_rect(quadtree.bounds.size(), &transform, &props);
+        painter.add_text(
+            &format!("{}.{}", quadtree.level, quadtree.id),
+            transform.position() + Vec2f::new(3., 3.),
+            (11 + (depth - quadtree.level as u32) * 20) as u16,
+            &colors::rgba(
+                0,
+                0,
+                0,
+                (255 - (depth - quadtree.level as u32) * 15).max(0) as u8,
+            )
+            .into(),
+        );
+        painter.add_text(
+            &format!("{}.{}", quadtree.level, quadtree.id),
+            transform.position() + Vec2f::new(2., 2.),
+            (11 + (depth - quadtree.level as u32) * 20) as u16,
+            &colors::rgba(
+                255,
+                0,
+                255,
+                (255 - (depth - quadtree.level as u32) * 15).max(0) as u8,
+            )
+            .into(),
+        );
         if let Some(subnodes) = &quadtree.subnodes {
             for subnode in subnodes {
                 draw_quadtree_internal(subnode, painter, depth);
