@@ -8,7 +8,6 @@ use std::collections::HashMap;
 use std::vec::Vec;
 
 pub type Entity = Generational_Index;
-pub type Entity_Index = usize;
 pub type Component_Handle = u32;
 
 #[derive(Default, Clone)]
@@ -16,7 +15,7 @@ struct Component_Storage {
     pub individual_size: usize,
     pub data: Vec<u8>,
     // { entity => index into `data` }
-    pub comp_idx: HashMap<Entity_Index, usize>,
+    pub comp_idx: HashMap<Index_Type, usize>,
 }
 
 #[derive(Clone)]
@@ -129,8 +128,8 @@ impl Component_Manager {
             *index
         } else {
             self.entity_comp_set
-                .resize(entity.index + 1, Bit_Set::default());
-            self.entity_comp_set[entity.index].set(comp_handle as usize, true);
+                .resize(entity.index as usize + 1, Bit_Set::default());
+            self.entity_comp_set[entity.index as usize].set(comp_handle as usize, true);
 
             if individual_size != 0 {
                 let n_comps = storage.data.len() / individual_size;
@@ -151,8 +150,8 @@ impl Component_Manager {
 
         if storage.individual_size == 0 {
             // ZST component (basically a tag): just check if the component is in the bitset.
-            if entity.index < self.entity_comp_set.len()
-                && self.entity_comp_set[entity.index].get(comp_handle as usize)
+            if (entity.index as usize) < self.entity_comp_set.len()
+                && self.entity_comp_set[entity.index as usize].get(comp_handle as usize)
             {
                 // return Some(null) to distinguish from the None case.
                 Some(std::ptr::null())
@@ -178,7 +177,7 @@ impl Component_Manager {
             .unwrap_or_else(|| panic!("Invalid component handle {:?}", comp_handle));
         if storage.individual_size == 0 {
             // ZST component (basically a tag): just check if the component is in the bitset.
-            if self.entity_comp_set[entity.index].get(comp_handle as usize) {
+            if self.entity_comp_set[entity.index as usize].get(comp_handle as usize) {
                 // return Some(null) to distinguish from the None case.
                 Some(std::ptr::null_mut())
             } else {
@@ -198,14 +197,14 @@ impl Component_Manager {
     }
 
     fn remove_component(&mut self, entity: Entity, comp_handle: Component_Handle) {
-        self.entity_comp_set[entity.index].set(comp_handle as usize, false);
+        self.entity_comp_set[entity.index as usize].set(comp_handle as usize, false);
         self.components[comp_handle as usize]
             .comp_idx
             .remove(&entity.index);
     }
 
     fn has_component(&self, entity: Entity, comp_handle: Component_Handle) -> bool {
-        self.entity_comp_set[entity.index].get(comp_handle as usize)
+        self.entity_comp_set[entity.index as usize].get(comp_handle as usize)
     }
 
     fn get_components(&self, comp_handle: Component_Handle) -> &[u8] {

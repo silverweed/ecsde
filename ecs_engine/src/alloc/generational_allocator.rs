@@ -1,6 +1,7 @@
+use std::convert::TryFrom;
 use std::vec::Vec;
 
-pub type Index_Type = usize;
+pub type Index_Type = u32;
 pub type Gen_Type = u32;
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Hash, Eq)]
@@ -34,7 +35,7 @@ impl Generational_Allocator {
             free_slots: vec![],
             alive: vec![],
         };
-        // Start from gen -1 so we can use { 0, 0 } as "the invalid index" (and can e.g. detect invalid deallocations).
+        // Start from gen 1 so we can use { 0, 0 } as "the invalid index"
         alloc.gens.resize(initial_size, 1);
         alloc.alive.resize(initial_size, false);
         alloc.free_slots = (0..initial_size).rev().collect();
@@ -52,16 +53,16 @@ impl Generational_Allocator {
     }
 
     pub fn cur_gen(&self, idx: Index_Type) -> Gen_Type {
-        assert!(idx < self.gens.len());
-        self.gens[idx]
+        assert!((idx as usize) < self.gens.len());
+        self.gens[idx as usize]
     }
 
     pub fn allocate(&mut self) -> Generational_Index {
-        let i = self.first_free_slot();
+        let slot = self.first_free_slot();
         let cur_size = self.gens.len();
-        if i == cur_size {
+        if slot == cur_size {
             // Grow the vectors (exponentially)
-            let new_size = cur_size * 2;
+            let new_size = (cur_size * 2).min(std::u32::MAX as usize);
             self.gens.resize(new_size, 1);
             self.alive.resize(new_size, false);
             self.free_slots.reserve(new_size);
@@ -70,11 +71,12 @@ impl Generational_Allocator {
             }
         }
 
-        let gen = &mut self.gens[i];
-        self.alive[i] = true;
+        let gen = &mut self.gens[slot];
+        self.alive[slot] = true;
 
         Generational_Index {
-            index: i,
+            index: u32::try_from(slot)
+                .unwrap_or_else(|_| panic!("[ ERROR ] allocate: slot overflowed u32! ({})", slot)),
             gen: *gen,
         }
     }
@@ -83,19 +85,27 @@ impl Generational_Allocator {
     #[inline]
     fn first_free_slot(&mut self) -> usize {
         match self.free_slots.pop() {
-            Some(slot) => slot,
-            None => self.gens.len(),
+            Some(slot) => {
+                debug_assert!(slot <= std::u32::MAX as usize);
+                slot
+            }
+            None => {
+                debug_assert!(self.gens.len() <= std::u32::MAX as usize);
+                self.gens.len()
+            }
         }
     }
 
     pub fn deallocate(&mut self, idx: Generational_Index) {
+        let index = idx.index as usize;
+
         #[cfg(debug_assertions)]
         {
-            if idx.index >= self.gens.len() {
+            if index >= self.gens.len() {
                 panic!("Tried to deallocate a Generational_Index whose index is greater than biggest one!");
             }
 
-            let gen = self.gens[idx.index];
+            let gen = self.gens[index];
 
             if gen > idx.gen {
                 panic!("Tried to deallocate an old Generational_Index! Double free?");
@@ -103,17 +113,19 @@ impl Generational_Allocator {
             if gen < idx.gen {
                 panic!("Tried to deallocate a Generational_Index with a generation greater than current!");
             }
-            if self.free_slots.contains(&idx.index) {
+            if self.free_slots.contains(&index) {
                 panic!("Tried to deallocate a Generational_Index which was never allocated!");
             }
         }
-        self.gens[idx.index] += 1;
-        self.free_slots.push(idx.index);
-        self.alive[idx.index] = false;
+
+        self.gens[index] += 1;
+        self.free_slots.push(index);
+        self.alive[index] = false;
     }
 
     pub fn is_valid(&self, idx: Generational_Index) -> bool {
-        (idx.index < self.gens.len()) && (idx.gen == self.gens[idx.index]) && self.alive[idx.index]
+        let index = idx.index as usize;
+        (index < self.gens.len()) && (idx.gen == self.gens[index]) && self.alive[index]
     }
 }
 
@@ -156,7 +168,12 @@ mod tests {
 
         for i in 0..2 * n {
             let i1 = alloc.allocate();
-            assert!(i1.index == i, "Index should be {} but is {}!", i, i1.index);
+            assert!(
+                i1.index as usize == i,
+                "Index should be {} but is {}!",
+                i,
+                i1.index
+            );
             assert!(i1.gen == 1);
         }
         assert_invariant_free_slots_alive(&alloc);
@@ -171,7 +188,7 @@ mod tests {
         for i in 0..n {
             let i1 = alloc.allocate();
             v.push(i1);
-            assert!(i1.index == i);
+            assert!(i1.index as usize == i);
             assert!(i1.gen == 1);
         }
 

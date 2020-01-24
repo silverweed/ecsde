@@ -39,8 +39,8 @@ impl Scene_Tree {
         assert!(!self.hierarchy.is_empty());
 
         // Ensure we have enough space in the entity => node map
-        if e.index >= self.nodes.len() {
-            self.nodes.resize(e.index + 1, None);
+        if e.index as usize >= self.nodes.len() {
+            self.nodes.resize(e.index as usize + 1, None);
         }
 
         // Associate this entity with a new node
@@ -55,7 +55,7 @@ impl Scene_Tree {
                 return;
             }
 
-            if parent.index >= self.nodes.len() {
+            if parent.index as usize >= self.nodes.len() {
                 println!(
                     "[ ERROR ] Invalid parent {:?} when adding {:?} to scene tree",
                     parent, e
@@ -98,8 +98,8 @@ impl Scene_Tree {
 
             // Add the new node to the list along with its parent and its associated transform
             self.nodes[e.index as usize] = Some(child_node);
-            if child_node.index >= self.hierarchy.len() {
-                assert_eq!(self.hierarchy.len(), child_node.index - 1);
+            if child_node.index as usize >= self.hierarchy.len() {
+                assert_eq!(self.hierarchy.len(), child_node.index as usize - 1);
                 self.hierarchy.push(parent_node);
                 self.local_transforms.push(*local_transform);
                 self.global_transforms.push(*local_transform);
@@ -113,7 +113,7 @@ impl Scene_Tree {
             if self.hierarchy[0].index != 0 {
                 println!("[ WARNING ] Overriding the root in a Scene_Tree");
             }
-            self.nodes[e.index] = Some(self.node_allocator.allocate());
+            self.nodes[e.index as usize] = Some(self.node_allocator.allocate());
             self.hierarchy[0] = Generational_Index { index: 1, gen: 0 };
             self.local_transforms.push(*local_transform);
             self.global_transforms.push(*local_transform);

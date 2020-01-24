@@ -1,6 +1,7 @@
 use super::ecs_world::{Ecs_World, Entity};
 use crate::core::common::bitset::Bit_Set;
 use std::any::type_name;
+use std::convert::TryFrom;
 
 pub struct Entity_Stream {
     required_components: Bit_Set,
@@ -25,9 +26,15 @@ impl Entity_Stream {
             }
 
             self.cur_idx = i + 1;
+            let index = u32::try_from(i).unwrap_or_else(|_| {
+                panic!(
+                    "[ ERROR ] Entity_Stream::next(): index overflowed u32! ({})",
+                    i
+                );
+            });
             return Some(Entity {
-                index: i,
-                gen: world.entity_manager.cur_gen(i),
+                index,
+                gen: world.entity_manager.cur_gen(index),
             });
         }
 
