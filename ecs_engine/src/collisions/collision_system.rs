@@ -5,20 +5,28 @@ use crate::core::common::shapes;
 use crate::core::common::transform::Transform2D;
 use crate::core::common::vector::Vec2f;
 use crate::ecs::components::base::C_Spatial2D;
-use crate::ecs::ecs_world::{Ecs_World, Entity};
+use crate::ecs::ecs_world::{Components_Map_Safe, Ecs_World, Entity};
 use crate::ecs::entity_stream::new_entity_stream;
 use crate::prelude::*;
 use crossbeam::thread;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
 
 #[cfg(debug_assertions)]
 use crate::debug::debug_painter::Debug_Painter;
 
+#[derive(Clone, Debug)]
+struct Collision_Info {
+    pub my_pos: Vec2f,
+    pub other: Entity,
+    pub oth_pos: Vec2f,
+}
+
 pub struct Collision_System {
     quadtree: quadtree::Quad_Tree,
     entities_buf: Vec<Entity>,
+    collided_entities: Arc<Mutex<HashMap<Entity, Collision_Info>>>,
 }
 
 impl Collision_System {
@@ -28,6 +36,7 @@ impl Collision_System {
         Collision_System {
             quadtree: quadtree::Quad_Tree::new(world_rect),
             entities_buf: vec![],
+            collided_entities: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -102,7 +111,7 @@ impl Collision_System {
 
             let n_collisions_total = Arc::new(AtomicUsize::new(0));
             let n_entities = self.entities_buf.len();
-            let collided_entities = Arc::new(Mutex::new(HashSet::new()));
+            self.collided_entities.lock().unwrap().clear();
 
             {
                 trace!("collision_detection", _tracer);
@@ -112,7 +121,7 @@ impl Collision_System {
                     for ent_chunk in self.entities_buf.chunks(n_entities / n_threads + 1) {
                         let quadtree = &self.quadtree;
                         let n_collisions_total = n_collisions_total.clone();
-                        let collided_entities = collided_entities.clone();
+                        let collided_entities = self.collided_entities.clone();
                         let ecs_world = ecs_world as &Ecs_World;
                         s.spawn(move |_| {
                             let map_collider = ecs_world.get_components_map::<Collider>();
@@ -131,7 +140,8 @@ impl Collision_System {
                                         collider,
                                         transform,
                                         &neighbours,
-                                        ecs_world,
+                                        &map_collider,
+                                        &map_spatial,
                                         collided_entities.clone(),
                                         n_collisions_total.clone(),
                                     );
@@ -145,13 +155,28 @@ impl Collision_System {
 
             {
                 trace!("collision_solving", _tracer);
-                if let Ok(cld) = collided_entities.lock() {
-                    for entity in cld.iter() {
-                        let collider = ecs_world.get_component_mut::<Collider>(*entity).unwrap();
-                        collider.colliding = true;
+
+                let mut map_collider = ecs_world.get_components_map_unsafe::<Collider>();
+                let mut map_spatial = ecs_world.get_components_map_unsafe::<C_Spatial2D>();
+
+                if let Ok(cld) = self.collided_entities.lock() {
+                    for (&entity, info) in cld.iter() {
+                        {
+                            let collider =
+                                unsafe { map_collider.get_component_mut(entity) }.unwrap();
+                            if collider.colliding {
+                                continue; // already processed
+                            }
+                            collider.colliding = true;
+                        }
+                        {
+                            let oth_collider =
+                                unsafe { map_collider.get_component_mut(info.other) }.unwrap();
+                            oth_collider.colliding = true;
+                        }
 
                         // @Incomplete: solve the collision
-                        let spatial = ecs_world.get_component_mut::<C_Spatial2D>(*entity).unwrap();
+                        let spatial = unsafe { map_spatial.get_component_mut(entity) }.unwrap();
                         spatial.local_transform.translate_v(-spatial.velocity);
                     }
                 }
@@ -175,8 +200,9 @@ fn check_collision_with_neighbours(
     collider: &Collider,
     transform: &Transform2D,
     neighbours: &[Entity],
-    ecs_world: &Ecs_World,
-    collided_entities: Arc<Mutex<HashSet<Entity>>>,
+    map_collider: &Components_Map_Safe<Collider>,
+    map_spatial: &Components_Map_Safe<C_Spatial2D>,
+    collided_entities: Arc<Mutex<HashMap<Entity, Collision_Info>>>,
     n_collisions_total: Arc<AtomicUsize>,
 ) {
     let pos = transform.position() + collider.offset;
@@ -187,9 +213,9 @@ fn check_collision_with_neighbours(
             continue;
         }
 
-        let oth_cld = ecs_world.get_component::<Collider>(neighbour).unwrap();
-        let oth_transf = &ecs_world
-            .get_component::<C_Spatial2D>(neighbour)
+        let oth_cld = map_collider.get_component(neighbour).unwrap();
+        let oth_transf = &map_spatial
+            .get_component(neighbour)
             .unwrap()
             .global_transform;
         let oth_pos = oth_transf.position() + oth_cld.offset;
@@ -210,8 +236,22 @@ fn check_collision_with_neighbours(
                     );
                     if rect::rects_intersect(&me, &him) {
                         if let Ok(mut cld) = collided_entities.lock() {
-                            cld.insert(entity);
-                            cld.insert(neighbour);
+                            cld.insert(
+                                entity,
+                                Collision_Info {
+                                    my_pos: pos,
+                                    other: neighbour,
+                                    oth_pos,
+                                },
+                            );
+                            cld.insert(
+                                neighbour,
+                                Collision_Info {
+                                    my_pos: oth_pos,
+                                    other: entity,
+                                    oth_pos: pos,
+                                },
+                            );
                         }
                         n_collisions_total
                             .fetch_add(neighbours.len(), std::sync::atomic::Ordering::Relaxed);
@@ -236,8 +276,22 @@ fn check_collision_with_neighbours(
                     };
                     if me.intersects(&him) {
                         if let Ok(mut cld) = collided_entities.lock() {
-                            cld.insert(entity);
-                            cld.insert(neighbour);
+                            cld.insert(
+                                entity,
+                                Collision_Info {
+                                    my_pos: pos,
+                                    other: neighbour,
+                                    oth_pos,
+                                },
+                            );
+                            cld.insert(
+                                neighbour,
+                                Collision_Info {
+                                    my_pos: oth_pos,
+                                    other: entity,
+                                    oth_pos: pos,
+                                },
+                            );
                         }
                         n_collisions_total
                             .fetch_add(neighbours.len(), std::sync::atomic::Ordering::Relaxed);

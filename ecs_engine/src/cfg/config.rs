@@ -26,7 +26,7 @@ impl Config {
                 for entry in section.entries.into_iter() {
                     let name = format!("{}/{}", section.header, entry.key);
                     let id = String_Id::from(name.as_str());
-                    linfo!("Loading cfg var {} = {:?}", name, entry.value);
+                    ldebug!("Loading cfg var {} = {:?}", name, entry.value);
 
                     cfg_var_table.insert(id, entry.value);
                 }
