@@ -37,10 +37,7 @@ impl Debug_Ui_System {
     ) -> &mut overlay::Debug_Overlay {
         match self.overlays.entry(id) {
             Entry::Occupied(e) => {
-                eprintln!(
-                    "[ WARNING ] Overlay {} already exists: won't overwrite.",
-                    id
-                );
+                lwarn!("Overlay {} already exists: won't overwrite.", id);
                 e.into_mut()
             }
             Entry::Vacant(v) => v.insert(overlay::Debug_Overlay::new(config, font)),
@@ -55,10 +52,7 @@ impl Debug_Ui_System {
     ) -> &mut fadeout_overlay::Fadeout_Debug_Overlay {
         match self.fadeout_overlays.entry(id) {
             Entry::Occupied(e) => {
-                eprintln!(
-                    "[ WARNING ] Overlay {} already exists: won't overwrite.",
-                    id
-                );
+                lwarn!("Overlay {} already exists: won't overwrite.", id);
                 e.into_mut()
             }
             Entry::Vacant(v) => v.insert(fadeout_overlay::Fadeout_Debug_Overlay::new(config, font)),
@@ -68,7 +62,7 @@ impl Debug_Ui_System {
     pub fn get_overlay(&mut self, id: String_Id) -> &mut overlay::Debug_Overlay {
         self.overlays
             .get_mut(&id)
-            .unwrap_or_else(|| panic!("Invalid debug overlay: {}", id))
+            .unwrap_or_else(|| fatal!("Invalid debug overlay: {}", id))
     }
 
     pub fn get_fadeout_overlay(
@@ -77,7 +71,7 @@ impl Debug_Ui_System {
     ) -> &mut fadeout_overlay::Fadeout_Debug_Overlay {
         self.fadeout_overlays
             .get_mut(&id)
-            .unwrap_or_else(|| panic!("Invalid fadout debug overlay: {}", id))
+            .unwrap_or_else(|| fatal!("Invalid fadout debug overlay: {}", id))
     }
 
     pub fn set_overlay_enabled(&mut self, id: String_Id, enabled: bool) {
@@ -91,7 +85,11 @@ impl Debug_Ui_System {
             assert!(target_map.get(&id).is_none());
             target_map.insert(id, overlay);
         } else {
-            eprintln!("[ WARNING ] Failed to {} overlay {}: either already in that state or not existing.", action, id);
+            lwarn!(
+                "Failed to {} overlay {}: either already in that state or not existing.",
+                action,
+                id
+            );
         }
     }
 

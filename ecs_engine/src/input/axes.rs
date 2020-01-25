@@ -35,16 +35,18 @@ impl Virtual_Axes {
         if let Some(val) = self.values.get(&name) {
             *val
         } else {
-            eprintln!("[ WARNING ] Queried value of inexistent axis {}", name);
+            lwarn!("Queried value of inexistent axis {}", name);
             0.0
         }
     }
 
     pub(super) fn set_emulated_value(&mut self, name: String_Id, emu_kind: Axis_Emulation_Type) {
-        let val = self
-            .values
-            .get_mut(&name)
-            .unwrap_or_else(|| panic!("Tried to set emulated value for inexistent axis {}", name));
+        let val = self.values.get_mut(&name);
+        if val.is_none() {
+            lerr!("Tried to set emulated value for inexistent axis {}", name);
+            return;
+        }
+        let val = val.unwrap();
 
         *val = emu_kind.assoc_value();
 

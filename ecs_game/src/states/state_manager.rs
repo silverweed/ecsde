@@ -97,7 +97,7 @@ impl State_Manager {
         if let Some(mut prev_state) = self.state_stack.pop() {
             prev_state.on_end(engine_state, gs);
         } else {
-            eprintln!("[ ERROR ] Tried to pop state, but state stack is empty!");
+            lerr!("Tried to pop state, but state stack is empty!");
         }
 
         if let Some(state) = self.current_state() {

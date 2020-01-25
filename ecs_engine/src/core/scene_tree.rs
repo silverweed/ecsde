@@ -48,26 +48,25 @@ impl Scene_Tree {
 
         if let Some(parent) = parent {
             if e == parent {
-                println!(
-                    "[ ERROR ] Tried to add entity {:?} as a child of itself.",
-                    e
-                );
+                lerr!("Tried to add entity {:?} as a child of itself.", e);
                 return;
             }
 
             if parent.index as usize >= self.nodes.len() {
-                println!(
-                    "[ ERROR ] Invalid parent {:?} when adding {:?} to scene tree",
-                    parent, e
+                lerr!(
+                    "Invalid parent {:?} when adding {:?} to scene tree",
+                    parent,
+                    e
                 );
                 return;
             }
 
             let parent_node = self.nodes[parent.index as usize];
             if parent_node.is_none() {
-                println!(
-                    "[ ERROR ] Invalid parent {:?} when adding {:?} to scene tree",
-                    parent, e
+                lerr!(
+                    "Invalid parent {:?} when adding {:?} to scene tree",
+                    parent,
+                    e
                 );
                 return;
             }
@@ -75,9 +74,10 @@ impl Scene_Tree {
             let mut parent_node = parent_node.unwrap();
 
             if !self.node_allocator.is_valid(parent_node) {
-                println!(
-                    "[ ERROR ] Parent {:?} was already expired when adding {:?} to scene tree",
-                    parent, e
+                lerr!(
+                    "Parent {:?} was already expired when adding {:?} to scene tree",
+                    parent,
+                    e
                 );
                 return;
             }
@@ -111,7 +111,7 @@ impl Scene_Tree {
         } else {
             // This entity is the root.
             if self.hierarchy[0].index != 0 {
-                println!("[ WARNING ] Overriding the root in a Scene_Tree");
+                lwarn!("Overriding the root in a Scene_Tree");
             }
             self.nodes[e.index as usize] = Some(self.node_allocator.allocate());
             self.hierarchy[0] = Generational_Index { index: 1, gen: 0 };

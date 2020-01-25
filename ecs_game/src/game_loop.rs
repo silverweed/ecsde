@@ -159,7 +159,7 @@ pub fn tick_game<'a>(
             while game_state.execution_time > update_time {
                 if frame_budget.is_none() {
                     // We consumed all our time budget. Let's go on next frame.
-                    eprintln!("[ WARNING ] Frame budget exhausted. Skipping remaining updates (time remaining: {} ms / {} updates)",
+                    lwarn!("Frame budget exhausted. Skipping remaining updates (time remaining: {} ms / {} updates)",
                     game_state.execution_time.as_millis(),
                     ecs_engine::core::time::duration_ratio(&game_state.execution_time,
                                                      &update_time) as u32);
@@ -393,7 +393,7 @@ fn update_debug(game_state: &mut Game_State) {
         .debug_cvars
         .draw_entities_velocities
         .read(&engine_state.config);
-    if draw_entities {
+    if draw_entities || draw_velocities {
         debug_draw_entities(
             debug_painter,
             &game_state.gameplay_system.ecs_world,
@@ -444,7 +444,7 @@ fn update_joystick_debug_overlay(
 
             for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
                 let axis: joystick::Joystick_Axis = i.try_into().unwrap_or_else(|err| {
-                    panic!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
+                    fatal!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
                 });
                 debug_overlay.add_line_color(
                     &format!("{:?}: {:.2}", axis, axes[i as usize]),

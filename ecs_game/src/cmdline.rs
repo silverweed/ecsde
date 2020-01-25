@@ -13,9 +13,10 @@ macro_rules! opt_with_arg {
     ($opt: expr, $args: ident, $target: expr, $conv_fn: expr) => {{
         if let Some(opt) = $args.next() {
             $target = $conv_fn(opt);
-            eprintln!("[ INFO ] Cmdline {}: {:?}", $opt, $target);
+            linfo!("Cmdline {}: {:?}", $opt, $target);
         } else {
-            eprintln!("Expected an argument after {} flag.", $opt);
+            println!("\n\tExpected an argument after {} flag.\n", $opt);
+            std::process::exit(1);
         }
     }};
 }

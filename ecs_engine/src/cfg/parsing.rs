@@ -65,7 +65,7 @@ fn parse_config_dir(dir_path: &Path) -> Result<Vec<Cfg_Section>, std::io::Error>
                 _ => (),
             }
         }
-        eprintln!("Parsed {} cfg files.", n_parsed);
+        lok!("Parsed {} cfg files.", n_parsed);
         Ok(sections)
     } else {
         eprintln!(

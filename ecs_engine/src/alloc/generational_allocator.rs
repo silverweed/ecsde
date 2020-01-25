@@ -76,7 +76,7 @@ impl Generational_Allocator {
 
         Generational_Index {
             index: u32::try_from(slot)
-                .unwrap_or_else(|_| panic!("[ ERROR ] allocate: slot overflowed u32! ({})", slot)),
+                .unwrap_or_else(|_| fatal!("allocate: slot overflowed u32! ({})", slot)),
             gen: *gen,
         }
     }
@@ -102,19 +102,19 @@ impl Generational_Allocator {
         #[cfg(debug_assertions)]
         {
             if index >= self.gens.len() {
-                panic!("Tried to deallocate a Generational_Index whose index is greater than biggest one!");
+                fatal!("Tried to deallocate a Generational_Index whose index is greater than biggest one!");
             }
 
             let gen = self.gens[index];
 
             if gen > idx.gen {
-                panic!("Tried to deallocate an old Generational_Index! Double free?");
+                fatal!("Tried to deallocate an old Generational_Index! Double free?");
             }
             if gen < idx.gen {
-                panic!("Tried to deallocate a Generational_Index with a generation greater than current!");
+                fatal!("Tried to deallocate a Generational_Index with a generation greater than current!");
             }
             if self.free_slots.contains(&index) {
-                panic!("Tried to deallocate a Generational_Index which was never allocated!");
+                fatal!("Tried to deallocate a Generational_Index which was never allocated!");
             }
         }
 

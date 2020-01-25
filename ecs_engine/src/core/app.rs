@@ -247,10 +247,7 @@ pub fn try_create_replay_data(replay_file: &std::path::Path) -> Option<replay_da
     match replay_data::Replay_Data::from_file(replay_file) {
         Ok(data) => Some(data),
         Err(err) => {
-            eprintln!(
-                "[ ERROR ] Failed to load replay data from {:?}: {}",
-                replay_file, err
-            );
+            lerr!("Failed to load replay data from {:?}: {}", replay_file, err);
             None
         }
     }

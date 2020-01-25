@@ -37,9 +37,9 @@ where
                 let res = self
                     .loader
                     .load(fname)
-                    .unwrap_or_else(|err| panic!("Error loading {}: {}", fname, err));
+                    .unwrap_or_else(|err| fatal!("Error loading {}: {}", fname, err));
                 v.insert(res);
-                eprintln!("[ OK ] Loaded resource {}", fname);
+                lok!("Loaded resource {}", fname);
                 Some(id)
             }
         }

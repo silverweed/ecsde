@@ -26,7 +26,7 @@ impl Config {
                 for entry in section.entries.into_iter() {
                     let name = format!("{}/{}", section.header, entry.key);
                     let id = String_Id::from(name.as_str());
-                    eprintln!("Loading cfg var {} = {:?}", name, entry.value);
+                    linfo!("Loading cfg var {} = {:?}", name, entry.value);
 
                     cfg_var_table.insert(id, entry.value);
                 }
@@ -36,10 +36,10 @@ impl Config {
         #[cfg(debug_assertions)]
         {
             let diff = start_t.elapsed();
-            println!(
-                "[ OK ] Loaded cfg dir {:?} in {} ms.",
+            lok!(
+                "Loaded cfg dir {:?} in {} ms.",
                 dir_path,
-                crate::core::time::to_secs_frac(&diff) * 1000.0
+                crate::core::time::to_secs_frac(&diff) * 1000.0,
             );
         }
 

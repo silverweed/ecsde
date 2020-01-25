@@ -110,7 +110,7 @@ pub unsafe extern "C" fn game_init<'a>(
     raw_args: *const String,
     args_count: usize,
 ) -> Game_Bundle<'a> {
-    eprintln!("[ INFO ] Initializing game...");
+    linfo!("Initializing game...");
 
     let mut args: Vec<&String> = Vec::with_capacity(args_count);
     for i in 0..args_count {
@@ -139,7 +139,7 @@ pub unsafe extern "C" fn game_update<'a>(
     game_resources: *mut Game_Resources<'a>,
 ) -> bool {
     if game_state.is_null() || game_resources.is_null() {
-        panic!("[ FATAL ] game_update: game state and/or resources are null!");
+        fatal!("game_update: game state and/or resources are null!");
     }
 
     {
@@ -186,7 +186,7 @@ pub unsafe extern "C" fn game_shutdown(
     use std::alloc::{dealloc, Layout};
 
     if game_state.is_null() || game_resources.is_null() {
-        panic!("[ FATAL ] game_shutdown: game state and/or resources are null!");
+        fatal!("game_shutdown: game state and/or resources are null!");
     }
 
     std::ptr::drop_in_place(game_state);
@@ -195,7 +195,7 @@ pub unsafe extern "C" fn game_shutdown(
     std::ptr::drop_in_place(game_resources);
     dealloc(game_resources as *mut u8, Layout::new::<Game_Resources>());
 
-    eprintln!("[ OK ] Game was shut down.");
+    lok!("Game was shut down.");
 }
 
 /// # Safety
@@ -211,7 +211,7 @@ pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mu
     #[cfg(debug_assertions)]
     {
         if game_state.is_null() {
-            panic!("[ FATAL ] game_reload: game state is null!");
+            fatal!("game_reload: game state is null!");
         }
 
         let game_state = &mut *game_state;
@@ -314,16 +314,13 @@ fn create_game_state<'a>(
     #[cfg(debug_assertions)]
     {
         if let Some(in_replay_file) = &appcfg.in_replay_file {
-            eprintln!("[ INFO ] Loading replay file {:?}", in_replay_file);
+            linfo!("Loading replay file {:?}", in_replay_file);
             engine_state.replay_data = app::try_create_replay_data(in_replay_file);
         }
     }
 
-    println!(
-        "Working dir = {:?}\nExe = {:?}",
-        engine_state.env.get_cwd(),
-        engine_state.env.get_exe()
-    );
+    linfo!("Working dir = {:?}", engine_state.env.get_cwd());
+    linfo!("Exe = {:?}", engine_state.env.get_exe());
 
     app::init_engine_systems(&mut engine_state)?;
     app::start_config_watch(&engine_state.env, &mut engine_state.config)?;
@@ -388,7 +385,7 @@ fn create_game_state<'a>(
 fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     let draw_sprites_bg = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg", cfg);
     let draw_sprites_bg_color = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg_color", cfg);
-    let extra_frame_sleep_ms = Cfg_Var::new("engine/debug/extra_frame_sleep_ms", cfg);
+    let extra_frame_sleep_ms = Cfg_Var::new("engine/debug/gameplay/extra_frame_sleep_ms", cfg);
     let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
     let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
     let draw_entities = Cfg_Var::new("engine/debug/draw_entities", cfg);

@@ -31,10 +31,7 @@ impl Joystick_Manager {
                 true
             }
             Err(msg) => {
-                eprintln!(
-                    "[ WARNING ] Failed to get type of joystick {}: {}",
-                    joystick_id, msg
-                );
+                lwarn!("Failed to get type of joystick {}: {}", joystick_id, msg);
                 false
             }
         }
@@ -45,6 +42,7 @@ impl Joystick_Manager {
     }
 
     pub fn init(&mut self) -> Maybe_Error {
+        // @Cleanup: this should be hidden in a backend
         #[cfg(feature = "use-sfml")]
         sfml::window::joystick::update();
 
@@ -55,7 +53,7 @@ impl Joystick_Manager {
             }
         }
 
-        println!("[ INFO ] Found {} valid joysticks.", joy_found);
+        linfo!("Found {} valid joysticks.", joy_found);
 
         Ok(())
     }

@@ -8,8 +8,8 @@ impl<'l> loaders::Resource_Loader<'l, Texture<'l>> for Texture_Loader {
     type Args = str;
 
     fn load(&'l self, fname: &str) -> Result<Texture<'l>, String> {
-        // @Incomplete: give a more descriptive error, if that's even possible.
-        Texture::from_file(fname).ok_or_else(|| String::from("Texture load failed"))
+        Texture::from_file(fname)
+            .ok_or_else(|| format!("[ WARNING ] Failed to load texture from {}", fname))
     }
 }
 
@@ -28,8 +28,8 @@ impl<'l> loaders::Resource_Loader<'l, Font<'l>> for Font_Loader {
     type Args = str;
 
     fn load(&'l self, fname: &str) -> Result<Font<'l>, String> {
-        // @Incomplete: give a more descriptive error, if that's even possible.
-        Font::from_file(fname).ok_or_else(|| String::from("Font load failed"))
+        Font::from_file(fname)
+            .ok_or_else(|| format!("[ WARNING ] Failed to load font from {}", fname))
     }
 }
 

@@ -3,6 +3,8 @@ use std::fmt::Debug;
 use std::rc::Rc;
 use std::time;
 
+// FIXME: in some cases this class reports wrong timings! (or doesn't report some timings at all...)
+
 pub struct Tracer {
     // Tree of Tracer_Nodes representing the call tree.
     saved_traces: Vec<Tracer_Node>,

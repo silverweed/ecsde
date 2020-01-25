@@ -87,8 +87,8 @@ impl Input_Bindings {
         joy_mgr: &Joystick_Manager,
     ) -> Option<&Vec<String_Id>> {
         let joystick = joy_mgr.get_joystick(joystick_id).unwrap_or_else(|| {
-            panic!(
-                "[ ERROR ] Tried to get action for joystick {}, but it is not registered!",
+            fatal!(
+                "Tried to get action for joystick {}, but it is not registered!",
                 joystick_id
             )
         });

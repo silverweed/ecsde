@@ -356,8 +356,8 @@ impl Gameplay_System {
             //}
             let prev_pos = t.local_transform.position();
             //t.local_transform.set_position(
-            //(time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
-            //3.,
+            //    (time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
+            //    3.,
             //);
             t.velocity = t.local_transform.position() - prev_pos;
             t.local_transform.set_rotation(cgmath::Deg(30.));

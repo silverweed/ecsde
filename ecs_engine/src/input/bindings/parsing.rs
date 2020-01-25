@@ -16,7 +16,7 @@ pub(super) fn parse_action_bindings_file(
 ) -> Result<HashMap<Input_Action, Vec<String_Id>>, String> {
     let file = File::open(path).or_else(|_| Err(format!("Failed to open file {:?}!", path)))?;
     let lines = BufReader::new(file).lines().filter_map(|l| Some(l.ok()?));
-    eprintln!("[ OK ] Parsed action bindings file {:?}", path);
+    lok!("Parsed action bindings file {:?}", path);
     Ok(parse_action_bindings_lines(lines))
 }
 
@@ -24,7 +24,7 @@ pub(super) fn parse_axis_bindings_file(path: &Path) -> Result<Axis_Bindings, Str
     // @Cutnpaste from above
     let file = File::open(path).or_else(|_| Err(format!("Failed to open file {:?}!", path)))?;
     let lines = BufReader::new(file).lines().filter_map(|l| Some(l.ok()?));
-    eprintln!("[ OK ] Parsed axis bindings file {:?}", path);
+    lok!("Parsed axis bindings file {:?}", path);
     Ok(parse_axis_bindings_lines(lines))
 }
 
@@ -64,9 +64,10 @@ fn parse_action_bindings_lines(
         let (action_name, action_values_raw) = {
             let tokens: Vec<_> = line.splitn(2, ':').map(str::trim).collect();
             if tokens.len() != 2 {
-                eprintln!(
-                    "[ WARNING ] Invalid line {} while parsing action bindings: '{}'.",
-                    lineno, line
+                lwarn!(
+                    "Invalid line {} while parsing action bindings: '{}'.",
+                    lineno,
+                    line
                 );
                 continue;
             } else {
@@ -140,9 +141,10 @@ fn parse_axis_bindings_lines(lines: impl std::iter::Iterator<Item = String>) -> 
         let (axis_name, axis_values_raw) = {
             let tokens: Vec<_> = line.splitn(2, ':').map(str::trim).collect();
             if tokens.len() != 2 {
-                eprintln!(
-                    "[ WARNING ] Invalid line {} while parsing axis bindings: '{}'.",
-                    lineno, line
+                lwarn!(
+                    "Invalid line {} while parsing axis bindings: '{}'.",
+                    lineno,
+                    line
                 );
                 continue;
             } else {

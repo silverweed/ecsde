@@ -27,10 +27,7 @@ impl Entity_Stream {
 
             self.cur_idx = i + 1;
             let index = u32::try_from(i).unwrap_or_else(|_| {
-                panic!(
-                    "[ ERROR ] Entity_Stream::next(): index overflowed u32! ({})",
-                    i
-                );
+                fatal!("Entity_Stream::next(): index overflowed u32! ({})", i);
             });
             return Some(Entity {
                 index,
@@ -63,7 +60,7 @@ impl Entity_Stream_Builder<'_> {
             .world
             .component_handles
             .get(&std::any::TypeId::of::<T>())
-            .unwrap_or_else(|| panic!("Requiring inexisting component {}!", type_name::<T>()));
+            .unwrap_or_else(|| fatal!("Requiring inexisting component {}!", type_name::<T>()));
         self.required_components.set(*handle as usize, true);
         self
     }

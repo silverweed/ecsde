@@ -121,7 +121,7 @@ impl Component_Manager {
         let storage = self
             .components
             .get_mut(comp_handle as usize)
-            .unwrap_or_else(|| panic!("Invalid component handle {:?}", comp_handle));
+            .unwrap_or_else(|| fatal!("Invalid component handle {:?}", comp_handle));
 
         let individual_size = storage.individual_size;
         let index = if let Some(index) = storage.comp_idx.get(&entity.index) {
@@ -174,7 +174,7 @@ impl Component_Manager {
         let storage = self
             .components
             .get_mut(comp_handle as usize)
-            .unwrap_or_else(|| panic!("Invalid component handle {:?}", comp_handle));
+            .unwrap_or_else(|| fatal!("Invalid component handle {:?}", comp_handle));
         if storage.individual_size == 0 {
             // ZST component (basically a tag): just check if the component is in the bitset.
             if self.entity_comp_set[entity.index as usize].get(comp_handle as usize) {
@@ -298,7 +298,7 @@ impl Ecs_World {
         let type_id = TypeId::of::<T>();
         match self.component_handles.entry(type_id) {
             Entry::Occupied(_) => {
-                panic!(
+                fatal!(
                     "register_component: same component '{}' registered twice!",
                     type_name::<T>()
                 );
@@ -312,7 +312,7 @@ impl Ecs_World {
 
     pub fn add_component<T: 'static + Copy + Default>(&mut self, entity: Entity) -> &mut T {
         if !self.entity_manager.is_valid_entity(entity) {
-            panic!(
+            fatal!(
                 "add_component::<{}?>: invalid entity {:?}",
                 type_name::<T>(),
                 entity
@@ -330,7 +330,7 @@ impl Ecs_World {
 
     pub fn get_component<T: 'static + Copy>(&self, entity: Entity) -> Option<&T> {
         if !self.entity_manager.is_valid_entity(entity) {
-            panic!(
+            fatal!(
                 "get_component::<{}?>: invalid entity {:?}",
                 type_name::<T>(),
                 entity
@@ -352,7 +352,7 @@ impl Ecs_World {
 
     pub fn get_component_mut<T: 'static + Copy>(&mut self, entity: Entity) -> Option<&mut T> {
         if !self.entity_manager.is_valid_entity(entity) {
-            panic!(
+            fatal!(
                 "get_component_mut::<{}?>: invalid entity {:?}",
                 type_name::<T>(),
                 entity
@@ -374,7 +374,7 @@ impl Ecs_World {
 
     pub fn remove_component<T: 'static + Copy>(&mut self, entity: Entity) {
         if !self.entity_manager.is_valid_entity(entity) {
-            panic!(
+            fatal!(
                 "remove_component::<{}?>: invalid entity {:?}",
                 type_name::<T>(),
                 entity
@@ -390,7 +390,7 @@ impl Ecs_World {
 
     pub fn has_component<T: 'static + Copy>(&self, entity: Entity) -> bool {
         if !self.entity_manager.is_valid_entity(entity) {
-            panic!(
+            fatal!(
                 "has_component::<{}?>: invalid entity {:?}",
                 type_name::<T>(),
                 entity
@@ -456,9 +456,7 @@ impl Ecs_World {
     pub fn get_components_map<T: 'static + Copy>(&self) -> Components_Map_Safe<T> {
         let comp_size = std::mem::size_of::<T>();
         if comp_size == 0 {
-            panic!(
-                "[ ERROR ] get_components_map_mut cannot be used on Zero Sized Types components!"
-            );
+            fatal!("get_components_map_mut cannot be used on Zero Sized Types components!");
         }
         let handle = get_comp_handle!(
             self.component_handles,
@@ -481,9 +479,7 @@ impl Ecs_World {
     pub fn get_components_map_unsafe<T: 'static + Copy>(&mut self) -> Components_Map_Unsafe<T> {
         let comp_size = std::mem::size_of::<T>();
         if comp_size == 0 {
-            panic!(
-                "[ ERROR ] get_components_map_mut cannot be used on Zero Sized Types components!"
-            );
+            fatal!("get_components_map_mut cannot be used on Zero Sized Types components!");
         }
         let handle = get_comp_handle!(
             self.component_handles,
@@ -959,7 +955,7 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "[ ERROR ] get_components_map_mut cannot be used on Zero Sized Types components!"
+        expected = "[ FATAL ] get_components_map_mut cannot be used on Zero Sized Types components!"
     )]
     fn components_map_zst() {
         let mut em = Ecs_World::new();

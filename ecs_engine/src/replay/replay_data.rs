@@ -187,8 +187,8 @@ impl Replay_Data {
         let mut byte_stream = Byte_Stream::new_from_vec(buf);
         let replay = Self::deserialize(&mut byte_stream)?;
 
-        eprintln!(
-            "[ OK ] Loaded replay data from {:?} in {} ms. Replay duration = {} s.",
+        lok!(
+            "Loaded replay data from {:?} in {} ms. Replay duration = {} s.",
             path,
             start_t.elapsed().as_millis(),
             time::to_secs_frac(&replay.duration)
@@ -283,7 +283,7 @@ mod tests {
             Replay_Data_Point::new(1110, &[], &joy_data, 0x0),
             Replay_Data_Point::new(1111, &[], &joy_data, 0x0),
             Replay_Data_Point::new(6531, &[], &joy_data, 0x0),
-            Replay_Data_Point::new(424242, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(424_242, &[], &joy_data, 0x0),
         ];
 
         let mut byte_stream = Byte_Stream::new();
@@ -325,7 +325,7 @@ mod tests {
             Replay_Data_Point::new(1110, &[], &joy_data, 0x0),
             Replay_Data_Point::new(1111, &[], &joy_data, 0x0),
             Replay_Data_Point::new(6531, &[], &joy_data, 0x0),
-            Replay_Data_Point::new(424242, &[], &joy_data, 0x0),
+            Replay_Data_Point::new(424_242, &[], &joy_data, 0x0),
         ];
 
         let mut byte_stream = Byte_Stream::new();
@@ -348,7 +348,7 @@ mod tests {
         assert_eq!(deserialized.ms_per_frame, ms_per_frame);
         assert_eq!(
             deserialized.duration,
-            Duration::from_millis(424242u64 * (ms_per_frame as u64))
+            Duration::from_millis(424_242u64 * (ms_per_frame as u64))
         );
         assert_eq!(deserialized.data.len(), data_points.len());
         for i in 0..data_points.len() {

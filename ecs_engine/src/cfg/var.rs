@@ -11,11 +11,11 @@ where
 {
     let value = cfg
         .read_cfg(path_id)
-        .unwrap_or_else(|| panic!("[ FATAL ] Tried to read inexistent Cfg_Var \"{}\"", path_id));
+        .unwrap_or_else(|| fatal!("Tried to read inexistent Cfg_Var \"{}\"", path_id));
 
     T::try_from(value.clone()).unwrap_or_else(|_| {
-        panic!(
-            "[ FATAL ] Error dereferencing Cfg_Var<{}>({}): incompatible value {:?}",
+        fatal!(
+            "Error dereferencing Cfg_Var<{}>({}): incompatible value {:?}",
             type_name::<T>(),
             path_id,
             value
