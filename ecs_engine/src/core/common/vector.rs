@@ -187,6 +187,13 @@ impl<T: Copy + Div<Output = T>> DivAssign<T> for Vector2<T> {
     }
 }
 
+#[cfg(test)]
+impl crate::test_common::Approx_Eq_Testable for Vec2f {
+    fn cmp_list(&self) -> Vec<f32> {
+        vec![self.x, self.y]
+    }
+}
+
 impl Vec2f {
     // @WaitForStable: make this const as soon as sqrt() is stable as const
     pub fn distance(&self, other: &Self) -> f32 {

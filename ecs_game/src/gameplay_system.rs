@@ -279,6 +279,10 @@ impl Gameplay_System {
                 rend.rect = Rect::new(0, 0, sw as i32 / (n_frames as i32), sh as i32);
                 (sw, sh)
             };
+            if i == 1 {
+                let ctr = em.add_component::<C_Controllable>(entity);
+                ctr.speed = Cfg_Var::new("gameplay/player/player_speed", cfg);
+            }
             {
                 let t = em.add_component::<C_Spatial2D>(entity);
                 let x = rand::rand_01(rng);
@@ -286,7 +290,7 @@ impl Gameplay_System {
                 if i > 0 {
                     t.local_transform.set_position(x * 542.0, y * 1402.0);
                 }
-                self.scene_tree.add(entity, prev_entity, &t.local_transform);
+                self.scene_tree.add(entity, fst_entity, &t.local_transform);
             }
             {
                 let c = em.add_component::<collider::Collider>(entity);
@@ -344,23 +348,32 @@ impl Gameplay_System {
             spat.velocity.y = transl.y;
         }
 
-        for (i, t) in em
-            .get_components_mut::<C_Spatial2D>()
-            .iter_mut()
-            .skip(1)
-            .enumerate()
-        {
+        let mut stream = new_entity_stream(em)
+            .require::<C_Spatial2D>()
+            .exclude::<C_Controllable>()
+            .build();
+        let mut i = 0;
+        loop {
+            let entity = stream.next(em);
+            if entity.is_none() {
+                break;
+            }
+            let entity = entity.unwrap();
+            let t = em.get_component_mut::<C_Spatial2D>(entity).unwrap();
+
             let speed = 10.0;
             //if i % 10 == 1 {
             //t.local_transform.rotate(Deg(dt_secs * speed));
             //}
-            let prev_pos = t.local_transform.position();
+            //let prev_pos = t.local_transform.position();
             //t.local_transform.set_position(
             //    (time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
             //    3.,
             //);
-            t.velocity = t.local_transform.position() - prev_pos;
-            t.local_transform.set_rotation(cgmath::Deg(30.));
+            //t.velocity = t.local_transform.position() - prev_pos;
+            //t.local_transform.set_rotation(cgmath::Deg(30.));
+
+            i += 1;
         }
     }
 }

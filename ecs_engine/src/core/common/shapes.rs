@@ -20,11 +20,21 @@ impl Circle {
         let rdist2 = (self.radius + other.radius).powf(2.);
         cdist2 < rdist2
     }
+
+    /// Returns the amount by which this circle is inside the other.
+    /// Returns a negative number (the opposite of the 'surface distance')
+    /// if the two circles are not overlapping.
+    pub fn penetration_distance(&self, other: &Circle) -> f32 {
+        let cdist = self.center.distance(&other.center);
+        let rdist = self.radius + other.radius;
+        rdist - cdist
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_common::assert_approx_eq;
 
     #[test]
     fn circle_intersect() {
@@ -47,5 +57,27 @@ mod tests {
         };
         assert!(!a.intersects(&b));
         assert!(!b.intersects(&a));
+    }
+
+    #[test]
+    fn circle_penetration_distance() {
+        let a = Circle {
+            center: Vec2f::new(0., 0.),
+            radius: 1.,
+        };
+        let b = Circle {
+            center: Vec2f::new(0.5, 0.),
+            radius: 1.,
+        };
+        assert_approx_eq(a.penetration_distance(&b), 1.5);
+        assert_approx_eq(b.penetration_distance(&a), 1.5);
+
+        let b = Circle {
+            center: Vec2f::new(2., 2.),
+            radius: 1.,
+        };
+        let expected = 2. - 2. * 2_f32.sqrt();
+        assert_approx_eq(a.penetration_distance(&b), expected);
+        assert_approx_eq(b.penetration_distance(&a), expected);
     }
 }

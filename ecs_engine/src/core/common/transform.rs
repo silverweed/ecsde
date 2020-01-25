@@ -173,6 +173,19 @@ impl std::ops::Mul<Vec2f> for Transform2D {
     }
 }
 
+#[cfg(test)]
+impl crate::test_common::Approx_Eq_Testable for Transform2D {
+    fn cmp_list(&self) -> Vec<f32> {
+        vec![
+            self.position.x,
+            self.position.y,
+            self.rotation.0,
+            self.scale.x,
+            self.scale.y,
+        ]
+    }
+}
+
 // Note: Matrix3 is column-major
 pub fn matrix_pretty_print(m: &Matrix3<f32>) {
     println!(

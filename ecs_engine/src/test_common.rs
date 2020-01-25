@@ -2,12 +2,17 @@
 // correctly. Investigate on this.
 //#![cfg(test)]
 
-use crate::core::env::Env_Info;
-use crate::resources::audio::Audio_Resources;
-use crate::resources::gfx::Gfx_Resources;
+#[rustfmt::skip]
 #[cfg(test)]
-use float_cmp::ApproxEq;
+use {
+    crate::core::env::Env_Info,
+    crate::resources::audio::Audio_Resources,
+    crate::resources::gfx::Gfx_Resources,
+    float_cmp::ApproxEq,
+    std::iter::Iterator,
+};
 
+#[cfg(test)]
 // Used for setting up tests which need resources
 pub fn create_test_resources_and_env<'a>() -> (Gfx_Resources<'a>, Audio_Resources<'a>, Env_Info) {
     let gfx = Gfx_Resources::new();
@@ -17,11 +22,25 @@ pub fn create_test_resources_and_env<'a>() -> (Gfx_Resources<'a>, Audio_Resource
 }
 
 #[cfg(test)]
-pub fn assert_approx_eq(a: f32, b: f32) {
-    assert!(a.approx_eq(b, (0.0, 2)), "Expected: {}, Got: {}", b, a);
+pub fn assert_approx_eq<T: Approx_Eq_Testable>(a: T, b: T) {
+    assert_approx_eq_eps(a, b, 0.0);
 }
 
 #[cfg(test)]
-pub fn assert_approx_eq_eps(a: f32, b: f32, eps: f32) {
-    assert!(a.approx_eq(b, (eps, 2)), "Expected: {}, Got: {}", b, a);
+pub fn assert_approx_eq_eps<T: Approx_Eq_Testable>(a: T, b: T, eps: f32) {
+    for (&xa, &xb) in a.cmp_list().iter().zip(b.cmp_list().iter()) {
+        assert!(xa.approx_eq(xb, (eps, 2)), "Expected: {}, Got: {}", xb, xa);
+    }
+}
+
+#[cfg(test)]
+pub trait Approx_Eq_Testable {
+    fn cmp_list(&self) -> Vec<f32>;
+}
+
+#[cfg(test)]
+impl Approx_Eq_Testable for f32 {
+    fn cmp_list(&self) -> Vec<f32> {
+        vec![*self]
+    }
 }

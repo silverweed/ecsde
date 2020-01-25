@@ -19,8 +19,11 @@ use crate::debug::debug_painter::Debug_Painter;
 #[derive(Clone, Debug)]
 struct Collision_Info {
     pub my_pos: Vec2f,
+    pub my_velocity: Vec2f,
     pub other: Entity,
     pub oth_pos: Vec2f,
+    pub oth_velocity: Vec2f,
+    pub penetration_dist: f32,
 }
 
 pub struct Collision_System {
@@ -129,8 +132,9 @@ impl Collision_System {
                             let mut neighbours = vec![];
                             for &entity in ent_chunk {
                                 let collider = map_collider.get_component(entity).unwrap();
-                                let transform =
-                                    &map_spatial.get_component(entity).unwrap().global_transform;
+                                let spatial = map_spatial.get_component(entity).unwrap();
+                                let transform = &spatial.global_transform;
+                                let velocity = spatial.velocity;
 
                                 neighbours.clear();
                                 quadtree.get_neighbours(collider, transform, &mut neighbours);
@@ -139,6 +143,7 @@ impl Collision_System {
                                         entity,
                                         collider,
                                         transform,
+                                        velocity,
                                         &neighbours,
                                         &map_collider,
                                         &map_spatial,
@@ -156,6 +161,7 @@ impl Collision_System {
             {
                 trace!("collision_solving", _tracer);
 
+                // @Audit: is this safe to do?
                 let mut map_collider = ecs_world.get_components_map_unsafe::<Collider>();
                 let mut map_spatial = ecs_world.get_components_map_unsafe::<C_Spatial2D>();
 
@@ -177,7 +183,14 @@ impl Collision_System {
 
                         // @Incomplete: solve the collision
                         let spatial = unsafe { map_spatial.get_component_mut(entity) }.unwrap();
-                        spatial.local_transform.translate_v(-spatial.velocity);
+                        let delta_pos = info.oth_pos - info.my_pos;
+
+                        // Reset velocity
+                        spatial.velocity = Vec2f::default();
+                        // Move out of the collision
+                        spatial.global_transform.translate_v(
+                            -delta_pos.normalized_or_zero() * (0.01 + info.penetration_dist),
+                        );
                     }
                 }
             }
@@ -199,6 +212,7 @@ fn check_collision_with_neighbours(
     entity: Entity,
     collider: &Collider,
     transform: &Transform2D,
+    velocity: Vec2f,
     neighbours: &[Entity],
     map_collider: &Components_Map_Safe<Collider>,
     map_spatial: &Components_Map_Safe<C_Spatial2D>,
@@ -214,10 +228,9 @@ fn check_collision_with_neighbours(
         }
 
         let oth_cld = map_collider.get_component(neighbour).unwrap();
-        let oth_transf = &map_spatial
-            .get_component(neighbour)
-            .unwrap()
-            .global_transform;
+        let oth_spatial = map_spatial.get_component(neighbour).unwrap();
+        let oth_transf = &oth_spatial.global_transform;
+        let oth_velocity = oth_spatial.velocity;
         let oth_pos = oth_transf.position() + oth_cld.offset;
         let oth_scale = oth_transf.scale();
 
@@ -242,6 +255,9 @@ fn check_collision_with_neighbours(
                                     my_pos: pos,
                                     other: neighbour,
                                     oth_pos,
+                                    my_velocity: velocity,
+                                    oth_velocity,
+                                    penetration_dist: 0., // @Incomplete
                                 },
                             );
                             cld.insert(
@@ -250,6 +266,9 @@ fn check_collision_with_neighbours(
                                     my_pos: oth_pos,
                                     other: entity,
                                     oth_pos: pos,
+                                    my_velocity: oth_velocity,
+                                    oth_velocity: velocity,
+                                    penetration_dist: 0., // @Incomplete
                                 },
                             );
                         }
@@ -274,7 +293,8 @@ fn check_collision_with_neighbours(
                         // Note: we assume uniform scale
                         radius: oth_radius * oth_scale.x,
                     };
-                    if me.intersects(&him) {
+                    let penetration_dist = me.penetration_distance(&him);
+                    if penetration_dist > 0. {
                         if let Ok(mut cld) = collided_entities.lock() {
                             cld.insert(
                                 entity,
@@ -282,6 +302,9 @@ fn check_collision_with_neighbours(
                                     my_pos: pos,
                                     other: neighbour,
                                     oth_pos,
+                                    my_velocity: velocity,
+                                    oth_velocity,
+                                    penetration_dist,
                                 },
                             );
                             cld.insert(
@@ -290,6 +313,9 @@ fn check_collision_with_neighbours(
                                     my_pos: oth_pos,
                                     other: entity,
                                     oth_pos: pos,
+                                    my_velocity: oth_velocity,
+                                    oth_velocity: velocity,
+                                    penetration_dist,
                                 },
                             );
                         }
