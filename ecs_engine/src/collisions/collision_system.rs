@@ -51,12 +51,7 @@ impl Collision_System {
                 .unwrap()
                 .global_transform;
 
-            painter.add_text(
-                &id,
-                transform.position(),
-                16,
-                &colors::rgb(0, 50, 200).into(),
-            );
+            painter.add_text(&id, transform.position(), 16, colors::rgb(0, 50, 200));
         }
     }
 

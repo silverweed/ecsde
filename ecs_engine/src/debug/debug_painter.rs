@@ -34,27 +34,33 @@ impl Debug_Painter {
         self.font = gres.load_font(&gfx::font_path(env, FONT_NAME));
     }
 
-    pub fn add_rect(&mut self, size: Vec2f, transform: &Transform2D, props: &Paint_Properties) {
-        self.rects.push((size, *transform, *props));
+    pub fn add_rect<T>(&mut self, size: Vec2f, transform: &Transform2D, props: T)
+    where
+        T: Into<Paint_Properties>,
+    {
+        self.rects.push((size, *transform, props.into()));
     }
 
-    pub fn add_circle(&mut self, circle: Circle, props: &Paint_Properties) {
-        self.circles.push((circle, *props));
+    pub fn add_circle<T>(&mut self, circle: Circle, props: T)
+    where
+        T: Into<Paint_Properties>,
+    {
+        self.circles.push((circle, props.into()));
     }
 
-    pub fn add_arrow(&mut self, arrow: Arrow, props: &Paint_Properties) {
-        self.arrows.push((arrow, *props));
+    pub fn add_arrow<T>(&mut self, arrow: Arrow, props: T)
+    where
+        T: Into<Paint_Properties>,
+    {
+        self.arrows.push((arrow, props.into()));
     }
 
-    pub fn add_text(
-        &mut self,
-        text: &str,
-        world_pos: Vec2f,
-        font_size: u16,
-        props: &Paint_Properties,
-    ) {
+    pub fn add_text<T>(&mut self, text: &str, world_pos: Vec2f, font_size: u16, props: T)
+    where
+        T: Into<Paint_Properties>,
+    {
         self.texts
-            .push((String::from(text), world_pos, font_size, *props));
+            .push((String::from(text), world_pos, font_size, props.into()));
     }
 
     pub fn clear(&mut self) {

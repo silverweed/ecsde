@@ -548,18 +548,15 @@ fn debug_draw_colliders(
         transform.set_rotation(cgmath::Rad(0.));
         transform.translate_v(collider.offset);
 
-        let paint_props = Paint_Properties {
-            color: if collider.colliding {
-                colors::rgba(255, 0, 0, 100)
-            } else {
-                colors::rgba(255, 255, 0, 100)
-            },
-            ..Default::default()
+        let color = if collider.colliding {
+            colors::rgba(255, 0, 0, 100)
+        } else {
+            colors::rgba(255, 255, 0, 100)
         };
 
         match collider.shape {
             Collider_Shape::Rect { width, height } => {
-                debug_painter.add_rect(Vec2f::new(width, height), &transform, &paint_props);
+                debug_painter.add_rect(Vec2f::new(width, height), &transform, color);
             }
             Collider_Shape::Circle { radius } => {
                 debug_painter.add_circle(
@@ -567,7 +564,7 @@ fn debug_draw_colliders(
                         center: transform.position(),
                         radius,
                     },
-                    &paint_props,
+                    color,
                 );
             }
         }
@@ -599,10 +596,7 @@ fn debug_draw_entities(
                 radius: 5.,
                 center: transform.position(),
             },
-            &Paint_Properties {
-                color: colors::rgb(50, 100, 200),
-                ..Default::default()
-            },
+            colors::rgb(50, 100, 200),
         );
 
         debug_painter.add_text(
@@ -613,7 +607,7 @@ fn debug_draw_entities(
             ),
             transform.position(),
             10,
-            &Paint_Properties {
+            Paint_Properties {
                 color: colors::WHITE,
                 border_thick: 1.,
                 border_color: colors::BLACK,
@@ -629,10 +623,7 @@ fn debug_draw_entities(
                     thickness: 2.,
                     arrow_size: 20.,
                 },
-                &Paint_Properties {
-                    color: colors::rgb(100, 0, 120),
-                    ..Default::default()
-                },
+                colors::rgb(100, 0, 120),
             );
         }
     }
@@ -675,23 +666,13 @@ fn debug_draw_grid(
             } else {
                 col_gray
             };
-            debug_painter.add_rect(
-                Vec2f::new(square_size, square_size),
-                &transf,
-                &Paint_Properties {
-                    color,
-                    ..Default::default()
-                },
-            );
+            debug_painter.add_rect(Vec2f::new(square_size, square_size), &transf, color);
             let pos = transf.position();
             debug_painter.add_text(
                 &format!("{},{}", pos.x, pos.y),
                 pos + Vec2f::new(5., 5.),
                 (square_size as i32 / 6).max(8) as u16,
-                &Paint_Properties {
-                    color,
-                    ..Default::default()
-                },
+                color,
             );
         }
     }

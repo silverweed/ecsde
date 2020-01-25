@@ -303,30 +303,28 @@ pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
         };
         let transform = Transform2D::from_pos(Vec2f::new(quadtree.bounds.x(), quadtree.bounds.y()));
 
-        painter.add_rect(quadtree.bounds.size(), &transform, &props);
+        painter.add_rect(quadtree.bounds.size(), &transform, props);
         painter.add_text(
             &format!("{}.{}", quadtree.level, quadtree.id),
             transform.position() + Vec2f::new(3., 3.),
             (11 + (depth - quadtree.level as u32) * 20) as u16,
-            &colors::rgba(
+            colors::rgba(
                 0,
                 0,
                 0,
                 (255 - (depth - quadtree.level as u32) * 15).max(0) as u8,
-            )
-            .into(),
+            ),
         );
         painter.add_text(
             &format!("{}.{}", quadtree.level, quadtree.id),
             transform.position() + Vec2f::new(2., 2.),
             (11 + (depth - quadtree.level as u32) * 20) as u16,
-            &colors::rgba(
+            colors::rgba(
                 255,
                 0,
                 255,
                 (255 - (depth - quadtree.level as u32) * 15).max(0) as u8,
-            )
-            .into(),
+            ),
         );
         if let Some(subnodes) = &quadtree.subnodes {
             for subnode in subnodes {
