@@ -1,7 +1,6 @@
 #[cfg(feature = "use-sfml")]
 mod sfml;
 
-#[repr(C)]
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Color {
     pub r: u8,
