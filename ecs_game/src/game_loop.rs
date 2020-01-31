@@ -27,7 +27,7 @@ pub fn tick_game<'a>(
     let _tracer = clone_tracer!(game_state.engine_state.tracer);
     trace!("tick_game", _tracer);
 
-    // @Speed: these should all be computed at compile time.
+    // @Speed @WaitForStable: these should all be computed at compile time.
     // Probably will do that when either const fn or proc macros/syntax extensions are stable.
     #[cfg(debug_assertions)]
     let (sid_joysticks, sid_msg) = (String_Id::from("joysticks"), String_Id::from("msg"));
@@ -333,7 +333,7 @@ fn update_debug(game_state: &mut Game_State) {
     let engine_state = &mut game_state.engine_state;
     let debug_systems = &mut engine_state.debug_systems;
 
-    // @Speed: these should all be computed at compile time.
+    // @Speed @WaitForStable: these should all be computed at compile time.
     let (sid_time, sid_fps, sid_entities, sid_camera) = (
         String_Id::from("time"),
         String_Id::from("fps"),

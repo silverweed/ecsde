@@ -91,7 +91,9 @@ impl Fadeout_Debug_Overlay {
             let d = core::time::duration_ratio(&time, &fadeout_time);
             let alpha = 255 - (d * d * 255.0f32) as u8;
             let mut text = Text::new(text, gres.get_font(font), font_size.into());
-            text.set_fill_color(colors::rgba(color.r, color.g, color.b, alpha));
+            // @Incomplete: our Text should accept our Color, not sfml::Color!
+            let color = Color { a: alpha, ..*color };
+            text.set_fill_color(color.into());
 
             let txt_bounds = text.local_bounds();
             max_row_width = max_row_width.max(txt_bounds.width);

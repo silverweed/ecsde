@@ -59,7 +59,7 @@ pub fn get_joy_type(id: u32) -> Result<Joystick_Type, &'static str> {
         return Err("Joystick is not connected.");
     }
 
-    // @Temporary: for now we only support XBox360
+    // @Incomplete @Temporary: for now we only support XBox360
     Ok(Joystick_Type::XBox360)
 }
 

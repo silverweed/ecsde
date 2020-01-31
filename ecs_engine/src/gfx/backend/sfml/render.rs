@@ -194,9 +194,9 @@ fn fill_color_rect_internal<T>(
     let rect = rect.into();
     rectangle_shape.set_position(Vector2f::new(rect.x(), rect.y()));
     rectangle_shape.set_size(Vector2f::new(rect.width(), rect.height()));
-    rectangle_shape.set_fill_color(paint_props.color);
+    rectangle_shape.set_fill_color(paint_props.color.into());
     rectangle_shape.set_outline_thickness(paint_props.border_thick);
-    rectangle_shape.set_outline_color(paint_props.border_color);
+    rectangle_shape.set_outline_color(paint_props.border_color.into());
     window
         .handle
         .draw_rectangle_shape(&rectangle_shape, render_states);
@@ -227,9 +227,9 @@ fn fill_color_circle_internal(
 ) {
     let mut circle_shape = CircleShape::new(circle.radius, paint_props.point_count);
     circle_shape.set_position(Vector2f::new(circle.center.x, circle.center.y));
-    circle_shape.set_fill_color(paint_props.color);
+    circle_shape.set_fill_color(paint_props.color.into());
     circle_shape.set_outline_thickness(paint_props.border_thick);
-    circle_shape.set_outline_color(paint_props.border_color);
+    circle_shape.set_outline_color(paint_props.border_color.into());
     window
         .handle
         .draw_circle_shape(&circle_shape, render_states);
@@ -330,7 +330,7 @@ pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex,
 }
 
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
-    Vertex::new(Vector2f::from(pos), col, Vector2f::from(tex_coords))
+    Vertex::new(Vector2f::from(pos), col.into(), Vector2f::from(tex_coords))
 }
 
 pub fn render_vbuf_ws(

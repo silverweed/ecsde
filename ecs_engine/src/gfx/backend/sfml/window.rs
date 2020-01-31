@@ -74,7 +74,7 @@ pub fn set_clear_color(window: &mut Window_Handle, color: Color) {
 }
 
 pub fn clear(window: &mut Window_Handle) {
-    let c = window.clear_color;
+    let c = window.clear_color.into();
     window.handle.clear(c);
 }
 

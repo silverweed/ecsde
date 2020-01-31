@@ -82,7 +82,10 @@ impl Debug_Overlay {
         for line in self.lines.iter() {
             let Debug_Line { text, color } = line;
             let mut text = Text::new(text, gres.get_font(font), font_size.into());
-            text.set_fill_color(*color);
+
+            // @Incomplete: our Text should accept our Color, not sfml::Color!
+            let color = (*color).into();
+            text.set_fill_color(color);
 
             let txt_bounds = text.local_bounds();
             max_row_width = max_row_width.max(txt_bounds.width);
