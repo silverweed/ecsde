@@ -10,92 +10,63 @@ pub enum Cfg_Value {
     String(String),
 }
 
-impl From<bool> for Cfg_Value {
-    fn from(v: bool) -> Cfg_Value {
-        Cfg_Value::Bool(v)
-    }
-}
-
-impl From<i32> for Cfg_Value {
-    fn from(v: i32) -> Cfg_Value {
-        Cfg_Value::Int(v)
-    }
-}
-
-impl From<u32> for Cfg_Value {
-    fn from(v: u32) -> Cfg_Value {
-        Cfg_Value::UInt(v)
-    }
-}
-
-impl From<f32> for Cfg_Value {
-    fn from(v: f32) -> Cfg_Value {
-        Cfg_Value::Float(v)
-    }
-}
-
-impl From<String> for Cfg_Value {
-    fn from(v: String) -> Cfg_Value {
-        Cfg_Value::String(v)
-    }
-}
-
-impl TryFrom<Cfg_Value> for bool {
-    type Error = ();
-
-    fn try_from(v: Cfg_Value) -> Result<Self, Self::Error> {
-        if let Cfg_Value::Bool(b) = v {
-            Ok(b)
-        } else {
-            Err(())
+macro_rules! impl_cfg_value {
+    ($type: ty => $val: ident) => {
+        impl From<$type> for Cfg_Value {
+            fn from(v: $type) -> Cfg_Value {
+                Cfg_Value::$val(v)
+            }
         }
-    }
+
+        impl TryFrom<Cfg_Value> for $type {
+            type Error = ();
+
+            fn try_from(v: Cfg_Value) -> Result<Self, Self::Error> {
+                if let Cfg_Value::$val(b) = v {
+                    Ok(b)
+                } else {
+                    Err(())
+                }
+            }
+        }
+    };
 }
 
-impl TryFrom<Cfg_Value> for i32 {
-    type Error = ();
+impl_cfg_value!(bool => Bool);
+impl_cfg_value!(u32 => UInt);
+impl_cfg_value!(i32 => Int);
+impl_cfg_value!(f32 => Float);
+impl_cfg_value!(String => String);
 
-    fn try_from(v: Cfg_Value) -> Result<Self, Self::Error> {
-        if let Cfg_Value::Int(b) = v {
-            Ok(b)
-        } else {
-            Err(())
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn val_to_cfg_value() {
+        assert_eq!(Cfg_Value::from(true), Cfg_Value::Bool(true));
+        assert_eq!(Cfg_Value::from(2), Cfg_Value::Int(2));
+        assert_eq!(Cfg_Value::from(2u32), Cfg_Value::UInt(2));
+        assert_eq!(Cfg_Value::from(2.0), Cfg_Value::Float(2.0));
+        assert_eq!(
+            Cfg_Value::from("2".to_string()),
+            Cfg_Value::String("2".to_string())
+        );
     }
-}
 
-impl TryFrom<Cfg_Value> for u32 {
-    type Error = ();
+    #[test]
+    fn cfg_value_to_val() {
+        assert_eq!(bool::try_from(Cfg_Value::Bool(true)), Ok(true));
+        assert_eq!(i32::try_from(Cfg_Value::Int(2)), Ok(2));
+        assert_eq!(u32::try_from(Cfg_Value::UInt(2)), Ok(2u32));
+        assert_eq!(f32::try_from(Cfg_Value::Float(2.0)), Ok(2.0));
+        assert_eq!(
+            String::try_from(Cfg_Value::String("2".to_string())),
+            Ok("2".to_string())
+        );
 
-    fn try_from(v: Cfg_Value) -> Result<Self, Self::Error> {
-        if let Cfg_Value::UInt(b) = v {
-            Ok(b)
-        } else {
-            Err(())
-        }
-    }
-}
-
-impl TryFrom<Cfg_Value> for f32 {
-    type Error = ();
-
-    fn try_from(v: Cfg_Value) -> Result<Self, Self::Error> {
-        if let Cfg_Value::Float(b) = v {
-            Ok(b)
-        } else {
-            Err(())
-        }
-    }
-}
-
-impl TryFrom<Cfg_Value> for String {
-    type Error = ();
-
-    fn try_from(v: Cfg_Value) -> Result<Self, Self::Error> {
-        if let Cfg_Value::String(b) = v {
-            Ok(b)
-        } else {
-            Err(())
-        }
+        assert_eq!(i32::try_from(Cfg_Value::UInt(2)), Err(()));
+        assert_eq!(String::try_from(Cfg_Value::Int(2)), Err(()));
+        assert_eq!(u32::try_from(Cfg_Value::Bool(false)), Err(()));
     }
 }

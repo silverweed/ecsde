@@ -101,71 +101,44 @@ where
     }
 }
 
+macro_rules! impl_cfg_vars {
+    (copy: $($type: ty),*) => {
+        $(
+            impl Cfg_Var<$type> {
+                #[cfg(debug_assertions)]
+                pub fn read(self, cfg: &Config) -> $type {
+                    read_cfg(self.id, cfg)
+                }
+
+                #[cfg(not(debug_assertions))]
+                #[inline(always)]
+                pub fn read(self, _: &Config) -> $type {
+                    self.0
+                }
+            }
+        )*
+    };
+    (noncopy: $($type: ty),*) => {
+        $(
+            impl Cfg_Var<$type> {
+                #[cfg(debug_assertions)]
+                pub fn read(&self, cfg: &Config) -> $type {
+                    read_cfg(self.id, cfg)
+                }
+
+                #[cfg(not(debug_assertions))]
+                #[inline(always)]
+                pub fn read(&self, _: &Config) -> $type {
+                    self.0
+                }
+            }
+        )*
+    }
+}
+
 // @WaitForStable: if specialization lands, only have impls for T: Copy / NonCopy.
-impl Cfg_Var<bool> {
-    #[cfg(debug_assertions)]
-    pub fn read(self, cfg: &Config) -> bool {
-        read_cfg(self.id, cfg)
-    }
-
-    #[cfg(not(debug_assertions))]
-    #[inline(always)]
-    pub fn read(self, _: &Config) -> bool {
-        self.0
-    }
-}
-
-impl Cfg_Var<i32> {
-    #[cfg(debug_assertions)]
-    pub fn read(self, cfg: &Config) -> i32 {
-        read_cfg(self.id, cfg)
-    }
-
-    #[cfg(not(debug_assertions))]
-    #[inline(always)]
-    pub fn read(self, _: &Config) -> i32 {
-        self.0
-    }
-}
-
-impl Cfg_Var<u32> {
-    #[cfg(debug_assertions)]
-    pub fn read(self, cfg: &Config) -> u32 {
-        read_cfg(self.id, cfg)
-    }
-
-    #[cfg(not(debug_assertions))]
-    #[inline(always)]
-    pub fn read(self, _: &Config) -> u32 {
-        self.0
-    }
-}
-
-impl Cfg_Var<f32> {
-    #[cfg(debug_assertions)]
-    pub fn read(self, cfg: &Config) -> f32 {
-        read_cfg(self.id, cfg)
-    }
-
-    #[cfg(not(debug_assertions))]
-    #[inline(always)]
-    pub fn read(self, _: &Config) -> f32 {
-        self.0
-    }
-}
-
-impl Cfg_Var<String> {
-    #[cfg(debug_assertions)]
-    pub fn read(&self, cfg: &Config) -> String {
-        read_cfg(self.id, cfg)
-    }
-
-    #[cfg(not(debug_assertions))]
-    #[inline(always)]
-    pub fn read(&self, _: &Config) -> String {
-        self.0.clone()
-    }
-}
+impl_cfg_vars!(copy: bool, i32, u32, f32);
+impl_cfg_vars!(noncopy: String);
 
 impl<T: std::fmt::Display> std::fmt::Display for Cfg_Var<T>
 where

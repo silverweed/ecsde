@@ -138,6 +138,7 @@ fn parse_lines(lines: impl std::iter::Iterator<Item = String>) -> Vec<Cfg_Sectio
 
 fn parse_value(raw: &str) -> Cfg_Value {
     if raw.is_empty() {
+        // @Redundant: can this ever happen? Do we need a Nil value at all?
         return Cfg_Value::Nil;
     }
 
