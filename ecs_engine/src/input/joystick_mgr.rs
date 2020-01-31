@@ -42,9 +42,7 @@ impl Joystick_Manager {
     }
 
     pub fn init(&mut self) -> Maybe_Error {
-        // @Cleanup: this should be hidden in a backend
-        #[cfg(feature = "use-sfml")]
-        sfml::window::joystick::update();
+        joystick::update_joysticks();
 
         let mut joy_found = 0;
         for i in 0..(JOY_COUNT as u32) {

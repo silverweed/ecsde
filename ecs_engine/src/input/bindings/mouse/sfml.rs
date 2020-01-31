@@ -37,15 +37,13 @@ impl std::convert::From<Mouse_Button> for Button {
     }
 }
 
-// @Cleanup @Temporary: make this a macro
 #[inline(always)]
-pub fn mousepressed(button: Button) -> Event {
+pub const fn mousepressed(button: Button) -> Event {
     Event::MouseButtonPressed { button, x: 0, y: 0 }
 }
 
-// @Cleanup @Temporary: make this a macro
 #[inline(always)]
-pub fn mousereleased(button: Button) -> Event {
+pub const fn mousereleased(button: Button) -> Event {
     Event::MouseButtonReleased { button, x: 0, y: 0 }
 }
 

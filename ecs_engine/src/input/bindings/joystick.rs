@@ -160,6 +160,11 @@ fn get_joy_axis_value_xbox360(joystick_id: u32, axis: Joystick_Axis) -> f32 {
     backend::get_axis_value_xbox360(joystick_id, axis)
 }
 
+/// Forces to update the joysticks' state
+pub fn update_joysticks() {
+    backend::update_joysticks();
+}
+
 // Map (Joystick_Button as u8) => (button id)
 #[cfg(target_os = "linux")]
 const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = [

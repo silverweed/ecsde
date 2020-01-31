@@ -278,7 +278,7 @@ fn create_game_state<'a>(
         let win_height: Cfg_Var<i32> = Cfg_Var::new("engine/window/height", cfg);
         let win_title: Cfg_Var<String> = Cfg_Var::new("engine/window/title", cfg);
         app_config::App_Config {
-            title: win_title.read(cfg),
+            title: win_title.read(cfg).clone(),
             target_win_size: (win_width.read(cfg) as u32, win_height.read(cfg) as u32),
             #[cfg(debug_assertions)]
             in_replay_file: None,
@@ -323,10 +323,10 @@ fn create_game_state<'a>(
     linfo!("Exe = {:?}", engine_state.env.get_exe());
 
     app::init_engine_systems(&mut engine_state)?;
-    app::start_config_watch(&engine_state.env, &mut engine_state.config)?;
 
     #[cfg(debug_assertions)]
     {
+        app::start_config_watch(&engine_state.env, &mut engine_state.config)?;
         app::init_engine_debug(&mut engine_state, &mut game_resources.gfx)?;
         app::start_recording(&mut engine_state)?;
     }

@@ -128,8 +128,8 @@ macro_rules! impl_cfg_vars {
 
                 #[cfg(not(debug_assertions))]
                 #[inline(always)]
-                pub fn read(&self, _: &Config) -> $type {
-                    self.0
+                pub fn read(&self, _: &Config) -> &$type {
+                    &self.0
                 }
             }
         )*

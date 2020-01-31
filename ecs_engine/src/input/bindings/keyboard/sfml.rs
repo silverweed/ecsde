@@ -225,9 +225,8 @@ pub(super) fn is_key_pressed(key: Key) -> bool {
     key.is_pressed()
 }
 
-// @Cleanup @Temporary: make this a macro
 #[inline(always)]
-pub fn keypressed(code: Key) -> Event {
+pub const fn keypressed(code: Key) -> Event {
     Event::KeyPressed {
         code,
         alt: false,
@@ -237,9 +236,8 @@ pub fn keypressed(code: Key) -> Event {
     }
 }
 
-// @Cleanup @Temporary: make this a macro
 #[inline(always)]
-pub fn keyreleased(code: Key) -> Event {
+pub const fn keyreleased(code: Key) -> Event {
     Event::KeyReleased {
         code,
         alt: false,

@@ -1,3 +1,5 @@
+#![cfg(debug_assertions)]
+
 use super::config::Config;
 use super::parsing::{self, Cfg_Entry, Cfg_Section};
 use crate::fs::{file_watcher, utils};

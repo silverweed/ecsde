@@ -66,6 +66,7 @@ pub fn create_engine_state<'r>(
     }
 }
 
+#[cfg(debug_assertions)]
 pub fn start_config_watch(env: &Env_Info, config: &mut cfg::Config) -> Maybe_Error {
     let config_watcher = Box::new(cfg::sync::Config_Watch_Handler::new(config));
     let config_watcher_cfg = fs::file_watcher::File_Watch_Config {

@@ -75,3 +75,8 @@ pub(super) fn get_connected_joysticks_mask() -> u8 {
     }
     mask
 }
+
+#[inline(always)]
+pub(super) fn update_joysticks() {
+    sfml::window::joystick::update();
+}
