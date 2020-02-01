@@ -6,7 +6,7 @@ mod sfml;
 #[cfg(feature = "use-sfml")]
 use self::sfml as backend;
 
-pub const JOY_COUNT: u32 = sfml::JOY_COUNT;
+pub const JOY_COUNT: u32 = backend::JOY_COUNT;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Joystick_Type {
