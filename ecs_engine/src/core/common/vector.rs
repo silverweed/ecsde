@@ -189,7 +189,7 @@ impl<T: Copy + Div<Output = T>> DivAssign<T> for Vector2<T> {
 
 #[cfg(test)]
 impl crate::test_common::Approx_Eq_Testable for Vec2f {
-    fn cmp_list(self) -> Vec<f32> {
+    fn cmp_list(&self) -> Vec<f32> {
         vec![self.x, self.y]
     }
 }
@@ -386,11 +386,11 @@ mod tests {
         let a = Vec2f::new(0., 0.);
         let b = Vec2f::new(3., 4.);
 
-        assert_approx_eq(a.distance(&b), 5.);
-        assert_approx_eq(b.distance(&a), 5.);
+        assert_approx_eq(a.distance(b), 5.);
+        assert_approx_eq(b.distance(a), 5.);
 
-        assert_approx_eq(a.distance2(&b), 25.);
-        assert_approx_eq(b.distance2(&a), 25.);
+        assert_approx_eq(a.distance2(b), 25.);
+        assert_approx_eq(b.distance2(a), 25.);
     }
 
     #[test]
@@ -398,11 +398,11 @@ mod tests {
         const A: Vec2i = Vec2i::new(0, 0);
         const B: Vec2i = Vec2i::new(3, 4);
 
-        assert_approx_eq(A.distance(&B), 5.);
-        assert_approx_eq(B.distance(&A), 5.);
+        assert_approx_eq(A.distance(B), 5.);
+        assert_approx_eq(B.distance(A), 5.);
 
-        assert_approx_eq(A.distance2(&B), 25.);
-        assert_approx_eq(B.distance2(&A), 25.);
+        assert_approx_eq(A.distance2(B), 25.);
+        assert_approx_eq(B.distance2(A), 25.);
     }
 
     #[test]
@@ -410,10 +410,10 @@ mod tests {
         let a = Vec2u::new(0, 0);
         const B: Vec2u = Vec2u::new(3, 4);
 
-        assert_approx_eq(a.distance(&B), 5.);
-        assert_approx_eq(B.distance(&a), 5.);
+        assert_approx_eq(a.distance(B), 5.);
+        assert_approx_eq(B.distance(a), 5.);
 
-        assert_approx_eq(a.distance2(&B), 25.);
-        assert_approx_eq(B.distance2(&a), 25.);
+        assert_approx_eq(a.distance2(B), 25.);
+        assert_approx_eq(B.distance2(a), 25.);
     }
 }

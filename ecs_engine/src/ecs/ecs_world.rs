@@ -18,6 +18,26 @@ struct Component_Storage {
     pub comp_idx: HashMap<Index_Type, usize>,
 }
 
+impl Component_Storage {
+    pub fn get_component(&self, entity: Entity) -> Option<*const u8> {
+        if let Some(index) = self.comp_idx.get(&entity.index) {
+            debug_assert!(*index * self.individual_size < isize::max_value() as usize);
+            Some(unsafe { self.data.as_ptr().add(*index * self.individual_size) })
+        } else {
+            None
+        }
+    }
+
+    pub fn get_component_mut(&mut self, entity: Entity) -> Option<*mut u8> {
+        if let Some(index) = self.comp_idx.get(&entity.index) {
+            debug_assert!(*index * self.individual_size < isize::max_value() as usize);
+            Some(unsafe { self.data.as_mut_ptr().add(*index * self.individual_size) })
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Components_Map_Safe<'a, T> {
     comp_storage: &'a Component_Storage,
@@ -36,13 +56,9 @@ impl<'a, T> Components_Map_Safe<'a, T> {
     where
         'a: 'b,
     {
-        let storage = &*self.comp_storage;
-        if let Some(index) = storage.comp_idx.get(&entity.index) {
-            let comp = unsafe { storage.data.as_ptr().add(*index * storage.individual_size) };
-            Some(unsafe { &*(comp as *const T) })
-        } else {
-            None
-        }
+        self.comp_storage
+            .get_component(entity)
+            .map(|comp| unsafe { &*(comp as *const T) })
     }
 }
 
@@ -61,31 +77,25 @@ impl<T> Components_Map_Unsafe<T> {
     }
 
     /// # Safety
-    /// The Components_Map_Mut must never outlive the Ecs_World, and at most one Components_Map_Mut
+    /// The Components_Map_Unsafe must never outlive the Ecs_World, and at most one Components_Map_Unsafe
     /// per type is allowed to exist at the same time.
-    /// The suggested usage of a Components_Map_Mut is to limit its existence to a single function.
+    /// The suggested usage of a Components_Map_Unsafe is to limit its existence to a single function.
+    // @Audit: it looks like this method returns an unbounded reference: do we need to add some bound here?
     pub unsafe fn get_component(&self, entity: Entity) -> Option<&T> {
-        let storage = &*self.comp_storage;
-        if let Some(index) = storage.comp_idx.get(&entity.index) {
-            let comp = storage.data.as_ptr().add(*index * storage.individual_size);
-            Some(&*(comp as *const T))
-        } else {
-            None
-        }
+        (*self.comp_storage)
+            .get_component(entity)
+            .map(|comp| &*(comp as *const T))
     }
 
     /// # Safety
-    /// The Components_Map_Mut must never outlive the Ecs_World, and at most one Components_Map_Mut
+    /// The Components_Map_Unsafe must never outlive the Ecs_World, and at most one Components_Map_Unsafe
     /// per type is allowed to exist at the same time.
-    /// The suggested usage of a Components_Map_Mut is to limit its existence to a single function.
+    /// The suggested usage of a Components_Map_Unsafe is to limit its existence to a single function.
+    // @Audit: it looks like this method returns an unbounded reference: do we need to add some bound here?
     pub unsafe fn get_component_mut(&mut self, entity: Entity) -> Option<&mut T> {
-        let storage = &*self.comp_storage;
-        if let Some(index) = storage.comp_idx.get(&entity.index) {
-            let comp = storage.data.as_ptr().add(*index * storage.individual_size);
-            Some(&mut *(comp as *mut T))
-        } else {
-            None
-        }
+        (*self.comp_storage)
+            .get_component_mut(entity)
+            .map(|comp| &mut *(comp as *mut T))
     }
 }
 
@@ -142,6 +152,7 @@ impl Component_Manager {
             }
         };
 
+        debug_assert!(index * individual_size < isize::max_value() as usize);
         unsafe { storage.data.as_mut_ptr().add(index * individual_size) }
     }
 
@@ -158,11 +169,8 @@ impl Component_Manager {
             } else {
                 None
             }
-        } else if let Some(index) = storage.comp_idx.get(&entity.index) {
-            let comp = unsafe { storage.data.as_ptr().add(*index * storage.individual_size) };
-            Some(comp)
         } else {
-            None
+            storage.get_component(entity)
         }
     }
 
@@ -183,16 +191,8 @@ impl Component_Manager {
             } else {
                 None
             }
-        } else if let Some(index) = storage.comp_idx.get_mut(&entity.index) {
-            let comp = unsafe {
-                storage
-                    .data
-                    .as_mut_ptr()
-                    .add(*index * storage.individual_size)
-            };
-            Some(comp)
         } else {
-            None
+            storage.get_component_mut(entity)
         }
     }
 
@@ -343,7 +343,6 @@ impl Ecs_World {
         );
         let maybe_comp = self.component_manager.get_component(entity, *handle);
         if std::mem::size_of::<T>() != 0 {
-            // reinterpret cast from *const u8 to *const T
             maybe_comp.map(|ptr| unsafe { &*(ptr as *const T) })
         } else {
             maybe_comp.map(|_| unsafe { &*(&() as *const () as *const T) })
@@ -365,7 +364,6 @@ impl Ecs_World {
         );
         let maybe_comp = self.component_manager.get_component_mut(entity, *handle);
         if std::mem::size_of::<T>() != 0 {
-            // reinterpret cast from *mut u8 to *mut T
             maybe_comp.map(|ptr| unsafe { &mut *(ptr as *mut T) })
         } else {
             maybe_comp.map(|_| unsafe { &mut *(&mut () as *mut () as *mut T) })
@@ -405,7 +403,7 @@ impl Ecs_World {
     }
 
     pub fn get_components<T: 'static + Copy>(&self) -> &[T] {
-        // Note: this should be able to be const, but a pesky compiler error
+        // @Cleanup: this should be able to be const, but a pesky compiler error
         // prevents it. Investigate on this later.
         let comp_size = std::mem::size_of::<T>();
         if comp_size == 0 {
@@ -476,7 +474,9 @@ impl Ecs_World {
     /// # Safety
     /// Only at most one map per type must exist at the same time: it is UB to call
     /// `get_components_map_mut::<T>()` multiple times with the same `T`.
-    pub fn get_components_map_unsafe<T: 'static + Copy>(&mut self) -> Components_Map_Unsafe<T> {
+    pub unsafe fn get_components_map_unsafe<T: 'static + Copy>(
+        &mut self,
+    ) -> Components_Map_Unsafe<T> {
         let comp_size = std::mem::size_of::<T>();
         if comp_size == 0 {
             fatal!("get_components_map_mut cannot be used on Zero Sized Types components!");
@@ -935,7 +935,7 @@ mod tests {
             entities.push(e);
         }
 
-        let mut map = em.get_components_map_unsafe::<C_Test>();
+        let mut map = unsafe { em.get_components_map_unsafe::<C_Test>() };
 
         for (i, e) in entities.iter().enumerate() {
             let e = *e;

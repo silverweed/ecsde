@@ -1,12 +1,10 @@
 pub fn fast_invsqrt(n: f32) -> f32 {
-    const THREE_HALFS: f32 = 1.5;
-
     let x2: f32 = n * 0.5;
-    let mut i: u32 = unsafe { std::mem::transmute(n) };
+    let mut i: u32 = n.to_bits();
     i = 0x5f37_5a86 - (i >> 1);
     let y: f32 = f32::from_bits(i);
-    let y = y * (THREE_HALFS - (x2 * y * y));
-    y * (THREE_HALFS - (x2 * y * y))
+    let y = y * (1.5 - (x2 * y * y));
+    y * (1.5 - (x2 * y * y))
 }
 
 #[cfg(test)]
