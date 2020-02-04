@@ -1,7 +1,7 @@
 #[cfg(feature = "use-sfml")]
 mod sfml;
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
