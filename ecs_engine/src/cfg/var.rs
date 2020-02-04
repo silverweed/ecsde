@@ -23,6 +23,22 @@ where
     })
 }
 
+fn read_cfg_str(path_id: String_Id, cfg: &Config) -> &String {
+    let value = cfg
+        .read_cfg(path_id)
+        .unwrap_or_else(|| fatal!(r#"Tried to read inexistent Cfg_Var "{}""#, path_id));
+
+    if let Cfg_Value::String(ref s) = value {
+        s
+    } else {
+        fatal!(
+            "Error dereferencing Cfg_Var<String>({}): incompatible value {:?}",
+            path_id,
+            value
+        );
+    }
+}
+
 #[cfg(debug_assertions)]
 #[derive(Debug, Clone)]
 pub struct Cfg_Var<T>
@@ -122,8 +138,8 @@ macro_rules! impl_cfg_vars {
         $(
             impl Cfg_Var<$type> {
                 #[cfg(debug_assertions)]
-                pub fn read(&self, cfg: &Config) -> $type {
-                    read_cfg(self.id, cfg)
+                pub fn read<'c>(&self, cfg: &'c Config) -> &'c $type {
+                    read_cfg_str(self.id, cfg)
                 }
 
                 #[cfg(not(debug_assertions))]
@@ -198,7 +214,7 @@ mod tests {
         assert_eq!(var.read(&config), 42);
 
         let var = Cfg_Var::new_from_val(String::from("foo"), &mut config);
-        assert_eq!(var.read(&config), String::from("foo"));
+        assert_eq!(var.read(&config), "foo");
     }
 
     #[test]
