@@ -16,7 +16,7 @@ pub struct Arrow {
 
 impl Circle {
     pub fn intersects(&self, other: &Circle) -> bool {
-        let cdist2 = self.center.distance2(&other.center);
+        let cdist2 = self.center.distance2(other.center);
         let rdist2 = (self.radius + other.radius).powf(2.);
         cdist2 < rdist2
     }
@@ -25,7 +25,7 @@ impl Circle {
     /// Returns a negative number (the opposite of the 'surface distance')
     /// if the two circles are not overlapping.
     pub fn penetration_distance(&self, other: &Circle) -> f32 {
-        let cdist = self.center.distance(&other.center);
+        let cdist = self.center.distance(other.center);
         let rdist = self.radius + other.radius;
         rdist - cdist
     }

@@ -83,8 +83,8 @@ impl Collision_System {
 
         {
             trace!("collision_system::fill_quadtree", _tracer);
-            let mut map_collider = ecs_world.get_components_map_unsafe::<Collider>();
-            let map_spatial = ecs_world.get_components_map_unsafe::<C_Spatial2D>();
+            let mut map_collider = unsafe { ecs_world.get_components_map_unsafe::<Collider>() };
+            let map_spatial = unsafe { ecs_world.get_components_map_unsafe::<C_Spatial2D>() };
 
             for &entity in &self.entities_buf {
                 let collider = {
@@ -162,8 +162,9 @@ impl Collision_System {
                 trace!("collision_solving", _tracer);
 
                 // @Audit: is this safe to do?
-                let mut map_collider = ecs_world.get_components_map_unsafe::<Collider>();
-                let mut map_spatial = ecs_world.get_components_map_unsafe::<C_Spatial2D>();
+                let mut map_collider = unsafe { ecs_world.get_components_map_unsafe::<Collider>() };
+                let mut map_spatial =
+                    unsafe { ecs_world.get_components_map_unsafe::<C_Spatial2D>() };
 
                 if let Ok(cld) = self.collided_entities.lock() {
                     for (&entity, info) in cld.iter() {

@@ -229,7 +229,7 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
         Collider_Shape::Circle { radius } => {
             #[cfg(debug_assertions)]
             {
-                if obj_scale_x != obj_scale_y {
+                if (obj_scale_x - obj_scale_y).abs() > 0.0001 {
                     eprintln!(
                         "[ WARNING ] Unsupported non-uniform scale {},{} on circular collider. Will use scale.x.",
                         obj_scale_x, obj_scale_y

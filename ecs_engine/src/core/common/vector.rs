@@ -189,19 +189,19 @@ impl<T: Copy + Div<Output = T>> DivAssign<T> for Vector2<T> {
 
 #[cfg(test)]
 impl crate::test_common::Approx_Eq_Testable for Vec2f {
-    fn cmp_list(&self) -> Vec<f32> {
+    fn cmp_list(self) -> Vec<f32> {
         vec![self.x, self.y]
     }
 }
 
 impl Vec2f {
     // @WaitForStable: make this const as soon as sqrt() is stable as const
-    pub fn distance(&self, other: &Self) -> f32 {
+    pub fn distance(self, other: Self) -> f32 {
         self.distance2(other).sqrt()
     }
 
     // @WaitForStable: make this const as soon as `-` on f32 is stable as const
-    pub fn distance2(&self, other: &Self) -> f32 {
+    pub fn distance2(self, other: Self) -> f32 {
         let dx = self.x - other.x;
         let dy = self.y - other.y;
         dx * dx + dy * dy
@@ -209,11 +209,11 @@ impl Vec2f {
 }
 
 impl Vec2i {
-    pub fn distance(&self, other: &Self) -> f32 {
+    pub fn distance(self, other: Self) -> f32 {
         self.distance2(other).sqrt()
     }
 
-    pub const fn distance2(&self, other: &Self) -> f32 {
+    pub const fn distance2(self, other: Self) -> f32 {
         let dx = self.x - other.x;
         let dy = self.y - other.y;
         (dx * dx + dy * dy) as f32
@@ -221,11 +221,11 @@ impl Vec2i {
 }
 
 impl Vec2u {
-    pub fn distance(&self, other: &Self) -> f32 {
+    pub fn distance(self, other: Self) -> f32 {
         self.distance2(other).sqrt()
     }
 
-    pub const fn distance2(&self, other: &Self) -> f32 {
+    pub const fn distance2(self, other: Self) -> f32 {
         let dx = self.x as i32 - other.x as i32;
         let dy = self.y as i32 - other.y as i32;
         (dx * dx + dy * dy) as f32

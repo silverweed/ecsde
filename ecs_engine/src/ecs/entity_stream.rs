@@ -16,11 +16,11 @@ impl Entity_Stream {
         let exc_comps = &self.excluded_components;
         let entity_comp_set = &world.component_manager.entity_comp_set;
         for (i, comp_set) in entity_comp_set.iter().enumerate().skip(self.cur_idx) {
-            if &(comp_set & req_comps) != req_comps {
+            if (comp_set & req_comps) != *req_comps {
                 continue;
             }
 
-            if &(comp_set & exc_comps) != &Bit_Set::default() {
+            if (comp_set & exc_comps) != Bit_Set::default() {
                 continue;
             }
 
