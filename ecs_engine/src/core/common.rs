@@ -1,3 +1,4 @@
+pub mod angle;
 pub mod bitset;
 pub mod colors;
 pub mod direction;
