@@ -8,7 +8,6 @@ use crate::fs;
 use crate::gfx;
 use crate::input;
 use crate::prelude::{new_debug_tracer, Debug_Tracer};
-use notify::RecursiveMode;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
@@ -68,6 +67,8 @@ pub fn create_engine_state<'r>(
 
 #[cfg(debug_assertions)]
 pub fn start_config_watch(env: &Env_Info, config: &mut cfg::Config) -> Maybe_Error {
+    use notify::RecursiveMode;
+
     let config_watcher = Box::new(cfg::sync::Config_Watch_Handler::new(config));
     let config_watcher_cfg = fs::file_watcher::File_Watch_Config {
         interval: Duration::from_secs(1),

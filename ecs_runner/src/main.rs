@@ -3,6 +3,8 @@
 #![allow(non_camel_case_types)]
 
 extern crate libloading as ll;
+
+#[cfg(debug_assertions)]
 extern crate notify;
 
 mod game_api;
