@@ -9,17 +9,18 @@ extern crate crossbeam;
 extern crate num_cpus;
 extern crate num_enum;
 
+#[macro_use]
+extern crate bitflags;
+
 #[cfg(debug_assertions)]
 extern crate notify;
 
+#[cfg(debug_assertions)]
 #[macro_use]
 extern crate lazy_static;
 
 #[cfg(test)]
 extern crate float_cmp;
-
-#[macro_use]
-extern crate bitflags;
 
 #[cfg(features = "use-sfml")]
 extern crate sfml;
