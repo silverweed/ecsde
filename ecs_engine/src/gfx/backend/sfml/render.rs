@@ -76,9 +76,9 @@ impl std::ops::DerefMut for Font<'_> {
 
 pub type Sprite<'a> = sfml::graphics::Sprite<'a>;
 
-pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect<i32>) -> Sprite<'a> {
+pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: &Rect<i32>) -> Sprite<'a> {
     let mut sprite = Sprite::with_texture(texture);
-    sprite.set_texture_rect(&rect);
+    sprite.set_texture_rect(&rect.into());
     let origin: Vector2f = Vec2f::new(rect.width as f32 * 0.5, rect.height as f32 * 0.5).into();
     sprite.set_origin(origin);
     sprite
@@ -110,14 +110,18 @@ pub fn render_sprite(
     window.handle.draw_with_renderstates(sprite, render_states);
 }
 
+pub fn sprite_global_bounds(sprite: &Sprite) -> Rect<f32> {
+    sprite.global_bounds().into()
+}
+
 pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: Rect<i32>) {
     let render_states = RenderStates {
         blend_mode: get_blend_mode(window),
         ..Default::default()
     };
     let mut rectangle_shape = RectangleShape::with_texture(texture);
-    rectangle_shape.set_position(Vector2f::new(rect.x() as f32, rect.y() as f32));
-    rectangle_shape.set_size(Vector2f::new(rect.width() as f32, rect.height() as f32));
+    rectangle_shape.set_position(Vector2f::new(rect.x as f32, rect.y as f32));
+    rectangle_shape.set_size(Vector2f::new(rect.width as f32, rect.height as f32));
     window
         .handle
         .draw_rectangle_shape(&rectangle_shape, render_states);
@@ -192,8 +196,8 @@ fn fill_color_rect_internal<T>(
 {
     let mut rectangle_shape = RectangleShape::new();
     let rect = rect.into();
-    rectangle_shape.set_position(Vector2f::new(rect.x(), rect.y()));
-    rectangle_shape.set_size(Vector2f::new(rect.width(), rect.height()));
+    rectangle_shape.set_position(Vector2f::new(rect.x, rect.y));
+    rectangle_shape.set_size(Vector2f::new(rect.width, rect.height));
     rectangle_shape.set_fill_color(paint_props.color.into());
     rectangle_shape.set_outline_thickness(paint_props.border_thick);
     rectangle_shape.set_outline_color(paint_props.border_color.into());

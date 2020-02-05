@@ -153,10 +153,10 @@ impl Quad_Tree {
 
     fn split(&mut self) {
         let bounds = &self.bounds;
-        let subw = bounds.width() * 0.5;
-        let subh = bounds.height() * 0.5;
-        let x = bounds.x();
-        let y = bounds.y();
+        let subw = bounds.width * 0.5;
+        let subh = bounds.height * 0.5;
+        let x = bounds.x;
+        let y = bounds.y;
 
         #[cfg(debug_assertions)]
         {
@@ -204,8 +204,8 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
     use crate::core::common::vector::Vec2f;
 
     let mut idx = -1;
-    let horiz_mid = bounds.x() + bounds.width() * 0.5;
-    let vert_mid = bounds.y() + bounds.height() * 0.5;
+    let horiz_mid = bounds.x + bounds.width * 0.5;
+    let vert_mid = bounds.y + bounds.height * 0.5;
     let Vec2f { x: obj_x, y: obj_y } = transform.position() + collider.offset;
     let Vec2f {
         x: obj_scale_x,
@@ -221,10 +221,10 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
         Collider_Shape::Rect { width, height } => {
             let width = width * obj_scale_x;
             let height = height * obj_scale_y;
-            fits_top = obj_y > bounds.y() && obj_y + height < vert_mid;
-            fits_bot = obj_y > vert_mid && obj_y + height < bounds.y() + bounds.height();
-            fits_left = obj_x > bounds.x() && obj_x + width < horiz_mid;
-            fits_right = obj_x > horiz_mid && obj_x + width < bounds.x() + bounds.width();
+            fits_top = obj_y > bounds.y && obj_y + height < vert_mid;
+            fits_bot = obj_y > vert_mid && obj_y + height < bounds.y + bounds.height;
+            fits_left = obj_x > bounds.x && obj_x + width < horiz_mid;
+            fits_right = obj_x > horiz_mid && obj_x + width < bounds.x + bounds.width;
         }
         Collider_Shape::Circle { radius } => {
             #[cfg(debug_assertions)]
@@ -238,10 +238,10 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
             }
             let width = radius * obj_scale_x;
             let height = width;
-            fits_top = obj_y > bounds.y() && obj_y + height < vert_mid;
-            fits_bot = obj_y > vert_mid && obj_y + height < bounds.y() + bounds.height();
-            fits_left = obj_x > bounds.x() && obj_x + width < horiz_mid;
-            fits_right = obj_x > horiz_mid && obj_x + width < bounds.x() + bounds.width();
+            fits_top = obj_y > bounds.y && obj_y + height < vert_mid;
+            fits_bot = obj_y > vert_mid && obj_y + height < bounds.y + bounds.height;
+            fits_left = obj_x > bounds.x && obj_x + width < horiz_mid;
+            fits_right = obj_x > horiz_mid && obj_x + width < bounds.x + bounds.width;
         }
     }
 
@@ -301,7 +301,7 @@ pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
             border_color: colors::rgba(255, 0, 255, 150),
             ..Default::default()
         };
-        let transform = Transform2D::from_pos(Vec2f::new(quadtree.bounds.x(), quadtree.bounds.y()));
+        let transform = Transform2D::from_pos(Vec2f::new(quadtree.bounds.x, quadtree.bounds.y));
 
         painter.add_rect(quadtree.bounds.size(), &transform, props);
         painter.add_text(

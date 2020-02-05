@@ -23,7 +23,7 @@ pub fn set_blend_mode(window: &mut Window_Handle, blend_mode: Blend_Mode) {
     backend::set_blend_mode(window, blend_mode);
 }
 
-pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect<i32>) -> Sprite<'a> {
+pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: &Rect<i32>) -> Sprite<'a> {
     backend::create_sprite(texture, rect)
 }
 
@@ -34,6 +34,10 @@ pub fn render_sprite(
     camera: &Transform2D,
 ) {
     backend::render_sprite(window, sprite, transform, camera);
+}
+
+pub fn sprite_global_bounds(sprite: &Sprite) -> Rect<f32> {
+    backend::sprite_global_bounds(sprite)
 }
 
 /// Draws a color-filled rectangle in screen space

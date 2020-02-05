@@ -90,7 +90,7 @@ pub fn get_window_target_size(window: &Window_Handle) -> (u32, u32) {
 }
 
 #[cfg(feature = "use-sfml")]
-pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: Rect<i32>) -> Sprite<'a> {
+pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: &Rect<i32>) -> Sprite<'a> {
     sfml::render::create_sprite(texture, rect)
 }
 
@@ -102,6 +102,11 @@ pub fn render_sprite(
     camera: &Transform2D,
 ) {
     sfml::render::render_sprite(window, sprite, transform, camera);
+}
+
+#[cfg(feature = "use-sfml")]
+pub fn sprite_global_bounds(sprite: &Sprite) -> Rect<f32> {
+    sfml::render::sprite_global_bounds(sprite)
 }
 
 #[cfg(feature = "use-sfml")]
