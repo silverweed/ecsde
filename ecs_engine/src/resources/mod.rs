@@ -1,6 +1,8 @@
+#[macro_use]
+pub mod loaders;
+
 pub mod audio;
 pub mod gfx;
-pub mod loaders;
 
 use crate::core::env::Env_Info;
 use std::path::PathBuf;

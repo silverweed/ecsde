@@ -3,7 +3,6 @@ use crate::core::common::rect::Rect;
 use crate::core::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
-use crate::gfx::render::Text;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
@@ -81,13 +80,10 @@ impl Debug_Overlay {
 
         for line in self.lines.iter() {
             let Debug_Line { text, color } = line;
-            let mut text = Text::new(text, gres.get_font(font), font_size.into());
+            let mut text = gfx::render::create_text(text, gres.get_font(font), font_size.into());
+            gfx::render::set_text_fill_color(&mut text, *color);
 
-            // @Incomplete: our Text should accept our Color, not sfml::Color!
-            let color = (*color).into();
-            text.set_fill_color(color);
-
-            let txt_bounds = text.local_bounds();
+            let txt_bounds = gfx::render::get_text_local_bounds(&text);
             max_row_width = max_row_width.max(txt_bounds.width);
             max_row_height = max_row_height.max(txt_bounds.height);
 

@@ -57,3 +57,35 @@ where
         self.cache.len()
     }
 }
+
+#[macro_export]
+macro_rules! define_file_loader {
+    ($loaded_res: ident, $loader_name: ident, $cache_name: ident) => {
+        pub(super) struct $loader_name;
+
+        impl<'l> loaders::Resource_Loader<'l, $loaded_res<'l>> for $loader_name {
+            type Args = str;
+
+            fn load(&'l self, fname: &str) -> Result<$loaded_res<'l>, String> {
+                $loaded_res::from_file(fname).ok_or_else(|| {
+                    format!(
+                        concat!(
+                            "[ WARNING ] Failed to load ",
+                            stringify!($loaded_res),
+                            " from {}"
+                        ),
+                        fname
+                    )
+                })
+            }
+        }
+
+        pub(super) type $cache_name<'l> = loaders::Cache<'l, $loaded_res<'l>, $loader_name>;
+
+        impl $cache_name<'_> {
+            pub fn new() -> Self {
+                Self::new_with_loader(&$loader_name {})
+            }
+        }
+    };
+}

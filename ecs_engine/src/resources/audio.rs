@@ -2,10 +2,9 @@ mod cache;
 
 use super::asset_path;
 use super::loaders;
+use crate::audio::sound::Sound_Buffer;
 use crate::core::env::Env_Info;
 
-pub type Sound_Buffer = cache::Sound_Buffer;
-pub type Sound<'a> = cache::Sound<'a>;
 pub type Sound_Handle = loaders::Res_Handle;
 
 pub struct Audio_Resources<'l> {

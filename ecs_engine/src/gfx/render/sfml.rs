@@ -1,5 +1,5 @@
 use crate::core::common::colors::Color;
-use crate::core::common::rect::Rect;
+use crate::core::common::rect::{Rect, Rectf};
 use crate::core::common::shapes;
 use crate::core::common::transform::Transform2D;
 use crate::core::common::vector::Vec2f;
@@ -9,69 +9,15 @@ use sfml::graphics::Shape;
 use sfml::graphics::{
     CircleShape, RectangleShape, RenderStates, RenderTarget, Transform, Transformable,
 };
-use sfml::system::{SfBox, Vector2f};
+use sfml::system::Vector2f;
 
 pub type Vertex_Buffer = sfml::graphics::VertexArray;
 pub type Vertex = sfml::graphics::Vertex;
 
-pub struct Texture<'a> {
-    texture: SfBox<sfml::graphics::Texture>,
-    _marker: &'a std::marker::PhantomData<()>,
-}
-
-impl Texture<'_> {
-    pub fn from_file(fname: &str) -> Option<Self> {
-        Some(Texture {
-            texture: sfml::graphics::Texture::from_file(fname)?,
-            _marker: &std::marker::PhantomData,
-        })
-    }
-}
-
-impl std::ops::Deref for Texture<'_> {
-    type Target = sfml::graphics::Texture;
-
-    fn deref(&self) -> &sfml::graphics::Texture {
-        &self.texture
-    }
-}
-
-impl std::ops::DerefMut for Texture<'_> {
-    fn deref_mut(&mut self) -> &mut sfml::graphics::Texture {
-        &mut self.texture
-    }
-}
+sf_wrap!(Texture, sfml::graphics::Texture);
+sf_wrap!(Font, sfml::graphics::Font);
 
 pub type Text<'a> = sfml::graphics::Text<'a>;
-
-pub struct Font<'a> {
-    font: SfBox<sfml::graphics::Font>,
-    _marker: &'a std::marker::PhantomData<()>,
-}
-
-impl Font<'_> {
-    pub fn from_file(fname: &str) -> Option<Self> {
-        Some(Font {
-            font: sfml::graphics::Font::from_file(fname)?,
-            _marker: &std::marker::PhantomData,
-        })
-    }
-}
-
-impl std::ops::Deref for Font<'_> {
-    type Target = sfml::graphics::Font;
-
-    fn deref(&self) -> &sfml::graphics::Font {
-        &self.font
-    }
-}
-
-impl std::ops::DerefMut for Font<'_> {
-    fn deref_mut(&mut self) -> &mut sfml::graphics::Font {
-        &mut self.font
-    }
-}
-
 pub type Sprite<'a> = sfml::graphics::Sprite<'a>;
 
 pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: &Rect<i32>) -> Sprite<'a> {
@@ -354,4 +300,16 @@ fn render_vbuf_internal(
     render_states: RenderStates,
 ) {
     window.draw_vertex_array(vbuf, render_states);
+}
+
+pub fn set_text_fill_color(text: &mut Text, color: Color) {
+    text.set_fill_color(color.into());
+}
+
+pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
+    Text::new(string, font, size as u32)
+}
+
+pub fn get_text_local_bounds(text: &Text) -> Rectf {
+    text.local_bounds().into()
 }

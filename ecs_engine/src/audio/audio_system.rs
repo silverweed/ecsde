@@ -1,5 +1,5 @@
-use crate::resources::audio::{Audio_Resources, Sound, Sound_Handle};
-use sfml::audio as sfaud;
+use super::sound;
+use crate::resources::audio::{Audio_Resources, Sound_Handle};
 use std::vec::Vec;
 
 pub struct Audio_System_Config {
@@ -8,7 +8,7 @@ pub struct Audio_System_Config {
 
 pub struct Audio_System<'r> {
     max_concurrent_sounds: usize,
-    sounds_playing: Vec<Sound<'r>>,
+    sounds_playing: Vec<sound::Sound<'r>>,
 }
 
 impl<'r> Audio_System<'r> {
@@ -23,7 +23,7 @@ impl<'r> Audio_System<'r> {
         let mut i = 0;
         while i < self.sounds_playing.len() {
             let sound = &self.sounds_playing[i];
-            if sound.status() != sfaud::SoundStatus::Playing {
+            if !sound::sound_playing(sound) {
                 self.sounds_playing.swap_remove(i);
             } else {
                 i += 1;
@@ -40,7 +40,7 @@ impl<'r> Audio_System<'r> {
             self.sounds_playing.swap_remove(0);
         }
         let sound_buf = rsrc.get_sound(sound_handle);
-        let mut sound = Sound::with_buffer(&sound_buf);
+        let mut sound = sound::create_sound_with_buffer(&sound_buf);
         sound.play();
         self.sounds_playing.push(sound);
     }

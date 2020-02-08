@@ -1,6 +1,6 @@
 use super::paint_props::Paint_Properties;
 use crate::core::common::colors::Color;
-use crate::core::common::rect::Rect;
+use crate::core::common::rect::{Rect, Rectf};
 use crate::core::common::shapes::Circle;
 use crate::core::common::transform::Transform2D;
 use crate::core::common::vector::Vec2f;
@@ -75,6 +75,10 @@ pub fn get_texture_size(texture: &Texture<'_>) -> (u32, u32) {
     backend::get_texture_size(texture)
 }
 
+pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
+    backend::create_text(string, font, size)
+}
+
 pub fn render_text(window: &mut Window_Handle, text: &mut Text, screen_pos: Vec2f) {
     backend::render_text(window, text, screen_pos);
 }
@@ -86,6 +90,14 @@ pub fn render_text_ws(
     camera: &Transform2D,
 ) {
     backend::render_text_ws(window, text, world_transform, camera);
+}
+
+pub fn set_text_fill_color(text: &mut Text, color: Color) {
+    backend::set_text_fill_color(text, color);
+}
+
+pub fn get_text_local_bounds(text: &Text) -> Rectf {
+    backend::get_text_local_bounds(text)
 }
 
 pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer {
