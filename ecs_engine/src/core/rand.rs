@@ -9,8 +9,7 @@ pub struct Rand_Xoshiro256 {
 pub fn new_rng_with_random_seed() -> std::io::Result<Rand_Xoshiro256> {
     let mut seed_buf = [0u8; 32];
     get_entropy_from_os(&mut seed_buf)?;
-    // @Robustness: consider hashing in the system time
-    // or something like that.
+    // @Robustness: consider hashing in the system time or something like that.
     Ok(Rand_Xoshiro256::new_with_seed(seed_buf))
 }
 
