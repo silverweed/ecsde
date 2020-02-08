@@ -12,3 +12,6 @@ cfg/*
 .gdb_history
 replay.bin
 fuzz/
+perf_data/
+*.ods
+*.data*
