@@ -129,6 +129,7 @@ mod tests {
     use sfml::window::Key;
 
     #[test]
+    #[ignore] // because create_render_window is expensive and may crash in multithreaded tests
     fn poll_replayed_events() {
         use crate::gfx::window;
         let wc_args = window::Create_Render_Window_Args::default();

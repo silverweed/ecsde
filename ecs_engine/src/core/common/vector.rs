@@ -235,7 +235,6 @@ impl Vec2u {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_common::assert_approx_eq;
 
     #[test]
     fn vector_default() {
@@ -362,7 +361,7 @@ mod tests {
     #[test]
     fn vector_normalize() {
         let v = Vec2f::new(1., 1.).normalized_or_zero();
-        assert_approx_eq(v.x, 0.707_106_7);
+        assert_approx_eq!(v.x, 0.707_106_7);
         assert_eq!(v.x, v.y);
 
         assert_eq!(Vec2f::new(0., 0.).normalized_or_zero(), Vec2f::new(0., 0.));
@@ -386,11 +385,11 @@ mod tests {
         let a = Vec2f::new(0., 0.);
         let b = Vec2f::new(3., 4.);
 
-        assert_approx_eq(a.distance(b), 5.);
-        assert_approx_eq(b.distance(a), 5.);
+        assert_approx_eq!(a.distance(b), 5.);
+        assert_approx_eq!(b.distance(a), 5.);
 
-        assert_approx_eq(a.distance2(b), 25.);
-        assert_approx_eq(b.distance2(a), 25.);
+        assert_approx_eq!(a.distance2(b), 25.);
+        assert_approx_eq!(b.distance2(a), 25.);
     }
 
     #[test]
@@ -398,11 +397,11 @@ mod tests {
         const A: Vec2i = Vec2i::new(0, 0);
         const B: Vec2i = Vec2i::new(3, 4);
 
-        assert_approx_eq(A.distance(B), 5.);
-        assert_approx_eq(B.distance(A), 5.);
+        assert_approx_eq!(A.distance(B), 5.);
+        assert_approx_eq!(B.distance(A), 5.);
 
-        assert_approx_eq(A.distance2(B), 25.);
-        assert_approx_eq(B.distance2(A), 25.);
+        assert_approx_eq!(A.distance2(B), 25.);
+        assert_approx_eq!(B.distance2(A), 25.);
     }
 
     #[test]
@@ -410,10 +409,10 @@ mod tests {
         let a = Vec2u::new(0, 0);
         const B: Vec2u = Vec2u::new(3, 4);
 
-        assert_approx_eq(a.distance(B), 5.);
-        assert_approx_eq(B.distance(a), 5.);
+        assert_approx_eq!(a.distance(B), 5.);
+        assert_approx_eq!(B.distance(a), 5.);
 
-        assert_approx_eq(a.distance2(B), 25.);
-        assert_approx_eq(B.distance2(a), 25.);
+        assert_approx_eq!(a.distance2(B), 25.);
+        assert_approx_eq!(B.distance2(a), 25.);
     }
 }

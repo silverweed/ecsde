@@ -209,6 +209,7 @@ impl Collision_System {
 /// Given the Entity `entity` with its `collider` and `transform`, and given an array of `neighbours`,
 /// computes collisions between that entity and its neighbours, adding each colliding entity to the
 /// `collided_entities` array and incrementing the total number of collisions.
+#[allow(clippy::too_many_arguments)]
 fn check_collision_with_neighbours(
     entity: Entity,
     collider: &Collider,

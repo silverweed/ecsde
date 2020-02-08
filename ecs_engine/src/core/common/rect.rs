@@ -51,7 +51,7 @@ pub type Recti = Rect<i32>;
 pub type Rectu = Rect<u32>;
 
 impl<T> Rect<T> {
-    pub fn new(x: T, y: T, width: T, height: T) -> Rect<T> {
+    pub const fn new(x: T, y: T, width: T, height: T) -> Rect<T> {
         Rect {
             x,
             y,
@@ -63,6 +63,7 @@ impl<T> Rect<T> {
 
 impl<T: Copy> Rect<T> {
     #[inline]
+    // @WaitForStable: mark this const
     pub fn size(&self) -> Vector2<T> {
         Vector2::new(self.width, self.height)
     }

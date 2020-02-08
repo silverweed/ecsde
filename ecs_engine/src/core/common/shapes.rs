@@ -34,7 +34,6 @@ impl Circle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_common::assert_approx_eq;
 
     #[test]
     fn circle_intersect() {
@@ -69,15 +68,15 @@ mod tests {
             center: Vec2f::new(0.5, 0.),
             radius: 1.,
         };
-        assert_approx_eq(a.penetration_distance(&b), 1.5);
-        assert_approx_eq(b.penetration_distance(&a), 1.5);
+        assert_approx_eq!(a.penetration_distance(&b), 1.5);
+        assert_approx_eq!(b.penetration_distance(&a), 1.5);
 
         let b = Circle {
             center: Vec2f::new(2., 2.),
             radius: 1.,
         };
         let expected = 2. - 2. * 2_f32.sqrt();
-        assert_approx_eq(a.penetration_distance(&b), expected);
-        assert_approx_eq(b.penetration_distance(&a), expected);
+        assert_approx_eq!(a.penetration_distance(&b), expected);
+        assert_approx_eq!(b.penetration_distance(&a), expected);
     }
 }

@@ -201,7 +201,6 @@ pub fn matrix_pretty_print(m: &Matrix3<f32>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_common::assert_approx_eq;
 
     #[test]
     fn default() {
@@ -251,18 +250,18 @@ mod tests {
     fn rotate() {
         let mut tr = Transform2D::new();
         tr.rotate(Rad(2.0));
-        assert_approx_eq(tr.rotation().0, 2.0);
+        assert_approx_eq!(tr.rotation().0, 2.0);
         tr.rotate(Rad(-1.2));
-        assert_approx_eq(tr.rotation().0, 0.8);
+        assert_approx_eq!(tr.rotation().0, 0.8);
     }
 
     #[test]
     fn set_rotation() {
         let mut tr = Transform2D::new();
         tr.set_rotation(Rad(2.0));
-        assert_approx_eq(tr.rotation().0, 2.0);
+        assert_approx_eq!(tr.rotation().0, 2.0);
         tr.set_rotation(Rad(-1.2));
-        assert_approx_eq(tr.rotation().0, -1.2);
+        assert_approx_eq!(tr.rotation().0, -1.2);
     }
 
     #[test]
@@ -273,8 +272,8 @@ mod tests {
         t1.set_scale(2.0, 2.0);
 
         let t2 = Transform2D::new_from_matrix(&t1.get_matrix());
-        assert_approx_eq(t2.position().x, 100.0);
-        assert_approx_eq(t2.rotation().0, 1.4);
-        assert_approx_eq(t2.scale().y, 2.0);
+        assert_approx_eq!(t2.position().x, 100.0);
+        assert_approx_eq!(t2.rotation().0, 1.4);
+        assert_approx_eq!(t2.scale().y, 2.0);
     }
 }
