@@ -290,7 +290,7 @@ impl Gameplay_System {
                 if i > 0 {
                     t.local_transform.set_position(x * 542.0, y * 1402.0);
                 }
-                self.scene_tree.add(entity, fst_entity, &t.local_transform);
+                self.scene_tree.add(entity, prev_entity, &t.local_transform);
             }
             {
                 let c = em.add_component::<collider::Collider>(entity);
@@ -361,17 +361,20 @@ impl Gameplay_System {
             let entity = entity.unwrap();
             let t = em.get_component_mut::<C_Spatial2D>(entity).unwrap();
 
-            let speed = 10.0;
-            //if i % 10 == 1 {
-            //t.local_transform.rotate(Deg(dt_secs * speed));
-            //}
-            //let prev_pos = t.local_transform.position();
-            //t.local_transform.set_position(
-            //    (time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
-            //    3.,
-            //);
-            //t.velocity = t.local_transform.position() - prev_pos;
-            //t.local_transform.set_rotation(cgmath::Deg(30.));
+            {
+                use ecs_engine::core::common::angle::deg;
+                let speed = 90.0;
+                if i % 10 == 0 {
+                    t.local_transform.rotate(deg(dt_secs * speed));
+                }
+                //let prev_pos = t.local_transform.position();
+                //t.local_transform.set_position(
+                //(time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
+                //3.,
+                //);
+                //t.velocity = t.local_transform.position() - prev_pos;
+                //t.local_transform.set_rotation(deg(30.));
+            }
 
             i += 1;
         }

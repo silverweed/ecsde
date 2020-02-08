@@ -339,9 +339,9 @@ pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::common::angle::rad;
     use crate::core::common::transform::Transform2D;
     use crate::core::common::vector::Vec2f;
-    use cgmath::Rad;
 
     fn depth(quadtree: &Quad_Tree) -> usize {
         fn depth_internal(quadtree: &Quad_Tree, val: usize) -> usize {
@@ -384,7 +384,7 @@ mod tests {
 
             let spat = ecs_world.add_component::<C_Spatial2D>(entity);
             let trans =
-                Transform2D::from_pos_rot_scale(Vec2f::new(x, y), Rad(0.), Vec2f::new(sx, sy));
+                Transform2D::from_pos_rot_scale(Vec2f::new(x, y), rad(0.), Vec2f::new(sx, sy));
             spat.global_transform = trans;
 
             (entity, collider, trans)

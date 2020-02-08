@@ -155,8 +155,8 @@ impl Scene_Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::common::angle::deg;
     use crate::ecs::ecs_world::Ecs_World;
-    use cgmath::Deg;
     use float_cmp::ApproxEq;
 
     #[test]
@@ -184,7 +184,7 @@ mod tests {
         assert!(new_child_t.position().x.approx_eq(100.0, (0.0, 2)));
 
         let root_t = em.get_component_mut::<Transform2D>(root_e).unwrap();
-        root_t.rotate(Deg(90.0));
+        root_t.rotate(deg(90.0));
         tree.set_local_transform(root_e, &root_t);
 
         tree.compute_global_transforms();

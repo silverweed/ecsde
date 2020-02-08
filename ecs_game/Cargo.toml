@@ -11,9 +11,9 @@ crate-type = ["cdylib"]
 features = ["use-sfml"]
 path = "../ecs_engine"
 
-[dependencies.cgmath]
-git = "https://github.com/rustgd/cgmath"
-rev = "50a345b"
+#[dependencies.cgmath]
+#git = "https://github.com/rustgd/cgmath"
+#rev = "50a345b"
 
 [features]
 prof_entities_update = []

@@ -1,3 +1,4 @@
+use crate::core::common::angle::rad;
 use crate::core::common::rect::Rect;
 use crate::core::common::shapes::{Arrow, Circle};
 use crate::core::common::transform::Transform2D;
@@ -116,7 +117,7 @@ fn draw_arrow(
     let mut vbuf = render::start_draw_quads(2);
 
     let magnitude = arrow.direction.magnitude();
-    let rot = cgmath::Rad(arrow.direction.y.atan2(arrow.direction.x));
+    let rot = rad(arrow.direction.y.atan2(arrow.direction.x));
     let transform = Transform2D::from_pos_rot_scale(arrow.center, rot, Vec2f::new(1., 1.));
 
     {

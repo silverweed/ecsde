@@ -5,7 +5,6 @@ use crate::core::common::transform::Transform2D;
 use crate::core::common::vector::Vec2f;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::window::Window_Handle;
-use cgmath::Rad;
 use sfml::graphics::Shape;
 use sfml::graphics::{
     CircleShape, RectangleShape, RenderStates, RenderTarget, Transform, Transformable,
@@ -97,7 +96,7 @@ pub fn render_sprite(
 
     {
         sprite.set_position(Vector2f::from(transform.position()));
-        let cgmath::Deg(angle) = transform.rotation().into();
+        let angle = transform.rotation().as_deg();
         sprite.set_rotation(angle);
         sprite.set_scale(Vector2f::from(transform.scale()));
     }
@@ -267,8 +266,8 @@ fn calc_render_transform(
     let pos = spos - cpos;
 
     // Apply rotation
-    let Rad(srot) = transform.rotation();
-    let Rad(crot) = camera.rotation();
+    let srot = transform.rotation().as_rad();
+    let crot = camera.rotation().as_rad();
     let rot = srot - crot;
     let rel_rot_origin = rot_origin;
     println!(

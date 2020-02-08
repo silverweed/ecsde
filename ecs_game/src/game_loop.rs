@@ -1,5 +1,6 @@
 use super::{Game_Resources, Game_State};
 use ecs_engine::core::app;
+use ecs_engine::core::common::angle::rad;
 use ecs_engine::core::common::colors;
 use ecs_engine::core::common::Maybe_Error;
 use ecs_engine::core::time;
@@ -545,7 +546,7 @@ fn debug_draw_colliders(
             .global_transform;
         // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
         let mut transform = *transform;
-        transform.set_rotation(cgmath::Rad(0.));
+        transform.set_rotation(rad(0.));
         transform.translate_v(collider.offset);
 
         let color = if collider.colliding {

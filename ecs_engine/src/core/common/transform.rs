@@ -1,12 +1,12 @@
+use crate::core::common::angle::{rad, Angle};
 use crate::core::common::vector::Vec2f;
-use cgmath::{Matrix3, Rad};
-use std::convert::Into;
+use cgmath::Matrix3;
 
 // Likely @Incomplete: we don't want to recalculate the matrix every time.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Transform2D {
     position: Vec2f,
-    rotation: Rad<f32>,
+    rotation: Angle,
     scale: Vec2f,
 }
 
@@ -14,7 +14,7 @@ impl Default for Transform2D {
     fn default() -> Self {
         Transform2D {
             position: Vec2f::new(0.0, 0.0),
-            rotation: Rad(0.0),
+            rotation: rad(0.0),
             scale: Vec2f::new(1.0, 1.0),
         }
     }
@@ -25,7 +25,7 @@ impl Transform2D {
         Transform2D::default()
     }
 
-    pub fn from_pos_rot_scale<T: Into<Rad<f32>>>(pos: Vec2f, rot: T, scale: Vec2f) -> Transform2D {
+    pub fn from_pos_rot_scale(pos: Vec2f, rot: Angle, scale: Vec2f) -> Transform2D {
         let mut t = Transform2D::new();
         t.set_position_v(pos);
         t.set_rotation(rot);
@@ -47,7 +47,7 @@ impl Transform2D {
         let ty = m[2][1];
         Transform2D {
             position: Vec2f::new(tx, ty),
-            rotation: Rad(rot),
+            rotation: rad(rot),
             scale: Vec2f::new(sx, sy),
         }
     }
@@ -100,20 +100,20 @@ impl Transform2D {
         self.scale
     }
 
-    pub fn set_rotation<T: Into<Rad<f32>>>(&mut self, angle: T) {
-        self.rotation = angle.into();
+    pub fn set_rotation(&mut self, angle: Angle) {
+        self.rotation = angle;
     }
 
-    pub fn rotate<T: Into<Rad<f32>>>(&mut self, angle: T) {
-        self.rotation += angle.into();
+    pub fn rotate(&mut self, angle: Angle) {
+        self.rotation += angle;
     }
 
-    pub fn rotation(&self) -> Rad<f32> {
+    pub fn rotation(&self) -> Angle {
         self.rotation
     }
 
     pub fn get_matrix(&self) -> Matrix3<f32> {
-        let Rad(angle) = self.rotation;
+        let angle = self.rotation.as_rad();
         let angle = -angle;
         let cosine = angle.cos();
         let sine = angle.sin();
@@ -131,7 +131,7 @@ impl Transform2D {
 
     #[cfg(feature = "use-sfml")]
     pub fn get_matrix_sfml(&self) -> sfml::graphics::Transform {
-        let Rad(angle) = self.rotation;
+        let angle = self.rotation.as_rad();
         let angle = -angle;
         let cosine = angle.cos();
         let sine = angle.sin();
@@ -179,7 +179,7 @@ impl crate::test_common::Approx_Eq_Testable for Transform2D {
         vec![
             self.position.x,
             self.position.y,
-            self.rotation.0,
+            self.rotation.as_rad(),
             self.scale.x,
             self.scale.y,
         ]
@@ -206,7 +206,7 @@ mod tests {
     fn default() {
         let tr = Transform2D::new();
         assert_eq!(tr.position(), Vec2f::new(0.0, 0.0));
-        assert_eq!(tr.rotation(), Rad(0.0));
+        assert_eq!(tr.rotation(), rad(0.0));
         assert_eq!(tr.scale(), Vec2f::new(1.0, 1.0));
     }
 
@@ -249,31 +249,31 @@ mod tests {
     #[test]
     fn rotate() {
         let mut tr = Transform2D::new();
-        tr.rotate(Rad(2.0));
-        assert_approx_eq!(tr.rotation().0, 2.0);
-        tr.rotate(Rad(-1.2));
-        assert_approx_eq!(tr.rotation().0, 0.8);
+        tr.rotate(rad(2.0));
+        assert_approx_eq!(tr.rotation().as_rad(), 2.0);
+        tr.rotate(rad(-1.2));
+        assert_approx_eq!(tr.rotation().as_rad(), 0.8);
     }
 
     #[test]
     fn set_rotation() {
         let mut tr = Transform2D::new();
-        tr.set_rotation(Rad(2.0));
-        assert_approx_eq!(tr.rotation().0, 2.0);
-        tr.set_rotation(Rad(-1.2));
-        assert_approx_eq!(tr.rotation().0, -1.2);
+        tr.set_rotation(rad(2.0));
+        assert_approx_eq!(tr.rotation().as_rad(), 2.0);
+        tr.set_rotation(rad(-1.2));
+        assert_approx_eq!(tr.rotation().as_rad(), -1.2);
     }
 
     #[test]
     fn to_matrix_from_matrix() {
         let mut t1 = Transform2D::new();
         t1.set_position(100.0, 0.0);
-        t1.set_rotation(Rad(1.4));
+        t1.set_rotation(rad(1.4));
         t1.set_scale(2.0, 2.0);
 
         let t2 = Transform2D::new_from_matrix(&t1.get_matrix());
         assert_approx_eq!(t2.position().x, 100.0);
-        assert_approx_eq!(t2.rotation().0, 1.4);
+        assert_approx_eq!(t2.rotation().as_rad_0tau(), 1.4);
         assert_approx_eq!(t2.scale().y, 2.0);
     }
 }

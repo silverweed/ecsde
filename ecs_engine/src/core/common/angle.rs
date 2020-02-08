@@ -1,5 +1,5 @@
 use std::fmt;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 #[derive(Copy, Clone)]
 pub struct Angle(f32); // The wrapped angle is in radians.
@@ -16,6 +16,13 @@ impl PartialEq for Angle {
 impl PartialOrd for Angle {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.as_rad_0tau().partial_cmp(&other.as_rad_0tau())
+    }
+}
+
+impl Neg for Angle {
+    type Output = Self;
+    fn neg(self) -> Self::Output {
+        Angle(-self.0)
     }
 }
 
@@ -167,6 +174,12 @@ mod tests {
         assert_approx_eq!(rad(TAU), deg(360.));
         assert_approx_eq!(rad(1.), rad(deg2rad(rad2deg(1.))));
         assert_approx_eq!(deg(1.), deg(rad2deg(deg2rad(1.))));
+    }
+
+    #[test]
+    fn angle_neg() {
+        assert_approx_eq!(-deg(200.), deg(-200.));
+        assert_approx_eq!(-rad(PI), deg(-180.));
     }
 
     #[test]
