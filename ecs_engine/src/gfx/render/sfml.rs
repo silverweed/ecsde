@@ -4,14 +4,13 @@ use crate::core::common::shapes;
 use crate::core::common::transform::Transform2D;
 use crate::core::common::vector::Vec2f;
 use crate::gfx::paint_props::Paint_Properties;
-use crate::gfx::window::Window_Handle;
+use crate::gfx::window::{get_blend_mode, Window_Handle};
 use sfml::graphics::Shape;
 use sfml::graphics::{
     CircleShape, RectangleShape, RenderStates, RenderTarget, Transform, Transformable,
 };
 use sfml::system::{SfBox, Vector2f};
 
-pub type Blend_Mode = sfml::graphics::blend_mode::BlendMode;
 pub type Vertex_Buffer = sfml::graphics::VertexArray;
 pub type Vertex = sfml::graphics::Vertex;
 
@@ -106,7 +105,9 @@ pub fn render_sprite(
         blend_mode: get_blend_mode(window),
         ..Default::default()
     };
-    window.handle.draw_with_renderstates(sprite, render_states);
+    window
+        .raw_handle_mut()
+        .draw_with_renderstates(sprite, render_states);
 }
 
 pub fn sprite_global_bounds(sprite: &Sprite) -> Rect<f32> {
@@ -122,13 +123,13 @@ pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: R
     rectangle_shape.set_position(Vector2f::new(rect.x as f32, rect.y as f32));
     rectangle_shape.set_size(Vector2f::new(rect.width as f32, rect.height as f32));
     window
-        .handle
+        .raw_handle_mut()
         .draw_rectangle_shape(&rectangle_shape, render_states);
 }
 
 pub fn render_text(window: &mut Window_Handle, text: &mut Text, screen_pos: Vec2f) {
     text.set_position(Vector2f::from(screen_pos));
-    window.handle.draw(text);
+    window.raw_handle_mut().draw(text);
 }
 
 pub fn render_text_ws(
@@ -146,7 +147,9 @@ pub fn render_text_ws(
         ..Default::default()
     };
 
-    window.handle.draw_with_renderstates(text, render_states);
+    window
+        .raw_handle_mut()
+        .draw_with_renderstates(text, render_states);
 }
 
 pub fn fill_color_rect<T>(window: &mut Window_Handle, paint_props: &Paint_Properties, rect: T)
@@ -201,7 +204,7 @@ fn fill_color_rect_internal<T>(
     rectangle_shape.set_outline_thickness(paint_props.border_thick);
     rectangle_shape.set_outline_color(paint_props.border_color.into());
     window
-        .handle
+        .raw_handle_mut()
         .draw_rectangle_shape(&rectangle_shape, render_states);
 }
 
@@ -234,16 +237,8 @@ fn fill_color_circle_internal(
     circle_shape.set_outline_thickness(paint_props.border_thick);
     circle_shape.set_outline_color(paint_props.border_color.into());
     window
-        .handle
+        .raw_handle_mut()
         .draw_circle_shape(&circle_shape, render_states);
-}
-
-pub fn get_blend_mode(window: &Window_Handle) -> Blend_Mode {
-    window.blend_mode
-}
-
-pub fn set_blend_mode(window: &mut Window_Handle, blend_mode: Blend_Mode) {
-    window.blend_mode = blend_mode;
 }
 
 pub fn get_texture_size(texture: &sfml::graphics::Texture) -> (u32, u32) {
@@ -251,7 +246,7 @@ pub fn get_texture_size(texture: &sfml::graphics::Texture) -> (u32, u32) {
     (s.x, s.y)
 }
 
-// @Dirty
+// @Cleanup
 // who's using this? Do we need it?
 fn calc_render_transform(
     transform: &Transform2D,

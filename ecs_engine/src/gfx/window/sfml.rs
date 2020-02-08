@@ -1,8 +1,11 @@
+#![cfg(feature = "use-sfml")]
+
 use crate::core::common::colors::{self, Color};
-use crate::gfx;
 use sfml::graphics::blend_mode::BlendMode;
 use sfml::graphics::{RenderTarget, RenderWindow};
 use sfml::window;
+
+pub type Blend_Mode = sfml::graphics::blend_mode::BlendMode;
 
 pub struct Create_Render_Window_Args {
     pub vsync: bool,
@@ -19,12 +22,24 @@ impl Default for Create_Render_Window_Args {
 }
 
 pub struct Window_Handle {
-    pub(super) handle: RenderWindow,
+    handle: RenderWindow,
     clear_color: Color,
-    pub(super) blend_mode: gfx::render::Blend_Mode,
+    blend_mode: Blend_Mode,
     target_size: (u32, u32),
     framerate_limit: u32,
     vsync: bool,
+}
+
+impl Window_Handle {
+    #[inline(always)]
+    pub fn raw_handle(&self) -> &RenderWindow {
+        &self.handle
+    }
+
+    #[inline(always)]
+    pub fn raw_handle_mut(&mut self) -> &mut RenderWindow {
+        &mut self.handle
+    }
 }
 
 impl std::ops::Deref for Window_Handle {
@@ -80,6 +95,14 @@ pub fn clear(window: &mut Window_Handle) {
 
 pub fn display(window: &mut Window_Handle) {
     window.handle.display();
+}
+
+pub fn get_blend_mode(window: &Window_Handle) -> Blend_Mode {
+    window.blend_mode
+}
+
+pub fn set_blend_mode(window: &mut Window_Handle, blend_mode: Blend_Mode) {
+    window.blend_mode = blend_mode;
 }
 
 pub fn resize_keep_ratio(window: &mut Window_Handle, new_width: u32, new_height: u32) {

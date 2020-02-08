@@ -1,8 +1,14 @@
-use super::backend;
 use crate::core::common::colors::Color;
+
+#[cfg(feature = "use-sfml")]
+mod sfml;
+
+#[cfg(feature = "use-sfml")]
+use self::sfml as backend;
 
 pub type Window_Handle = backend::Window_Handle;
 pub type Create_Render_Window_Args = backend::Create_Render_Window_Args;
+pub type Blend_Mode = backend::Blend_Mode;
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn create_render_window(
@@ -11,6 +17,14 @@ pub fn create_render_window(
     title: &str,
 ) -> Window_Handle {
     backend::create_render_window(args, target_size, title)
+}
+
+pub fn get_blend_mode(window: &Window_Handle) -> Blend_Mode {
+    backend::get_blend_mode(window)
+}
+
+pub fn set_blend_mode(window: &mut Window_Handle, blend_mode: Blend_Mode) {
+    backend::set_blend_mode(window, blend_mode);
 }
 
 pub fn destroy_render_window(window: &mut Window_Handle) {

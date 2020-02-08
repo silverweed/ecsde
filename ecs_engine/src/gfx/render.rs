@@ -1,4 +1,3 @@
-use super::backend;
 use super::paint_props::Paint_Properties;
 use crate::core::common::colors::Color;
 use crate::core::common::rect::Rect;
@@ -7,21 +6,18 @@ use crate::core::common::transform::Transform2D;
 use crate::core::common::vector::Vec2f;
 use crate::gfx::window::Window_Handle;
 
-pub type Blend_Mode = backend::Blend_Mode;
+#[cfg(feature = "use-sfml")]
+mod sfml;
+
+#[cfg(feature = "use-sfml")]
+use self::sfml as backend;
+
 pub type Texture<'a> = backend::Texture<'a>;
 pub type Sprite<'a> = backend::Sprite<'a>;
 pub type Text<'a> = backend::Text<'a>;
 pub type Font<'a> = backend::Font<'a>;
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
-
-pub fn get_blend_mode(window: &Window_Handle) -> Blend_Mode {
-    backend::get_blend_mode(window)
-}
-
-pub fn set_blend_mode(window: &mut Window_Handle, blend_mode: Blend_Mode) {
-    backend::set_blend_mode(window, blend_mode);
-}
 
 pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: &Rect<i32>) -> Sprite<'a> {
     backend::create_sprite(texture, rect)
