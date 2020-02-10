@@ -26,7 +26,7 @@ impl Quad_Tree {
     pub fn new(bounds: Rectf) -> Self {
         Quad_Tree {
             bounds,
-            objects: vec![],
+            objects: Vec::with_capacity(MAX_OBJECTS),
             subnodes: None,
             level: 0,
             #[cfg(debug_assertions)]
@@ -38,7 +38,7 @@ impl Quad_Tree {
     fn new_nested(bounds: Rectf, parent: &Quad_Tree, id: u8) -> Self {
         Quad_Tree {
             bounds,
-            objects: vec![],
+            objects: Vec::with_capacity(MAX_OBJECTS),
             subnodes: None,
             level: parent.level + 1,
             id,
@@ -203,7 +203,6 @@ impl Quad_Tree {
 fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8 {
     use crate::core::common::vector::Vec2f;
 
-    let mut idx = -1;
     let horiz_mid = bounds.x + bounds.width * 0.5;
     let vert_mid = bounds.y + bounds.height * 0.5;
     let Vec2f { x: obj_x, y: obj_y } = transform.position() + collider.offset;
@@ -248,6 +247,7 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
     debug_assert!(!(fits_top && fits_bot));
     debug_assert!(!(fits_left && fits_right));
 
+    let mut idx = -1;
     if fits_left {
         if fits_top {
             idx = 0;
