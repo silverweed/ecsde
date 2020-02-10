@@ -49,7 +49,7 @@ impl Quad_Tree {
     fn new_nested(bounds: Rectf, parent: &Quad_Tree) -> Self {
         Quad_Tree {
             bounds,
-            objects: vec![],
+            objects: Vec::with_capacity(MAX_OBJECTS),
             subnodes: None,
             level: parent.level + 1,
         }
