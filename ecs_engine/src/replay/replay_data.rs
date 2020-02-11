@@ -257,16 +257,6 @@ impl std::iter::Iterator for Replay_Data_Iter {
     }
 }
 
-impl Replay_Data_Iter {
-    pub fn cur(&self) -> Option<&Replay_Data_Point> {
-        if self.idx == self.replay.data.len() {
-            None
-        } else {
-            Some(&self.replay.data[self.idx])
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -5,6 +5,7 @@ use crate::input::default_input_provider::Default_Input_Provider;
 use crate::input::input_system::Input_Raw_Event;
 use crate::input::joystick_mgr::{Joystick_Manager, Real_Axes_Values};
 use crate::input::provider::{Input_Provider, Input_Provider_Input};
+use std::iter::Peekable;
 
 pub struct Replay_Input_Provider_Config {
     pub disable_input_during_replay: Cfg_Var<bool>,
@@ -12,7 +13,7 @@ pub struct Replay_Input_Provider_Config {
 
 pub struct Replay_Input_Provider {
     cur_frame: u64,
-    replay_data_iter: Replay_Data_Iter,
+    replay_data_iter: Peekable<Replay_Data_Iter>,
     depleted: bool,
     dip: Default_Input_Provider,
     config: Replay_Input_Provider_Config,
@@ -25,7 +26,7 @@ impl Replay_Input_Provider {
     ) -> Replay_Input_Provider {
         Replay_Input_Provider {
             cur_frame: 0,
-            replay_data_iter: replay_data.into_iter(),
+            replay_data_iter: replay_data.into_iter().peekable(),
             depleted: false,
             dip: Default_Input_Provider::default(),
             config,
@@ -55,7 +56,7 @@ impl Input_Provider for Replay_Input_Provider {
             }
 
             loop {
-                if let Some(datum) = self.replay_data_iter.cur() {
+                if let Some(datum) = self.replay_data_iter.peek() {
                     if self.cur_frame >= datum.frame_number {
                         // We have a new replay data point at this frame.
 
