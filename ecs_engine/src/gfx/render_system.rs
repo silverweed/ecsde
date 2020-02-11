@@ -71,7 +71,7 @@ impl Render_System {
             let C_Renderable {
                 texture: tex_id,
                 rect: src_rect,
-                ..
+                modulate,
             } = rend;
 
             let texture = resources.get_texture(*tex_id);
@@ -98,6 +98,8 @@ impl Render_System {
                     );
                 }
             }
+
+            gfx::render::set_sprite_modulate(&mut sprite, *modulate);
             {
                 trace!("render_system::render_sprite", _tracer);
                 gfx::render::render_sprite(window, &mut sprite, &rend_transform, &camera.transform);

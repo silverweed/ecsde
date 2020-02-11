@@ -26,10 +26,19 @@ struct Collision_Info {
     pub penetration_dist: f32,
 }
 
+#[cfg(debug_assertions)]
+struct Debug_Applied_Impulse {
+    pub center: Vec2f,
+    pub impulse: Vec2f,
+}
+
 pub struct Collision_System {
     quadtree: quadtree::Quad_Tree,
     entities_buf: Vec<Entity>,
     collided_entities: Arc<Mutex<HashMap<Entity, Collision_Info>>>,
+
+    #[cfg(debug_assertions)]
+    debug_applied_impulses: Vec<Debug_Applied_Impulse>,
 }
 
 impl Collision_System {
@@ -40,12 +49,29 @@ impl Collision_System {
             quadtree: quadtree::Quad_Tree::new(world_rect),
             entities_buf: vec![],
             collided_entities: Arc::new(Mutex::new(HashMap::new())),
+            #[cfg(debug_assertions)]
+            debug_applied_impulses: vec![],
         }
     }
 
     #[cfg(debug_assertions)]
     pub fn debug_draw_quadtree(&self, painter: &mut Debug_Painter) {
         quadtree::draw_quadtree(&self.quadtree, painter);
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn debug_draw_applied_impulses(&self, painter: &mut Debug_Painter) {
+        for impulse in &self.debug_applied_impulses {
+            painter.add_arrow(
+                crate::core::common::shapes::Arrow {
+                    center: impulse.center,
+                    direction: impulse.impulse,
+                    thickness: 3.,
+                    arrow_size: 30.,
+                },
+                crate::core::common::colors::rgb(0, 153, 255),
+            );
+        }
     }
 
     #[cfg(debug_assertions)]
@@ -73,6 +99,9 @@ impl Collision_System {
             trace!("collision_system::clear_quadtree", _tracer);
             self.quadtree.clear();
         }
+
+        #[cfg(debug_assertions)]
+        self.debug_applied_impulses.clear();
 
         self.entities_buf.clear();
         new_entity_stream(ecs_world)
@@ -168,6 +197,9 @@ impl Collision_System {
 
                 if let Ok(cld) = self.collided_entities.lock() {
                     for (&entity, info) in cld.iter() {
+                        if info.my_velocity.magnitude2().abs() < 0.0001 {
+                            continue;
+                        }
                         {
                             let collider =
                                 unsafe { map_collider.get_component_mut(entity) }.unwrap();
@@ -192,6 +224,13 @@ impl Collision_System {
                         spatial.global_transform.translate_v(
                             -delta_pos.normalized_or_zero() * (0.01 + info.penetration_dist),
                         );
+
+                        #[cfg(debug_assertions)]
+                        self.debug_applied_impulses.push(Debug_Applied_Impulse {
+                            center: spatial.global_transform.position(),
+                            impulse: -delta_pos.normalized_or_zero()
+                                * (0.01 + info.penetration_dist),
+                        });
                     }
                 }
             }
@@ -249,7 +288,7 @@ fn check_collision_with_neighbours(
                         oth_width * oth_scale.x,
                         oth_height * oth_scale.y,
                     );
-                    if rect::rects_intersect(&me, &him) {
+                    if let Some(intersection) = rect::rects_intersection(&me, &him) {
                         if let Ok(mut cld) = collided_entities.lock() {
                             cld.insert(
                                 entity,

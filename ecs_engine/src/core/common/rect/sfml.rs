@@ -19,10 +19,10 @@ where
     }
 }
 
-pub fn rects_intersect<T>(a: &Rect<T>, b: &Rect<T>) -> bool
+pub fn rects_intersection<T>(a: &Rect<T>, b: &Rect<T>) -> Option<Rect<T>>
 where
     T: PartialOrd + Add<Output = T> + Sub<Output = T> + Copy,
 {
     let a: sfml::graphics::Rect<T> = a.into();
-    a.intersection(&b.into()) != None
+    a.intersection(&b.into()).map(Into::into)
 }

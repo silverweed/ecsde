@@ -135,6 +135,7 @@ pub fn tick_game<'a>(
             #[cfg(feature = "prof_gameplay")]
             let mut n_gameplay_updates = 0;
 
+            // @Audit
             // Maybe we should have a time budget that is more than the one asked by the strict target fps...
             // like 2x, 4x or something.
             let mut frame_budget = {
@@ -153,10 +154,6 @@ pub fn tick_game<'a>(
                 clone_tracer!(_tracer),
             );
 
-            // @Robustness: limit or control somehow the number of updates done here
-            // (maybe skip some frames if needed), lest we enter a "positive feedback"
-            // where we keep losing time while attempting to update the game too many times
-            // in the same frame.
             while game_state.execution_time > update_time {
                 if frame_budget.is_none() {
                     // We consumed all our time budget. Let's go on next frame.
@@ -390,16 +387,16 @@ fn update_debug(game_state: &mut Game_State) {
         .debug_cvars
         .draw_entities
         .read(&engine_state.config);
+    if draw_entities {
+        debug_draw_transforms(debug_painter, &game_state.gameplay_system.ecs_world);
+    }
+
     let draw_velocities = game_state
         .debug_cvars
         .draw_entities_velocities
         .read(&engine_state.config);
-    if draw_entities || draw_velocities {
-        debug_draw_entities(
-            debug_painter,
-            &game_state.gameplay_system.ecs_world,
-            draw_velocities,
-        );
+    if draw_velocities {
+        debug_draw_velocities(debug_painter, &game_state.gameplay_system.ecs_world);
     }
 
     let draw_colliders = game_state
@@ -425,6 +422,11 @@ fn update_debug(game_state: &mut Game_State) {
             .collision_system
             .debug_draw_entities_quad_id(&game_state.gameplay_system.ecs_world, debug_painter);
     }
+
+    engine_state
+        .systems
+        .collision_system
+        .debug_draw_applied_impulses(debug_painter);
 }
 
 #[cfg(debug_assertions)]
@@ -573,12 +575,11 @@ fn debug_draw_colliders(
 }
 
 #[cfg(debug_assertions)]
-fn debug_draw_entities(
+fn debug_draw_transforms(
     debug_painter: &mut Debug_Painter,
     ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
-    draw_velocities: bool,
 ) {
-    use ecs_engine::core::common::shapes::{Arrow, Circle};
+    use ecs_engine::core::common::shapes::Circle;
     use ecs_engine::ecs::components::base::C_Spatial2D;
 
     let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
@@ -615,18 +616,50 @@ fn debug_draw_entities(
                 ..Default::default()
             },
         );
+    }
+}
 
-        if draw_velocities {
-            debug_painter.add_arrow(
-                Arrow {
-                    center: transform.position(),
-                    direction: spatial.velocity * 10.,
-                    thickness: 2.,
-                    arrow_size: 20.,
-                },
-                colors::rgb(100, 0, 120),
-            );
+fn debug_draw_velocities(
+    debug_painter: &mut Debug_Painter,
+    ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
+) {
+    use ecs_engine::core::common::shapes::Arrow;
+    use ecs_engine::ecs::components::base::C_Spatial2D;
+
+    const COLOR: colors::Color = colors::rgb(100, 0, 120);
+
+    let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
+        .require::<C_Spatial2D>()
+        .build();
+    loop {
+        let entity = stream.next(ecs_world);
+        if entity.is_none() {
+            break;
         }
+        let entity = entity.unwrap();
+        let spatial = ecs_world.get_component::<C_Spatial2D>(entity).unwrap();
+        let transform = &spatial.global_transform;
+        debug_painter.add_arrow(
+            Arrow {
+                center: transform.position(),
+                direction: spatial.velocity,
+                thickness: 3.,
+                arrow_size: 20.,
+            },
+            COLOR,
+        );
+        debug_painter.add_text(
+            &spatial.velocity.to_string(),
+            transform.position() + Vec2f::new(1., -14.),
+            12,
+            colors::WHITE,
+        );
+        debug_painter.add_text(
+            &spatial.velocity.to_string(),
+            transform.position() + Vec2f::new(0., -15.),
+            12,
+            COLOR,
+        );
     }
 }
 

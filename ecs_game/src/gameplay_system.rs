@@ -1,8 +1,10 @@
 use super::controllable_system::C_Controllable;
 use crate::controllable_system;
+use crate::movement_system;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider;
 use ecs_engine::core::common;
+use ecs_engine::core::common::colors;
 use ecs_engine::core::common::rect::Rect;
 use ecs_engine::core::common::stringid::String_Id;
 use ecs_engine::core::common::transform::Transform2D;
@@ -111,6 +113,8 @@ impl Gameplay_System {
         }
 
         self.update_demo_entites(&dt, time);
+
+        movement_system::update(&dt, &mut self.ecs_world);
     }
 
     pub fn realtime_update(
@@ -123,7 +127,7 @@ impl Gameplay_System {
         _tracer: Debug_Tracer,
     ) {
         trace!("gameplay_system::realtime_update", _tracer);
-        self.update_camera(real_dt, actions, axes, cfg);
+        //self.update_camera(real_dt, actions, axes, cfg);
     }
 
     #[cfg(debug_assertions)]
@@ -241,6 +245,30 @@ impl Gameplay_System {
 
         camera.transform.translate_v(v);
         camera.transform.add_scale_v(add_scale);
+
+        // DEBUG: center camera on player
+        {
+            let mut stream = new_entity_stream(&mut self.ecs_world)
+                .require::<C_Controllable>()
+                .exclude::<C_Camera2D>()
+                .build();
+            let moved = stream.next(&mut self.ecs_world);
+            if let Some(moved) = moved {
+                let pos = self
+                    .ecs_world
+                    .get_component::<C_Spatial2D>(moved)
+                    .unwrap()
+                    .global_transform
+                    .position();
+                let camera = self
+                    .ecs_world
+                    .get_component_mut::<C_Camera2D>(self.camera)
+                    .unwrap();
+                camera
+                    .transform
+                    .set_position_v(pos + Vec2f::new(-300., -300.));
+            }
+        }
     }
 
     fn init_demo_entities(
@@ -258,6 +286,7 @@ impl Gameplay_System {
         {
             let cam = em.add_component::<C_Camera2D>(self.camera);
             //cam.transform.set_scale(2.5, 2.5);
+            cam.transform.set_position(-300., -300.);
         }
 
         {
@@ -275,6 +304,11 @@ impl Gameplay_System {
                 //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
                 rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
                 assert!(rend.texture.is_some(), "Could not load texture!");
+                rend.modulate = if i == 1 {
+                    colors::rgb(0, 255, 0)
+                } else {
+                    colors::WHITE
+                };
                 let (sw, sh) = ngfx::render::get_texture_size(rsrc.get_texture(rend.texture));
                 rend.rect = Rect::new(0, 0, sw as i32 / (n_frames as i32), sh as i32);
                 (sw, sh)
@@ -288,9 +322,9 @@ impl Gameplay_System {
                 let x = rand::rand_01(rng);
                 let y = rand::rand_01(rng);
                 if i > 0 {
-                    t.local_transform.set_position(x * 542.0, y * 1402.0);
+                    t.local_transform.set_position(i as f32 * 242.0, 0.);
                 }
-                self.scene_tree.add(entity, prev_entity, &t.local_transform);
+                self.scene_tree.add(entity, fst_entity, &t.local_transform);
             }
             {
                 let c = em.add_component::<collider::Collider>(entity);
@@ -330,23 +364,23 @@ impl Gameplay_System {
         let em = &mut self.ecs_world;
         let dt_secs = time::to_secs_frac(dt);
 
-        let mut stream = new_entity_stream(em)
-            .require::<C_Controllable>()
-            .require::<C_Spatial2D>()
-            .build();
-        loop {
-            let entity = stream.next(em);
-            if entity.is_none() {
-                break;
-            }
-            let entity = entity.unwrap();
-            let ctrl = em.get_component::<C_Controllable>(entity).unwrap();
-            let transl = ctrl.translation_this_frame;
-            let spat = em.get_component_mut::<C_Spatial2D>(entity).unwrap();
-            spat.local_transform.translate_v(transl);
-            spat.velocity.x = transl.x;
-            spat.velocity.y = transl.y;
-        }
+        //let mut stream = new_entity_stream(em)
+        //.require::<C_Controllable>()
+        //.require::<C_Spatial2D>()
+        //.build();
+        //loop {
+        //let entity = stream.next(em);
+        //if entity.is_none() {
+        //break;
+        //}
+        //let entity = entity.unwrap();
+        //let ctrl = em.get_component::<C_Controllable>(entity).unwrap();
+        //let transl = ctrl.translation_this_frame;
+        //let spat = em.get_component_mut::<C_Spatial2D>(entity).unwrap();
+        //spat.local_transform.translate_v(transl);
+        //spat.velocity.x = transl.x;
+        //spat.velocity.y = transl.y;
+        //}
 
         let mut stream = new_entity_stream(em)
             .require::<C_Spatial2D>()
@@ -361,12 +395,15 @@ impl Gameplay_System {
             let entity = entity.unwrap();
             let t = em.get_component_mut::<C_Spatial2D>(entity).unwrap();
 
+            if i == 1 {
+                t.velocity = Vec2f::new(-50.0, 0.);
+            }
             {
-                use ecs_engine::core::common::angle::deg;
-                let speed = 90.0;
-                if i % 10 == 0 {
-                    t.local_transform.rotate(deg(dt_secs * speed));
-                }
+                //use ecs_engine::core::common::angle::deg;
+                //let speed = 90.0;
+                //if i % 10 == 0 {
+                //t.local_transform.rotate(deg(dt_secs * speed));
+                //}
                 //let prev_pos = t.local_transform.position();
                 //t.local_transform.set_position(
                 //(time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,

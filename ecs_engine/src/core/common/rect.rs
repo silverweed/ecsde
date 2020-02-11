@@ -81,9 +81,9 @@ impl From<&Rect<u32>> for Rect<f32> {
     }
 }
 
-pub fn rects_intersect<T>(a: &Rect<T>, b: &Rect<T>) -> bool
+pub fn rects_intersection<T>(a: &Rect<T>, b: &Rect<T>) -> Option<Rect<T>>
 where
     T: PartialOrd + Add<Output = T> + Sub<Output = T> + Copy,
 {
-    backend::rects_intersect(a, b)
+    backend::rects_intersection(a, b)
 }

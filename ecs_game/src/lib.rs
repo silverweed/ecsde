@@ -11,6 +11,7 @@ mod cmdline;
 mod controllable_system;
 mod game_loop;
 mod gameplay_system;
+mod movement_system;
 mod states;
 
 use ecs_engine::cfg;

@@ -60,6 +60,10 @@ pub fn sprite_global_bounds(sprite: &Sprite) -> Rect<f32> {
     sprite.global_bounds().into()
 }
 
+pub fn set_sprite_modulate(sprite: &mut Sprite, modulate: Color) {
+    sprite.set_color(modulate.into());
+}
+
 pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: Rect<i32>) {
     let render_states = RenderStates {
         blend_mode: get_blend_mode(window),

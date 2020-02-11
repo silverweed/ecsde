@@ -31,6 +31,12 @@ impl<T> Vector2<T> {
     }
 }
 
+impl<T: ToString> std::string::ToString for Vector2<T> {
+    fn to_string(&self) -> String {
+        format!("{}, {}", self.x.to_string(), self.y.to_string())
+    }
+}
+
 impl<T> Vector2<T>
 where
     T: Copy

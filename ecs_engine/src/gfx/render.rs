@@ -32,6 +32,10 @@ pub fn render_sprite(
     backend::render_sprite(window, sprite, transform, camera);
 }
 
+pub fn set_sprite_modulate(sprite: &mut Sprite, modulate: Color) {
+    backend::set_sprite_modulate(sprite, modulate);
+}
+
 pub fn sprite_global_bounds(sprite: &Sprite) -> Rect<f32> {
     backend::sprite_global_bounds(sprite)
 }
