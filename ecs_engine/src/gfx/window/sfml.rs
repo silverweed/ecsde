@@ -133,7 +133,7 @@ pub fn resize_keep_ratio(window: &mut Window_Handle, new_width: u32, new_height:
         0.0,
         0.0,
         target_width as f32,
-        target_width as f32,
+        target_height as f32,
     ));
     view.set_viewport(&viewport);
     window.set_view(&view);
