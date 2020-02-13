@@ -22,7 +22,7 @@ pub type Sprite<'a> = sfml::graphics::Sprite<'a>;
 
 pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: &Rect<i32>) -> Sprite<'a> {
     let mut sprite = Sprite::with_texture(texture);
-    sprite.set_texture_rect(&rect.into());
+    sprite.set_texture_rect(rect.as_ref());
     let origin: Vector2f = Vec2f::new(rect.width as f32 * 0.5, rect.height as f32 * 0.5).into();
     sprite.set_origin(origin);
     sprite

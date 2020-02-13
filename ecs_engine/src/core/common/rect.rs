@@ -9,6 +9,7 @@ mod sfml;
 #[cfg(feature = "use-sfml")]
 use self::sfml as backend;
 
+#[repr(C)]
 pub struct Rect<T> {
     pub x: T,
     pub y: T,
