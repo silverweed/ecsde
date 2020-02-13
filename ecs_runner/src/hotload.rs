@@ -100,10 +100,10 @@ pub fn lib_reload(lib_path: &str, unique_path: &mut PathBuf) -> ll::Library {
 
 pub unsafe fn game_load(game_lib: &ll::Library) -> ll::Result<Game_Api<'_>> {
     Ok(Game_Api {
-        init: game_lib.get(b"game_init")?,
-        update: game_lib.get(b"game_update")?,
-        shutdown: game_lib.get(b"game_shutdown")?,
-        unload: game_lib.get(b"game_unload")?,
-        reload: game_lib.get(b"game_reload")?,
+        init: game_lib.get(b"game_init\0")?,
+        update: game_lib.get(b"game_update\0")?,
+        shutdown: game_lib.get(b"game_shutdown\0")?,
+        unload: game_lib.get(b"game_unload\0")?,
+        reload: game_lib.get(b"game_reload\0")?,
     })
 }
