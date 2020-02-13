@@ -106,11 +106,11 @@ pub fn set_blend_mode(window: &mut Window_Handle, blend_mode: Blend_Mode) {
     window.blend_mode = blend_mode;
 }
 
+pub(super) fn set_viewport(window: &mut Window_Handle, viewport: &Rectf, view_rect: &Rectf) {
+    use sfml::graphics::View;
 
-pub(super) fn set_viewport(window: &mut Window_Handle, viewport: &Rectf) {
-    let viewport: &sfml::graphics::FloatRect = viewport.as_ref();
-    let mut view = sfml::graphics::View::from_rect(viewport);
-    view.set_viewport(viewport);
+    let mut view = View::from_rect(view_rect.as_ref());
+    view.set_viewport(viewport.as_ref());
     window.set_view(&view);
 }
 

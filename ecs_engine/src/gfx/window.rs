@@ -84,7 +84,8 @@ pub fn resize_keep_ratio(window: &mut Window_Handle, new_width: u32, new_height:
         _ => {}
     }
 
-    backend::set_viewport(window, &viewport);
+    let view = Rect::new(0., 0., target_width as f32, target_height as f32);
+    backend::set_viewport(window, &viewport, &view);
 }
 
 pub fn get_window_target_size(window: &Window_Handle) -> (u32, u32) {
