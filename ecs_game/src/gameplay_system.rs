@@ -127,7 +127,7 @@ impl Gameplay_System {
         _tracer: Debug_Tracer,
     ) {
         trace!("gameplay_system::realtime_update", _tracer);
-        //self.update_camera(real_dt, actions, axes, cfg);
+        self.update_camera(real_dt, actions, axes, cfg);
     }
 
     #[cfg(debug_assertions)]
@@ -322,7 +322,8 @@ impl Gameplay_System {
                 let x = rand::rand_01(rng);
                 let y = rand::rand_01(rng);
                 if i > 0 {
-                    t.local_transform.set_position(i as f32 * 242.0, 0.);
+                    //t.local_transform.set_position(i as f32 * 242.0, 0.);
+                    t.local_transform.set_position(x * 1500., y * 1500.);
                 }
                 self.scene_tree.add(entity, fst_entity, &t.local_transform);
             }

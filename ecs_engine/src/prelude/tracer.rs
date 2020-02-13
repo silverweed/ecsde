@@ -1,8 +1,14 @@
 #[cfg(debug_assertions)]
+use {
+    crate::debug::tracer::Tracer,
+    std::sync::{Arc, Mutex},
+};
+
+#[cfg(debug_assertions)]
 #[macro_export]
 macro_rules! trace {
     ($tag: expr, $tracer: expr) => {
-        let _trace_var = crate::debug::tracer::debug_trace($tag, $tracer.clone());
+        let _trace_var = $crate::debug::tracer::debug_trace($tag, $tracer.clone());
     };
 }
 
@@ -13,14 +19,14 @@ macro_rules! trace {
 }
 
 #[cfg(debug_assertions)]
-pub type Debug_Tracer = std::rc::Rc<std::cell::RefCell<crate::debug::tracer::Tracer>>;
+pub type Debug_Tracer = Arc<Mutex<Tracer>>;
 
 #[cfg(not(debug_assertions))]
 pub type Debug_Tracer = ();
 
 #[cfg(debug_assertions)]
 pub fn new_debug_tracer() -> Debug_Tracer {
-    std::rc::Rc::new(std::cell::RefCell::new(crate::debug::tracer::Tracer::new()))
+    Arc::new(Mutex::new(Tracer::new()))
 }
 
 #[cfg(not(debug_assertions))]

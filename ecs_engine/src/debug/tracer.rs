@@ -1,9 +1,6 @@
-use std::cell::RefCell;
+use crate::prelude::Debug_Tracer;
 use std::fmt::Debug;
-use std::rc::Rc;
 use std::time;
-
-// FIXME: in some cases this class reports wrong timings! (or doesn't report some timings at all...)
 
 pub struct Tracer {
     // Tree of Tracer_Nodes representing the call tree.
@@ -25,7 +22,10 @@ pub struct Scope_Trace_Info {
     pub start_t: time::Instant,
     pub end_t: time::Instant,
     pub tag: &'static str,
+
+    // These are only meaningful for collated traces
     pub n_calls: usize,
+    pub tot_duration: time::Duration,
 }
 
 impl Scope_Trace_Info {
@@ -48,12 +48,12 @@ impl Debug for Scope_Trace_Info {
 
 /// This is used to automatically add a Trace_Info to the Tracer via RAII.
 pub struct Scope_Trace {
-    tracer: Rc<RefCell<Tracer>>,
+    tracer: Debug_Tracer,
 }
 
 impl Drop for Scope_Trace {
     fn drop(&mut self) {
-        self.tracer.borrow_mut().pop_scope_trace();
+        self.tracer.lock().unwrap().pop_scope_trace();
     }
 }
 
@@ -88,6 +88,7 @@ impl Tracer {
                 end_t: now,
                 tag,
                 n_calls: 1,
+                tot_duration: time::Duration::default(),
             },
             parent_idx: self.cur_active,
         });
@@ -104,30 +105,34 @@ impl Tracer {
     }
 
     /// Deduplicates tracer nodes and returns a reference to the final traces.
+    // @Incomplete: handle multiple threads in a sane way (right now tot_duration
+    // ends up being the sum of all threads, which may be ok, but should be made explicit
+    // in the debug overlay).
     pub fn collate_traces(&mut self) -> &[Tracer_Node] {
         use std::collections::hash_map::Entry;
         use std::collections::HashMap;
 
-        // Map { tag => (index_into_saved_traces, tot_n_calls) }
-        let mut tag_map: HashMap<&'static str, (usize, usize)> = HashMap::new();
+        // Map { tag => (index_into_saved_traces, tot_n_calls, tot_duration) }
+        let mut tag_map: HashMap<&'static str, (usize, usize, time::Duration)> = HashMap::new();
 
         // Accumulate n_calls of all nodes with the same tag in the first one found,
         // and leave all others with n_calls = 0.
         for (i, node) in self.saved_traces.iter_mut().enumerate() {
             match tag_map.entry(&node.info.tag) {
                 Entry::Vacant(v) => {
-                    v.insert((i, 1));
+                    v.insert((i, 1, node.info.duration()));
                 }
                 Entry::Occupied(mut o) => {
-                    let (idx, n_calls) = *o.get();
-                    o.insert((idx, n_calls + 1));
+                    let (idx, n_calls, duration) = *o.get();
+                    o.insert((idx, n_calls + 1, duration + node.info.duration()));
                     node.info.n_calls = 0;
                 }
             }
         }
 
-        for (_, (idx, tot_calls)) in tag_map {
+        for (_, (idx, tot_calls, tot_duration)) in tag_map {
             self.saved_traces[idx].info.n_calls = tot_calls;
+            self.saved_traces[idx].info.tot_duration = tot_duration;
         }
 
         &self.saved_traces
@@ -168,8 +173,8 @@ impl Tracer {
 }
 
 #[inline]
-pub fn debug_trace(tag: &'static str, tracer: Rc<RefCell<Tracer>>) -> Scope_Trace {
-    tracer.borrow_mut().push_scope_trace(tag);
+pub fn debug_trace(tag: &'static str, tracer: Debug_Tracer) -> Scope_Trace {
+    tracer.lock().unwrap().push_scope_trace(tag);
     Scope_Trace { tracer }
 }
 

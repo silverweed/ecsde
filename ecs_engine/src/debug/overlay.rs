@@ -3,12 +3,14 @@ use crate::core::common::rect::Rect;
 use crate::core::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
+use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
 struct Debug_Line {
     pub text: String,
     pub color: Color,
+    pub bg_rect_fill: Option<(Color, f32)>, // @Cleanup: this is not very pretty
 }
 
 #[derive(Copy, Clone)]
@@ -49,7 +51,8 @@ impl Debug_Overlay {
     pub fn add_line(&mut self, line: &str) {
         self.lines.push(Debug_Line {
             text: String::from(line),
-            color: colors::rgb(255, 255, 255),
+            color: colors::WHITE,
+            bg_rect_fill: None,
         });
     }
 
@@ -57,6 +60,20 @@ impl Debug_Overlay {
         self.lines.push(Debug_Line {
             text: String::from(line),
             color,
+            bg_rect_fill: None,
+        });
+    }
+
+    pub fn add_line_color_with_bg_fill(
+        &mut self,
+        line: &str,
+        color: Color,
+        bg_rect_fill: (Color, f32),
+    ) {
+        self.lines.push(Debug_Line {
+            text: String::from(line),
+            color,
+            bg_rect_fill: Some(bg_rect_fill),
         });
     }
 
@@ -74,12 +91,12 @@ impl Debug_Overlay {
             ..
         } = self.config;
 
-        let mut texts = vec![];
+        let mut texts = Vec::with_capacity(self.lines.len());
         let mut max_row_width = 0f32;
         let mut max_row_height = 0f32;
 
         for line in self.lines.iter() {
-            let Debug_Line { text, color } = line;
+            let Debug_Line { text, color, .. } = line;
             let mut text = gfx::render::create_text(text, gres.get_font(font), font_size.into());
             gfx::render::set_text_fill_color(&mut text, *color);
 
@@ -111,6 +128,30 @@ impl Debug_Overlay {
                 2.0 * pad_y + tot_height,
             ),
         );
+
+        // Draw bg rects
+        for (i, (bg_col, bg_fill_ratio)) in self
+            .lines
+            .iter()
+            .enumerate()
+            .filter_map(|(i, line)| Some((i, line.bg_rect_fill?)))
+        {
+            let pos = position
+                + Vec2f::new(
+                    self.horiz_align.aligned_pos(pad_x, max_row_width),
+                    self.vert_align.aligned_pos(pad_y, tot_height)
+                        + (i as f32) * (max_row_height + row_spacing),
+                );
+            let rect = Rect::new(pos.x, pos.y, bg_fill_ratio * max_row_width, max_row_height);
+            gfx::render::fill_color_rect(
+                window,
+                &Paint_Properties {
+                    color: bg_col,
+                    ..Default::default()
+                },
+                rect,
+            );
+        }
 
         // Draw texts
         for (i, (text, bounds)) in texts.iter_mut().enumerate() {

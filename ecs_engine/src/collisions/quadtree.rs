@@ -68,6 +68,8 @@ impl Quad_Tree {
         ecs_world: &Ecs_World,
         _tracer: Debug_Tracer,
     ) {
+        trace!("quadtree::add", _tracer);
+
         if let Some(subnodes) = &mut self.subnodes {
             let index = get_index(collider, transform, &self.bounds);
             if index >= 0 {
@@ -86,7 +88,7 @@ impl Quad_Tree {
 
         if self.objects.len() > MAX_OBJECTS && self.level < MAX_DEPTH {
             if self.subnodes.is_none() {
-                trace!("quadtree::split", _tracer);
+                trace!("quadtree::split", clone_tracer!(_tracer));
                 self.split();
             }
 
@@ -120,11 +122,19 @@ impl Quad_Tree {
         collider: &Collider,
         transform: &Transform2D,
         result: &mut Vec<Entity>,
+        _tracer: Debug_Tracer,
     ) {
+        trace!("quadtree::get_neighbours", _tracer);
+
         if let Some(subnodes) = &self.subnodes {
             let index = get_index(collider, transform, &self.bounds);
             if index >= 0 {
-                subnodes[index as usize].get_neighbours(collider, transform, result);
+                subnodes[index as usize].get_neighbours(
+                    collider,
+                    transform,
+                    result,
+                    clone_tracer!(_tracer),
+                );
             }
         }
 

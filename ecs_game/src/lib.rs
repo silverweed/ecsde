@@ -150,7 +150,7 @@ pub unsafe extern "C" fn game_update<'a>(
 
         #[cfg(debug_assertions)]
         {
-            game_state.engine_state.tracer.borrow_mut().start_frame();
+            game_state.engine_state.tracer.lock().unwrap().start_frame();
         }
 
         {

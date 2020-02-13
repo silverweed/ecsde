@@ -275,7 +275,7 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
     use crate::debug::overlay::Debug_Overlay;
     use crate::debug::tracer::{build_trace_trees, sort_trace_trees, Trace_Tree, Tracer_Node};
 
-    let mut tracer = engine_state.tracer.borrow_mut();
+    let mut tracer = engine_state.tracer.lock().unwrap();
     let overlay = engine_state
         .debug_systems
         .debug_ui_system
@@ -289,7 +289,7 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
         indent: usize,
         overlay: &mut Debug_Overlay,
     ) {
-        let duration = node.info.duration();
+        let duration = node.info.tot_duration;
         let ratio = time::duration_ratio(&duration, total_traced_time);
         let color = colors::lerp_col(colors::GREEN, colors::RED, ratio);
         let mut line = String::new();
@@ -299,12 +299,13 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
         line.push_str(&format!(
             "{:width$}: {:>6.3}ms ({:3}%): {:>7}",
             node.info.tag,
-            node.info.duration().as_micros() as f32 * 0.001,
+            duration.as_micros() as f32 * 0.001,
             (ratio * 100.0) as u32,
             node.info.n_calls,
             width = 40 - indent
         ));
-        overlay.add_line_color(&line, color);
+        let bg_col = colors::Color { a: 50, ..color };
+        overlay.add_line_color_with_bg_fill(&line, color, (bg_col, ratio));
     }
 
     fn add_tree_lines(

@@ -151,6 +151,7 @@ impl Collision_System {
                 thread::scope(|s| {
                     let n_threads = num_cpus::get();
                     for ent_chunk in self.entities_buf.chunks(n_entities / n_threads + 1) {
+                        let _tracer = clone_tracer!(_tracer);
                         let quadtree = &self.quadtree;
                         let n_collisions_total = n_collisions_total.clone();
                         let collided_entities = self.collided_entities.clone();
@@ -166,7 +167,12 @@ impl Collision_System {
                                 let velocity = spatial.velocity;
 
                                 neighbours.clear();
-                                quadtree.get_neighbours(collider, transform, &mut neighbours);
+                                quadtree.get_neighbours(
+                                    collider,
+                                    transform,
+                                    &mut neighbours,
+                                    clone_tracer!(_tracer),
+                                );
                                 if !neighbours.is_empty() {
                                     check_collision_with_neighbours(
                                         entity,

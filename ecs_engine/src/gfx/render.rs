@@ -5,6 +5,7 @@ use crate::core::common::shapes::Circle;
 use crate::core::common::transform::Transform2D;
 use crate::core::common::vector::Vec2f;
 use crate::gfx::window::Window_Handle;
+use std::convert::Into;
 
 #[cfg(feature = "use-sfml")]
 mod sfml;
@@ -43,7 +44,7 @@ pub fn sprite_global_bounds(sprite: &Sprite) -> Rect<f32> {
 /// Draws a color-filled rectangle in screen space
 pub fn fill_color_rect<T>(window: &mut Window_Handle, paint_props: &Paint_Properties, rect: T)
 where
-    T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
+    T: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
     backend::fill_color_rect(window, paint_props, rect);
 }
@@ -56,7 +57,7 @@ pub fn fill_color_rect_ws<T>(
     transform: &Transform2D,
     camera: &Transform2D,
 ) where
-    T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
+    T: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
     backend::fill_color_rect_ws(window, paint_props, rect, transform, camera);
 }
