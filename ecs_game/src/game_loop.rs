@@ -45,6 +45,7 @@ pub fn tick_game<'a>(
 
     let update_time = Duration::from_millis(
         game_state
+            .cvars
             .gameplay_update_tick_ms
             .read(&engine_state.config) as u64,
     );
@@ -96,6 +97,8 @@ pub fn tick_game<'a>(
                 debug_systems.debug_ui_system.get_overlay(sid_joysticks),
                 real_axes,
                 joy_mask,
+                game_state.gameplay_system.input_cfg,
+                &engine_state.config,
             );
 
             // Only record replay data if we're not already playing back a replay.
@@ -139,7 +142,7 @@ pub fn tick_game<'a>(
             // Maybe we should have a time budget that is more than the one asked by the strict target fps...
             // like 2x, 4x or something.
             let mut frame_budget = {
-                let target_fps = game_state.target_fps.read(&engine_state.config);
+                let target_fps = game_state.cvars.target_fps.read(&engine_state.config);
                 Some(3 * std::time::Duration::from_millis((1000 / target_fps) as u64))
             };
             let gameplay_system = &mut game_state.gameplay_system;
@@ -247,14 +250,16 @@ fn update_graphics(
     #[cfg(debug_assertions)]
     {
         let cur_framerate_limit = gfx::window::get_framerate_limit(window);
-        let desired_framerate_limit =
-            game_state.target_fps.read(&game_state.engine_state.config) as u32;
+        let desired_framerate_limit = game_state
+            .cvars
+            .target_fps
+            .read(&game_state.engine_state.config) as u32;
         if desired_framerate_limit != cur_framerate_limit {
             gfx::window::set_framerate_limit(window, desired_framerate_limit);
         }
 
         let cur_vsync = gfx::window::has_vsync(window);
-        let desired_vsync = game_state.vsync.read(&game_state.engine_state.config);
+        let desired_vsync = game_state.cvars.vsync.read(&game_state.engine_state.config);
         if desired_vsync != cur_vsync {
             gfx::window::set_vsync(window, desired_vsync);
         }
@@ -269,8 +274,11 @@ fn update_graphics(
 
     let cfg = &game_state.engine_state.config;
     let render_cfg = render_system::Render_System_Config {
-        clear_color: colors::color_from_hex(game_state.clear_color.read(cfg) as u32),
-        smooth_by_extrapolating_velocity: game_state.smooth_by_extrapolating_velocity.read(cfg),
+        clear_color: colors::color_from_hex(game_state.cvars.clear_color.read(cfg) as u32),
+        smooth_by_extrapolating_velocity: game_state
+            .cvars
+            .smooth_by_extrapolating_velocity
+            .read(cfg),
         #[cfg(debug_assertions)]
         draw_sprites_bg: game_state.debug_cvars.draw_sprites_bg.read(cfg),
         #[cfg(debug_assertions)]
@@ -347,7 +355,7 @@ fn update_debug(game_state: &mut Game_State) {
     update_fps_debug_overlay(
         debug_systems.debug_ui_system.get_overlay(sid_fps),
         &game_state.fps_debug,
-        game_state.vsync.read(&engine_state.config),
+        game_state.cvars.vsync.read(&engine_state.config),
     );
     update_entities_debug_overlay(
         debug_systems.debug_ui_system.get_overlay(sid_entities),
@@ -435,11 +443,15 @@ fn update_joystick_debug_overlay(
     real_axes: &[input::joystick_mgr::Real_Axes_Values;
          input::bindings::joystick::JOY_COUNT as usize],
     joy_mask: u8,
+    input_cfg: crate::input_utils::Input_Config,
+    cfg: &ecs_engine::cfg::Config,
 ) {
     use input::bindings::joystick;
     use std::convert::TryInto;
 
     debug_overlay.clear();
+
+    let deadzone = input_cfg.joy_deadzone.read(cfg);
 
     for (joy_id, axes) in real_axes.iter().enumerate() {
         if (joy_mask & (1 << joy_id)) != 0 {
@@ -450,8 +462,12 @@ fn update_joystick_debug_overlay(
                     fatal!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
                 });
                 debug_overlay.add_line_color(
-                    &format!("{:?}: {:.2}", axis, axes[i as usize]),
-                    colors::rgb(255, 255, 0),
+                    &format!("{:?}: {:5.2}", axis, axes[i as usize]),
+                    if axes[i as usize].abs() > deadzone {
+                        colors::GREEN
+                    } else {
+                        colors::YELLOW
+                    },
                 );
             }
         }

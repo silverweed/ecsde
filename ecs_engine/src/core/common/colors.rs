@@ -12,6 +12,9 @@ pub struct Color {
 pub const RED: Color = rgb(255, 0, 0);
 pub const GREEN: Color = rgb(0, 255, 0);
 pub const BLUE: Color = rgb(0, 0, 255);
+pub const YELLOW: Color = rgb(255, 255, 0);
+pub const FUCHSIA: Color = rgb(255, 0, 255);
+pub const AQUA: Color = rgb(0, 255, 255);
 pub const WHITE: Color = rgb(255, 255, 255);
 pub const BLACK: Color = rgb(0, 0, 0);
 

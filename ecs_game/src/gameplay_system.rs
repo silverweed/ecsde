@@ -1,5 +1,6 @@
 use super::controllable_system::C_Controllable;
 use crate::controllable_system;
+use crate::input_utils::{get_movement_from_input, Input_Config};
 use crate::movement_system;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider;
@@ -36,6 +37,7 @@ pub struct Gameplay_System {
     camera: Entity,
     latest_frame_actions: Vec<Game_Action>,
     latest_frame_axes: Virtual_Axes,
+    pub input_cfg: Input_Config,
     scene_tree: scene_tree::Scene_Tree,
 }
 
@@ -48,6 +50,7 @@ impl Gameplay_System {
             latest_frame_actions: vec![],
             latest_frame_axes: Virtual_Axes::default(),
             scene_tree: scene_tree::Scene_Tree::new(),
+            input_cfg: Input_Config::default(),
         }
     }
 
@@ -59,8 +62,8 @@ impl Gameplay_System {
         cfg: &cfg::Config,
         gs_cfg: Gameplay_System_Config,
     ) -> common::Maybe_Error {
+        self.input_cfg = read_input_cfg(cfg);
         self.register_all_components();
-
         self.init_demo_entities(gres, env, rng, cfg, gs_cfg);
 
         Ok(())
@@ -87,7 +90,7 @@ impl Gameplay_System {
                 .build();
             gfx::animation_system::update(&dt, &mut self.ecs_world, stream);
         }
-        controllable_system::update(&dt, actions, axes, &mut self.ecs_world, cfg);
+        controllable_system::update(&dt, actions, axes, &mut self.ecs_world, self.input_cfg, cfg);
 
         {
             trace!("scene_tree::copy_transforms", _tracer);
@@ -196,7 +199,7 @@ impl Gameplay_System {
         cfg: &cfg::Config,
     ) {
         // @Incomplete
-        let movement = get_movement_from_input(axes);
+        let movement = get_movement_from_input(axes, self.input_cfg, cfg);
         let camera_ctrl = self
             .ecs_world
             .get_component_mut::<C_Controllable>(self.camera);
@@ -291,7 +294,7 @@ impl Gameplay_System {
 
         {
             let mut ctrl = em.add_component::<C_Controllable>(self.camera);
-            ctrl.speed = Cfg_Var::new("gameplay/player/player_speed", cfg);
+            ctrl.speed = Cfg_Var::new("game/gameplay/player/player_speed", cfg);
         }
 
         let mut prev_entity: Option<Entity> = None;
@@ -315,7 +318,7 @@ impl Gameplay_System {
             };
             if i == 1 {
                 let ctr = em.add_component::<C_Controllable>(entity);
-                ctr.speed = Cfg_Var::new("gameplay/player/player_speed", cfg);
+                ctr.speed = Cfg_Var::new("game/gameplay/player/player_speed", cfg);
             }
             {
                 let t = em.add_component::<C_Spatial2D>(entity);
@@ -419,14 +422,8 @@ impl Gameplay_System {
     }
 }
 
-pub fn get_movement_from_input(axes: &Virtual_Axes) -> Vec2f {
-    Vec2f::new(
-        axes.get_axis_value(String_Id::from("horizontal")),
-        axes.get_axis_value(String_Id::from("vertical")),
-    )
-}
-
-pub fn get_normalized_movement_from_input(axes: &Virtual_Axes) -> Vec2f {
-    let m = get_movement_from_input(axes);
-    m.normalized_or_zero()
+fn read_input_cfg(cfg: &cfg::Config) -> Input_Config {
+    Input_Config {
+        joy_deadzone: Cfg_Var::new("game/input/joystick/deadzone", cfg),
+    }
 }

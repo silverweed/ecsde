@@ -1,3 +1,4 @@
+use crate::input_utils::{get_movement_from_input, Input_Config};
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::core::common::vector::Vec2f;
 use ecs_engine::core::time;
@@ -28,9 +29,10 @@ pub fn update(
     _actions: &[Game_Action],
     axes: &Virtual_Axes,
     ecs_world: &mut Ecs_World,
+    input_cfg: Input_Config,
     cfg: &cfg::Config,
 ) {
-    let movement = super::gameplay_system::get_normalized_movement_from_input(axes);
+    let movement = get_movement_from_input(axes, input_cfg, cfg);
     let dt_secs = time::to_secs_frac(&dt);
 
     let mut entity_stream = new_entity_stream(ecs_world)

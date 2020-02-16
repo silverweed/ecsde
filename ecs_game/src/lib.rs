@@ -11,6 +11,7 @@ mod cmdline;
 mod controllable_system;
 mod game_loop;
 mod gameplay_system;
+mod input_utils;
 mod movement_system;
 mod states;
 
@@ -50,16 +51,20 @@ pub struct Game_State<'a> {
     pub is_replaying: bool,
 
     //// Cfg vars
-    pub gameplay_update_tick_ms: Cfg_Var<i32>,
-    pub target_fps: Cfg_Var<i32>,
-    pub vsync: Cfg_Var<bool>,
-    pub smooth_by_extrapolating_velocity: Cfg_Var<bool>,
-    pub clear_color: Cfg_Var<u32>,
+    pub cvars: CVars,
 
     #[cfg(debug_assertions)]
     pub debug_cvars: Debug_CVars,
 
     pub rng: rand::Default_Rng,
+}
+
+pub struct CVars {
+    pub gameplay_update_tick_ms: Cfg_Var<i32>,
+    pub target_fps: Cfg_Var<i32>,
+    pub vsync: Cfg_Var<bool>,
+    pub smooth_by_extrapolating_velocity: Cfg_Var<bool>,
+    pub clear_color: Cfg_Var<u32>,
 }
 
 #[cfg(debug_assertions)]
@@ -317,13 +322,11 @@ fn create_game_state<'a>(
 
     let appcfg = &engine_state.app_config;
     let cfg = &engine_state.config;
-
-    let vsync = Cfg_Var::<bool>::new("engine/window/vsync", cfg);
-    let target_fps = Cfg_Var::<i32>::new("engine/rendering/target_fps", cfg);
+    let cvars = create_cvars(cfg);
 
     let window_create_args = ngfx::window::Create_Render_Window_Args {
-        vsync: vsync.read(cfg),
-        framerate_limit: target_fps.read(cfg) as u32,
+        vsync: cvars.vsync.read(cfg),
+        framerate_limit: cvars.target_fps.read(cfg) as u32,
     };
     let window = ngfx::window::create_render_window(
         &window_create_args,
@@ -359,10 +362,7 @@ fn create_game_state<'a>(
     let input_provider = app::create_input_provider();
 
     let is_replaying = !input_provider.is_realtime_player_input();
-    let gameplay_update_tick_ms = Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg);
-    let smooth_by_extrapolating_velocity =
-        Cfg_Var::new("engine/rendering/smooth_by_extrapolating_velocity", cfg);
-    let clear_color = Cfg_Var::new("engine/rendering/clear_color", cfg);
+
     #[cfg(debug_assertions)]
     let debug_cvars = create_debug_cvars(cfg);
 
@@ -389,16 +389,29 @@ fn create_game_state<'a>(
             rng: rand::new_rng_with_random_seed()?,
 
             // Cfg_Vars
-            gameplay_update_tick_ms,
-            smooth_by_extrapolating_velocity,
-            target_fps,
-            vsync,
-            clear_color,
+            cvars,
             #[cfg(debug_assertions)]
             debug_cvars,
         }),
         parsed_cmdline_args,
     ))
+}
+
+fn create_cvars(cfg: &ecs_engine::cfg::Config) -> CVars {
+    let gameplay_update_tick_ms = Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg);
+    let smooth_by_extrapolating_velocity =
+        Cfg_Var::new("engine/rendering/smooth_by_extrapolating_velocity", cfg);
+    let clear_color = Cfg_Var::new("engine/rendering/clear_color", cfg);
+    let vsync = Cfg_Var::new("engine/window/vsync", cfg);
+    let target_fps = Cfg_Var::new("engine/rendering/target_fps", cfg);
+
+    CVars {
+        gameplay_update_tick_ms,
+        smooth_by_extrapolating_velocity,
+        clear_color,
+        vsync,
+        target_fps,
+    }
 }
 
 #[cfg(debug_assertions)]
