@@ -54,6 +54,16 @@ where
         self.magnitude2().into().sqrt()
     }
 
+    /// Like 'normalized_or_zero' but panics if length is 0.
+    pub fn normalized(self) -> Vector2<T> {
+        let mag = self.magnitude2().into();
+        let den = math::fast_invsqrt(mag);
+        Self {
+            x: T::from(self.x.into() * den),
+            y: T::from(self.y.into() * den),
+        }
+    }
+
     pub fn normalized_or_zero(self) -> Vector2<T> {
         let mag = self.magnitude2().into();
         if mag == 0. {
@@ -146,6 +156,17 @@ impl<T: Copy + Mul<Output = T>> Mul<T> for Vector2<T> {
     }
 }
 
+impl<T: Copy + Mul<Output = T>> Mul for Vector2<T> {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self::Output {
+        Self {
+            x: self.x * other.x,
+            y: self.y * other.y,
+        }
+    }
+}
+
 impl<T: Copy + Div<Output = T>> Div<T> for Vector2<T> {
     type Output = Self;
 
@@ -180,6 +201,15 @@ impl<T: Copy + Mul<Output = T>> MulAssign<T> for Vector2<T> {
         *self = Self {
             x: self.x * other,
             y: self.y * other,
+        };
+    }
+}
+
+impl<T: Copy + Mul<Output = T>> MulAssign for Vector2<T> {
+    fn mul_assign(&mut self, other: Self) {
+        *self = Self {
+            x: self.x * other.x,
+            y: self.y * other.y,
         };
     }
 }
@@ -285,10 +315,23 @@ mod tests {
     }
 
     #[test]
-    fn vector_mul() {
+    fn vector_mul_scalar() {
         assert_eq!(Vec2i::new(0, 3) * 3, Vec2i::new(0, 9));
         assert_eq!(Vec2u::new(200, 10) * 2, Vec2u::new(400, 20));
         assert_eq!(Vec2f::new(5., 0.) * 0.5, Vec2f::new(2.5, 0.));
+    }
+
+    #[test]
+    fn vector_mul_compwise() {
+        assert_eq!(Vec2i::new(0, 3) * Vec2i::new(2, 3), Vec2i::new(0, 9));
+        assert_eq!(
+            Vec2u::new(200, 10) * Vec2u::new(2, 10),
+            Vec2u::new(400, 100)
+        );
+        assert_eq!(
+            Vec2f::new(5., 0.1) * Vec2f::new(0.5, 1.),
+            Vec2f::new(2.5, 0.1)
+        );
     }
 
     #[test]
@@ -370,7 +413,17 @@ mod tests {
         assert_approx_eq!(v.x, 0.707_106_7);
         assert_eq!(v.x, v.y);
 
+        let v = Vec2f::new(1., 1.).normalized();
+        assert_approx_eq!(v.x, 0.707_106_7);
+        assert_eq!(v.x, v.y);
+
         assert_eq!(Vec2f::new(0., 0.).normalized_or_zero(), Vec2f::new(0., 0.));
+    }
+
+    #[test]
+    #[should_panic]
+    fn vector_normalize_zero_length() {
+        let _ = Vec2f::new(0., 0.).normalized();
     }
 
     #[cfg(feature = "use-sfml")]

@@ -23,7 +23,7 @@ struct Collision_Info {
     pub other: Entity,
     pub oth_pos: Vec2f,
     pub oth_velocity: Vec2f,
-    pub penetration_dist: f32,
+    pub penetration: Vec2f,
 }
 
 #[cfg(debug_assertions)]
@@ -222,22 +222,20 @@ impl Collision_System {
 
                         // @Incomplete: solve the collision
                         let spatial = unsafe { map_spatial.get_component_mut(entity) }.unwrap();
-                        let delta_pos = info.oth_pos - info.my_pos;
 
                         // Reset velocity
-                        spatial.velocity = Vec2f::default();
+                        spatial.velocity -= info.penetration;
                         // Move out of the collision
                         // @Incomplete: we should actually set the global_transform, but doing so
                         // does not update the local one yet!
-                        spatial.local_transform.translate_v(
-                            -delta_pos.normalized_or_zero() * (0.01 + info.penetration_dist),
-                        );
+                        spatial
+                            .local_transform
+                            .translate_v(-info.penetration * 1.001);
 
                         #[cfg(debug_assertions)]
                         self.debug_applied_impulses.push(Debug_Applied_Impulse {
                             center: spatial.global_transform.position(),
-                            impulse: -delta_pos.normalized_or_zero()
-                                * (0.01 + info.penetration_dist),
+                            impulse: -info.penetration * 1.001,
                         });
                     }
                 }
@@ -298,6 +296,12 @@ fn check_collision_with_neighbours(
                     );
                     if let Some(intersection) = rect::rects_intersection(&me, &him) {
                         if let Ok(mut cld) = collided_entities.lock() {
+                            let delta_pos = oth_pos - pos;
+                            let Vec2f { x: iw, y: ih } = intersection.size();
+                            let penetration = Vec2f::new(
+                                (iw < ih) as i32 as f32 * iw * delta_pos.x.signum(),
+                                (ih < iw) as i32 as f32 * ih * delta_pos.y.signum(),
+                            );
                             cld.insert(
                                 entity,
                                 Collision_Info {
@@ -306,7 +310,7 @@ fn check_collision_with_neighbours(
                                     oth_pos,
                                     my_velocity: velocity,
                                     oth_velocity,
-                                    penetration_dist: 0., // @Incomplete
+                                    penetration,
                                 },
                             );
                             cld.insert(
@@ -317,7 +321,7 @@ fn check_collision_with_neighbours(
                                     oth_pos: pos,
                                     my_velocity: oth_velocity,
                                     oth_velocity: velocity,
-                                    penetration_dist: 0., // @Incomplete
+                                    penetration: -penetration,
                                 },
                             );
                         }
@@ -353,7 +357,7 @@ fn check_collision_with_neighbours(
                                     oth_pos,
                                     my_velocity: velocity,
                                     oth_velocity,
-                                    penetration_dist,
+                                    penetration: (oth_pos - pos).normalized() * penetration_dist,
                                 },
                             );
                             cld.insert(
@@ -364,7 +368,7 @@ fn check_collision_with_neighbours(
                                     oth_pos: pos,
                                     my_velocity: oth_velocity,
                                     oth_velocity: velocity,
-                                    penetration_dist,
+                                    penetration: (oth_pos - pos).normalized() * penetration_dist,
                                 },
                             );
                         }
