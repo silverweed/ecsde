@@ -1,4 +1,5 @@
 use libloading as ll;
+use std::os::raw::c_char;
 
 // Note: this is an opaque type
 #[repr(C)]
@@ -21,7 +22,7 @@ pub struct Game_Bundle {
 pub struct Game_Api<'lib> {
     pub init: ll::Symbol<
         'lib,
-        unsafe extern "C" fn(args: *const String, args_count: usize) -> Game_Bundle,
+        unsafe extern "C" fn(args: *const *const c_char, args_count: usize) -> Game_Bundle,
     >,
     pub update:
         ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State, *mut Game_Resources) -> bool>,

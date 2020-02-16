@@ -619,6 +619,7 @@ fn debug_draw_transforms(
     }
 }
 
+#[cfg(debug_assertions)]
 fn debug_draw_velocities(
     debug_painter: &mut Debug_Painter,
     ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,

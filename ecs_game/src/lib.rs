@@ -22,6 +22,8 @@ use ecs_engine::core::{app, app_config};
 use ecs_engine::gfx::{self as ngfx, window};
 use ecs_engine::input;
 use ecs_engine::resources;
+use std::ffi::CStr;
+use std::os::raw::c_char;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
@@ -94,6 +96,18 @@ pub struct Game_Bundle<'a> {
     pub game_resources: *mut Game_Resources<'a>,
 }
 
+/// Given a c_char pointer, returns a String allocated from the raw string it points to,
+/// or an empty string if the conversion fails.
+fn new_string_from_c_char_ptr(c_char_ptr: *const c_char) -> String {
+    let cstr = unsafe { CStr::from_ptr(c_char_ptr) };
+    dbg!(cstr);
+    let str_slice = cstr.to_str().unwrap_or_else(|_| {
+        lerr!("Failed to convert argument {:?} to a valid String.", cstr);
+        ""
+    });
+    String::from(str_slice)
+}
+
 /////////////////////////////////////////////////////////////////////////////
 //                        FOREIGN FUNCTION API                             //
 /////////////////////////////////////////////////////////////////////////////
@@ -107,18 +121,24 @@ pub struct Game_Bundle<'a> {
 /// If `args_count` > 0, `raw_args` must point to valid memory.
 #[no_mangle]
 pub unsafe extern "C" fn game_init<'a>(
-    raw_args: *const String,
+    raw_args: *const *const c_char,
     args_count: usize,
 ) -> Game_Bundle<'a> {
     linfo!("Initializing game...");
 
-    let mut args: Vec<&String> = Vec::with_capacity(args_count);
+    // Copy all arguments into rust strings
+    let mut args: Vec<String> = Vec::with_capacity(args_count);
     for i in 0..args_count {
         let arg = raw_args.add(i);
-        args.push(&*arg);
+        assert!(
+            *arg != std::ptr::null(),
+            "{}-th cmdline argument is null!",
+            i
+        );
+        args.push(new_string_from_c_char_ptr(*arg));
     }
 
-    if let Ok((game_state, game_resources)) = internal_game_init(args) {
+    if let Ok((game_state, game_resources)) = internal_game_init(&args) {
         Game_Bundle {
             game_state: Box::into_raw(game_state),
             game_resources: Box::into_raw(game_resources),
@@ -229,7 +249,7 @@ pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mu
 /////////////////////////////////////////////////////////////////////////////
 
 fn internal_game_init<'a>(
-    args: Vec<&String>,
+    args: &[String],
 ) -> Result<(Box<Game_State<'a>>, Box<Game_Resources<'a>>), Box<dyn std::error::Error>> {
     let mut game_resources = create_game_resources()?;
     let (mut game_state, parsed_cmdline_args) = create_game_state(&mut game_resources, args)?;
@@ -265,14 +285,14 @@ fn internal_game_init<'a>(
 
 fn create_game_state<'a>(
     game_resources: &mut Game_Resources<'_>,
-    cmdline_args: Vec<&String>,
+    cmdline_args: &[String],
 ) -> Result<(Box<Game_State<'a>>, cmdline::Cmdline_Args), Box<dyn std::error::Error>> {
     // Load Config first, as it's needed to setup everything that follows.
     let env = Env_Info::gather().unwrap();
     let config = cfg::Config::new_from_dir(env.get_cfg_root());
 
     // Load initial App_Config (some values may be overwritten by cmdline args)
-    let mut app_config = {
+    let mut_in_debug!(app_config) = {
         let cfg = &config;
         let win_width: Cfg_Var<i32> = Cfg_Var::new("engine/window/width", cfg);
         let win_height: Cfg_Var<i32> = Cfg_Var::new("engine/window/height", cfg);
@@ -285,7 +305,7 @@ fn create_game_state<'a>(
         }
     };
 
-    let mut parsed_cmdline_args = cmdline::parse_cmdline_args(cmdline_args.into_iter());
+    let mut_in_debug!(parsed_cmdline_args) = cmdline::parse_cmdline_args(cmdline_args.into_iter());
     #[cfg(debug_assertions)]
     {
         if let Some(in_replay_file) = parsed_cmdline_args.in_replay_file.take() {
