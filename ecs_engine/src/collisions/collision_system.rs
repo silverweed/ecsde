@@ -202,10 +202,10 @@ impl Collision_System {
                     unsafe { ecs_world.get_components_map_unsafe::<C_Spatial2D>() };
 
                 if let Ok(cld) = self.collided_entities.lock() {
-                    for (&entity, info) in cld.iter() {
-                        if info.my_velocity.magnitude2().abs() < 0.0001 {
-                            continue;
-                        }
+                    for (&entity, info) in cld
+                        .iter()
+                        .filter(|(_, info)| info.my_velocity.magnitude2() > 0.0001)
+                    {
                         {
                             let collider =
                                 unsafe { map_collider.get_component_mut(entity) }.unwrap();
@@ -227,7 +227,9 @@ impl Collision_System {
                         // Reset velocity
                         spatial.velocity = Vec2f::default();
                         // Move out of the collision
-                        spatial.global_transform.translate_v(
+                        // @Incomplete: we should actually set the global_transform, but doing so
+                        // does not update the local one yet!
+                        spatial.local_transform.translate_v(
                             -delta_pos.normalized_or_zero() * (0.01 + info.penetration_dist),
                         );
 
