@@ -406,7 +406,7 @@ mod tests {
         let (e1, c1, t1) = cld(&mut ecs_world, (0., 0.), (1., 1.), (10., 10.));
         tree.add(e1, &c1, &t1, &ecs_world, clone_tracer!(tracer));
 
-        tree.get_neighbours(&c1, &t1, &mut results);
+        tree.get_neighbours(&c1, &t1, &mut results, clone_tracer!(tracer));
         assert_eq!(results.len(), 1);
         assert_eq!(depth(&tree), 1);
 
@@ -417,7 +417,7 @@ mod tests {
         tree.add(e3, &c3, &t3, &ecs_world, clone_tracer!(tracer));
 
         results.clear();
-        tree.get_neighbours(&c1, &t1, &mut results);
+        tree.get_neighbours(&c1, &t1, &mut results, clone_tracer!(tracer));
         assert_eq!(results.len(), 3);
         assert_eq!(depth(&tree), 1);
 
@@ -429,7 +429,7 @@ mod tests {
         assert_eq!(depth(&tree), 2);
 
         results.clear();
-        tree.get_neighbours(&c2, &t2, &mut results);
+        tree.get_neighbours(&c2, &t2, &mut results, clone_tracer!(tracer));
         // All c3's should not be in the neighbour list.
         assert_eq!(results.len(), 2);
 
