@@ -251,11 +251,11 @@ impl Gameplay_System {
 
         // DEBUG: center camera on player
         {
-            let mut stream = new_entity_stream(&mut self.ecs_world)
+            let mut stream = new_entity_stream(&self.ecs_world)
                 .require::<C_Controllable>()
                 .exclude::<C_Camera2D>()
                 .build();
-            let moved = stream.next(&mut self.ecs_world);
+            let moved = stream.next(&self.ecs_world);
             if let Some(moved) = moved {
                 let pos = self
                     .ecs_world

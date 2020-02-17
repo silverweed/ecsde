@@ -97,7 +97,7 @@ impl Debug_Overlay {
 
         for line in self.lines.iter() {
             let Debug_Line { text, color, .. } = line;
-            let mut text = gfx::render::create_text(text, gres.get_font(font), font_size.into());
+            let mut text = gfx::render::create_text(text, gres.get_font(font), font_size);
             gfx::render::set_text_fill_color(&mut text, *color);
 
             let txt_bounds = gfx::render::get_text_local_bounds(&text);

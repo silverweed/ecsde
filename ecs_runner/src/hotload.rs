@@ -20,8 +20,9 @@ pub struct Game_Dll_File_Watcher {
 impl Game_Dll_File_Watcher {
     pub fn new(file: PathBuf, reload_pending: SyncSender<()>) -> Self {
         Game_Dll_File_Watcher {
-            file: file.canonicalize().unwrap_or_else(|err| 
-	    	panic!("Failed to canonicalize path {:?}: {}", file, err)),
+            file: file
+                .canonicalize()
+                .unwrap_or_else(|err| panic!("Failed to canonicalize path {:?}: {}", file, err)),
             reload_pending,
         }
     }

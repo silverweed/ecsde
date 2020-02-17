@@ -135,7 +135,7 @@ pub unsafe extern "C" fn game_init<'a>(
     for i in 0..args_count {
         let arg = raw_args.add(i);
         assert!(
-            *arg != std::ptr::null(),
+            !(*arg).is_null(),
             "{}-th cmdline argument is null!",
             i
         );
@@ -309,7 +309,7 @@ fn create_game_state<'a>(
         }
     };
 
-    let mut_in_debug!(parsed_cmdline_args) = cmdline::parse_cmdline_args(cmdline_args.into_iter());
+    let mut_in_debug!(parsed_cmdline_args) = cmdline::parse_cmdline_args(cmdline_args.iter());
     #[cfg(debug_assertions)]
     {
         if let Some(in_replay_file) = parsed_cmdline_args.in_replay_file.take() {
