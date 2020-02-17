@@ -105,7 +105,6 @@ pub struct Game_Bundle<'a> {
 /// or an empty string if the conversion fails.
 fn new_string_from_c_char_ptr(c_char_ptr: *const c_char) -> String {
     let cstr = unsafe { CStr::from_ptr(c_char_ptr) };
-    dbg!(cstr);
     let str_slice = cstr.to_str().unwrap_or_else(|_| {
         lerr!("Failed to convert argument {:?} to a valid String.", cstr);
         ""
