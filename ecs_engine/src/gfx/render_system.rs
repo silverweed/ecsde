@@ -24,6 +24,7 @@ pub struct Render_System_Update_Args<'a> {
     pub ecs_world: &'a Ecs_World,
     pub frame_lag_normalized: f32,
     pub cfg: Render_System_Config,
+    pub dt: std::time::Duration,
     pub _tracer: Debug_Tracer,
 }
 
@@ -46,6 +47,7 @@ impl Render_System {
             ecs_world,
             frame_lag_normalized,
             cfg,
+            dt,
             _tracer,
         } = args;
 
@@ -79,7 +81,7 @@ impl Render_System {
 
             let mut rend_transform = spatial.global_transform;
             if cfg.smooth_by_extrapolating_velocity {
-                let v = spatial.velocity;
+                let v = spatial.velocity * crate::core::time::to_secs_frac(&dt);
                 rend_transform.translate(v.x * frame_lag_normalized, v.y * frame_lag_normalized);
             }
 

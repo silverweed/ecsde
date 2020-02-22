@@ -1,14 +1,15 @@
 use std::convert::From;
 
 #[cfg(debug_assertions)]
-use std::collections::hash_map::Entry;
-#[cfg(debug_assertions)]
-use std::collections::HashMap;
-#[cfg(debug_assertions)]
-use std::sync::RwLock;
+use {std::collections::hash_map::Entry, std::collections::HashMap, std::sync::RwLock};
 
 #[derive(PartialEq, Hash, Copy, Clone, PartialOrd, Eq, Ord)]
 pub struct String_Id(u32);
+
+#[cfg(debug_assertions)]
+lazy_static! {
+    static ref STRING_ID_MAP: RwLock<HashMap<String_Id, String>> = RwLock::new(HashMap::new());
+}
 
 impl String_Id {
     pub fn from_u32(x: u32) -> String_Id {
@@ -96,11 +97,6 @@ fn fnv1a(bytes: &[u8]) -> u32 {
         result = result.wrapping_mul(FNV_PRIME32);
     }
     result
-}
-
-#[cfg(debug_assertions)]
-lazy_static! {
-    static ref STRING_ID_MAP: RwLock<HashMap<String_Id, String>> = RwLock::new(HashMap::new());
 }
 
 #[cfg(test)]

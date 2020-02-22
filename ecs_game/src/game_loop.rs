@@ -293,6 +293,7 @@ fn update_graphics(
         ecs_world: &game_state.gameplay_system.ecs_world,
         frame_lag_normalized,
         cfg: render_cfg,
+	dt: real_dt,
         _tracer: clone_tracer!(game_state.engine_state.tracer),
     };
 

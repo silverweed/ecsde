@@ -77,7 +77,6 @@ impl Persistent_Game_State for Debug_Base_State {
                     });
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_step_sim => {
-                    // FIXME: game does not resume after calling this
                     let msg_overlay = debug_ui.get_fadeout_overlay(String_Id::from("msg"));
                     let step_delta = std::time::Duration::from_millis(
                         self.gameplay_update_tick_ms.read(&engine_state.config) as u64,
