@@ -3,7 +3,6 @@ use crate::core::common::rect::Rect;
 use crate::core::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
-use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
@@ -114,10 +113,7 @@ impl Debug_Overlay {
         // Draw background
         gfx::render::fill_color_rect(
             window,
-            &gfx::paint_props::Paint_Properties {
-                color: self.config.background,
-                ..Default::default()
-            },
+			self.config.background,
             Rect::new(
                 position.x
                     + self
@@ -145,10 +141,7 @@ impl Debug_Overlay {
             let rect = Rect::new(pos.x, pos.y, bg_fill_ratio * max_row_width, max_row_height);
             gfx::render::fill_color_rect(
                 window,
-                &Paint_Properties {
-                    color: bg_col,
-                    ..Default::default()
-                },
+				bg_col,
                 rect,
             );
         }

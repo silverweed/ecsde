@@ -14,6 +14,8 @@ extern crate bitflags;
 
 #[cfg(debug_assertions)]
 extern crate notify;
+#[cfg(debug_assertions)]
+extern crate rustyline;
 
 #[cfg(debug_assertions)]
 #[macro_use]

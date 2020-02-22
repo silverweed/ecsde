@@ -349,7 +349,13 @@ fn create_game_state<'a>(
     #[cfg(debug_assertions)]
     {
         app::start_config_watch(&engine_state.env, &mut engine_state.config)?;
-        app::init_engine_debug(&mut engine_state, &mut game_resources.gfx)?;
+
+		let ui_scale = Cfg_Var::<f32>::new("engine/debug/ui/ui_scale", &engine_state.config).read(&engine_state.config);
+		let cfg = debug::debug_ui_system::Debug_Ui_System_Config {
+			ui_scale
+		};
+        app::init_engine_debug(&mut engine_state, &mut game_resources.gfx, cfg)?;
+
         app::start_recording(&mut engine_state)?;
     }
 
@@ -420,8 +426,8 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     let extra_frame_sleep_ms = Cfg_Var::new("engine/debug/gameplay/extra_frame_sleep_ms", cfg);
     let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
     let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
-    let draw_entities = Cfg_Var::new("engine/debug/draw_entities", cfg);
-    let draw_entities_velocities = Cfg_Var::new("engine/debug/draw_entities_velocities", cfg);
+    let draw_entities = Cfg_Var::new("engine/debug/entities/draw_entities", cfg);
+    let draw_entities_velocities = Cfg_Var::new("engine/debug/entities/draw_entities_velocities", cfg);
     let draw_colliders = Cfg_Var::new("engine/debug/collisions/draw_colliders", cfg);
     let draw_collision_quadtree =
         Cfg_Var::new("engine/debug/collisions/draw_collision_quadtree", cfg);
@@ -483,12 +489,13 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         &game_state.engine_state.env,
         FONT,
     ));
+	let ui_scale = debug_ui.config().ui_scale;
 
     let overlay_cfg = Debug_Overlay_Config {
-        row_spacing: 20.0,
-        font_size: 13,
-        pad_x: 5.0,
-        pad_y: 5.0,
+        row_spacing: 20.0 * ui_scale,
+        font_size: (13.0 * ui_scale) as u16,
+        pad_x: 5.0 * ui_scale,
+        pad_y: 5.0 * ui_scale,
         background: colors::rgba(25, 25, 25, 210),
     };
     // Entities overlay
@@ -497,7 +504,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
     overlay.horiz_align = Align::Begin;
     overlay.position = Vec2f::new(
         0.0,
-        game_state.engine_state.app_config.target_win_size.1 as f32 - 22.,
+        game_state.engine_state.app_config.target_win_size.1 as f32 - 22. * ui_scale,
     );
     // Camera overlay
     let mut overlay = debug_ui.create_overlay(String_Id::from("camera"), overlay_cfg, font);
@@ -505,6 +512,6 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
     overlay.horiz_align = Align::End;
     overlay.position = Vec2f::new(
         game_state.engine_state.app_config.target_win_size.0 as f32,
-        game_state.engine_state.app_config.target_win_size.1 as f32 - 20.,
+        game_state.engine_state.app_config.target_win_size.1 as f32 - 20. * ui_scale,
     );
 }

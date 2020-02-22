@@ -6,7 +6,7 @@ use crate::ecs::ecs_world::{Ecs_World, Entity};
 use crate::prelude::*;
 
 #[cfg(debug_assertions)]
-use crate::debug::debug_painter::Debug_Painter;
+use crate::debug::painter::Debug_Painter;
 
 const MAX_OBJECTS: usize = 8;
 const MAX_DEPTH: u8 = 10;

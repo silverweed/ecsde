@@ -78,26 +78,26 @@ impl Debug_Painter {
         camera: &Transform2D,
         tracer: Debug_Tracer,
     ) {
-        trace!("debug_painter::draw", tracer);
+        trace!("painter::draw", tracer);
 
         for (size, transform, props) in &self.rects {
             let rect = Rect::new(0., 0., size.x, size.y);
-            trace!("debug_painter::fill_rect", tracer);
-            render::fill_color_rect_ws(window, props, rect, transform, camera);
+            trace!("painter::fill_rect", tracer);
+            render::fill_color_rect_ws(window, *props, rect, transform, camera);
         }
 
         for (circle, props) in &self.circles {
-            render::fill_color_circle_ws(window, props, *circle, camera);
+            render::fill_color_circle_ws(window, *props, *circle, camera);
         }
 
         for (arrow, props) in &self.arrows {
-            trace!("debug_painter::draw_arrow", tracer);
+            trace!("painter::draw_arrow", tracer);
             draw_arrow(window, arrow, props, camera);
         }
 
         let font = self.font;
         for (text, world_pos, font_size, props) in &self.texts {
-            trace!("debug_painter::draw_text", tracer);
+            trace!("painter::draw_text", tracer);
             let mut txt = Text::new(text, gres.get_font(font), (*font_size).into());
             txt.set_fill_color(props.color.into());
             txt.set_outline_thickness(props.border_thick);

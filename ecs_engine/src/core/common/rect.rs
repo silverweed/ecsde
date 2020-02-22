@@ -70,14 +70,14 @@ impl<T: Copy> Rect<T> {
     }
 }
 
-impl From<&Rect<i32>> for Rect<f32> {
-    fn from(r: &Rect<i32>) -> Self {
+impl From<Rect<i32>> for Rect<f32> {
+    fn from(r: Rect<i32>) -> Self {
         Rect::new(r.x as f32, r.y as f32, r.width as f32, r.height as f32)
     }
 }
 
-impl From<&Rect<u32>> for Rect<f32> {
-    fn from(r: &Rect<u32>) -> Self {
+impl From<Rect<u32>> for Rect<f32> {
+    fn from(r: Rect<u32>) -> Self {
         Rect::new(r.x as f32, r.y as f32, r.width as f32, r.height as f32)
     }
 }

@@ -16,7 +16,7 @@ use ecs_engine::{
     core::common::vector::Vec2f,
     core::common::transform::Transform2D,
     debug,
-    debug::debug_painter::Debug_Painter,
+    debug::painter::Debug_Painter,
     gfx::paint_props::Paint_Properties,
     input,
 };

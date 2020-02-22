@@ -42,34 +42,38 @@ pub fn sprite_global_bounds(sprite: &Sprite) -> Rect<f32> {
 }
 
 /// Draws a color-filled rectangle in screen space
-pub fn fill_color_rect<T>(window: &mut Window_Handle, paint_props: &Paint_Properties, rect: T)
+pub fn fill_color_rect<R, P>(window: &mut Window_Handle, paint_props: P, rect: R)
 where
-    T: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
+    R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
+	P: Into<Paint_Properties>,
 {
-    backend::fill_color_rect(window, paint_props, rect);
+    backend::fill_color_rect(window, &paint_props.into(), rect);
 }
 
 /// Draws a color-filled rectangle in world space
-pub fn fill_color_rect_ws<T>(
+pub fn fill_color_rect_ws<R, P>(
     window: &mut Window_Handle,
-    paint_props: &Paint_Properties,
-    rect: T,
+    paint_props: P,
+    rect: R,
     transform: &Transform2D,
     camera: &Transform2D,
 ) where
-    T: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
+    R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
+	P: Into<Paint_Properties>,
 {
-    backend::fill_color_rect_ws(window, paint_props, rect, transform, camera);
+    backend::fill_color_rect_ws(window, &paint_props.into(), rect, transform, camera);
 }
 
 /// Draws a color-filled circle in world space
-pub fn fill_color_circle_ws(
+pub fn fill_color_circle_ws<P>(
     window: &mut Window_Handle,
-    paint_props: &Paint_Properties,
+    paint_props: P,
     circle: Circle,
     camera: &Transform2D,
-) {
-    backend::fill_color_circle_ws(window, paint_props, circle, camera);
+) where
+    P: Into<Paint_Properties>,
+{
+    backend::fill_color_circle_ws(window, &paint_props.into(), circle, camera);
 }
 
 pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: Rect<i32>) {

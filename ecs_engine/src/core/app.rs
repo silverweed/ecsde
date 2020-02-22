@@ -107,6 +107,7 @@ pub fn start_recording(engine_state: &mut Engine_State) -> Maybe_Error {
 pub fn init_engine_debug(
     engine_state: &mut Engine_State<'_>,
     gfx_resources: &mut Gfx_Resources<'_>,
+	cfg: debug::debug_ui_system::Debug_Ui_System_Config,
 ) -> Maybe_Error {
     use crate::core::common::colors;
     use crate::core::common::vector::Vec2f;
@@ -123,15 +124,17 @@ pub fn init_engine_debug(
         engine_state.app_config.target_win_size.0 as f32,
         engine_state.app_config.target_win_size.1 as f32,
     );
+	let ui_scale = cfg.ui_scale;
     let debug_ui_system = &mut engine_state.debug_systems.debug_ui_system;
+	debug_ui_system.init(cfg);
 
     // Debug overlays
     {
         let mut debug_overlay_config = overlay::Debug_Overlay_Config {
-            row_spacing: 2.0,
-            font_size: 14,
-            pad_x: 5.0,
-            pad_y: 5.0,
+            row_spacing: 2.0 * ui_scale,
+            font_size: (14.0 * ui_scale) as u16,
+            pad_x: 5.0 * ui_scale,
+            pad_y: 5.0 * ui_scale,
             background: colors::rgba(25, 25, 25, 210),
         };
 
@@ -143,7 +146,7 @@ pub fn init_engine_debug(
         joy_overlay.horiz_align = align::Align::End;
         joy_overlay.position = Vec2f::new(target_win_size_x, 0.0);
 
-        debug_overlay_config.font_size = 13;
+        debug_overlay_config.font_size = (13.0 * ui_scale) as u16;
         let mut time_overlay =
             debug_ui_system.create_overlay(String_Id::from("time"), debug_overlay_config, font);
         time_overlay.horiz_align = align::Align::End;
@@ -155,7 +158,7 @@ pub fn init_engine_debug(
         fps_overlay.vert_align = align::Align::End;
         fps_overlay.position = Vec2f::new(0.0, target_win_size_y as f32);
 
-        debug_overlay_config.font_size = 11;
+        debug_overlay_config.font_size = (11.0 * ui_scale) as u16;
         let mut trace_overlay =
             debug_ui_system.create_overlay(String_Id::from("trace"), debug_overlay_config, font);
         trace_overlay.vert_align = align::Align::Middle;
@@ -171,13 +174,13 @@ pub fn init_engine_debug(
     // Debug fadeout overlays
     {
         let fadeout_overlay_config = fadeout_overlay::Fadeout_Debug_Overlay_Config {
-            row_spacing: 2.0,
-            font_size: 20,
-            pad_x: 5.0,
-            pad_y: 5.0,
+            row_spacing: 2.0 * ui_scale,
+            font_size: (20.0 * ui_scale) as u16,
+            pad_x: 5.0 * ui_scale,
+            pad_y: 5.0 * ui_scale,
             background: colors::rgba(25, 25, 25, 210),
             fadeout_time: Duration::from_secs(3),
-            max_rows: 30,
+            max_rows: (30.0 / ui_scale.max(0.1)) as usize,
         };
 
         let mut fadeout_overlay = debug_ui_system.create_fadeout_overlay(

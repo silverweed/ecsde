@@ -90,10 +90,7 @@ impl Render_System {
                 if cfg.draw_sprites_bg {
                     gfx::render::fill_color_rect_ws(
                         window,
-                        &gfx::paint_props::Paint_Properties {
-                            color: cfg.draw_sprites_bg_color,
-                            ..Default::default()
-                        },
+						cfg.draw_sprites_bg_color,
                         gfx::render::sprite_global_bounds(&sprite),
                         &rend_transform,
                         &camera.transform,

@@ -14,7 +14,7 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
 
 #[cfg(debug_assertions)]
-use crate::debug::debug_painter::Debug_Painter;
+use crate::debug::painter::Debug_Painter;
 
 #[derive(Clone, Debug)]
 struct Collision_Info {

@@ -109,10 +109,7 @@ impl Fadeout_Debug_Overlay {
         // Draw background
         gfx::render::fill_color_rect(
             window,
-            &gfx::paint_props::Paint_Properties {
-                color: self.config.background,
-                ..Default::default()
-            },
+			self.config.background,
             Rect::new(
                 position.x
                     + self
