@@ -1,6 +1,6 @@
 use super::parsing::{Cfg_Entry, Raw_Config};
 use super::value::Cfg_Value;
-use crate::core::common::stringid::String_Id;
+use crate::common::stringid::String_Id;
 use std::collections::HashMap;
 use std::convert::From;
 use std::path::Path;

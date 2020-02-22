@@ -1,6 +1,6 @@
-use crate::core::common::colors::{self, Color};
-use crate::core::common::rect::Rect;
-use crate::core::common::vector::Vec2f;
+use crate::common::colors::{self, Color};
+use crate::common::rect::Rect;
+use crate::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
 use crate::gfx::window::Window_Handle;
@@ -97,7 +97,7 @@ impl Debug_Overlay {
         for line in self.lines.iter() {
             let Debug_Line { text, color, .. } = line;
             let mut text = gfx::render::create_text(text, gres.get_font(font), font_size);
-            gfx::render::set_text_fill_color(&mut text, *color);
+            gfx::render::set_text_paint_props(&mut text, *color);
 
             let txt_bounds = gfx::render::get_text_local_bounds(&text);
             max_row_width = max_row_width.max(txt_bounds.width);
@@ -113,7 +113,7 @@ impl Debug_Overlay {
         // Draw background
         gfx::render::fill_color_rect(
             window,
-			self.config.background,
+            self.config.background,
             Rect::new(
                 position.x
                     + self
@@ -139,11 +139,7 @@ impl Debug_Overlay {
                         + (i as f32) * (max_row_height + row_spacing),
                 );
             let rect = Rect::new(pos.x, pos.y, bg_fill_ratio * max_row_width, max_row_height);
-            gfx::render::fill_color_rect(
-                window,
-				bg_col,
-                rect,
-            );
+            gfx::render::fill_color_rect(window, bg_col, rect);
         }
 
         // Draw texts

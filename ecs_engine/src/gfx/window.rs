@@ -1,5 +1,5 @@
-use crate::core::common::colors::Color;
-use crate::core::common::rect::Rect;
+use crate::common::colors::Color;
+use crate::common::rect::Rect;
 
 #[cfg(feature = "use-sfml")]
 mod sfml;

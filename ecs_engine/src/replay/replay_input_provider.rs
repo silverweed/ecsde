@@ -38,7 +38,7 @@ impl Input_Provider for Replay_Input_Provider {
     fn update(
         &mut self,
         window: &mut Input_Provider_Input,
-        joy_mgr: &Joystick_Manager,
+        joy_mgr: Option<&Joystick_Manager>,
         cfg: &cfg::Config,
     ) {
         self.dip.events.clear();
@@ -178,24 +178,24 @@ mod tests {
         let joy_mgr = Joystick_Manager::new();
 
         // frame 0
-        replay_provider.update(&mut window, &joy_mgr, &config);
+        replay_provider.update(&mut window, Some(&joy_mgr), &config);
         let events = all_but_resized(&replay_provider);
         assert_eq!(events.len(), 2);
         assert_eq!(*events[0], keypressed(Key::Num0));
         assert_eq!(*events[1], keypressed(Key::A));
 
         // frame 1
-        replay_provider.update(&mut window, &joy_mgr, &config);
+        replay_provider.update(&mut window, Some(&joy_mgr), &config);
         let events = all_but_resized(&replay_provider);
         assert_eq!(events.len(), 0);
 
         // frame 2
-        replay_provider.update(&mut window, &joy_mgr, &config);
+        replay_provider.update(&mut window, Some(&joy_mgr), &config);
         let events = all_but_resized(&replay_provider);
         assert_eq!(events.len(), 0);
 
         // frame 3
-        replay_provider.update(&mut window, &joy_mgr, &config);
+        replay_provider.update(&mut window, Some(&joy_mgr), &config);
         let events = all_but_resized(&replay_provider);
         assert_eq!(events.len(), 2);
         assert_eq!(*events[0], keypressed(Key::Z));

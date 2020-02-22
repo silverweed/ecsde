@@ -1,6 +1,6 @@
 use super::collider::{Collider, Collider_Shape};
-use crate::core::common::rect::{Rect, Rectf};
-use crate::core::common::transform::Transform2D;
+use crate::common::rect::{Rect, Rectf};
+use crate::common::transform::Transform2D;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Ecs_World, Entity};
 use crate::prelude::*;
@@ -211,7 +211,7 @@ impl Quad_Tree {
 }
 
 fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8 {
-    use crate::core::common::vector::Vec2f;
+    use crate::common::vector::Vec2f;
 
     let horiz_mid = bounds.x + bounds.width * 0.5;
     let vert_mid = bounds.y + bounds.height * 0.5;
@@ -277,8 +277,8 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
 
 #[cfg(debug_assertions)]
 pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
-    use crate::core::common::colors;
-    use crate::core::common::vector::Vec2f;
+    use crate::common::colors;
+    use crate::common::vector::Vec2f;
 
     fn calc_quadtree_deepth(quadtree: &Quad_Tree) -> u32 {
         fn calc_quadtree_deepth_internal(quadtree: &Quad_Tree, depth: u32) -> u32 {
@@ -349,9 +349,9 @@ pub(super) fn draw_quadtree(quadtree: &Quad_Tree, painter: &mut Debug_Painter) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::common::angle::rad;
-    use crate::core::common::transform::Transform2D;
-    use crate::core::common::vector::Vec2f;
+    use crate::common::angle::rad;
+    use crate::common::transform::Transform2D;
+    use crate::common::vector::Vec2f;
 
     fn depth(quadtree: &Quad_Tree) -> usize {
         fn depth_internal(quadtree: &Quad_Tree, val: usize) -> usize {

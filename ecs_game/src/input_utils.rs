@@ -1,6 +1,6 @@
 use ecs_engine::cfg::{Cfg_Var, Config};
-use ecs_engine::core::common::stringid::String_Id;
-use ecs_engine::core::common::vector::Vec2f;
+use ecs_engine::common::stringid::String_Id;
+use ecs_engine::common::vector::Vec2f;
 use ecs_engine::input::axes::Virtual_Axes;
 
 #[derive(Copy, Clone, Default)]

@@ -1,9 +1,9 @@
 use super::paint_props::Paint_Properties;
-use crate::core::common::colors::Color;
-use crate::core::common::rect::{Rect, Rectf};
-use crate::core::common::shapes::Circle;
-use crate::core::common::transform::Transform2D;
-use crate::core::common::vector::Vec2f;
+use crate::common::colors::Color;
+use crate::common::rect::{Rect, Rectf};
+use crate::common::shapes::Circle;
+use crate::common::transform::Transform2D;
+use crate::common::vector::Vec2f;
 use crate::gfx::window::Window_Handle;
 use std::convert::Into;
 
@@ -45,7 +45,7 @@ pub fn sprite_global_bounds(sprite: &Sprite) -> Rect<f32> {
 pub fn fill_color_rect<R, P>(window: &mut Window_Handle, paint_props: P, rect: R)
 where
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
-	P: Into<Paint_Properties>,
+    P: Into<Paint_Properties>,
 {
     backend::fill_color_rect(window, &paint_props.into(), rect);
 }
@@ -59,7 +59,7 @@ pub fn fill_color_rect_ws<R, P>(
     camera: &Transform2D,
 ) where
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
-	P: Into<Paint_Properties>,
+    P: Into<Paint_Properties>,
 {
     backend::fill_color_rect_ws(window, &paint_props.into(), rect, transform, camera);
 }
@@ -88,6 +88,7 @@ pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
     backend::create_text(string, font, size)
 }
 
+// @Cleanup: ideally we'd want to pass a &Text, not a &mut Text.
 pub fn render_text(window: &mut Window_Handle, text: &mut Text, screen_pos: Vec2f) {
     backend::render_text(window, text, screen_pos);
 }
@@ -101,8 +102,11 @@ pub fn render_text_ws(
     backend::render_text_ws(window, text, world_transform, camera);
 }
 
-pub fn set_text_fill_color(text: &mut Text, color: Color) {
-    backend::set_text_fill_color(text, color);
+pub fn set_text_paint_props<P>(text: &mut Text, paint_props: P)
+where
+    P: Into<Paint_Properties>,
+{
+    backend::set_text_paint_props(text, paint_props.into());
 }
 
 pub fn get_text_local_bounds(text: &Text) -> Rectf {

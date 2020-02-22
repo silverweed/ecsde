@@ -1,5 +1,5 @@
-use crate::core::common::angle::{rad, Angle};
-use crate::core::common::vector::Vec2f;
+use crate::common::angle::{rad, Angle};
+use crate::common::vector::Vec2f;
 use cgmath::Matrix3;
 
 // Likely @Incomplete: we don't want to recalculate the matrix every time.

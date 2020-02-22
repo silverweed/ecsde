@@ -1,4 +1,4 @@
-use crate::core::common::vector::Vec2f;
+use crate::common::vector::Vec2f;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Collider_Shape {

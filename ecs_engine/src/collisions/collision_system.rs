@@ -1,9 +1,9 @@
 use super::collider::{Collider, Collider_Shape};
 use super::quadtree;
-use crate::core::common::rect::{self, Rect};
-use crate::core::common::shapes;
-use crate::core::common::transform::Transform2D;
-use crate::core::common::vector::Vec2f;
+use crate::common::rect::{self, Rect};
+use crate::common::shapes;
+use crate::common::transform::Transform2D;
+use crate::common::vector::Vec2f;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Components_Map_Safe, Ecs_World, Entity};
 use crate::ecs::entity_stream::new_entity_stream;
@@ -63,20 +63,20 @@ impl Collision_System {
     pub fn debug_draw_applied_impulses(&self, painter: &mut Debug_Painter) {
         for impulse in &self.debug_applied_impulses {
             painter.add_arrow(
-                crate::core::common::shapes::Arrow {
+                crate::common::shapes::Arrow {
                     center: impulse.center,
                     direction: impulse.impulse,
                     thickness: 3.,
                     arrow_size: 30.,
                 },
-                crate::core::common::colors::rgb(0, 153, 255),
+                crate::common::colors::rgb(0, 153, 255),
             );
         }
     }
 
     #[cfg(debug_assertions)]
     pub fn debug_draw_entities_quad_id(&self, ecs_world: &Ecs_World, painter: &mut Debug_Painter) {
-        use crate::core::common::colors;
+        use crate::common::colors;
 
         for &entity in &self.entities_buf {
             let id = self

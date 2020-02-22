@@ -1,8 +1,8 @@
 use super::{Game_Resources, Game_State};
+use ecs_engine::common::angle::rad;
+use ecs_engine::common::colors;
+use ecs_engine::common::Maybe_Error;
 use ecs_engine::core::app;
-use ecs_engine::core::common::angle::rad;
-use ecs_engine::core::common::colors;
-use ecs_engine::core::common::Maybe_Error;
 use ecs_engine::core::time;
 use ecs_engine::gfx;
 use ecs_engine::gfx::render_system;
@@ -12,9 +12,9 @@ use std::time::Duration;
 #[rustfmt::skip]
 #[cfg(debug_assertions)]
 use ecs_engine::{
-    core::common::stringid::String_Id,
-    core::common::vector::Vec2f,
-    core::common::transform::Transform2D,
+    common::stringid::String_Id,
+    common::vector::Vec2f,
+    common::transform::Transform2D,
     debug,
     debug::painter::Debug_Painter,
     gfx::paint_props::Paint_Properties,
@@ -64,12 +64,27 @@ pub fn tick_game<'a>(
 
     // Update input
     {
-        trace!("input_system::update", _tracer);
-        systems.input_system.update(
-            window,
-            &mut *game_state.input_provider,
-            &engine_state.config,
-        );
+        let mut_in_debug!(do_update_input) = true;
+        #[cfg(debug_assertions)]
+        {
+            if debug_systems.console.status == debug::console::Console_Status::Open {
+                do_update_input = false;
+                debug_systems.console.update(
+                    window,
+                    &mut *game_state.input_provider,
+                    &engine_state.config,
+                );
+            }
+        }
+
+        if do_update_input {
+            trace!("input_system::update", _tracer);
+            systems.input_system.update(
+                window,
+                &mut *game_state.input_provider,
+                &engine_state.config,
+            );
+        }
     }
 
     // Handle actions
@@ -126,6 +141,16 @@ pub fn tick_game<'a>(
             ) {
                 engine_state.should_close = true;
                 return Ok(false);
+            }
+        }
+
+        #[cfg(debug_assertions)]
+        {
+            if actions.contains(&(
+                String_Id::from("toggle_console"),
+                ecs_engine::input::input_system::Action_Kind::Pressed,
+            )) {
+                engine_state.debug_systems.console.toggle();
             }
         }
 
@@ -293,7 +318,7 @@ fn update_graphics(
         ecs_world: &game_state.gameplay_system.ecs_world,
         frame_lag_normalized,
         cfg: render_cfg,
-	dt: real_dt,
+        dt: real_dt,
         _tracer: clone_tracer!(game_state.engine_state.tracer),
     };
 
@@ -324,6 +349,16 @@ fn update_graphics(
                 .debug_systems
                 .debug_ui_system
                 .update(&real_dt, window, gres);
+        }
+
+        // Draw console
+        {
+            trace!("console::draw", game_state.engine_state.tracer);
+            game_state
+                .engine_state
+                .debug_systems
+                .console
+                .draw(window, gres);
         }
     }
 
@@ -545,7 +580,7 @@ fn debug_draw_colliders(
     ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
 ) {
     use ecs_engine::collisions::collider::{Collider, Collider_Shape};
-    use ecs_engine::core::common::shapes;
+    use ecs_engine::common::shapes;
     use ecs_engine::ecs::components::base::C_Spatial2D;
 
     let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
@@ -596,7 +631,7 @@ fn debug_draw_transforms(
     debug_painter: &mut Debug_Painter,
     ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
 ) {
-    use ecs_engine::core::common::shapes::Circle;
+    use ecs_engine::common::shapes::Circle;
     use ecs_engine::ecs::components::base::C_Spatial2D;
 
     let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
@@ -641,7 +676,7 @@ fn debug_draw_velocities(
     debug_painter: &mut Debug_Painter,
     ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
 ) {
-    use ecs_engine::core::common::shapes::Arrow;
+    use ecs_engine::common::shapes::Arrow;
     use ecs_engine::ecs::components::base::C_Spatial2D;
 
     const COLOR: colors::Color = colors::rgb(100, 0, 120);

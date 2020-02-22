@@ -25,6 +25,24 @@ impl From<sfml::system::Vector2f> for Vec2f {
     }
 }
 
+impl<T: Copy> From<(T, T)> for Vector2<T> {
+    fn from((x, y): (T, T)) -> Self {
+        Self::new(x, y)
+    }
+}
+
+impl From<Vec2u> for Vec2f {
+    fn from(v: Vec2u) -> Self {
+        Self::new(v.x as f32, v.y as f32)
+    }
+}
+
+impl From<Vec2i> for Vec2f {
+    fn from(v: Vec2i) -> Self {
+        Self::new(v.x as f32, v.y as f32)
+    }
+}
+
 impl<T> Vector2<T> {
     pub const fn new(x: T, y: T) -> Self {
         Self { x, y }

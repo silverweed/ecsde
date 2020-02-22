@@ -3,10 +3,10 @@ use super::bindings::joystick;
 use super::bindings::{Axis_Emulation_Type, Input_Bindings};
 use super::core_actions::Core_Action;
 use super::joystick_mgr::{Joystick_Manager, Real_Axes_Values};
-use super::provider::Input_Provider;
+use super::provider::{Input_Provider, Input_Provider_Input};
 use crate::cfg;
-use crate::core::common::stringid::String_Id;
-use crate::core::common::Maybe_Error;
+use crate::common::stringid::String_Id;
+use crate::common::Maybe_Error;
 use crate::core::env::Env_Info;
 use std::convert::TryInto;
 
@@ -85,15 +85,18 @@ impl Input_System {
         &self.raw_events
     }
 
-    #[cfg(feature = "use-sfml")]
+    pub fn get_bindings(&self) -> &Input_Bindings {
+        &self.bindings
+    }
+
     pub fn update(
         &mut self,
-        window: &mut sfml::graphics::RenderWindow,
+        window: &mut Input_Provider_Input,
         provider: &mut dyn Input_Provider,
         cfg: &cfg::Config,
     ) {
-        sfml::window::joystick::update();
-        provider.update(window, &self.joystick_mgr, cfg);
+        joystick::update_joysticks();
+        provider.update(window, Some(&self.joystick_mgr), cfg);
 
         self.joystick_mgr.update_from_input_provider(provider);
         self.update_real_axes(); // Note: these axes values may be later overwritten by actions
@@ -102,7 +105,6 @@ impl Input_System {
         self.read_events_to_actions(events);
     }
 
-    #[cfg(feature = "use-sfml")]
     fn read_events_to_actions(&mut self, events: &[Input_Raw_Event]) {
         let bindings = &self.bindings;
         self.core_actions.clear();
@@ -135,6 +137,7 @@ impl Input_System {
             self.raw_events.push(event);
             let prev_core_actions_len = self.core_actions.len();
 
+            #[cfg(feature = "use-sfml")]
             match event {
                 // Core Actions
                 Event::Closed { .. } => self.core_actions.push(Core_Action::Quit),

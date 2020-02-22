@@ -30,8 +30,8 @@ use std::time::Duration;
 #[cfg(debug_assertions)]
 #[rustfmt::skip]
 use ecs_engine::{
-    core::common::colors,
-    core::common::stringid::String_Id,
+    common::colors,
+    common::stringid::String_Id,
     debug
 };
 
@@ -134,11 +134,7 @@ pub unsafe extern "C" fn game_init<'a>(
     let mut args: Vec<String> = Vec::with_capacity(args_count);
     for i in 0..args_count {
         let arg = raw_args.add(i);
-        assert!(
-            !(*arg).is_null(),
-            "{}-th cmdline argument is null!",
-            i
-        );
+        assert!(!(*arg).is_null(), "{}-th cmdline argument is null!", i);
         args.push(new_string_from_c_char_ptr(*arg));
     }
 
@@ -350,10 +346,9 @@ fn create_game_state<'a>(
     {
         app::start_config_watch(&engine_state.env, &mut engine_state.config)?;
 
-		let ui_scale = Cfg_Var::<f32>::new("engine/debug/ui/ui_scale", &engine_state.config).read(&engine_state.config);
-		let cfg = debug::debug_ui_system::Debug_Ui_System_Config {
-			ui_scale
-		};
+        let ui_scale = Cfg_Var::<f32>::new("engine/debug/ui/ui_scale", &engine_state.config)
+            .read(&engine_state.config);
+        let cfg = debug::debug_ui_system::Debug_Ui_System_Config { ui_scale };
         app::init_engine_debug(&mut engine_state, &mut game_resources.gfx, cfg)?;
 
         app::start_recording(&mut engine_state)?;
@@ -427,7 +422,8 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
     let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
     let draw_entities = Cfg_Var::new("engine/debug/entities/draw_entities", cfg);
-    let draw_entities_velocities = Cfg_Var::new("engine/debug/entities/draw_entities_velocities", cfg);
+    let draw_entities_velocities =
+        Cfg_Var::new("engine/debug/entities/draw_entities_velocities", cfg);
     let draw_colliders = Cfg_Var::new("engine/debug/collisions/draw_colliders", cfg);
     let draw_collision_quadtree =
         Cfg_Var::new("engine/debug/collisions/draw_collision_quadtree", cfg);
@@ -478,7 +474,7 @@ fn init_states(
 
 #[cfg(debug_assertions)]
 fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resources) {
-    use ecs_engine::core::common::vector::Vec2f;
+    use ecs_engine::common::vector::Vec2f;
     use ecs_engine::debug::overlay::Debug_Overlay_Config;
     use ecs_engine::gfx::align::Align;
 
@@ -489,7 +485,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         &game_state.engine_state.env,
         FONT,
     ));
-	let ui_scale = debug_ui.config().ui_scale;
+    let ui_scale = debug_ui.config().ui_scale;
 
     let overlay_cfg = Debug_Overlay_Config {
         row_spacing: 20.0 * ui_scale,

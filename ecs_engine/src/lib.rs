@@ -14,8 +14,6 @@ extern crate bitflags;
 
 #[cfg(debug_assertions)]
 extern crate notify;
-#[cfg(debug_assertions)]
-extern crate rustyline;
 
 #[cfg(debug_assertions)]
 #[macro_use]
@@ -40,6 +38,7 @@ pub mod alloc;
 pub mod audio;
 pub mod cfg;
 pub mod collisions;
+pub mod common;
 pub mod core;
 pub mod ecs;
 pub mod fs;

@@ -1,5 +1,5 @@
 use super::joystick_mgr::Joystick_Manager;
-use crate::core::common::stringid::String_Id;
+use crate::common::stringid::String_Id;
 use std::collections::HashMap;
 use std::path::Path;
 use std::vec::Vec;
@@ -13,7 +13,7 @@ mod parsing;
 use joystick::Joystick_Button;
 use mouse::Mouse_Button;
 
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum Input_Action {
     Key(keyboard::Key),
     Joystick(Joystick_Button),
@@ -74,6 +74,21 @@ impl Input_Bindings {
         real_axis: joystick::Joystick_Axis,
     ) -> &[String_Id] {
         &self.axis_bindings.real[real_axis as usize]
+    }
+
+    /// Makes an inverse search in the bindings, returning all kinds of actions that yield the given `action_name`.
+    #[cfg(debug_assertions)]
+    pub fn get_all_actions_triggering(&self, action_name: String_Id) -> Vec<Input_Action> {
+        self.action_bindings
+            .iter()
+            .filter_map(|(action, names)| {
+                if names.contains(&action_name) {
+                    Some(*action)
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     pub(super) fn get_key_actions(&self, code: keyboard::Key) -> Option<&Vec<String_Id>> {

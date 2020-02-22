@@ -1,7 +1,7 @@
 use super::recording_thread;
 use super::replay_data::{Replay_Data_Point, Replay_Joystick_Data};
 use crate::cfg::{self, Cfg_Var};
-use crate::core::common::Maybe_Error;
+use crate::common::Maybe_Error;
 use crate::input::bindings::joystick::{self, Joystick_Axis};
 use crate::input::input_system::Input_Raw_Event;
 use crate::input::joystick_mgr::Real_Axes_Values;

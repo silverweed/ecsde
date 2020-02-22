@@ -1,7 +1,7 @@
+use crate::common::colors::{self, Color};
+use crate::common::rect::Rect;
+use crate::common::vector::Vec2f;
 use crate::core;
-use crate::core::common::colors::{self, Color};
-use crate::core::common::rect::Rect;
-use crate::core::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
 use crate::gfx::render::Text;
@@ -109,7 +109,7 @@ impl Fadeout_Debug_Overlay {
         // Draw background
         gfx::render::fill_color_rect(
             window,
-			self.config.background,
+            self.config.background,
             Rect::new(
                 position.x
                     + self

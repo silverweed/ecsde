@@ -1,8 +1,8 @@
-use crate::core::common::colors::Color;
-use crate::core::common::rect::{Rect, Rectf};
-use crate::core::common::shapes;
-use crate::core::common::transform::Transform2D;
-use crate::core::common::vector::Vec2f;
+use crate::common::colors::Color;
+use crate::common::rect::{Rect, Rectf};
+use crate::common::shapes;
+use crate::common::transform::Transform2D;
+use crate::common::vector::Vec2f;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::window::{get_blend_mode, Window_Handle};
 use sfml::graphics::Shape;
@@ -306,8 +306,10 @@ fn render_vbuf_internal(
     window.draw_vertex_array(vbuf, render_states);
 }
 
-pub fn set_text_fill_color(text: &mut Text, color: Color) {
-    text.set_fill_color(color.into());
+pub fn set_text_paint_props(text: &mut Text, paint_props: Paint_Properties) {
+    text.set_fill_color(paint_props.color.into());
+    text.set_outline_color(paint_props.border_color.into());
+    text.set_outline_thickness(paint_props.border_thick);
 }
 
 pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {

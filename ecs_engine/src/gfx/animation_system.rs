@@ -45,7 +45,7 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, mut entity_stream: Entit
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::common::rect::Rect;
+    use crate::common::rect::Rect;
     use crate::ecs::entity_stream::new_entity_stream;
     use crate::resources::gfx::tex_path;
     use crate::test_common;

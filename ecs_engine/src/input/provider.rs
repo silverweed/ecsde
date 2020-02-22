@@ -12,7 +12,7 @@ pub trait Input_Provider {
     fn update(
         &mut self,
         args: &mut Input_Provider_Input,
-        joy_mgr: &Joystick_Manager,
+        joy_mgr: Option<&Joystick_Manager>,
         cfg: &cfg::Config,
     );
     fn get_events(&self) -> &[Input_Raw_Event];

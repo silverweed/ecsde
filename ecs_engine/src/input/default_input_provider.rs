@@ -17,7 +17,7 @@ impl Input_Provider for Default_Input_Provider {
     fn update(
         &mut self,
         window: &mut Input_Provider_Input,
-        joy_mgr: &Joystick_Manager,
+        joy_mgr: Option<&Joystick_Manager>,
         _: &cfg::Config,
     ) {
         self.events.clear();
@@ -25,14 +25,16 @@ impl Input_Provider for Default_Input_Provider {
             self.events.push(evt);
         }
 
-        for joy_id in 0..joystick::JOY_COUNT {
-            if let Some(joy) = joy_mgr.get_joystick(joy_id) {
-                for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
-                    let axis = i.try_into().unwrap_or_else(|err| {
-                        panic!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
-                    });
-                    self.axes[joy_id as usize][i as usize] =
-                        joystick::get_joy_axis_value(*joy, axis);
+        if let Some(joy_mgr) = joy_mgr {
+            for joy_id in 0..joystick::JOY_COUNT {
+                if let Some(joy) = joy_mgr.get_joystick(joy_id) {
+                    for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
+                        let axis = i.try_into().unwrap_or_else(|err| {
+                            panic!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
+                        });
+                        self.axes[joy_id as usize][i as usize] =
+                            joystick::get_joy_axis_value(*joy, axis);
+                    }
                 }
             }
         }

@@ -1,4 +1,4 @@
-use crate::core::common::colors::Color;
+use crate::common::colors::Color;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Camera2D, C_Renderable};
 use crate::ecs::ecs_world::{Ecs_World, Entity};
@@ -90,7 +90,7 @@ impl Render_System {
                 if cfg.draw_sprites_bg {
                     gfx::render::fill_color_rect_ws(
                         window,
-						cfg.draw_sprites_bg_color,
+                        cfg.draw_sprites_bg_color,
                         gfx::render::sprite_global_bounds(&sprite),
                         &rend_transform,
                         &camera.transform,

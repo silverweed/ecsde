@@ -1,7 +1,7 @@
 #![cfg(feature = "use-sfml")]
 
-use crate::core::common::colors::{self, Color};
-use crate::core::common::rect::Rectf;
+use crate::common::colors::{self, Color};
+use crate::common::rect::Rectf;
 use sfml::graphics::blend_mode::BlendMode;
 use sfml::graphics::{RenderTarget, RenderWindow};
 use sfml::window;

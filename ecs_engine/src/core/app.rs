@@ -1,8 +1,8 @@
 use super::app_config::App_Config;
-use super::common::Maybe_Error;
 use super::env::Env_Info;
 use super::time;
 use crate::cfg;
+use crate::common::Maybe_Error;
 use crate::core::systems::Core_Systems;
 use crate::fs;
 use crate::gfx;
@@ -12,8 +12,8 @@ use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use {
-    super::common::stringid::String_Id,
     crate::cfg::Cfg_Var,
+    crate::common::stringid::String_Id,
     crate::core::systems::Debug_Systems,
     crate::debug,
     crate::replay::{replay_data, replay_input_provider},
@@ -107,10 +107,10 @@ pub fn start_recording(engine_state: &mut Engine_State) -> Maybe_Error {
 pub fn init_engine_debug(
     engine_state: &mut Engine_State<'_>,
     gfx_resources: &mut Gfx_Resources<'_>,
-	cfg: debug::debug_ui_system::Debug_Ui_System_Config,
+    cfg: debug::debug_ui_system::Debug_Ui_System_Config,
 ) -> Maybe_Error {
-    use crate::core::common::colors;
-    use crate::core::common::vector::Vec2f;
+    use crate::common::colors;
+    use crate::common::vector::{Vec2f, Vec2u};
     use crate::gfx::align;
     use debug::{fadeout_overlay, overlay};
 
@@ -124,15 +124,15 @@ pub fn init_engine_debug(
         engine_state.app_config.target_win_size.0 as f32,
         engine_state.app_config.target_win_size.1 as f32,
     );
-	let ui_scale = cfg.ui_scale;
+    let ui_scale = cfg.ui_scale;
     let debug_ui_system = &mut engine_state.debug_systems.debug_ui_system;
-	debug_ui_system.init(cfg);
+    debug_ui_system.init(cfg);
 
     // Debug overlays
     {
         let mut debug_overlay_config = overlay::Debug_Overlay_Config {
             row_spacing: 2.0 * ui_scale,
-            font_size: (14.0 * ui_scale) as u16,
+            font_size: (14.0 * ui_scale) as _,
             pad_x: 5.0 * ui_scale,
             pad_y: 5.0 * ui_scale,
             background: colors::rgba(25, 25, 25, 210),
@@ -146,7 +146,7 @@ pub fn init_engine_debug(
         joy_overlay.horiz_align = align::Align::End;
         joy_overlay.position = Vec2f::new(target_win_size_x, 0.0);
 
-        debug_overlay_config.font_size = (13.0 * ui_scale) as u16;
+        debug_overlay_config.font_size = (13.0 * ui_scale) as _;
         let mut time_overlay =
             debug_ui_system.create_overlay(String_Id::from("time"), debug_overlay_config, font);
         time_overlay.horiz_align = align::Align::End;
@@ -158,7 +158,7 @@ pub fn init_engine_debug(
         fps_overlay.vert_align = align::Align::End;
         fps_overlay.position = Vec2f::new(0.0, target_win_size_y as f32);
 
-        debug_overlay_config.font_size = (11.0 * ui_scale) as u16;
+        debug_overlay_config.font_size = (11.0 * ui_scale) as _;
         let mut trace_overlay =
             debug_ui_system.create_overlay(String_Id::from("trace"), debug_overlay_config, font);
         trace_overlay.vert_align = align::Align::Middle;
@@ -175,12 +175,12 @@ pub fn init_engine_debug(
     {
         let fadeout_overlay_config = fadeout_overlay::Fadeout_Debug_Overlay_Config {
             row_spacing: 2.0 * ui_scale,
-            font_size: (20.0 * ui_scale) as u16,
+            font_size: (20.0 * ui_scale) as _,
             pad_x: 5.0 * ui_scale,
             pad_y: 5.0 * ui_scale,
             background: colors::rgba(25, 25, 25, 210),
             fadeout_time: Duration::from_secs(3),
-            max_rows: (30.0 / ui_scale.max(0.1)) as usize,
+            max_rows: (30.0 / ui_scale.max(0.1)) as _,
         };
 
         let mut fadeout_overlay = debug_ui_system.create_fadeout_overlay(
@@ -196,6 +196,30 @@ pub fn init_engine_debug(
         .debug_systems
         .debug_painter
         .init(gfx_resources, &engine_state.env);
+
+    {
+        use crate::input::bindings::Input_Action;
+
+        let (win_width, win_height) = engine_state.app_config.target_win_size;
+        let console = &mut engine_state.debug_systems.console;
+        console.size = Vec2u::new(win_width, win_height / 2);
+        console.font_size = (console.font_size as f32 * ui_scale) as _;
+        console.toggle_console_keys = engine_state
+            .systems
+            .input_system
+            .get_bindings()
+            .get_all_actions_triggering(String_Id::from("toggle_console"))
+            .iter()
+            .filter_map(|action| {
+                if let Input_Action::Key(key) = action {
+                    Some(*key)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        console.init(gfx_resources, &engine_state.env);
+    }
 
     Ok(())
 }
@@ -274,7 +298,7 @@ pub fn maybe_update_trace_overlay(engine_state: &mut Engine_State, refresh_rate:
 
 #[cfg(debug_assertions)]
 fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
-    use crate::core::common::colors;
+    use crate::common::colors;
     use crate::debug::overlay::Debug_Overlay;
     use crate::debug::tracer::{build_trace_trees, sort_trace_trees, Trace_Tree, Tracer_Node};
 

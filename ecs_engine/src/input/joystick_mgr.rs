@@ -1,6 +1,6 @@
 use super::bindings::joystick::{self, Joystick, Joystick_Axis};
 use super::provider::Input_Provider;
-use crate::core::common::Maybe_Error;
+use crate::common::Maybe_Error;
 use std::default::Default;
 
 const JOY_COUNT: usize = joystick::JOY_COUNT as usize;

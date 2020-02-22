@@ -1,5 +1,5 @@
 use crate::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
-use crate::core::common::transform::Transform2D;
+use crate::common::transform::Transform2D;
 use crate::ecs::ecs_world::Entity;
 
 type Node = Generational_Index;
@@ -155,7 +155,7 @@ impl Scene_Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::common::angle::deg;
+    use crate::common::angle::deg;
     use crate::ecs::ecs_world::Ecs_World;
     use float_cmp::ApproxEq;
 

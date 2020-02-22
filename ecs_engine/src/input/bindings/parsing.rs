@@ -2,7 +2,7 @@ use super::joystick;
 use super::keyboard;
 use super::mouse;
 use super::Input_Action;
-use crate::core::common::stringid::String_Id;
+use crate::common::stringid::String_Id;
 use crate::input::bindings::Axis_Bindings;
 use crate::input::bindings::Axis_Emulation_Type;
 use std::collections::HashMap;
@@ -85,7 +85,7 @@ fn parse_action_bindings_lines(
             let action_id = String_Id::from(action_name);
             bindings
                 .entry(key)
-                .or_insert_with(|| Vec::with_capacity(16))
+                .or_insert_with(|| Vec::with_capacity(8))
                 .push(action_id);
         }
     }

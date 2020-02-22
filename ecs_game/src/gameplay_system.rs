@@ -4,12 +4,12 @@ use crate::input_utils::{get_movement_from_input, Input_Config};
 use crate::movement_system;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider;
-use ecs_engine::core::common;
-use ecs_engine::core::common::colors;
-use ecs_engine::core::common::rect::Rect;
-use ecs_engine::core::common::stringid::String_Id;
-use ecs_engine::core::common::transform::Transform2D;
-use ecs_engine::core::common::vector::Vec2f;
+use ecs_engine::common;
+use ecs_engine::common::colors;
+use ecs_engine::common::rect::Rect;
+use ecs_engine::common::stringid::String_Id;
+use ecs_engine::common::transform::Transform2D;
+use ecs_engine::common::vector::Vec2f;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::rand;
 use ecs_engine::core::scene_tree;
@@ -403,7 +403,7 @@ impl Gameplay_System {
                 t.velocity = Vec2f::new(-50.0, 0.);
             }
             {
-                //use ecs_engine::core::common::angle::deg;
+                //use ecs_engine::common::angle::deg;
                 //let speed = 90.0;
                 //if i % 10 == 0 {
                 //t.local_transform.rotate(deg(dt_secs * speed));

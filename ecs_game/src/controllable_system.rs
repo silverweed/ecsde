@@ -1,6 +1,6 @@
 use crate::input_utils::{get_movement_from_input, Input_Config};
 use ecs_engine::cfg::{self, Cfg_Var};
-use ecs_engine::core::common::vector::Vec2f;
+use ecs_engine::common::vector::Vec2f;
 use ecs_engine::core::time;
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::ecs_world::Ecs_World;

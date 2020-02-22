@@ -1,4 +1,4 @@
-use crate::core::common::serialize::{Binary_Serializable, Byte_Stream};
+use crate::common::serialize::{Binary_Serializable, Byte_Stream};
 use crate::input::bindings::{keyboard, mouse};
 use sfml::window::Event;
 use std::io;

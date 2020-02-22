@@ -1,6 +1,6 @@
 use super::config::Config;
 use super::value::Cfg_Value;
-use crate::core::common::stringid::String_Id;
+use crate::common::stringid::String_Id;
 use std::any::type_name;
 use std::convert::{From, Into, TryFrom};
 use std::fmt::Debug;

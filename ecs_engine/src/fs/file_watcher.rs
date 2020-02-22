@@ -1,6 +1,6 @@
 #![cfg(debug_assertions)]
 
-use crate::core::common::Maybe_Error;
+use crate::common::Maybe_Error;
 use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
 use std::path::PathBuf;
 use std::sync::mpsc::channel;

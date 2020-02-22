@@ -1,8 +1,8 @@
-use crate::core::common::angle::rad;
-use crate::core::common::rect::Rect;
-use crate::core::common::shapes::{Arrow, Circle};
-use crate::core::common::transform::Transform2D;
-use crate::core::common::vector::Vec2f;
+use crate::common::angle::rad;
+use crate::common::rect::Rect;
+use crate::common::shapes::{Arrow, Circle};
+use crate::common::transform::Transform2D;
+use crate::common::vector::Vec2f;
 use crate::core::env::Env_Info;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render::{self, Text};

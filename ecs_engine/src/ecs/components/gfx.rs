@@ -1,6 +1,6 @@
-use crate::core::common::colors;
-use crate::core::common::rect::Rect;
-use crate::core::common::transform::Transform2D;
+use crate::common::colors;
+use crate::common::rect::Rect;
+use crate::common::transform::Transform2D;
 use crate::resources;
 
 #[derive(Copy, Clone, Debug)]

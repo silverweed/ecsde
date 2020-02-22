@@ -1,4 +1,4 @@
-use crate::core::common::colors::{self, Color};
+use crate::common::colors::{self, Color};
 use std::convert::From;
 use std::default::Default;
 
