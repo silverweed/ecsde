@@ -1,4 +1,3 @@
-use crate::cfg::Config;
 use crate::common::colors;
 use crate::common::rect::Rect;
 use crate::common::vector::{Vec2f, Vec2u};
@@ -7,14 +6,19 @@ use crate::gfx::render;
 use crate::gfx::window::Window_Handle;
 use crate::input::bindings::keyboard;
 use crate::input::input_system::Input_Raw_Event;
-use crate::input::provider::{Input_Provider, Input_Provider_Input};
 use crate::resources::gfx;
+
+mod history;
+
+use history::{Direction, History};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Console_Status {
     Open,
     Closed,
 }
+
+const HIST_SIZE: usize = 50;
 
 pub struct Console {
     pub status: Console_Status,
@@ -23,12 +27,13 @@ pub struct Console {
     pub font_size: u16,
     // This should be (externally) set equal to the "toggle_console" action keys.
     pub toggle_console_keys: Vec<keyboard::Key>,
+
     font: gfx::Font_Handle,
     cur_line: String,
     cur_pos: usize,
-    // @Temporary
+    enqueued_cmd: Option<String>,
+    history: History<String>,
     hints: Vec<String>,
-    // @Temporary
     hints_displayed: Vec<usize>,
 }
 
@@ -43,7 +48,9 @@ impl Console {
             cur_pos: 0,
             font: None,
             toggle_console_keys: vec![],
-            hints: vec!["foo.bar".to_string(), "fooz.quuz".to_string()],
+            enqueued_cmd: None,
+            history: History::with_capacity(HIST_SIZE),
+            hints: vec![],
             hints_displayed: vec![],
         }
     }
@@ -62,17 +69,21 @@ impl Console {
         self.status
     }
 
-    pub fn update(
-        &mut self,
-        window: &mut Input_Provider_Input,
-        provider: &mut dyn Input_Provider,
-        cfg: &Config,
-    ) {
-        provider.update(window, None, cfg);
-        let events = provider.get_events();
+    pub fn update(&mut self, events: &[Input_Raw_Event]) {
         for event in events {
             self.process_event(*event);
         }
+    }
+
+    pub fn pop_enqueued_cmd(&mut self) -> Option<String> {
+        self.enqueued_cmd.take()
+    }
+
+    pub fn add_hints<I>(&mut self, hints: I)
+    where
+        I: IntoIterator<Item = String>,
+    {
+        self.hints.extend(hints);
     }
 
     #[cfg(feature = "use-sfml")]
@@ -80,7 +91,6 @@ impl Console {
         use keyboard::Key;
         use sfml::window::Event;
 
-        debug_assert!(self.cur_pos >= 0);
         debug_assert!(self.cur_pos <= self.cur_line.len());
 
         match event {
@@ -98,19 +108,22 @@ impl Console {
                     self.del_prev_char();
                 }
             }
-            Event::KeyPressed {
-                code: Key::Up,
-                ctrl,
-                ..
-            } => {
-                // TODO: move in history
+            Event::KeyPressed { code: Key::Up, .. } => {
+                if let Some(line) = self.history.move_and_read(Direction::To_Older) {
+                    self.cur_line = line.to_string();
+                    self.cur_pos = self.cur_line.len();
+                }
             }
             Event::KeyPressed {
-                code: Key::Down,
-                ctrl,
-                ..
+                code: Key::Down, ..
             } => {
-                // TODO: move in history
+                if !self.history.is_cursor_past_end() {
+                    self.cur_line = self
+                        .history
+                        .move_and_read(Direction::To_Newer)
+                        .map_or_else(|| String::from(""), |s| s.to_string());
+                    self.cur_pos = self.cur_line.len();
+                }
             }
             Event::KeyPressed {
                 code: Key::Left,
@@ -142,10 +155,18 @@ impl Console {
                 self.cur_pos = 0;
             }
             Event::KeyPressed {
+                code: Key::Home, ..
+            } => {
+                self.cur_pos = 0;
+            }
+            Event::KeyPressed {
                 code: Key::E,
                 ctrl: true,
                 ..
             } => {
+                self.cur_pos = self.cur_line.len();
+            }
+            Event::KeyPressed { code: Key::End, .. } => {
                 self.cur_pos = self.cur_line.len();
             }
             Event::KeyPressed {
@@ -156,6 +177,17 @@ impl Console {
                 self.del_prev_word();
             }
             Event::KeyPressed {
+                code: Key::Delete,
+                ctrl,
+                ..
+            } => {
+                if ctrl {
+                    self.del_next_word();
+                } else {
+                    self.del_next_char();
+                }
+            }
+            Event::KeyPressed {
                 code: Key::K,
                 ctrl: true,
                 ..
@@ -163,13 +195,21 @@ impl Console {
                 self.cur_line.truncate(self.cur_pos);
             }
             Event::KeyPressed {
+                code: Key::D,
+                ctrl: true,
+                ..
+            } => {
+                self.cur_line.clear();
+                self.cur_pos = 0;
+            }
+            Event::KeyPressed {
                 code: Key::Return, ..
             } => {
-                // TODO: commit line
+                self.commit_line();
             }
             Event::KeyPressed { code: Key::Tab, .. } => {
                 if !self.hints_displayed.is_empty() {
-                    // @Incomplete: this is a pretty rudimentary behaviour: consider improving.
+                    // @Improve: this is a pretty rudimentary behaviour: consider improving.
                     self.cur_line = self.hints[self.hints_displayed[0]].clone();
                     self.cur_pos = self.cur_line.len();
                 }
@@ -185,30 +225,63 @@ impl Console {
         self.update_hints();
     }
 
+    fn commit_line(&mut self) {
+        let cmdline = self.cur_line.trim().to_string();
+        self.history.push(cmdline.clone());
+        self.enqueued_cmd = Some(cmdline);
+        self.cur_line.clear();
+        self.cur_pos = 0;
+    }
+
     fn update_hints(&mut self) {
         self.hints_displayed.clear();
 
-        if self.cur_line.is_empty() {
+        let cur_line = self.cur_line.trim();
+        if cur_line.is_empty() {
             return;
         }
 
-        // @Incomplete: sort by relevance
+        // @Improve: sort by relevance
         for (i, hint) in self.hints.iter().enumerate() {
-            if hint.contains(&self.cur_line) {
+            if hint.contains(cur_line) {
                 self.hints_displayed.push(i);
             }
         }
     }
 
     fn del_prev_char(&mut self) -> Option<char> {
+        debug_assert!(self.cur_pos <= self.cur_line.len());
+
         if self.cur_pos > 0 {
             self.cur_pos -= 1;
+        } else {
+            return None;
         }
-        self.cur_line.pop()
+
+        if self.cur_pos < self.cur_line.len() {
+            Some(self.cur_line.remove(self.cur_pos))
+        } else {
+            None
+        }
     }
 
     fn del_prev_word(&mut self) {
         while self.cur_pos > 0 && self.del_prev_char() != Some(' ') {}
+    }
+
+    fn del_next_char(&mut self) -> Option<char> {
+        debug_assert!(self.cur_pos <= self.cur_line.len());
+
+        if self.cur_pos <= self.cur_line.len() {
+            Some(self.cur_line.remove(self.cur_pos))
+        } else {
+            None
+        }
+    }
+
+    fn del_next_word(&mut self) {
+        // @Improve: this works pretty bad, should be more like move_one_word().
+        while self.cur_pos < self.cur_line.len() && self.del_next_char() != Some(' ') {}
     }
 
     fn move_one_char(&mut self, sign: i8) {
@@ -217,42 +290,29 @@ impl Console {
             if self.cur_pos > 0 {
                 self.cur_pos -= 1;
             }
-        } else {
-            if self.cur_pos < self.cur_line.len() {
-                self.cur_pos += 1;
-            }
+        } else if self.cur_pos < self.cur_line.len() {
+            self.cur_pos += 1;
         }
     }
 
     fn move_one_word(&mut self, sign: i8) {
         let sign = sign.signum();
+
+        fn char_at(s: &str, idx: usize) -> char {
+            s.chars().nth(idx).unwrap()
+        }
+
         let mut crossed_ws = false;
         if sign < 0 {
             while self.cur_pos > 0 {
                 self.cur_pos -= 1;
                 if crossed_ws {
-                    if !self
-                        .cur_line
-                        .chars()
-                        .skip(self.cur_pos)
-                        .next()
-                        .unwrap()
-                        .is_whitespace()
-                    {
+                    if !char_at(&self.cur_line, self.cur_pos).is_whitespace() {
                         self.cur_pos += 1;
                         break;
                     }
-                } else {
-                    if self
-                        .cur_line
-                        .chars()
-                        .skip(self.cur_pos)
-                        .next()
-                        .unwrap()
-                        .is_whitespace()
-                    {
-                        crossed_ws = true;
-                    }
+                } else if char_at(&self.cur_line, self.cur_pos).is_whitespace() {
+                    crossed_ws = true;
                 }
             }
         } else {
@@ -262,28 +322,12 @@ impl Console {
                     break;
                 }
                 if crossed_ws {
-                    if !self
-                        .cur_line
-                        .chars()
-                        .skip(self.cur_pos)
-                        .next()
-                        .unwrap()
-                        .is_whitespace()
-                    {
+                    if !char_at(&self.cur_line, self.cur_pos).is_whitespace() {
                         self.cur_pos -= 1;
                         break;
                     }
-                } else {
-                    if self
-                        .cur_line
-                        .chars()
-                        .skip(self.cur_pos)
-                        .next()
-                        .unwrap()
-                        .is_whitespace()
-                    {
-                        crossed_ws = true;
-                    }
+                } else if char_at(&self.cur_line, self.cur_pos).is_whitespace() {
+                    crossed_ws = true;
                 }
             }
         }
@@ -294,27 +338,32 @@ impl Console {
             return;
         }
 
-        // Draw background
-        let Vec2u { x, y } = self.pos;
-        let Vec2u { x: w, y: h } = self.size;
-        render::fill_color_rect(window, colors::rgba(0, 0, 0, 150), Rect::new(x, y, w, h));
-
         // @Temporary
         let pad_x = 5.0;
         let linesep = self.font_size as f32 * 1.2;
 
+        // Draw background
+        let Vec2u { x, y } = self.pos;
+        let Vec2u { x: w, y: h } = self.size;
+        render::fill_color_rect(
+            window,
+            colors::rgba(0, 0, 0, 150),
+            Rect::new(x, y, w, h - linesep as u32),
+        );
+        render::fill_color_rect(
+            window,
+            colors::rgba(30, 30, 30, 200),
+            Rect::new(x, h - linesep as u32, w, linesep as u32),
+        );
+
         // Draw cur line
         let font = gres.get_font(self.font);
         let mut text = render::create_text(&self.cur_line, font, self.font_size);
-        let mut pos = Vec2f::from(self.pos) + Vec2f::new(pad_x, self.size.y as f32);
+        let mut pos = Vec2f::from(self.pos) + Vec2f::new(pad_x, self.size.y as f32 - linesep);
         render::render_text(window, &mut text, pos);
 
         // Draw cursor
-        let Rect {
-            width: line_w,
-            height: line_h,
-            ..
-        } = render::get_text_local_bounds(&text);
+        let Rect { width: line_w, .. } = render::get_text_local_bounds(&text);
         let cursor = Rect::new(
             pad_x + (self.cur_pos as f32 / self.cur_line.len().max(1) as f32) * line_w as f32,
             pos.y + linesep,
@@ -323,11 +372,42 @@ impl Console {
         );
         render::fill_color_rect(window, colors::WHITE, cursor);
 
+        // Draw history
+        {
+            let mut pos = pos - Vec2f::new(0.0, linesep as f32);
+            for line in self.history.iter().rev() {
+                let mut text = render::create_text(line, font, self.font_size);
+                render::set_text_paint_props(&mut text, colors::rgba(200, 200, 200, 200));
+                render::render_text(window, &mut text, pos);
+                pos.y -= linesep;
+                if pos.y < -linesep {
+                    break;
+                }
+            }
+        }
+
+        // Draw hints
+        let mut texts = Vec::with_capacity(self.hints_displayed.len());
         for idx in &self.hints_displayed {
-            pos.y -= linesep;
             let mut text =
                 render::create_text(&self.hints[*idx], font, (self.font_size as f32 * 0.9) as _);
             render::set_text_paint_props(&mut text, colors::rgba(200, 200, 200, 255));
+
+            texts.push(text);
+        }
+
+        {
+            let position = pos - Vec2f::new(0.0, linesep as f32 * texts.len() as f32);
+            let tot_height = linesep as f32 * texts.len() as f32;
+            render::fill_color_rect(
+                window,
+                colors::rgb(20, 20, 20),
+                Rect::new(position.x, position.y, w as f32, tot_height),
+            );
+        }
+
+        for mut text in texts {
+            pos.y -= linesep;
             render::render_text(window, &mut text, pos);
         }
     }

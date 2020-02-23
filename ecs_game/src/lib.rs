@@ -15,6 +15,9 @@ mod input_utils;
 mod movement_system;
 mod states;
 
+#[cfg(debug_assertions)]
+mod debug;
+
 use ecs_engine::cfg;
 use ecs_engine::cfg::Cfg_Var;
 use ecs_engine::core::env::Env_Info;
@@ -32,7 +35,7 @@ use std::time::Duration;
 use ecs_engine::{
     common::colors,
     common::stringid::String_Id,
-    debug
+    debug as ngdebug
 };
 
 #[repr(C)]
@@ -44,7 +47,7 @@ pub struct Game_State<'a> {
 
     pub state_mgr: states::state_manager::State_Manager,
     #[cfg(debug_assertions)]
-    pub fps_debug: debug::fps::Fps_Console_Printer,
+    pub fps_debug: ngdebug::fps::Fps_Console_Printer,
 
     pub execution_time: Duration,
     pub input_provider: Box<dyn input::provider::Input_Provider>,
@@ -348,7 +351,7 @@ fn create_game_state<'a>(
 
         let ui_scale = Cfg_Var::<f32>::new("engine/debug/ui/ui_scale", &engine_state.config)
             .read(&engine_state.config);
-        let cfg = debug::debug_ui_system::Debug_Ui_System_Config { ui_scale };
+        let cfg = ngdebug::debug_ui_system::Debug_Ui_System_Config { ui_scale };
         app::init_engine_debug(&mut engine_state, &mut game_resources.gfx, cfg)?;
 
         app::start_recording(&mut engine_state)?;
@@ -372,7 +375,7 @@ fn create_game_state<'a>(
             engine_state,
 
             #[cfg(debug_assertions)]
-            fps_debug: debug::fps::Fps_Console_Printer::new(&Duration::from_secs(2), "game"),
+            fps_debug: ngdebug::fps::Fps_Console_Printer::new(&Duration::from_secs(2), "game"),
 
             execution_time: Duration::default(),
             input_provider,
@@ -509,5 +512,12 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
     overlay.position = Vec2f::new(
         game_state.engine_state.app_config.target_win_size.0 as f32,
         game_state.engine_state.app_config.target_win_size.1 as f32 - 20. * ui_scale,
+    );
+
+    // Console hints
+    game_state.engine_state.debug_systems.console.add_hints(
+        crate::debug::console_executor::ALL_CMD_STRINGS
+            .iter()
+            .map(|s| String::from(*s)),
     );
 }

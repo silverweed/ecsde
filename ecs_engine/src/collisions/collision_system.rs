@@ -8,7 +8,7 @@ use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Components_Map_Safe, Ecs_World, Entity};
 use crate::ecs::entity_stream::new_entity_stream;
 use crate::prelude::*;
-use crossbeam::thread;
+use crossbeam_utils::thread;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};

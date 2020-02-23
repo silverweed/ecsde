@@ -34,20 +34,19 @@ pub fn tick_game<'a>(
     let (sid_joysticks, sid_msg) = (String_Id::from("joysticks"), String_Id::from("msg"));
 
     let window = &mut game_state.window;
-    let engine_state = &mut game_state.engine_state;
-    engine_state.time.update();
+    game_state.engine_state.time.update();
 
-    let dt = engine_state.time.dt();
-    let real_dt = engine_state.time.real_dt();
-    let systems = &mut engine_state.systems;
+    let dt = game_state.engine_state.time.dt();
+    let real_dt = game_state.engine_state.time.real_dt();
+    let systems = &mut game_state.engine_state.systems;
     #[cfg(debug_assertions)]
-    let debug_systems = &mut engine_state.debug_systems;
+    let debug_systems = &mut game_state.engine_state.debug_systems;
 
     let update_time = Duration::from_millis(
         game_state
             .cvars
             .gameplay_update_tick_ms
-            .read(&engine_state.config) as u64,
+            .read(&game_state.engine_state.config) as u64,
     );
 
     game_state.execution_time += dt;
@@ -63,35 +62,57 @@ pub fn tick_game<'a>(
     }
 
     // Update input
+    #[cfg(debug_assertions)]
     {
-        let mut_in_debug!(do_update_input) = true;
-        #[cfg(debug_assertions)]
-        {
-            if debug_systems.console.status == debug::console::Console_Status::Open {
-                do_update_input = false;
-                debug_systems.console.update(
-                    window,
-                    &mut *game_state.input_provider,
-                    &engine_state.config,
-                );
+        systems.input_system.process_game_actions =
+            debug_systems.console.status != debug::console::Console_Status::Open;
+    }
+
+    {
+        trace!("input_system::update", _tracer);
+        systems.input_system.update(
+            window,
+            &mut *game_state.input_provider,
+            &game_state.engine_state.config,
+        );
+    }
+
+    #[cfg(debug_assertions)]
+    {
+        use crate::debug::console_executor;
+
+        trace!("console::update", _tracer);
+        if debug_systems.console.status == debug::console::Console_Status::Open {
+            debug_systems
+                .console
+                .update(systems.input_system.get_raw_events());
+
+            while let Some(cmd) = game_state
+                .engine_state
+                .debug_systems
+                .console
+                .pop_enqueued_cmd()
+            {
+                if !cmd.is_empty() {
+                    console_executor::execute(
+                        &cmd,
+                        &mut game_state.engine_state,
+                        &mut game_state.gameplay_system,
+                    );
+                }
             }
         }
-
-        if do_update_input {
-            trace!("input_system::update", _tracer);
-            systems.input_system.update(
-                window,
-                &mut *game_state.input_provider,
-                &engine_state.config,
-            );
-        }
     }
+
+    let systems = &mut game_state.engine_state.systems;
+    #[cfg(debug_assertions)]
+    let debug_systems = &mut game_state.engine_state.debug_systems;
 
     // Handle actions
     {
         trace!("app::handle_core_actions", _tracer);
         if app::handle_core_actions(&systems.input_system.extract_core_actions(), window) {
-            engine_state.should_close = true;
+            game_state.engine_state.should_close = true;
             return Ok(false);
         }
     }
@@ -113,7 +134,7 @@ pub fn tick_game<'a>(
                 real_axes,
                 joy_mask,
                 game_state.gameplay_system.input_cfg,
-                &engine_state.config,
+                &game_state.engine_state.config,
             );
 
             // Only record replay data if we're not already playing back a replay.
@@ -123,7 +144,7 @@ pub fn tick_game<'a>(
                 let record_replay_data = game_state
                     .debug_cvars
                     .record_replay
-                    .read(&engine_state.config);
+                    .read(&game_state.engine_state.config);
                 if record_replay_data {
                     debug_systems
                         .replay_recording_system
@@ -136,10 +157,10 @@ pub fn tick_game<'a>(
             trace!("state_mgr::handle_actions", _tracer);
             if game_state.state_mgr.handle_actions(
                 &actions,
-                engine_state,
+                &mut game_state.engine_state,
                 &mut game_state.gameplay_system,
             ) {
-                engine_state.should_close = true;
+                game_state.engine_state.should_close = true;
                 return Ok(false);
             }
         }
@@ -150,7 +171,7 @@ pub fn tick_game<'a>(
                 String_Id::from("toggle_console"),
                 ecs_engine::input::input_system::Action_Kind::Pressed,
             )) {
-                engine_state.debug_systems.console.toggle();
+                game_state.engine_state.debug_systems.console.toggle();
             }
         }
 
@@ -158,7 +179,11 @@ pub fn tick_game<'a>(
         {
             trace!("game_update", _tracer);
 
-            let axes = engine_state.systems.input_system.get_virtual_axes();
+            let axes = game_state
+                .engine_state
+                .systems
+                .input_system
+                .get_virtual_axes();
 
             #[cfg(feature = "prof_gameplay")]
             let mut n_gameplay_updates = 0;
@@ -167,7 +192,10 @@ pub fn tick_game<'a>(
             // Maybe we should have a time budget that is more than the one asked by the strict target fps...
             // like 2x, 4x or something.
             let mut frame_budget = {
-                let target_fps = game_state.cvars.target_fps.read(&engine_state.config);
+                let target_fps = game_state
+                    .cvars
+                    .target_fps
+                    .read(&game_state.engine_state.config);
                 Some(3 * std::time::Duration::from_millis((1000 / target_fps) as u64))
             };
             let gameplay_system = &mut game_state.gameplay_system;
@@ -175,10 +203,10 @@ pub fn tick_game<'a>(
 
             gameplay_system.realtime_update(
                 &real_dt,
-                &engine_state.time,
+                &game_state.engine_state.time,
                 &actions,
                 axes,
-                &engine_state.config,
+                &game_state.engine_state.config,
                 clone_tracer!(_tracer),
             );
 
@@ -194,10 +222,10 @@ pub fn tick_game<'a>(
 
                 gameplay_system.update(
                     &update_time,
-                    &engine_state.time,
+                    &game_state.engine_state.time,
                     &actions,
                     axes,
-                    &engine_state.config,
+                    &game_state.engine_state.config,
                     clone_tracer!(_tracer),
                 );
                 game_state.execution_time -= update_time;
@@ -225,7 +253,7 @@ pub fn tick_game<'a>(
     {
         trace!("collision_system::update", _tracer);
 
-        engine_state.systems.collision_system.update(
+        game_state.engine_state.systems.collision_system.update(
             &mut game_state.gameplay_system.ecs_world,
             clone_tracer!(_tracer),
         );
@@ -234,7 +262,7 @@ pub fn tick_game<'a>(
     // Update audio
     {
         trace!("audio_system_update", _tracer);
-        engine_state.systems.audio_system.update();
+        game_state.engine_state.systems.audio_system.update();
     }
 
     #[cfg(debug_assertions)]

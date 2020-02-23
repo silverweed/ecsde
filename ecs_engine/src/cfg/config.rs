@@ -67,12 +67,18 @@ impl Config {
         }
     }
 
+    #[cfg(debug_assertions)]
+    pub fn read_cfg(&self, id: String_Id) -> Option<&Cfg_Value> {
+        self.cfg_var_table.get(&id)
+    }
+
+    #[cfg(not(debug_assertions))]
     pub(super) fn read_cfg(&self, id: String_Id) -> Option<&Cfg_Value> {
         self.cfg_var_table.get(&id)
     }
 
     #[cfg(debug_assertions)]
-    pub(super) fn write_cfg(&mut self, id: String_Id, val: Cfg_Value) {
+    pub fn write_cfg(&mut self, id: String_Id, val: Cfg_Value) {
         self.cfg_var_table.insert(id, val);
     }
 

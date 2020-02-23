@@ -36,6 +36,8 @@ pub struct Input_System {
     axes: axes::Virtual_Axes,
     /// Contains the raw window events that are suitable for becoming game actions.
     raw_events: Vec<Input_Raw_Event>,
+
+    pub process_game_actions: bool,
 }
 
 impl Input_System {
@@ -49,6 +51,7 @@ impl Input_System {
             game_actions: vec![],
             axes,
             raw_events: vec![],
+            process_game_actions: true,
         }
     }
 
@@ -133,6 +136,8 @@ impl Input_System {
 
         self.raw_events.clear();
 
+        let process_game_actions = self.process_game_actions;
+
         for &event in events.iter() {
             self.raw_events.push(event);
             let prev_core_actions_len = self.core_actions.len();
@@ -144,81 +149,125 @@ impl Input_System {
                 Event::Resized { width, height } => {
                     self.core_actions.push(Core_Action::Resize(width, height))
                 }
-                // Game Actions
-                Event::KeyPressed { code, .. } => {
-                    if let Some(names) = bindings.get_key_actions(code) {
-                        handle_actions(&mut self.game_actions, Action_Kind::Pressed, names);
-                    }
-                    if let Some(names) = bindings.get_key_emulated_axes(code) {
-                        handle_axis_pressed(&mut self.axes, names);
-                    }
-                }
-                Event::KeyReleased { code, .. } => {
-                    if let Some(names) = bindings.get_key_actions(code) {
-                        handle_actions(&mut self.game_actions, Action_Kind::Released, names);
-                    }
-                    if let Some(names) = bindings.get_key_emulated_axes(code) {
-                        handle_axis_released(&mut self.axes, names);
-                    }
-                }
-                Event::JoystickButtonPressed { joystickid, button } => {
-                    if let Some(names) =
-                        bindings.get_joystick_actions(joystickid, button, &self.joystick_mgr)
-                    {
-                        handle_actions(&mut self.game_actions, Action_Kind::Pressed, names);
-                    }
-                    if let Some(names) =
-                        bindings.get_joystick_emulated_axes(joystickid, button, &self.joystick_mgr)
-                    {
-                        handle_axis_pressed(&mut self.axes, names);
-                    }
-                }
-                Event::JoystickButtonReleased { joystickid, button } => {
-                    if let Some(names) =
-                        bindings.get_joystick_actions(joystickid, button, &self.joystick_mgr)
-                    {
-                        handle_actions(&mut self.game_actions, Action_Kind::Released, names);
-                    }
-                    if let Some(names) =
-                        bindings.get_joystick_emulated_axes(joystickid, button, &self.joystick_mgr)
-                    {
-                        handle_axis_released(&mut self.axes, names);
-                    }
-                }
-                Event::MouseButtonPressed { button, .. } => {
-                    if let Some(names) = bindings.get_mouse_actions(button) {
-                        handle_actions(&mut self.game_actions, Action_Kind::Pressed, names);
-                    }
-                    if let Some(names) = bindings.get_mouse_emulated_axes(button) {
-                        handle_axis_pressed(&mut self.axes, names);
-                    }
-                }
-                Event::MouseButtonReleased { button, .. } => {
-                    if let Some(names) = bindings.get_mouse_actions(button) {
-                        handle_actions(&mut self.game_actions, Action_Kind::Released, names);
-                    }
-                    if let Some(names) = bindings.get_mouse_emulated_axes(button) {
-                        handle_axis_released(&mut self.axes, names);
-                    }
-                }
-                Event::MouseWheelScrolled { delta, .. } => {
-                    if let Some(names) = bindings.get_mouse_wheel_actions(delta > 0.) {
-                        // Note: MouseWheel actions always count as 'Pressed'.
-                        handle_actions(&mut self.game_actions, Action_Kind::Pressed, names);
-                    }
-                    if let Some(names) = bindings.get_mouse_wheel_emulated_axes(delta > 0.) {
-                        handle_axis_pressed(&mut self.axes, names);
-                    }
-                }
-                Event::JoystickConnected { joystickid } => {
-                    self.joystick_mgr.register(joystickid);
-                }
-                Event::JoystickDisconnected { joystickid } => {
-                    self.joystick_mgr.unregister(joystickid);
-                }
                 _ => {
-                    // We're not interested in this event.
-                    self.raw_events.pop();
+                    if process_game_actions {
+                        match event {
+                            // Game Actions
+                            Event::KeyPressed { code, .. } => {
+                                if let Some(names) = bindings.get_key_actions(code) {
+                                    handle_actions(
+                                        &mut self.game_actions,
+                                        Action_Kind::Pressed,
+                                        names,
+                                    );
+                                }
+                                if let Some(names) = bindings.get_key_emulated_axes(code) {
+                                    handle_axis_pressed(&mut self.axes, names);
+                                }
+                            }
+                            Event::KeyReleased { code, .. } => {
+                                if let Some(names) = bindings.get_key_actions(code) {
+                                    handle_actions(
+                                        &mut self.game_actions,
+                                        Action_Kind::Released,
+                                        names,
+                                    );
+                                }
+                                if let Some(names) = bindings.get_key_emulated_axes(code) {
+                                    handle_axis_released(&mut self.axes, names);
+                                }
+                            }
+                            Event::JoystickButtonPressed { joystickid, button } => {
+                                if let Some(names) = bindings.get_joystick_actions(
+                                    joystickid,
+                                    button,
+                                    &self.joystick_mgr,
+                                ) {
+                                    handle_actions(
+                                        &mut self.game_actions,
+                                        Action_Kind::Pressed,
+                                        names,
+                                    );
+                                }
+                                if let Some(names) = bindings.get_joystick_emulated_axes(
+                                    joystickid,
+                                    button,
+                                    &self.joystick_mgr,
+                                ) {
+                                    handle_axis_pressed(&mut self.axes, names);
+                                }
+                            }
+                            Event::JoystickButtonReleased { joystickid, button } => {
+                                if let Some(names) = bindings.get_joystick_actions(
+                                    joystickid,
+                                    button,
+                                    &self.joystick_mgr,
+                                ) {
+                                    handle_actions(
+                                        &mut self.game_actions,
+                                        Action_Kind::Released,
+                                        names,
+                                    );
+                                }
+                                if let Some(names) = bindings.get_joystick_emulated_axes(
+                                    joystickid,
+                                    button,
+                                    &self.joystick_mgr,
+                                ) {
+                                    handle_axis_released(&mut self.axes, names);
+                                }
+                            }
+                            Event::MouseButtonPressed { button, .. } => {
+                                if let Some(names) = bindings.get_mouse_actions(button) {
+                                    handle_actions(
+                                        &mut self.game_actions,
+                                        Action_Kind::Pressed,
+                                        names,
+                                    );
+                                }
+                                if let Some(names) = bindings.get_mouse_emulated_axes(button) {
+                                    handle_axis_pressed(&mut self.axes, names);
+                                }
+                            }
+                            Event::MouseButtonReleased { button, .. } => {
+                                if let Some(names) = bindings.get_mouse_actions(button) {
+                                    handle_actions(
+                                        &mut self.game_actions,
+                                        Action_Kind::Released,
+                                        names,
+                                    );
+                                }
+                                if let Some(names) = bindings.get_mouse_emulated_axes(button) {
+                                    handle_axis_released(&mut self.axes, names);
+                                }
+                            }
+                            Event::MouseWheelScrolled { delta, .. } => {
+                                if let Some(names) = bindings.get_mouse_wheel_actions(delta > 0.) {
+                                    // Note: MouseWheel actions always count as 'Pressed'.
+                                    handle_actions(
+                                        &mut self.game_actions,
+                                        Action_Kind::Pressed,
+                                        names,
+                                    );
+                                }
+                                if let Some(names) =
+                                    bindings.get_mouse_wheel_emulated_axes(delta > 0.)
+                                {
+                                    handle_axis_pressed(&mut self.axes, names);
+                                }
+                            }
+                            Event::JoystickConnected { joystickid } => {
+                                self.joystick_mgr.register(joystickid);
+                            }
+                            Event::JoystickDisconnected { joystickid } => {
+                                self.joystick_mgr.unregister(joystickid);
+                            }
+                            _ => {
+                                // We're not interested in this event.
+                                self.raw_events.pop();
+                            }
+                        }
+                    }
                 }
             }
 
