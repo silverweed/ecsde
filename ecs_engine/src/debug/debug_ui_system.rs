@@ -1,4 +1,5 @@
 use super::fadeout_overlay;
+use super::graph;
 use super::overlay;
 use crate::common::stringid::String_Id;
 use crate::gfx::window::Window_Handle;
@@ -23,15 +24,18 @@ pub struct Debug_Ui_System {
     overlays: HashMap<String_Id, overlay::Debug_Overlay>,
     fadeout_overlays: HashMap<String_Id, fadeout_overlay::Fadeout_Debug_Overlay>,
     disabled_overlays: HashMap<String_Id, overlay::Debug_Overlay>,
+    graphs: HashMap<String_Id, graph::Debug_Graph_View>,
     cfg: Debug_Ui_System_Config,
 }
 
+// @Cleanup: this needs refactoring!
 impl Debug_Ui_System {
     pub fn new() -> Debug_Ui_System {
         Debug_Ui_System {
             overlays: HashMap::new(),
             fadeout_overlays: HashMap::new(),
             disabled_overlays: HashMap::new(),
+            graphs: HashMap::new(),
             cfg: Debug_Ui_System_Config::default(),
         }
     }
@@ -74,6 +78,16 @@ impl Debug_Ui_System {
         }
     }
 
+    pub fn create_graph(&mut self, id: String_Id) -> &mut graph::Debug_Graph_View {
+        match self.graphs.entry(id) {
+            Entry::Occupied(e) => {
+                lwarn!("Graph {} already exists: won't overwrite.", id);
+                e.into_mut()
+            }
+            Entry::Vacant(v) => v.insert(graph::Debug_Graph_View::default()),
+        }
+    }
+
     pub fn get_overlay(&mut self, id: String_Id) -> &mut overlay::Debug_Overlay {
         self.overlays
             .get_mut(&id)
@@ -87,6 +101,12 @@ impl Debug_Ui_System {
         self.fadeout_overlays
             .get_mut(&id)
             .unwrap_or_else(|| fatal!("Invalid fadout debug overlay: {}", id))
+    }
+
+    pub fn get_graph(&mut self, id: String_Id) -> &mut graph::Debug_Graph_View {
+        self.graphs
+            .get_mut(&id)
+            .unwrap_or_else(|| fatal!("Invalid debug graph: {}", id))
     }
 
     pub fn set_overlay_enabled(&mut self, id: String_Id, enabled: bool) {
@@ -116,6 +136,10 @@ impl Debug_Ui_System {
         for (_, overlay) in self.fadeout_overlays.iter_mut() {
             overlay.update(dt);
             overlay.draw(window, gres);
+        }
+
+        for (_, graph) in self.graphs.iter_mut() {
+            graph.draw(window, gres);
         }
     }
 }
