@@ -3,6 +3,7 @@ use super::graph;
 use super::overlay;
 use crate::common::stringid::String_Id;
 use crate::gfx::window::Window_Handle;
+use crate::prelude::*;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -78,13 +79,18 @@ impl Debug_Ui_System {
         }
     }
 
-    pub fn create_graph(&mut self, id: String_Id) -> &mut graph::Debug_Graph_View {
+    pub fn create_graph(
+        &mut self,
+        id: String_Id,
+        config: graph::Debug_Graph_View_Config,
+        font: Font_Handle,
+    ) -> &mut graph::Debug_Graph_View {
         match self.graphs.entry(id) {
             Entry::Occupied(e) => {
                 lwarn!("Graph {} already exists: won't overwrite.", id);
                 e.into_mut()
             }
-            Entry::Vacant(v) => v.insert(graph::Debug_Graph_View::default()),
+            Entry::Vacant(v) => v.insert(graph::Debug_Graph_View::new(config, font)),
         }
     }
 
@@ -128,18 +134,25 @@ impl Debug_Ui_System {
         }
     }
 
-    pub fn update(&mut self, dt: &Duration, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
+    pub fn update(
+        &mut self,
+        dt: &Duration,
+        window: &mut Window_Handle,
+        gres: &mut Gfx_Resources,
+        _tracer: Debug_Tracer,
+    ) {
+        for (_, graph) in self.graphs.iter_mut() {
+            graph.data.remove_points_before_x_range();
+            graph.draw(window, gres, clone_tracer!(_tracer));
+        }
+
         for (_, overlay) in self.overlays.iter_mut() {
-            overlay.draw(window, gres);
+            overlay.draw(window, gres, clone_tracer!(_tracer));
         }
 
         for (_, overlay) in self.fadeout_overlays.iter_mut() {
             overlay.update(dt);
-            overlay.draw(window, gres);
-        }
-
-        for (_, graph) in self.graphs.iter_mut() {
-            graph.draw(window, gres);
+            overlay.draw(window, gres, clone_tracer!(_tracer));
         }
     }
 }

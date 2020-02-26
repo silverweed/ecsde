@@ -7,7 +7,8 @@ use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::window::{get_blend_mode, Window_Handle};
 use sfml::graphics::Shape;
 use sfml::graphics::{
-    CircleShape, RectangleShape, RenderStates, RenderTarget, Transform, Transformable,
+    CircleShape, PrimitiveType, RectangleShape, RenderStates, RenderTarget, Transform,
+    Transformable,
 };
 use sfml::system::Vector2f;
 
@@ -267,7 +268,11 @@ fn calc_render_transform(
 }
 
 pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer {
-    sfml::graphics::VertexArray::new(sfml::graphics::PrimitiveType::Quads, n_quads * 4)
+    sfml::graphics::VertexArray::new(PrimitiveType::Quads, n_quads * 4)
+}
+
+pub fn start_draw_linestrip(n_vertices: usize) -> Vertex_Buffer {
+    sfml::graphics::VertexArray::new(PrimitiveType::LineStrip, n_vertices)
 }
 
 pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
@@ -277,8 +282,21 @@ pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex,
     vbuf.append(v4);
 }
 
+pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {
+    vbuf.append(v);
+}
+
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     Vertex::new(Vector2f::from(pos), col.into(), Vector2f::from(tex_coords))
+}
+
+pub fn render_vbuf(window: &mut Window_Handle, vbuf: &Vertex_Buffer, transform: &Transform2D) {
+    let render_states = RenderStates {
+        transform: transform.get_matrix_sfml(),
+        blend_mode: get_blend_mode(window),
+        ..Default::default()
+    };
+    render_vbuf_internal(window, vbuf, render_states);
 }
 
 pub fn render_vbuf_ws(
@@ -318,4 +336,9 @@ pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
 
 pub fn get_text_local_bounds(text: &Text) -> Rectf {
     text.local_bounds().into()
+}
+
+pub fn render_line(window: &mut Window_Handle, start: &Vertex, end: &Vertex) {
+    let vertices: [sfml::graphics::Vertex; 2] = [*start, *end];
+    window.draw_primitives(&vertices, PrimitiveType::Lines, RenderStates::default());
 }

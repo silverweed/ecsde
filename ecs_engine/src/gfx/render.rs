@@ -121,8 +121,16 @@ pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex,
     backend::add_quad(vbuf, v1, v2, v3, v4);
 }
 
+pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {
+    backend::add_vertex(vbuf, v);
+}
+
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     backend::new_vertex(pos, col, tex_coords)
+}
+
+pub fn render_vbuf(window: &mut Window_Handle, vbuf: &Vertex_Buffer, transform: &Transform2D) {
+    backend::render_vbuf(window, vbuf, transform);
 }
 
 pub fn render_vbuf_ws(
@@ -132,4 +140,12 @@ pub fn render_vbuf_ws(
     camera: &Transform2D,
 ) {
     backend::render_vbuf_ws(window, vbuf, transform, camera);
+}
+
+pub fn start_draw_linestrip(n_vertices: usize) -> Vertex_Buffer {
+    backend::start_draw_linestrip(n_vertices)
+}
+
+pub fn render_line(window: &mut Window_Handle, start: &Vertex, end: &Vertex) {
+    backend::render_line(window, start, end);
 }

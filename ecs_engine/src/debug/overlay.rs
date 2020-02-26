@@ -4,6 +4,7 @@ use crate::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
 use crate::gfx::window::Window_Handle;
+use crate::prelude::*;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
 struct Debug_Line {
@@ -76,7 +77,14 @@ impl Debug_Overlay {
         });
     }
 
-    pub fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
+    pub fn draw(
+        &self,
+        window: &mut Window_Handle,
+        gres: &mut Gfx_Resources,
+        _tracer: Debug_Tracer,
+    ) {
+        trace!("overlay::draw", _tracer);
+
         if self.lines.is_empty() {
             return;
         }

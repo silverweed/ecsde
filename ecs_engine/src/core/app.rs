@@ -112,7 +112,7 @@ pub fn init_engine_debug(
     use crate::common::colors;
     use crate::common::vector::{Vec2f, Vec2u};
     use crate::gfx::align;
-    use debug::{fadeout_overlay, overlay};
+    use debug::{fadeout_overlay, graph, overlay};
 
     const FONT: &str = "Hack-Regular.ttf";
 
@@ -147,19 +147,19 @@ pub fn init_engine_debug(
         joy_overlay.position = Vec2f::new(target_win_size_x, 0.0);
 
         debug_overlay_config.font_size = (13.0 * ui_scale) as _;
-        let mut time_overlay =
+        let time_overlay =
             debug_ui_system.create_overlay(String_Id::from("time"), debug_overlay_config, font);
         time_overlay.horiz_align = align::Align::End;
         time_overlay.vert_align = align::Align::End;
         time_overlay.position = Vec2f::new(target_win_size_x, target_win_size_y);
 
-        let mut fps_overlay =
+        let fps_overlay =
             debug_ui_system.create_overlay(String_Id::from("fps"), debug_overlay_config, font);
         fps_overlay.vert_align = align::Align::End;
         fps_overlay.position = Vec2f::new(0.0, target_win_size_y as f32);
 
         debug_overlay_config.font_size = (11.0 * ui_scale) as _;
-        let mut trace_overlay =
+        let trace_overlay =
             debug_ui_system.create_overlay(String_Id::from("trace"), debug_overlay_config, font);
         trace_overlay.vert_align = align::Align::Middle;
         trace_overlay.horiz_align = align::Align::Middle;
@@ -183,13 +183,35 @@ pub fn init_engine_debug(
             max_rows: (30.0 / ui_scale.max(0.1)) as _,
         };
 
-        let mut fadeout_overlay = debug_ui_system.create_fadeout_overlay(
+        let fadeout_overlay = debug_ui_system.create_fadeout_overlay(
             String_Id::from("msg"),
             fadeout_overlay_config,
             font,
         );
         fadeout_overlay.horiz_align = align::Align::Begin;
         fadeout_overlay.position = Vec2f::new(0.0, 0.0);
+    }
+
+    // Graphs
+    {
+        let graph_config = graph::Debug_Graph_View_Config {
+            grid_xstep: Some(5.0),
+            grid_ystep: Some(20.0),
+            label_font_size: (10.0 * ui_scale) as _,
+            title: Some(String::from("FPS")),
+            title_font_size: (18.0 * ui_scale) as _,
+            color: colors::YELLOW,
+            low_threshold: Some((25.0, colors::RED)),
+            high_threshold: Some((55.0, colors::GREEN)),
+        };
+        let graph = engine_state.debug_systems.debug_ui_system.create_graph(
+            String_Id::from("fps"),
+            graph_config,
+            font,
+        );
+
+        graph.size = Vec2u::new(target_win_size_x as _, (0.2 * target_win_size_y) as _);
+        graph.data.y_range = 0.0..120.0;
     }
 
     engine_state

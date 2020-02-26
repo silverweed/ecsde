@@ -1,3 +1,5 @@
+use std::ops::{Add, Mul, Sub};
+
 pub fn fast_invsqrt(n: f32) -> f32 {
     assert!(n != 0., "fast_invsqrt: argument cannot be 0!");
     let x2: f32 = n * 0.5;
@@ -7,6 +9,28 @@ pub fn fast_invsqrt(n: f32) -> f32 {
     let y = y * (1.5 - (x2 * y * y));
     y * (1.5 - (x2 * y * y))
 }
+
+// @WaitForStable: make this const when trait bounds are stable
+pub fn lerp<T: Lerpable>(a: T, b: T, t: T) -> T {
+    a * (T::ONE - t) + b * t
+}
+
+pub trait Lerpable: Copy + Add<Output = Self> + Mul<Output = Self> + Sub<Output = Self> {
+    const ONE: Self;
+}
+
+macro_rules! def_lerpable {
+    ($($type: ty),*: $one: expr) => {
+        $(
+            impl Lerpable for $type {
+                const ONE: Self = $one;
+            }
+        )*
+    }
+}
+
+def_lerpable!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize: 1);
+def_lerpable!(f32, f64: 1.0);
 
 #[cfg(test)]
 mod tests {

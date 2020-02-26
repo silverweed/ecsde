@@ -376,7 +376,12 @@ fn update_graphics(
                 .engine_state
                 .debug_systems
                 .debug_ui_system
-                .update(&real_dt, window, gres);
+                .update(
+                    &real_dt,
+                    window,
+                    gres,
+                    clone_tracer!(game_state.engine_state.tracer),
+                );
         }
 
         // Draw console
@@ -428,6 +433,12 @@ fn update_debug(game_state: &mut Game_State) {
     update_camera_debug_overlay(
         debug_systems.debug_ui_system.get_overlay(sid_camera),
         &game_state.gameplay_system.get_camera(),
+    );
+
+    update_graph_fps(
+        debug_systems.debug_ui_system.get_graph(sid_fps),
+        &engine_state.time,
+        &game_state.fps_debug,
     );
 
     let debug_painter = &mut engine_state.debug_systems.debug_painter;
@@ -791,4 +802,19 @@ fn debug_draw_grid(
             );
         }
     }
+}
+
+#[cfg(debug_assertions)]
+fn update_graph_fps(
+    graph: &mut debug::graph::Debug_Graph_View,
+    time: &time::Time,
+    fps: &debug::fps::Fps_Console_Printer,
+) {
+    let fps = fps.get_fps();
+    let now = time::to_secs_frac(&time.get_real_time());
+    graph.data.x_range.end = now;
+    if graph.data.x_range.end - graph.data.x_range.start > 60.0 {
+        graph.data.x_range.start = graph.data.x_range.end - 60.0;
+    }
+    graph.data.add_point(now, fps);
 }
