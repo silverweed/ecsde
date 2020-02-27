@@ -79,7 +79,7 @@ impl Debug_Graph_View {
                 let v2 =
                     render::new_vertex(pos2, colors::rgba(180, 180, 180, 200), Vec2f::default());
 
-                let mut text = render::create_text(&x.to_string(), font, font_size);
+                let mut text = render::create_text(&format!("{:.1}", x), font, font_size);
 
                 render::render_line(window, &v1, &v2);
                 render::render_text(window, &mut text, pos2 + Vec2f::new(2., 0.));
@@ -99,7 +99,7 @@ impl Debug_Graph_View {
                 let v2 =
                     render::new_vertex(pos2, colors::rgba(180, 180, 180, 200), Vec2f::default());
 
-                let mut text = render::create_text(&y.to_string(), font, font_size);
+                let mut text = render::create_text(&format!("{:.1}", y), font, font_size);
 
                 render::render_text(window, &mut text, pos1 + Vec2f::new(0., -2.));
                 render::render_line(window, &v1, &v2);
@@ -141,8 +141,8 @@ impl Debug_Graph_View {
         let h = self.data.y_range.end - self.data.y_range.start;
         Vec2f::from(self.pos)
             + Vec2f::new(
-                lerp(0.0, self.size.x as f32, point.x / w),
-                lerp(0.0, self.size.y as f32, 1.0 - point.y / h),
+                lerp(0.0, self.size.x as f32, (point.x - self.data.x_range.start) / w),
+                lerp(0.0, self.size.y as f32, 1.0 - (point.y - self.data.y_range.start) / h),
             )
     }
 
