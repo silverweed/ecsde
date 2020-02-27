@@ -29,6 +29,7 @@ pub struct Engine_State<'r> {
 
     pub time: time::Time,
 
+    pub input_state: input::input_system::Input_State,
     pub systems: Core_Systems<'r>,
 
     pub tracer: Debug_Tracer,
@@ -46,6 +47,7 @@ pub fn create_engine_state<'r>(
     app_config: App_Config,
 ) -> Engine_State<'r> {
     let systems = Core_Systems::new(&env);
+    let input_state = input::input_system::create_input_state(&env);
     let time = time::Time::new();
     #[cfg(debug_assertions)]
     let debug_systems = Debug_Systems::new(&config);
@@ -56,6 +58,7 @@ pub fn create_engine_state<'r>(
         config,
         app_config,
         time,
+        input_state,
         systems,
         #[cfg(debug_assertions)]
         debug_systems,
@@ -83,7 +86,7 @@ pub fn start_config_watch(env: &Env_Info, config: &mut cfg::Config) -> Maybe_Err
 }
 
 pub fn init_engine_systems(engine_state: &mut Engine_State) -> Maybe_Error {
-    engine_state.systems.input_system.init()?;
+    input::joystick_mgr::init_joysticks(&mut engine_state.input_state.joy_state);
 
     Ok(())
 }
@@ -231,9 +234,8 @@ pub fn init_engine_debug(
         console.size = Vec2u::new(win_width, win_height / 2);
         console.font_size = (console.font_size as f32 * ui_scale) as _;
         console.toggle_console_keys = engine_state
-            .systems
-            .input_system
-            .get_bindings()
+            .input_state
+            .bindings
             .get_all_actions_triggering(String_Id::from("toggle_console"))
             .iter()
             .filter_map(|action| {

@@ -32,7 +32,6 @@ pub fn tick_game<'a>(
 
     let dt = game_state.engine_state.time.dt();
     let real_dt = game_state.engine_state.time.real_dt();
-    let systems = &mut game_state.engine_state.systems;
     #[cfg(debug_assertions)]
     let debug_systems = &mut game_state.engine_state.debug_systems;
 
@@ -58,13 +57,14 @@ pub fn tick_game<'a>(
     // Update input
     #[cfg(debug_assertions)]
     {
-        systems.input_system.process_game_actions =
+        game_state.engine_state.input_state.process_game_actions =
             debug_systems.console.status != debug::console::Console_Status::Open;
     }
 
     {
         trace!("input_system::update", _tracer);
-        systems.input_system.update(
+        input::input_system::update_input(
+            &mut game_state.engine_state.input_state,
             window,
             &mut *game_state.input_provider,
             &game_state.engine_state.config,
@@ -79,7 +79,7 @@ pub fn tick_game<'a>(
         if debug_systems.console.status == debug::console::Console_Status::Open {
             debug_systems
                 .console
-                .update(systems.input_system.get_raw_events());
+                .update(&game_state.engine_state.input_state.raw_events);
 
             let mut output = vec![];
             while let Some(cmd) = game_state
@@ -117,21 +117,33 @@ pub fn tick_game<'a>(
     // Handle actions
     {
         trace!("app::handle_core_actions", _tracer);
-        if app::handle_core_actions(&systems.input_system.extract_core_actions(), window) {
+        if app::handle_core_actions(
+            &game_state
+                .engine_state
+                .input_state
+                .core_actions
+                .split_off(0),
+            window,
+        ) {
             game_state.engine_state.should_close = true;
             return Ok(false);
         }
     }
 
     {
-        let actions = systems.input_system.extract_game_actions();
+        let actions = game_state
+            .engine_state
+            .input_state
+            .game_actions
+            .split_off(0);
 
         #[cfg(debug_assertions)]
-        let input_system = &systems.input_system;
+        let input_state = &game_state.engine_state.input_state;
         #[cfg(debug_assertions)]
-        let raw_events = input_system.get_raw_events();
+        let raw_events = &input_state.raw_events;
         #[cfg(debug_assertions)]
-        let (real_axes, joy_mask) = input_system.get_all_real_axes();
+        let (real_axes, joy_mask) =
+            input::joystick_mgr::all_joysticks_values(&input_state.joy_state);
 
         #[cfg(debug_assertions)]
         {
@@ -185,11 +197,7 @@ pub fn tick_game<'a>(
         {
             trace!("game_update", _tracer);
 
-            let axes = game_state
-                .engine_state
-                .systems
-                .input_system
-                .get_virtual_axes();
+            let axes = &game_state.engine_state.input_state.axes;
 
             #[cfg(feature = "prof_gameplay")]
             let mut n_gameplay_updates = 0;
