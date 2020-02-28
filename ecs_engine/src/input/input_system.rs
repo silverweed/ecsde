@@ -42,7 +42,7 @@ pub struct Input_State {
 
 pub fn create_input_state(env: &Env_Info) -> Input_State {
     let bindings = super::create_bindings(env);
-    let axes = axes::Virtual_Axes::with_axes(bindings.get_all_virtual_axes_names());
+    let axes = axes::Virtual_Axes::with_axes(&bindings.axis_bindings.axes_names);
     Input_State {
         joy_state: Joystick_State::default(),
         bindings,
