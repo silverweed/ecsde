@@ -12,13 +12,14 @@ pub enum Console_Cmd {
     Move_Camera { to: Vec2f },
     Get_Cfg_Var { name: String },
     Set_Cfg_Var { name: String, value: Cfg_Value },
+    Toggle_Cfg_Var { name: String },
 }
 
 // @Improve @Convenience: this is ugly! We must manually synch this list with
 // the parse_cmd below *and* the enum declaration above!
 // We can @WaitForStable until we can do a const match on the enum, but maybe
 // there is a better way.
-pub const ALL_CMD_STRINGS: [&str; 3] = ["quit", "cam", "var"];
+pub const ALL_CMD_STRINGS: [&str; 5] = ["quit", "cam", "var", "toggle", "fps"];
 
 pub fn execute(cmdline: &str, engine_state: &mut Engine_State, gs: &mut Gameplay_System) {
     match parse_cmd(cmdline) {
@@ -47,6 +48,12 @@ fn parse_cmd(cmdline: &str) -> Result<Console_Cmd, Console_Error> {
                 name: (*name).to_string(),
                 value: Cfg_Value::from(*value),
             }),
+            ["toggle", name] => Ok(Console_Cmd::Toggle_Cfg_Var {
+                name: (*name).to_string(),
+            }),
+            ["fps"] => Ok(Console_Cmd::Toggle_Cfg_Var {
+                name: String::from("engine/debug/draw_fps_graph"),
+            }),
             _ => Err(Console_Error::new(format!("Unknown command: {}", cmdline))),
         }
     }
@@ -68,6 +75,21 @@ fn execute_command(cmd: Console_Cmd, engine_state: &mut Engine_State, gs: &mut G
             engine_state
                 .config
                 .write_cfg(String_Id::from(name.as_str()), value);
+        }
+        Console_Cmd::Toggle_Cfg_Var { name } => {
+            linfo!("Toggling {}", name);
+            let val = engine_state
+                .config
+                .read_cfg(String_Id::from(name.as_str()))
+                .unwrap_or(&Cfg_Value::Nil)
+                .clone();
+            if let Cfg_Value::Bool(val) = val {
+                engine_state
+                    .config
+                    .write_cfg(String_Id::from(name.as_str()), Cfg_Value::Bool(!val));
+            } else {
+                lerr!("Cfg_Var {} is not a bool!", name);
+            }
         }
     }
 }

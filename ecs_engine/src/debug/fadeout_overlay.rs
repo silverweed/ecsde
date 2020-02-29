@@ -1,3 +1,4 @@
+use super::element::Debug_Element;
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
 use crate::common::vector::Vec2f;
@@ -17,7 +18,7 @@ struct Fadeout_Text {
     pub time: Duration,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct Fadeout_Debug_Overlay_Config {
     pub row_spacing: f32,
     pub font_size: u16,
@@ -26,31 +27,21 @@ pub struct Fadeout_Debug_Overlay_Config {
     pub background: Color,
     pub max_rows: usize,
     pub fadeout_time: Duration,
-}
-
-pub struct Fadeout_Debug_Overlay {
-    font: Font_Handle,
-    fadeout_texts: VecDeque<Fadeout_Text>,
-    config: Fadeout_Debug_Overlay_Config,
-
-    pub position: Vec2f,
     pub horiz_align: Align,
     pub vert_align: Align,
+    pub font: Font_Handle,
 }
 
-impl Fadeout_Debug_Overlay {
-    pub fn new(config: Fadeout_Debug_Overlay_Config, font: Font_Handle) -> Fadeout_Debug_Overlay {
-        Fadeout_Debug_Overlay {
-            font,
-            fadeout_texts: VecDeque::with_capacity(config.max_rows),
-            config,
-            position: Vec2f::new(0.0, 0.0),
-            horiz_align: Align::Begin,
-            vert_align: Align::Begin,
-        }
-    }
+#[derive(Default)]
+pub struct Fadeout_Debug_Overlay {
+    fadeout_texts: VecDeque<Fadeout_Text>,
 
-    pub fn update(&mut self, dt: &Duration) {
+    pub config: Fadeout_Debug_Overlay_Config,
+    pub position: Vec2f,
+}
+
+impl Debug_Element for Fadeout_Debug_Overlay {
+    fn update(&mut self, dt: &Duration) {
         let fadeout_time = self.config.fadeout_time;
         let mut n_drained = 0;
         for (i, text) in self.fadeout_texts.iter_mut().enumerate().rev() {
@@ -67,25 +58,22 @@ impl Fadeout_Debug_Overlay {
     }
 
     // @Refactor: this is mostly @Cutnpaste from overlay.rs
-    pub fn draw(
-        &mut self,
-        window: &mut Window_Handle,
-        gres: &mut Gfx_Resources,
-        _tracer: Debug_Tracer,
-    ) {
+    fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources, _tracer: Debug_Tracer) {
         trace!("fadeout_overlay::draw", _tracer);
 
         if self.fadeout_texts.is_empty() {
             return;
         }
 
-        let font = self.font;
         let Fadeout_Debug_Overlay_Config {
+            font,
             font_size,
             pad_x,
             pad_y,
             row_spacing,
             fadeout_time,
+            horiz_align,
+            vert_align,
             ..
         } = self.config;
 
@@ -119,11 +107,8 @@ impl Fadeout_Debug_Overlay {
             window,
             self.config.background,
             Rect::new(
-                position.x
-                    + self
-                        .horiz_align
-                        .aligned_pos(0.0, 2.0 * pad_x + max_row_width),
-                position.y + self.vert_align.aligned_pos(0.0, 2.0 * pad_y + tot_height),
+                position.x + horiz_align.aligned_pos(0.0, 2.0 * pad_x + max_row_width),
+                position.y + vert_align.aligned_pos(0.0, 2.0 * pad_y + tot_height),
                 2.0 * pad_x + max_row_width,
                 2.0 * pad_y + tot_height,
             ),
@@ -132,11 +117,20 @@ impl Fadeout_Debug_Overlay {
         // Draw lines
         for (i, (text, bounds)) in texts.iter_mut().enumerate() {
             let pos = Vec2f::new(
-                self.horiz_align.aligned_pos(pad_x, bounds.width),
-                self.vert_align.aligned_pos(pad_y, tot_height)
+                horiz_align.aligned_pos(pad_x, bounds.width),
+                vert_align.aligned_pos(pad_y, tot_height)
                     + (i as f32) * (max_row_height + row_spacing),
             );
             gfx::render::render_text(window, text, position + pos);
+        }
+    }
+}
+
+impl Fadeout_Debug_Overlay {
+    pub fn new(config: Fadeout_Debug_Overlay_Config) -> Self {
+        Self {
+            config,
+            ..Default::default()
         }
     }
 

@@ -5,6 +5,12 @@ pub enum Align {
     End,
 }
 
+impl Default for Align {
+    fn default() -> Self {
+        Align::Begin
+    }
+}
+
 impl Align {
     pub fn aligned_pos(self, pos: f32, width: f32) -> f32 {
         match self {

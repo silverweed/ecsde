@@ -1,5 +1,4 @@
 use super::{Game_Resources, Game_State};
-use ecs_engine::common::angle::rad;
 use ecs_engine::common::colors;
 use ecs_engine::common::Maybe_Error;
 use ecs_engine::core::app;
@@ -9,16 +8,11 @@ use ecs_engine::gfx::render_system;
 use ecs_engine::resources::gfx::Gfx_Resources;
 use std::time::Duration;
 
-#[rustfmt::skip]
 #[cfg(debug_assertions)]
 use ecs_engine::{
-    common::stringid::String_Id,
-    common::vector::Vec2f,
-    common::transform::Transform2D,
-    debug,
-    debug::painter::Debug_Painter,
-    gfx::paint_props::Paint_Properties,
-    input,
+    common::stringid::String_Id, common::transform::Transform2D, common::vector::Vec2f, debug,
+    debug::painter::Debug_Painter, ecs_engine::common::angle::rad,
+    gfx::paint_props::Paint_Properties, input,
 };
 
 pub fn tick_game<'a>(
@@ -435,11 +429,23 @@ fn update_debug(game_state: &mut Game_State) {
         &game_state.gameplay_system.get_camera(),
     );
 
-    update_graph_fps(
-        debug_systems.debug_ui_system.get_graph(sid_fps),
-        &engine_state.time,
-        &game_state.fps_debug,
-    );
+    let draw_fps_graph = game_state
+        .debug_cvars
+        .draw_fps_graph
+        .read(&engine_state.config);
+    debug_systems
+        .debug_ui_system
+        .set_graph_enabled(sid_fps, draw_fps_graph);
+    if draw_fps_graph {
+        debug_systems
+            .debug_ui_system
+            .set_graph_enabled(sid_fps, true);
+        update_graph_fps(
+            debug_systems.debug_ui_system.get_graph(sid_fps),
+            &engine_state.time,
+            &game_state.fps_debug,
+        );
+    }
 
     let debug_painter = &mut engine_state.debug_systems.debug_painter;
 
@@ -810,11 +816,13 @@ fn update_graph_fps(
     time: &time::Time,
     fps: &debug::fps::Fps_Console_Printer,
 ) {
+    const TIME_LIMIT: f32 = 60.0;
+
     let fps = fps.get_fps();
     let now = time::to_secs_frac(&time.get_real_time());
     graph.data.x_range.end = now;
-    if graph.data.x_range.end - graph.data.x_range.start > 60.0 {
-        graph.data.x_range.start = graph.data.x_range.end - 60.0;
+    if graph.data.x_range.end - graph.data.x_range.start > TIME_LIMIT {
+        graph.data.x_range.start = graph.data.x_range.end - TIME_LIMIT;
     }
     graph.data.add_point(now, fps);
 }

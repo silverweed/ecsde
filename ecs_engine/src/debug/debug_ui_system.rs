@@ -1,10 +1,12 @@
+use super::element::Debug_Element;
 use super::fadeout_overlay;
 use super::graph;
 use super::overlay;
 use crate::common::stringid::String_Id;
 use crate::gfx::window::Window_Handle;
 use crate::prelude::*;
-use crate::resources::gfx::{Font_Handle, Gfx_Resources};
+use crate::resources::gfx::Gfx_Resources;
+use std::any::type_name;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -20,23 +22,121 @@ impl Default for Debug_Ui_System_Config {
     }
 }
 
+#[derive(PartialEq, Eq)]
+enum Active_State {
+    Active,
+    Inactive,
+}
+
+#[derive(Default)]
+struct Debug_Element_Container<T> {
+    pub actives: Vec<T>,
+    pub inactives: Vec<T>,
+    pub all: HashMap<String_Id, (Active_State, usize)>,
+}
+
+impl<T> Debug_Element_Container<T> {
+    fn new() -> Self {
+        Self {
+            actives: vec![],
+            inactives: vec![],
+            all: HashMap::new(),
+        }
+    }
+
+    fn get_debug_element(&mut self, id: String_Id) -> &mut T {
+        match self
+            .all
+            .get(&id)
+            .unwrap_or_else(|| fatal!("Tried to get inexisting {} {}", type_name::<T>(), id))
+        {
+            (Active_State::Active, idx) => &mut self.actives[*idx],
+            (Active_State::Inactive, idx) => &mut self.inactives[*idx],
+        }
+    }
+
+    fn set_enabled(&mut self, id: String_Id, enabled: bool) {
+        let (old_idx, new_idx, old_state, new_state) =
+            match self.all.get(&id).unwrap_or_else(|| {
+                fatal!(
+                    "Tried to set_enabled inexisting {} {}",
+                    type_name::<T>(),
+                    id
+                )
+            }) {
+                (Active_State::Active, idx) => {
+                    if enabled {
+                        return;
+                    }
+                    let elem = self.actives.swap_remove(*idx);
+                    self.inactives.push(elem);
+                    (
+                        *idx,
+                        self.inactives.len() - 1,
+                        Active_State::Active,
+                        Active_State::Inactive,
+                    )
+                }
+                (Active_State::Inactive, idx) => {
+                    if !enabled {
+                        return;
+                    }
+                    let elem = self.inactives.swap_remove(*idx);
+                    self.actives.push(elem);
+                    (
+                        *idx,
+                        self.actives.len() - 1,
+                        Active_State::Inactive,
+                        Active_State::Active,
+                    )
+                }
+            };
+
+        self.all.insert(id, (new_state, new_idx));
+
+        for (_, (_, idx)) in self
+            .all
+            .iter_mut()
+            .filter(|(_, (state, _))| *state == old_state)
+        {
+            if *idx > old_idx {
+                *idx = *idx + 1;
+            }
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct Debug_Ui_System {
-    overlays: HashMap<String_Id, overlay::Debug_Overlay>,
-    fadeout_overlays: HashMap<String_Id, fadeout_overlay::Fadeout_Debug_Overlay>,
-    disabled_overlays: HashMap<String_Id, overlay::Debug_Overlay>,
-    graphs: HashMap<String_Id, graph::Debug_Graph_View>,
+    overlays: Debug_Element_Container<overlay::Debug_Overlay>,
+    fadeout_overlays: Debug_Element_Container<fadeout_overlay::Fadeout_Debug_Overlay>,
+    graphs: Debug_Element_Container<graph::Debug_Graph_View>,
     cfg: Debug_Ui_System_Config,
 }
 
-// @Cleanup: this needs refactoring!
+macro_rules! add_debug_elem {
+    ($type: ty, $cfg_type: ty, $container: ident, $create_fn: ident, $get_fn: ident, $enable_fn: ident) => {
+        pub fn $create_fn(&mut self, id: String_Id, config: $cfg_type) -> Option<&mut $type> {
+            let elem = <$type>::new(config);
+            insert_debug_element(id, &mut self.$container, elem)
+        }
+
+        pub fn $get_fn(&mut self, id: String_Id) -> &mut $type {
+            self.$container.get_debug_element(id)
+        }
+
+        pub fn $enable_fn(&mut self, id: String_Id, enabled: bool) {
+            self.$container.set_enabled(id, enabled);
+        }
+    }
+}
+
 impl Debug_Ui_System {
     pub fn new() -> Debug_Ui_System {
         Debug_Ui_System {
-            overlays: HashMap::new(),
-            fadeout_overlays: HashMap::new(),
-            disabled_overlays: HashMap::new(),
-            graphs: HashMap::new(),
+            overlays: Debug_Element_Container::new(),
+            fadeout_overlays: Debug_Element_Container::new(),
+            graphs: Debug_Element_Container::new(),
             cfg: Debug_Ui_System_Config::default(),
         }
     }
@@ -49,90 +149,32 @@ impl Debug_Ui_System {
         &self.cfg
     }
 
-    pub fn create_overlay(
-        &mut self,
-        id: String_Id,
-        config: overlay::Debug_Overlay_Config,
-        font: Font_Handle,
-    ) -> &mut overlay::Debug_Overlay {
-        match self.overlays.entry(id) {
-            Entry::Occupied(e) => {
-                lwarn!("Overlay {} already exists: won't overwrite.", id);
-                e.into_mut()
-            }
-            Entry::Vacant(v) => v.insert(overlay::Debug_Overlay::new(config, font)),
-        }
-    }
+    add_debug_elem!(
+        overlay::Debug_Overlay,
+        overlay::Debug_Overlay_Config,
+        overlays,
+        create_overlay,
+        get_overlay,
+        set_overlay_enabled
+    );
 
-    pub fn create_fadeout_overlay(
-        &mut self,
-        id: String_Id,
-        config: fadeout_overlay::Fadeout_Debug_Overlay_Config,
-        font: Font_Handle,
-    ) -> &mut fadeout_overlay::Fadeout_Debug_Overlay {
-        match self.fadeout_overlays.entry(id) {
-            Entry::Occupied(e) => {
-                lwarn!("Overlay {} already exists: won't overwrite.", id);
-                e.into_mut()
-            }
-            Entry::Vacant(v) => v.insert(fadeout_overlay::Fadeout_Debug_Overlay::new(config, font)),
-        }
-    }
+    add_debug_elem!(
+        fadeout_overlay::Fadeout_Debug_Overlay,
+        fadeout_overlay::Fadeout_Debug_Overlay_Config,
+        fadeout_overlays,
+        create_fadeout_overlay,
+        get_fadeout_overlay,
+        set_fadeout_overlay_enabled
+    );
 
-    pub fn create_graph(
-        &mut self,
-        id: String_Id,
-        config: graph::Debug_Graph_View_Config,
-        font: Font_Handle,
-    ) -> &mut graph::Debug_Graph_View {
-        match self.graphs.entry(id) {
-            Entry::Occupied(e) => {
-                lwarn!("Graph {} already exists: won't overwrite.", id);
-                e.into_mut()
-            }
-            Entry::Vacant(v) => v.insert(graph::Debug_Graph_View::new(config, font)),
-        }
-    }
-
-    pub fn get_overlay(&mut self, id: String_Id) -> &mut overlay::Debug_Overlay {
-        self.overlays
-            .get_mut(&id)
-            .unwrap_or_else(|| fatal!("Invalid debug overlay: {}", id))
-    }
-
-    pub fn get_fadeout_overlay(
-        &mut self,
-        id: String_Id,
-    ) -> &mut fadeout_overlay::Fadeout_Debug_Overlay {
-        self.fadeout_overlays
-            .get_mut(&id)
-            .unwrap_or_else(|| fatal!("Invalid fadout debug overlay: {}", id))
-    }
-
-    pub fn get_graph(&mut self, id: String_Id) -> &mut graph::Debug_Graph_View {
-        self.graphs
-            .get_mut(&id)
-            .unwrap_or_else(|| fatal!("Invalid debug graph: {}", id))
-    }
-
-    pub fn set_overlay_enabled(&mut self, id: String_Id, enabled: bool) {
-        let (source_map, target_map, action) = if enabled {
-            (&mut self.disabled_overlays, &mut self.overlays, "enable")
-        } else {
-            (&mut self.overlays, &mut self.disabled_overlays, "disable")
-        };
-
-        if let Some(overlay) = source_map.remove(&id) {
-            assert!(target_map.get(&id).is_none());
-            target_map.insert(id, overlay);
-        } else {
-            lwarn!(
-                "Failed to {} overlay {}: either already in that state or not existing.",
-                action,
-                id
-            );
-        }
-    }
+    add_debug_elem!(
+        graph::Debug_Graph_View,
+        graph::Debug_Graph_View_Config,
+        graphs,
+        create_graph,
+        get_graph,
+        set_graph_enabled
+    );
 
     pub fn update(
         &mut self,
@@ -141,18 +183,42 @@ impl Debug_Ui_System {
         gres: &mut Gfx_Resources,
         _tracer: Debug_Tracer,
     ) {
-        for (_, graph) in self.graphs.iter_mut() {
-            graph.data.remove_points_before_x_range();
-            graph.draw(window, gres, clone_tracer!(_tracer));
+        for elem in &mut self.graphs.actives {
+            elem.update(dt);
+            elem.draw(window, gres, clone_tracer!(_tracer));
         }
 
-        for (_, overlay) in self.overlays.iter_mut() {
-            overlay.draw(window, gres, clone_tracer!(_tracer));
+        for elem in &mut self.overlays.actives {
+            elem.update(dt);
+            elem.draw(window, gres, clone_tracer!(_tracer));
         }
 
-        for (_, overlay) in self.fadeout_overlays.iter_mut() {
-            overlay.update(dt);
-            overlay.draw(window, gres, clone_tracer!(_tracer));
+        for elem in &mut self.fadeout_overlays.actives {
+            elem.update(dt);
+            elem.draw(window, gres, clone_tracer!(_tracer));
+        }
+    }
+}
+
+fn insert_debug_element<T: Debug_Element>(
+    id: String_Id,
+    container: &mut Debug_Element_Container<T>,
+    element: T,
+) -> Option<&mut T> {
+    match container.all.entry(id) {
+        Entry::Occupied(_) => {
+            lwarn!(
+                "{} '{}' already exists: won't overwrite.",
+                type_name::<T>(),
+                id
+            );
+            None
+        }
+        Entry::Vacant(v) => {
+            container.actives.push(element);
+            let idx = container.actives.len() - 1;
+            v.insert((Active_State::Active, idx));
+            Some(&mut container.actives[idx])
         }
     }
 }

@@ -23,6 +23,7 @@ where
     })
 }
 
+#[cfg(debug_assertions)]
 fn read_cfg_str(path_id: String_Id, cfg: &Config) -> &String {
     let value = cfg
         .read_cfg(path_id)

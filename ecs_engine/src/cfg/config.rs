@@ -1,16 +1,23 @@
-use super::parsing::{Cfg_Entry, Raw_Config};
+use super::parsing::Raw_Config;
 use super::value::Cfg_Value;
 use crate::common::stringid::String_Id;
 use std::collections::HashMap;
 use std::convert::From;
 use std::path::Path;
-use std::sync::mpsc::{self, Receiver, Sender};
-use std::vec::Vec;
+
+#[cfg(debug_assertions)]
+use {
+    super::parsing::Cfg_Entry,
+    std::sync::mpsc::{self, Receiver, Sender},
+};
 
 pub struct Config {
-    change_rx: Receiver<Cfg_Entry>,
-    change_tx: Option<Sender<Cfg_Entry>>,
     cfg_var_table: HashMap<String_Id, Cfg_Value>,
+
+    #[cfg(debug_assertions)]
+    change_rx: Receiver<Cfg_Entry>,
+    #[cfg(debug_assertions)]
+    change_tx: Option<Sender<Cfg_Entry>>,
 }
 
 impl Config {
@@ -43,12 +50,15 @@ impl Config {
             );
         }
 
+        #[cfg(debug_assertions)]
         let (change_tx, change_rx) = mpsc::channel();
 
         Config {
-            change_rx,
-            change_tx: Some(change_tx),
             cfg_var_table,
+            #[cfg(debug_assertions)]
+            change_rx,
+            #[cfg(debug_assertions)]
+            change_tx: Some(change_tx),
         }
     }
 

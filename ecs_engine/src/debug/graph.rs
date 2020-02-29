@@ -1,3 +1,4 @@
+use super::element::Debug_Element;
 use crate::common::colors;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
@@ -13,6 +14,7 @@ use std::ops::Range;
 pub struct Debug_Graph_View_Config {
     pub grid_xstep: Option<f32>,
     pub grid_ystep: Option<f32>,
+    pub font: Font_Handle,
     pub label_font_size: u16,
     pub title: Option<String>,
     pub title_font_size: u16,
@@ -29,7 +31,6 @@ pub struct Debug_Graph_View {
     pub pos: Vec2u,
     pub size: Vec2u,
     pub config: Debug_Graph_View_Config,
-    font: Font_Handle,
 }
 
 /// Note: for simplicify, the graph assumes points are added in x-sorted order.
@@ -39,21 +40,8 @@ pub struct Debug_Graph {
     pub y_range: Range<f32>,
 }
 
-impl Debug_Graph_View {
-    pub fn new(config: Debug_Graph_View_Config, font: Font_Handle) -> Self {
-        Debug_Graph_View {
-            config,
-            font,
-            ..Default::default()
-        }
-    }
-
-    pub fn draw(
-        &self,
-        window: &mut Window_Handle,
-        gres: &mut Gfx_Resources,
-        _tracer: Debug_Tracer,
-    ) {
+impl Debug_Element for Debug_Graph_View {
+    fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources, _tracer: Debug_Tracer) {
         trace!("graph::draw", _tracer);
 
         // Draw background
@@ -65,8 +53,7 @@ impl Debug_Graph_View {
         let yr = &self.data.y_range;
 
         // Draw grid
-        let pos = Vec2f::from(self.pos);
-        let font = gres.get_font(self.font);
+        let font = gres.get_font(self.config.font);
         let font_size = self.config.label_font_size;
         if let Some(xstep) = self.config.grid_xstep {
             let mut x = xr.start;
@@ -123,8 +110,9 @@ impl Debug_Graph_View {
             .data
             .points
             .iter()
-            .filter(|Vec2f { x, y }| xr.contains(x) && yr.contains(y));
-        let mut vbuf = render::start_draw_linestrip(drawn_points.clone().count());
+            .filter(|Vec2f { x, y }| xr.contains(x) && yr.contains(y))
+            .collect::<Vec<_>>();
+        let mut vbuf = render::start_draw_linestrip(drawn_points.len());
         for &point in drawn_points {
             let vpos = self.get_coords_for(point);
             let col = self.get_color_for(point);
@@ -134,6 +122,15 @@ impl Debug_Graph_View {
 
         render::render_vbuf(window, &vbuf, &Transform2D::from_pos(self.pos.into()));
     }
+}
+
+impl Debug_Graph_View {
+    pub fn new(config: Debug_Graph_View_Config) -> Self {
+        Self {
+            config,
+            ..Default::default()
+        }
+    }
 
     fn get_coords_for(&self, point: Vec2f) -> Vec2f {
         use crate::common::math::lerp;
@@ -141,8 +138,16 @@ impl Debug_Graph_View {
         let h = self.data.y_range.end - self.data.y_range.start;
         Vec2f::from(self.pos)
             + Vec2f::new(
-                lerp(0.0, self.size.x as f32, (point.x - self.data.x_range.start) / w),
-                lerp(0.0, self.size.y as f32, 1.0 - (point.y - self.data.y_range.start) / h),
+                lerp(
+                    0.0,
+                    self.size.x as f32,
+                    (point.x - self.data.x_range.start) / w,
+                ),
+                lerp(
+                    0.0,
+                    self.size.y as f32,
+                    1.0 - (point.y - self.data.y_range.start) / h,
+                ),
             )
     }
 

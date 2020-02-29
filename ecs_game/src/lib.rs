@@ -90,6 +90,8 @@ pub struct Debug_CVars {
     pub draw_debug_grid: Cfg_Var<bool>,
     pub debug_grid_square_size: Cfg_Var<f32>,
     pub debug_grid_opacity: Cfg_Var<i32>,
+
+    pub draw_fps_graph: Cfg_Var<bool>,
 }
 
 #[repr(C)]
@@ -357,6 +359,7 @@ fn create_game_state<'a>(
         app::start_recording(&mut engine_state)?;
     }
 
+    #[cfg(debug_assertions)]
     let cfg = &engine_state.config;
 
     #[cfg(debug_assertions)]
@@ -433,6 +436,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     let draw_debug_grid = Cfg_Var::new("engine/debug/rendering/grid/draw_grid", cfg);
     let debug_grid_square_size = Cfg_Var::new("engine/debug/rendering/grid/square_size", cfg);
     let debug_grid_opacity = Cfg_Var::new("engine/debug/rendering/grid/opacity", cfg);
+    let draw_fps_graph = Cfg_Var::new("engine/debug/draw_fps_graph", cfg);
 
     Debug_CVars {
         draw_sprites_bg,
@@ -447,6 +451,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
         draw_debug_grid,
         debug_grid_square_size,
         debug_grid_opacity,
+        draw_fps_graph,
     }
 }
 
@@ -496,19 +501,25 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         pad_x: 5.0 * ui_scale,
         pad_y: 5.0 * ui_scale,
         background: colors::rgba(25, 25, 25, 210),
+        font,
+        ..Default::default()
     };
     // Entities overlay
-    let mut overlay = debug_ui.create_overlay(String_Id::from("entities"), overlay_cfg, font);
-    overlay.vert_align = Align::End;
-    overlay.horiz_align = Align::Begin;
+    let mut overlay = debug_ui
+        .create_overlay(String_Id::from("entities"), overlay_cfg)
+        .unwrap();
+    overlay.config.vert_align = Align::End;
+    overlay.config.horiz_align = Align::Begin;
     overlay.position = Vec2f::new(
         0.0,
         game_state.engine_state.app_config.target_win_size.1 as f32 - 22. * ui_scale,
     );
     // Camera overlay
-    let mut overlay = debug_ui.create_overlay(String_Id::from("camera"), overlay_cfg, font);
-    overlay.vert_align = Align::End;
-    overlay.horiz_align = Align::End;
+    let mut overlay = debug_ui
+        .create_overlay(String_Id::from("camera"), overlay_cfg)
+        .unwrap();
+    overlay.config.vert_align = Align::End;
+    overlay.config.horiz_align = Align::End;
     overlay.position = Vec2f::new(
         game_state.engine_state.app_config.target_win_size.0 as f32,
         game_state.engine_state.app_config.target_win_size.1 as f32 - 20. * ui_scale,

@@ -12,6 +12,7 @@ use sfml::graphics::{
 };
 use sfml::system::Vector2f;
 
+// @Speed: replace this with a VertexBuffer
 pub type Vertex_Buffer = sfml::graphics::VertexArray;
 pub type Vertex = sfml::graphics::Vertex;
 
@@ -267,12 +268,12 @@ fn calc_render_transform(
     t
 }
 
-pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer {
-    sfml::graphics::VertexArray::new(PrimitiveType::Quads, n_quads * 4)
+pub fn start_draw_quads(_n_quads: usize) -> Vertex_Buffer {
+    sfml::graphics::VertexArray::new(PrimitiveType::Quads, 0)
 }
 
-pub fn start_draw_linestrip(n_vertices: usize) -> Vertex_Buffer {
-    sfml::graphics::VertexArray::new(PrimitiveType::LineStrip, n_vertices)
+pub fn start_draw_linestrip(_n_vertices: usize) -> Vertex_Buffer {
+    sfml::graphics::VertexArray::new(PrimitiveType::LineStrip, 0)
 }
 
 pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
