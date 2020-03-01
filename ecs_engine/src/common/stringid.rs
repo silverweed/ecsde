@@ -15,6 +15,14 @@ impl String_Id {
     pub fn from_u32(x: u32) -> String_Id {
         String_Id(x)
     }
+
+    #[cfg(debug_assertions)]
+    pub fn to_string(&self) -> String {
+        STRING_ID_MAP
+            .read()
+            .expect("[ ERROR ] Failed to lock STRING_ID_MAP")[self]
+            .clone()
+    }
 }
 
 impl<'a, T> From<T> for String_Id

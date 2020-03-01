@@ -7,6 +7,7 @@ use crate::gfx::window::Window_Handle;
 use crate::input::bindings::keyboard;
 use crate::input::input_system::Input_Raw_Event;
 use crate::resources::gfx;
+use std::collections::HashMap;
 
 mod history;
 
@@ -18,7 +19,9 @@ pub enum Console_Status {
     Closed,
 }
 
+const OUTPUT_SIZE: usize = 250;
 const HIST_SIZE: usize = 50;
+const COLOR_HISTORY: colors::Color = colors::rgba(200, 200, 200, 200);
 
 pub struct Console {
     pub status: Console_Status,
@@ -29,12 +32,20 @@ pub struct Console {
     pub toggle_console_keys: Vec<keyboard::Key>,
 
     font: gfx::Font_Handle,
+
     cur_line: String,
     cur_pos: usize,
+
     enqueued_cmd: Option<String>,
+
+    output: Vec<(String, colors::Color)>,
     history: History<String>,
-    hints: Vec<String>,
+
+    // { cur_cmd => hints relative to it } (empty string => all commands)
+    // @Speed: we should avoid having more copies of the same hint set if more commands share it.
+    hints: HashMap<String, Vec<String>>,
     hints_displayed: Vec<usize>,
+    selected_hint: usize,
 }
 
 impl Console {
@@ -49,9 +60,11 @@ impl Console {
             font: None,
             toggle_console_keys: vec![],
             enqueued_cmd: None,
+            output: Vec::with_capacity(OUTPUT_SIZE),
             history: History::with_capacity(HIST_SIZE),
-            hints: vec![],
+            hints: HashMap::new(),
             hints_displayed: vec![],
+            selected_hint: 0,
         }
     }
 
@@ -79,11 +92,18 @@ impl Console {
         self.enqueued_cmd.take()
     }
 
-    pub fn add_hints<I>(&mut self, hints: I)
+    pub fn add_hints<I>(&mut self, cmd: &str, hints: I)
     where
         I: IntoIterator<Item = String>,
     {
-        self.hints.extend(hints);
+        self.hints
+            .entry(cmd.to_string())
+            .or_insert_with(|| vec![])
+            .extend(hints);
+    }
+
+    pub fn output_line<T: ToString>(&mut self, line: T, color: colors::Color) {
+        self.output.push((line.to_string(), color));
     }
 
     #[cfg(feature = "use-sfml")]
@@ -92,6 +112,8 @@ impl Console {
         use sfml::window::Event;
 
         debug_assert!(self.cur_pos <= self.cur_line.len());
+
+        let mut line_changed = false;
 
         match event {
             Event::KeyPressed { code, .. } if self.toggle_console_keys.contains(&code) => {
@@ -107,22 +129,39 @@ impl Console {
                 } else {
                     self.del_prev_char();
                 }
+                line_changed = true;
             }
             Event::KeyPressed { code: Key::Up, .. } => {
-                if let Some(line) = self.history.move_and_read(Direction::To_Older) {
-                    self.cur_line = line.to_string();
-                    self.cur_pos = self.cur_line.len();
+                if self.hints_displayed.is_empty() {
+                    if let Some(line) = self.history.move_and_read(Direction::To_Older) {
+                        self.cur_line = line.to_string();
+                        self.cur_pos = self.cur_line.len();
+                    }
+                } else {
+                    if self.selected_hint == self.hints_displayed.len() - 1 {
+                        self.selected_hint = 0;
+                    } else {
+                        self.selected_hint += 1;
+                    }
                 }
             }
             Event::KeyPressed {
                 code: Key::Down, ..
             } => {
-                if !self.history.is_cursor_past_end() {
-                    self.cur_line = self
-                        .history
-                        .move_and_read(Direction::To_Newer)
-                        .map_or_else(|| String::from(""), |s| s.to_string());
-                    self.cur_pos = self.cur_line.len();
+                if self.hints_displayed.is_empty() {
+                    if !self.history.is_cursor_past_end() {
+                        self.cur_line = self
+                            .history
+                            .move_and_read(Direction::To_Newer)
+                            .map_or_else(|| String::from(""), |s| s.to_string());
+                        self.cur_pos = self.cur_line.len();
+                    }
+                } else {
+                    if self.selected_hint == 0 {
+                        self.selected_hint = self.hints_displayed.len() - 1;
+                    } else {
+                        self.selected_hint -= 1;
+                    }
                 }
             }
             Event::KeyPressed {
@@ -175,6 +214,7 @@ impl Console {
                 ..
             } => {
                 self.del_prev_word();
+                line_changed = true;
             }
             Event::KeyPressed {
                 code: Key::Delete,
@@ -186,6 +226,7 @@ impl Console {
                 } else {
                     self.del_next_char();
                 }
+                line_changed = true;
             }
             Event::KeyPressed {
                 code: Key::K,
@@ -193,6 +234,7 @@ impl Console {
                 ..
             } => {
                 self.cur_line.truncate(self.cur_pos);
+                line_changed = true;
             }
             Event::KeyPressed {
                 code: Key::D,
@@ -201,33 +243,44 @@ impl Console {
             } => {
                 self.cur_line.clear();
                 self.cur_pos = 0;
+                line_changed = true;
             }
             Event::KeyPressed {
                 code: Key::Return, ..
             } => {
                 self.commit_line();
+                line_changed = true;
             }
             Event::KeyPressed { code: Key::Tab, .. } => {
                 if !self.hints_displayed.is_empty() {
                     // @Improve: this is a pretty rudimentary behaviour: consider improving.
-                    self.cur_line = self.hints[self.hints_displayed[0]].clone();
+                    let (cmd, _) = self.get_hint_key_and_rest().unwrap();
+                    self.cur_line = cmd.to_string()
+                        + if cmd.is_empty() { "" } else { " " }
+                        + &self.hints[cmd][self.hints_displayed[self.selected_hint]]
+                        + " ";
                     self.cur_pos = self.cur_line.len();
                 }
+                line_changed = true;
             }
             Event::KeyPressed { code, shift, .. } => {
                 if let Some(c) = keyboard::key_to_char(code, shift) {
                     self.cur_line.insert(self.cur_pos, c);
                     self.cur_pos += 1;
                 }
+                line_changed = true;
             }
             _ => {}
         }
-        self.update_hints();
+        if line_changed {
+            self.update_hints();
+        }
     }
 
     fn commit_line(&mut self) {
         let cmdline = self.cur_line.trim().to_string();
         self.history.push(cmdline.clone());
+        self.output_line(cmdline.clone(), COLOR_HISTORY);
         self.enqueued_cmd = Some(cmdline);
         self.cur_line.clear();
         self.cur_pos = 0;
@@ -241,11 +294,39 @@ impl Console {
             return;
         }
 
+        let cmd;
+        let rest;
+        {
+            let cmd_and_rest = self.get_hint_key_and_rest().unwrap();
+            cmd = cmd_and_rest.0.to_string();
+            rest = cmd_and_rest.1.to_string();
+        }
         // @Improve: sort by relevance
-        for (i, hint) in self.hints.iter().enumerate() {
-            if hint.contains(cur_line) {
-                self.hints_displayed.push(i);
+        if let Some(hints) = self.hints.get(&cmd) {
+            for (i, hint) in hints.iter().enumerate() {
+                if hint.contains(&rest) {
+                    self.hints_displayed.push(i);
+                }
             }
+        }
+
+        if !self.hints_displayed.is_empty() {
+            self.selected_hint = 0;
+        }
+    }
+
+    fn get_hint_key_and_rest(&self) -> Option<(&str, &str)> {
+        let cur_line = self.cur_line.trim();
+        if cur_line.is_empty() {
+            return None;
+        }
+        let mut split = cur_line.split(' ');
+        let cur_cmd = split.next().unwrap();
+        let rest = split.next();
+        if let Some(rest) = rest {
+            Some((cur_cmd, rest))
+        } else {
+            Some(("", cur_cmd))
         }
     }
 
@@ -266,7 +347,12 @@ impl Console {
     }
 
     fn del_prev_word(&mut self) {
-        while self.cur_pos > 0 && self.del_prev_char() != Some(' ') {}
+        while self.cur_pos > 0 {
+            match self.del_prev_char() {
+                Some(' ') | Some('/') => break,
+                _ => {}
+            }
+        }
     }
 
     fn del_next_char(&mut self) -> Option<char> {
@@ -372,12 +458,12 @@ impl Console {
         );
         render::fill_color_rect(window, colors::WHITE, cursor);
 
-        // Draw history
+        // Draw output
         {
             let mut pos = pos - Vec2f::new(0.0, linesep as f32);
-            for line in self.history.iter().rev() {
+            for (line, color) in self.output.iter().rev() {
                 let mut text = render::create_text(line, font, self.font_size);
-                render::set_text_paint_props(&mut text, colors::rgba(200, 200, 200, 200));
+                render::set_text_paint_props(&mut text, *color);
                 render::render_text(window, &mut text, pos);
                 pos.y -= linesep;
                 if pos.y < -linesep {
@@ -388,12 +474,21 @@ impl Console {
 
         // Draw hints
         let mut texts = Vec::with_capacity(self.hints_displayed.len());
-        for idx in &self.hints_displayed {
-            let mut text =
-                render::create_text(&self.hints[*idx], font, (self.font_size as f32 * 0.9) as _);
-            render::set_text_paint_props(&mut text, colors::rgba(200, 200, 200, 255));
+        if let Some((cmd, _)) = self.get_hint_key_and_rest() {
+            if let Some(hints) = &self.hints.get(cmd) {
+                for (i, idx) in self.hints_displayed.iter().enumerate() {
+                    let mut text =
+                        render::create_text(&hints[*idx], font, (self.font_size as f32 * 0.9) as _);
+                    let color = if i == self.selected_hint {
+                        colors::YELLOW
+                    } else {
+                        colors::rgba(200, 200, 200, 255)
+                    };
+                    render::set_text_paint_props(&mut text, color);
 
-            texts.push(text);
+                    texts.push(text);
+                }
+            }
         }
 
         {

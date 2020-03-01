@@ -98,4 +98,11 @@ impl Config {
         // @Incomplete: maybe give a warning if type changes?
         self.cfg_var_table.insert(id, value);
     }
+
+    #[cfg(debug_assertions)]
+    pub fn get_all_pairs(&self) -> impl Iterator<Item = (String, Cfg_Value)> + '_ {
+        self.cfg_var_table
+            .iter()
+            .map(|(key, val)| (key.to_string(), val.clone()))
+    }
 }

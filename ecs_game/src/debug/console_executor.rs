@@ -1,5 +1,6 @@
 use crate::gameplay_system::Gameplay_System;
 use ecs_engine::cfg::Cfg_Value;
+use ecs_engine::common::colors::{self, Color};
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::vector::Vec2f;
 use ecs_engine::core::app::Engine_State;
@@ -21,10 +22,18 @@ pub enum Console_Cmd {
 // there is a better way.
 pub const ALL_CMD_STRINGS: [&str; 5] = ["quit", "cam", "var", "toggle", "fps"];
 
-pub fn execute(cmdline: &str, engine_state: &mut Engine_State, gs: &mut Gameplay_System) {
+// Parses and executes 'cmdline'. May return a string to output to the console.
+pub fn execute(
+    cmdline: &str,
+    engine_state: &mut Engine_State,
+    gs: &mut Gameplay_System,
+) -> Option<(String, Color)> {
     match parse_cmd(cmdline) {
         Ok(cmd) => execute_command(cmd, engine_state, gs),
-        Err(err) => lerr!("Failed to execute command {}: {}", cmdline, err),
+        Err(err) => Some((
+            format!("Failed to execute command {}: {}", cmdline, err),
+            colors::RED,
+        )),
     }
 }
 
@@ -59,22 +68,34 @@ fn parse_cmd(cmdline: &str) -> Result<Console_Cmd, Console_Error> {
     }
 }
 
-fn execute_command(cmd: Console_Cmd, engine_state: &mut Engine_State, gs: &mut Gameplay_System) {
+fn execute_command(
+    cmd: Console_Cmd,
+    engine_state: &mut Engine_State,
+    gs: &mut Gameplay_System,
+) -> Option<(String, Color)> {
     match cmd {
-        Console_Cmd::Quit => engine_state.should_close = true,
-        Console_Cmd::Move_Camera { to } => gs.move_camera_to(to),
-        Console_Cmd::Get_Cfg_Var { name } => {
-            linfo!(
+        Console_Cmd::Quit => {
+            engine_state.should_close = true;
+            None
+        }
+        Console_Cmd::Move_Camera { to } => {
+            gs.move_camera_to(to);
+            None
+        }
+        Console_Cmd::Get_Cfg_Var { name } => Some((
+            format!(
                 "{} = {:?}",
                 name,
                 engine_state.config.read_cfg(String_Id::from(name.as_str()))
-            );
-        }
+            ),
+            colors::WHITE,
+        )),
         Console_Cmd::Set_Cfg_Var { name, value } => {
             linfo!("Setting {} to {:?}", name, value);
             engine_state
                 .config
                 .write_cfg(String_Id::from(name.as_str()), value);
+            None
         }
         Console_Cmd::Toggle_Cfg_Var { name } => {
             linfo!("Toggling {}", name);
@@ -87,8 +108,9 @@ fn execute_command(cmd: Console_Cmd, engine_state: &mut Engine_State, gs: &mut G
                 engine_state
                     .config
                     .write_cfg(String_Id::from(name.as_str()), Cfg_Value::Bool(!val));
+                None
             } else {
-                lerr!("Cfg_Var {} is not a bool!", name);
+                Some((format!("Cfg_Var {} is not a bool!", name), colors::RED))
             }
         }
     }

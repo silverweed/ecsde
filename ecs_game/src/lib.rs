@@ -527,8 +527,31 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
 
     // Console hints
     game_state.engine_state.debug_systems.console.add_hints(
+        "",
         crate::debug::console_executor::ALL_CMD_STRINGS
             .iter()
             .map(|s| String::from(*s)),
+    );
+    game_state.engine_state.debug_systems.console.add_hints(
+        "var",
+        game_state
+            .engine_state
+            .config
+            .get_all_pairs()
+            .map(|(k, _)| k),
+    );
+    game_state.engine_state.debug_systems.console.add_hints(
+        "toggle",
+        game_state
+            .engine_state
+            .config
+            .get_all_pairs()
+            .filter_map(|(k, v)| {
+                if let cfg::Cfg_Value::Bool(_) = v {
+                    Some(k)
+                } else {
+                    None
+                }
+            }),
     );
 }

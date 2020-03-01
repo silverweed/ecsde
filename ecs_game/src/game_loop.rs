@@ -10,8 +10,8 @@ use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use ecs_engine::{
-    common::stringid::String_Id, common::transform::Transform2D, common::vector::Vec2f, debug,
-    debug::painter::Debug_Painter, ecs_engine::common::angle::rad,
+    common::angle::rad, common::stringid::String_Id, common::transform::Transform2D,
+    common::vector::Vec2f, debug, debug::painter::Debug_Painter,
     gfx::paint_props::Paint_Properties, input,
 };
 
@@ -81,6 +81,7 @@ pub fn tick_game<'a>(
                 .console
                 .update(systems.input_system.get_raw_events());
 
+            let mut output = vec![];
             while let Some(cmd) = game_state
                 .engine_state
                 .debug_systems
@@ -88,12 +89,23 @@ pub fn tick_game<'a>(
                 .pop_enqueued_cmd()
             {
                 if !cmd.is_empty() {
-                    console_executor::execute(
+                    let maybe_output = console_executor::execute(
                         &cmd,
                         &mut game_state.engine_state,
                         &mut game_state.gameplay_system,
                     );
+                    if let Some(out) = maybe_output {
+                        output.push(out);
+                    }
                 }
+            }
+
+            for (out, color) in output {
+                game_state
+                    .engine_state
+                    .debug_systems
+                    .console
+                    .output_line(format!(">> {}", out), color);
             }
         }
     }
