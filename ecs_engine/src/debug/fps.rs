@@ -31,12 +31,6 @@ impl Fps_Console_Printer {
         if self.time_elapsed >= self.update_rate {
             self.latest_calc_fps =
                 self.frames_elapsed as f32 / time::to_secs_frac(&self.update_rate);
-            eprintln!(
-                "[{}] Avg. FPS: {} | Time: {:.4} ms",
-                self.tag,
-                self.latest_calc_fps,
-                (self.time_elapsed / self.frames_elapsed).as_nanos() as f32 * 0.000_001
-            );
             self.frames_elapsed = 0;
             self.time_elapsed = Duration::new(0, 0);
         }
