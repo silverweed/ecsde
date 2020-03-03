@@ -55,19 +55,21 @@ pub fn tick_game<'a>(
     }
 
     // Update input
-    #[cfg(debug_assertions)]
-    {
-        game_state.engine_state.input_state.process_game_actions =
-            debug_systems.console.status != debug::console::Console_Status::Open;
-    }
-
     {
         trace!("input_system::update", _tracer);
+
+        let process_game_actions = if cfg!(debug_assertions) {
+            debug_systems.console.status != debug::console::Console_Status::Open
+        } else {
+            true
+        };
+
         input::input_system::update_input(
             &mut game_state.engine_state.input_state,
             window,
             &mut *game_state.input_provider,
             &game_state.engine_state.config,
+            process_game_actions,
         );
     }
 

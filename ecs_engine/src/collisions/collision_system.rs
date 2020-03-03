@@ -103,12 +103,15 @@ impl Collision_System {
         #[cfg(debug_assertions)]
         self.debug_applied_impulses.clear();
 
-        self.entities_buf.clear();
-        new_entity_stream(ecs_world)
-            .require::<Collider>()
-            .require::<C_Spatial2D>()
-            .build()
-            .collect(ecs_world, &mut self.entities_buf);
+        {
+            trace!("collision_system::collect_entities", _tracer);
+            self.entities_buf.clear();
+            new_entity_stream(ecs_world)
+                .require::<Collider>()
+                .require::<C_Spatial2D>()
+                .build()
+                .collect(ecs_world, &mut self.entities_buf);
+        }
 
         {
             trace!("collision_system::fill_quadtree", _tracer);
@@ -313,17 +316,6 @@ fn check_collision_with_neighbours(
                                     penetration,
                                 },
                             );
-                            cld.insert(
-                                neighbour,
-                                Collision_Info {
-                                    my_pos: oth_pos,
-                                    other: entity,
-                                    oth_pos: pos,
-                                    my_velocity: oth_velocity,
-                                    oth_velocity: velocity,
-                                    penetration: -penetration,
-                                },
-                            );
                         }
                         n_collisions_total
                             .fetch_add(neighbours.len(), std::sync::atomic::Ordering::Relaxed);
@@ -357,17 +349,6 @@ fn check_collision_with_neighbours(
                                     oth_pos,
                                     my_velocity: velocity,
                                     oth_velocity,
-                                    penetration: (oth_pos - pos).normalized() * penetration_dist,
-                                },
-                            );
-                            cld.insert(
-                                neighbour,
-                                Collision_Info {
-                                    my_pos: oth_pos,
-                                    other: entity,
-                                    oth_pos: pos,
-                                    my_velocity: oth_velocity,
-                                    oth_velocity: velocity,
                                     penetration: (oth_pos - pos).normalized() * penetration_dist,
                                 },
                             );

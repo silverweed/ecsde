@@ -36,8 +36,6 @@ pub struct Input_State {
     pub axes: axes::Virtual_Axes,
     /// Contains the raw window events that are suitable for becoming game actions.
     pub raw_events: Vec<Input_Raw_Event>,
-
-    pub process_game_actions: bool,
 }
 
 pub fn create_input_state(env: &Env_Info) -> Input_State {
@@ -50,7 +48,6 @@ pub fn create_input_state(env: &Env_Info) -> Input_State {
         game_actions: vec![],
         axes,
         raw_events: vec![],
-        process_game_actions: true,
     }
 }
 
@@ -59,6 +56,7 @@ pub fn update_input(
     window: &mut Input_Provider_Input,
     provider: &mut dyn Input_Provider,
     cfg: &cfg::Config,
+    process_game_actions: bool,
 ) {
     joystick::update_joysticks();
     provider.update(window, Some(&input_state.joy_state), cfg);
@@ -67,7 +65,7 @@ pub fn update_input(
     update_real_axes(input_state); // Note: these axes values may be later overwritten by actions
 
     let events = provider.get_events();
-    read_events_to_actions(input_state, events);
+    read_events_to_actions(input_state, events, process_game_actions);
 }
 
 fn handle_actions(actions: &mut Vec<Game_Action>, kind: Action_Kind, names: &[String_Id]) {
@@ -88,12 +86,16 @@ fn handle_axis_released(axes: &mut axes::Virtual_Axes, names: &[(String_Id, Axis
     }
 }
 
-fn read_events_to_actions(state: &mut Input_State, events: &[Input_Raw_Event]) {
+fn read_events_to_actions(
+    state: &mut Input_State,
+    events: &[Input_Raw_Event],
+    process_game_actions: bool,
+) {
     state.core_actions.clear();
     state.game_actions.clear();
     state.raw_events.clear();
 
-    let process_event_func = if state.process_game_actions {
+    let process_event_func = if process_game_actions {
         process_event_core_and_game_actions
     } else {
         process_event_core_actions
@@ -102,15 +104,8 @@ fn read_events_to_actions(state: &mut Input_State, events: &[Input_Raw_Event]) {
     for &event in events.iter() {
         let prev_core_actions_len = state.core_actions.len();
 
-        if process_event_func(state, event) {
-            state.raw_events.push(event);
-        }
-        {
-            if state.core_actions.len() > prev_core_actions_len {
-                // The event was a core action: don't save it in raw_events
-                state.raw_events.pop();
-            }
-        }
+        state.raw_events.push(event);
+        process_event_func(state, event);
     }
 }
 
