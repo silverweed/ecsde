@@ -10,7 +10,7 @@ use std::thread::JoinHandle;
 
 #[derive(Copy, Clone)]
 pub struct Replay_Recording_System_Config {
-    pub ms_per_frame: i32,
+    pub ms_per_frame: f32,
 }
 
 pub struct Replay_Recording_System {

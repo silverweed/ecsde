@@ -35,11 +35,11 @@ pub fn tick_game<'a>(
     #[cfg(debug_assertions)]
     let debug_systems = &mut game_state.engine_state.debug_systems;
 
-    let update_time = Duration::from_millis(
-        game_state
+    let update_time = Duration::from_micros(
+        (game_state
             .cvars
             .gameplay_update_tick_ms
-            .read(&game_state.engine_state.config) as u64,
+            .read(&game_state.engine_state.config) * 1000.0) as u64,
     );
 
     game_state.execution_time += dt;

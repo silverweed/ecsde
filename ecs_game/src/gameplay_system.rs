@@ -330,6 +330,7 @@ impl Gameplay_System {
                 }
                 self.scene_tree.add(entity, fst_entity, &t.local_transform);
             }
+            /*
             {
                 let c = em.add_component::<collider::Collider>(entity);
                 let width = (sw / n_frames) as f32;
@@ -340,6 +341,7 @@ impl Gameplay_System {
                 //};
                 c.offset = -Vec2f::new(width * 0.5, height * 0.5);
             }
+            */
             {
                 let s = em.add_component::<C_Animated_Sprite>(entity);
                 s.n_frames = n_frames;

@@ -63,7 +63,7 @@ pub struct Game_State<'a> {
 }
 
 pub struct CVars {
-    pub gameplay_update_tick_ms: Cfg_Var<i32>,
+    pub gameplay_update_tick_ms: Cfg_Var<f32>,
     pub target_fps: Cfg_Var<i32>,
     pub vsync: Cfg_Var<bool>,
     pub smooth_by_extrapolating_velocity: Cfg_Var<bool>,

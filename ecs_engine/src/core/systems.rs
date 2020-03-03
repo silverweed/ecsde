@@ -47,7 +47,7 @@ impl Debug_Systems {
             debug_ui_system: debug_ui_system::Debug_Ui_System::new(),
             replay_recording_system: recording_system::Replay_Recording_System::new(
                 recording_system::Replay_Recording_System_Config {
-                    ms_per_frame: crate::cfg::Cfg_Var::<i32>::new(
+                    ms_per_frame: crate::cfg::Cfg_Var::<f32>::new(
                         "engine/gameplay/gameplay_update_tick_ms",
                         cfg,
                     )
