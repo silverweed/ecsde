@@ -39,7 +39,8 @@ pub fn tick_game<'a>(
         (game_state
             .cvars
             .gameplay_update_tick_ms
-            .read(&game_state.engine_state.config) * 1000.0) as u64,
+            .read(&game_state.engine_state.config)
+            * 1000.0) as u64,
     );
 
     game_state.execution_time += dt;
@@ -425,11 +426,12 @@ fn update_debug(game_state: &mut Game_State) {
     let debug_systems = &mut engine_state.debug_systems;
 
     // @Speed @WaitForStable: these should all be computed at compile time.
-    let (sid_time, sid_fps, sid_entities, sid_camera) = (
+    let (sid_time, sid_fps, sid_entities, sid_camera, sid_execution_time) = (
         String_Id::from("time"),
         String_Id::from("fps"),
         String_Id::from("entities"),
         String_Id::from("camera"),
+        String_Id::from("execution_time"),
     );
 
     // Overlays
@@ -466,6 +468,24 @@ fn update_debug(game_state: &mut Game_State) {
             debug_systems.debug_ui_system.get_graph(sid_fps),
             &engine_state.time,
             &game_state.fps_debug,
+        );
+    }
+
+    let draw_exe_time_graph = game_state
+        .debug_cvars
+        .draw_exe_time_graph
+        .read(&engine_state.config);
+    debug_systems
+        .debug_ui_system
+        .set_graph_enabled(sid_execution_time, draw_exe_time_graph);
+    if draw_exe_time_graph {
+        debug_systems
+            .debug_ui_system
+            .set_graph_enabled(sid_execution_time, true);
+        update_graph_exe_time(
+            debug_systems.debug_ui_system.get_graph(sid_execution_time),
+            &engine_state.time,
+            &game_state.execution_time,
         );
     }
 
@@ -847,4 +867,22 @@ fn update_graph_fps(
         graph.data.x_range.start = graph.data.x_range.end - TIME_LIMIT;
     }
     graph.data.add_point(now, fps);
+}
+
+#[cfg(debug_assertions)]
+fn update_graph_exe_time(
+    graph: &mut debug::graph::Debug_Graph_View,
+    time: &time::Time,
+    execution_time: &std::time::Duration,
+) {
+    const TIME_LIMIT: f32 = 60.0;
+
+    let now = time::to_secs_frac(&time.get_real_time());
+    graph.data.x_range.end = now;
+    if graph.data.x_range.end - graph.data.x_range.start > TIME_LIMIT {
+        graph.data.x_range.start = graph.data.x_range.end - TIME_LIMIT
+    }
+    graph
+        .data
+        .add_point(now, time::to_secs_frac(&execution_time) * 1000.0);
 }

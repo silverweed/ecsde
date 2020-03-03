@@ -103,8 +103,8 @@ impl Input_Bindings {
                 joystick_id
             )
         });
-	let joystick = joystick::get_joy_btn_from_id(*joystick, button)?;
-	let input_action = Input_Action::Joystick(joystick);
+        let joystick = joystick::get_joy_btn_from_id(*joystick, button)?;
+        let input_action = Input_Action::Joystick(joystick);
         self.action_bindings.get(&input_action).map(Vec::as_slice)
     }
 

@@ -100,7 +100,7 @@ impl<T> Debug_Element_Container<T> {
             .filter(|(_, (state, _))| *state == old_state)
         {
             if *idx > old_idx {
-                *idx = *idx + 1;
+                *idx = *idx - 1;
             }
         }
     }

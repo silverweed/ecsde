@@ -92,6 +92,7 @@ pub struct Debug_CVars {
     pub debug_grid_opacity: Cfg_Var<i32>,
 
     pub draw_fps_graph: Cfg_Var<bool>,
+    pub draw_exe_time_graph: Cfg_Var<bool>,
 }
 
 #[repr(C)]
@@ -436,7 +437,8 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     let draw_debug_grid = Cfg_Var::new("engine/debug/rendering/grid/draw_grid", cfg);
     let debug_grid_square_size = Cfg_Var::new("engine/debug/rendering/grid/square_size", cfg);
     let debug_grid_opacity = Cfg_Var::new("engine/debug/rendering/grid/opacity", cfg);
-    let draw_fps_graph = Cfg_Var::new("engine/debug/draw_fps_graph", cfg);
+    let draw_fps_graph = Cfg_Var::new("engine/debug/graphs/fps", cfg);
+    let draw_exe_time_graph = Cfg_Var::new("engine/debug/graphs/exe_time", cfg);
 
     Debug_CVars {
         draw_sprites_bg,
@@ -452,6 +454,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
         debug_grid_square_size,
         debug_grid_opacity,
         draw_fps_graph,
+        draw_exe_time_graph,
     }
 }
 
@@ -505,7 +508,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         ..Default::default()
     };
     // Entities overlay
-    let mut overlay = debug_ui
+    let overlay = debug_ui
         .create_overlay(String_Id::from("entities"), overlay_cfg)
         .unwrap();
     overlay.config.vert_align = Align::End;
@@ -515,7 +518,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         game_state.engine_state.app_config.target_win_size.1 as f32 - 22. * ui_scale,
     );
     // Camera overlay
-    let mut overlay = debug_ui
+    let overlay = debug_ui
         .create_overlay(String_Id::from("camera"), overlay_cfg)
         .unwrap();
     overlay.config.vert_align = Align::End;
@@ -524,6 +527,26 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         game_state.engine_state.app_config.target_win_size.0 as f32,
         game_state.engine_state.app_config.target_win_size.1 as f32 - 20. * ui_scale,
     );
+
+    // Graphs
+    {
+        let graph_cfg = ngdebug::graph::Debug_Graph_View_Config {
+            font,
+            label_font_size: (10.0 * ui_scale) as _,
+            color: colors::RED,
+            grid_xstep: Some(5.0),
+            grid_ystep: Some(5.0),
+            title: Some(String::from("Exec Time")),
+            ..Default::default()
+        };
+        let graph = debug_ui
+            .create_graph(String_Id::from("execution_time"), graph_cfg)
+            .unwrap();
+        graph.size.x = game_state.engine_state.app_config.target_win_size.0;
+        graph.size.y = (0.2 * game_state.engine_state.app_config.target_win_size.1 as f32) as _;
+        graph.pos.y = graph.size.y;
+        graph.data.y_range = 0.0..20.0;
+    }
 
     // Console hints
     game_state.engine_state.debug_systems.console.add_hints(
