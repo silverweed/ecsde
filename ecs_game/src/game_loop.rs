@@ -143,7 +143,7 @@ pub fn tick_game<'a>(
         let raw_events = &input_state.raw_events;
         #[cfg(debug_assertions)]
         let (real_axes, joy_mask) =
-            input::joystick_mgr::all_joysticks_values(&input_state.joy_state);
+            input::joystick_state::all_joysticks_values(&input_state.joy_state);
 
         #[cfg(debug_assertions)]
         {
@@ -541,7 +541,7 @@ fn update_debug(game_state: &mut Game_State) {
 #[cfg(debug_assertions)]
 fn update_joystick_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
-    real_axes: &[input::joystick_mgr::Real_Axes_Values;
+    real_axes: &[input::joystick_state::Real_Axes_Values;
          input::bindings::joystick::JOY_COUNT as usize],
     joy_mask: u8,
     input_cfg: crate::input_utils::Input_Config,

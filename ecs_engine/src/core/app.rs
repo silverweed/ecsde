@@ -86,7 +86,7 @@ pub fn start_config_watch(env: &Env_Info, config: &mut cfg::Config) -> Maybe_Err
 }
 
 pub fn init_engine_systems(engine_state: &mut Engine_State) -> Maybe_Error {
-    input::joystick_mgr::init_joysticks(&mut engine_state.input_state.joy_state);
+    input::joystick_state::init_joysticks(&mut engine_state.input_state.joy_state);
 
     Ok(())
 }

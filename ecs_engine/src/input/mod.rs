@@ -4,7 +4,7 @@ pub mod callbacks;
 pub mod core_actions;
 pub mod default_input_provider;
 pub mod input_system;
-pub mod joystick_mgr;
+pub mod joystick_state;
 pub mod provider;
 pub mod serialize;
 

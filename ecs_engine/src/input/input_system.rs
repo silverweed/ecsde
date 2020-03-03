@@ -2,7 +2,7 @@ use super::axes;
 use super::bindings::joystick;
 use super::bindings::{Axis_Emulation_Type, Input_Bindings};
 use super::core_actions::Core_Action;
-use super::joystick_mgr::{self, Joystick_State, Real_Axes_Values};
+use super::joystick_state::{self, Joystick_State, Real_Axes_Values};
 use super::provider::{Input_Provider, Input_Provider_Input};
 use crate::cfg;
 use crate::common::stringid::String_Id;
@@ -204,10 +204,10 @@ fn process_event_game_actions(state: &mut Input_State, event: Input_Raw_Event) -
             }
         }
         Event::JoystickConnected { joystickid } => {
-            joystick_mgr::register_joystick(&mut state.joy_state, joystickid);
+            joystick_state::register_joystick(&mut state.joy_state, joystickid);
         }
         Event::JoystickDisconnected { joystickid } => {
-            joystick_mgr::unregister_joystick(&mut state.joy_state, joystickid);
+            joystick_state::unregister_joystick(&mut state.joy_state, joystickid);
         }
         _ => {
             return false;
@@ -230,7 +230,7 @@ fn update_real_axes(state: &mut Input_State) {
 
     let bindings = &state.bindings;
 
-    let (all_real_axes, joy_mask) = joystick_mgr::all_joysticks_values(&state.joy_state);
+    let (all_real_axes, joy_mask) = joystick_state::all_joysticks_values(&state.joy_state);
 
     for (joy_id, real_axes) in all_real_axes.iter().enumerate() {
         if (joy_mask & (1 << joy_id)) == 0 {

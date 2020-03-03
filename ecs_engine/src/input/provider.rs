@@ -1,6 +1,6 @@
 use super::bindings::joystick;
 use super::input_system::Input_Raw_Event;
-use super::joystick_mgr::{Joystick_State, Real_Axes_Values};
+use super::joystick_state::{Joystick_State, Real_Axes_Values};
 use crate::cfg;
 
 #[cfg(feature = "use-sfml")]

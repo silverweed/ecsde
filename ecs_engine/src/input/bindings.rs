@@ -1,4 +1,4 @@
-use super::joystick_mgr::Joystick_State;
+use super::joystick_state::Joystick_State;
 use crate::common::stringid::String_Id;
 use std::collections::HashMap;
 use std::path::Path;
