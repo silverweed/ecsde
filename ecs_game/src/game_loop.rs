@@ -5,6 +5,7 @@ use ecs_engine::core::app;
 use ecs_engine::core::time;
 use ecs_engine::gfx;
 use ecs_engine::gfx::render_system;
+use ecs_engine::input;
 use ecs_engine::resources::gfx::Gfx_Resources;
 use std::time::Duration;
 
@@ -12,7 +13,7 @@ use std::time::Duration;
 use ecs_engine::{
     common::angle::rad, common::stringid::String_Id, common::transform::Transform2D,
     common::vector::Vec2f, debug, debug::painter::Debug_Painter,
-    gfx::paint_props::Paint_Properties, input,
+    gfx::paint_props::Paint_Properties,
 };
 
 pub fn tick_game<'a>(
@@ -59,11 +60,16 @@ pub fn tick_game<'a>(
     {
         trace!("input_system::update", _tracer);
 
-        let process_game_actions = if cfg!(debug_assertions) {
-            debug_systems.console.status != debug::console::Console_Status::Open
-        } else {
-            true
-        };
+        let process_game_actions;
+        #[cfg(debug_assertions)]
+        {
+            process_game_actions =
+                debug_systems.console.status != debug::console::Console_Status::Open;
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            process_game_actions = true;
+        }
 
         input::input_system::update_input(
             &mut game_state.engine_state.input_state,
