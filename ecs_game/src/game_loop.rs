@@ -276,10 +276,11 @@ pub fn tick_game<'a>(
     {
         trace!("collision_system::update", _tracer);
 
-        game_state.engine_state.systems.collision_system.update(
-            &mut game_state.gameplay_system.ecs_world,
-            clone_tracer!(_tracer),
-        );
+        let gameplay_system = &mut game_state.gameplay_system;
+        let collision_system = &mut game_state.engine_state.systems.collision_system;
+        gameplay_system.foreach_active_level(|level| {
+            collision_system.update(&mut level.world, clone_tracer!(_tracer));
+        });
     }
 
     // Update audio
@@ -362,35 +363,43 @@ fn update_graphics(
             game_state.debug_cvars.draw_sprites_bg_color.read(cfg) as u32,
         ),
     };
-    let render_args = render_system::Render_System_Update_Args {
-        window,
-        resources: gres,
-        camera: game_state.gameplay_system.get_camera(),
-        ecs_world: &game_state.gameplay_system.ecs_world,
-        frame_lag_normalized,
-        cfg: render_cfg,
-        dt: real_dt,
-        _tracer: clone_tracer!(game_state.engine_state.tracer),
-    };
 
-    game_state
-        .engine_state
-        .systems
-        .render_system
-        .update(render_args);
+    let gameplay_system = &mut game_state.gameplay_system;
+    let render_system = &mut game_state.engine_state.systems.render_system;
+    let tracer = clone_tracer!(game_state.engine_state.tracer);
+    gameplay_system.foreach_active_level(|level| {
+        let render_args = render_system::Render_System_Update_Args {
+            window,
+            resources: gres,
+            camera: level.get_camera(),
+            ecs_world: &level.world,
+            frame_lag_normalized,
+            cfg: render_cfg,
+            dt: real_dt,
+            _tracer: clone_tracer!(tracer),
+        };
+
+        render_system.update(render_args);
+    });
 
     #[cfg(debug_assertions)]
     {
-        // Draw debug painter
-        {
-            game_state.engine_state.debug_systems.debug_painter.draw(
+        // Draw debug painter (one per active level)
+        let painters = &mut game_state.engine_state.debug_systems.painters;
+        let window = &mut game_state.window;
+        let tracer = clone_tracer!(game_state.engine_state.tracer);
+        game_state.gameplay_system.foreach_active_level(|level| {
+            let painter = painters
+                .get_mut(&level.id)
+                .unwrap_or_else(|| panic!("Debug painter not found for level {:?}", level.id));
+            painter.draw(
                 window,
                 gres,
-                &game_state.gameplay_system.get_camera().transform,
-                clone_tracer!(game_state.engine_state.tracer),
+                &level.get_camera().transform,
+                clone_tracer!(tracer),
             );
-            game_state.engine_state.debug_systems.debug_painter.clear();
-        }
+            painter.clear();
+        });
 
         // Draw debug UI
         {
@@ -401,7 +410,7 @@ fn update_graphics(
                 .debug_ui_system
                 .update(
                     &real_dt,
-                    window,
+                    &mut game_state.window,
                     gres,
                     clone_tracer!(game_state.engine_state.tracer),
                 );
@@ -414,13 +423,13 @@ fn update_graphics(
                 .engine_state
                 .debug_systems
                 .console
-                .draw(window, gres);
+                .draw(&mut game_state.window, gres);
         }
     }
 
     {
         trace!("vsync", game_state.engine_state.tracer);
-        gfx::window::display(window);
+        gfx::window::display(&mut game_state.window);
     }
 
     Ok(())
@@ -445,18 +454,11 @@ fn update_debug(game_state: &mut Game_State) {
         debug_systems.debug_ui_system.get_overlay(sid_time),
         &engine_state.time,
     );
+
     update_fps_debug_overlay(
         debug_systems.debug_ui_system.get_overlay(sid_fps),
         &game_state.fps_debug,
         game_state.cvars.vsync.read(&engine_state.config),
-    );
-    update_entities_debug_overlay(
-        debug_systems.debug_ui_system.get_overlay(sid_entities),
-        &game_state.gameplay_system.ecs_world,
-    );
-    update_camera_debug_overlay(
-        debug_systems.debug_ui_system.get_overlay(sid_camera),
-        &game_state.gameplay_system.get_camera(),
     );
 
     let draw_fps_graph = game_state
@@ -495,75 +497,61 @@ fn update_debug(game_state: &mut Game_State) {
         );
     }
 
-    let debug_painter = &mut engine_state.debug_systems.debug_painter;
+    ////// Per-Level debugs //////
+    let painters = &mut debug_systems.painters;
+    let collision_system = &engine_state.systems.collision_system;
+    let ui_system = &mut debug_systems.debug_ui_system;
+    let target_win_size = engine_state.app_config.target_win_size;
 
-    // Debug grid
-    if game_state
-        .debug_cvars
-        .draw_debug_grid
-        .read(&engine_state.config)
-    {
-        let square_size = game_state
-            .debug_cvars
-            .debug_grid_square_size
-            .read(&engine_state.config);
-        let opacity = game_state
-            .debug_cvars
-            .debug_grid_opacity
-            .read(&engine_state.config);
-        debug_draw_grid(
-            debug_painter,
-            &game_state.gameplay_system.get_camera().transform,
-            engine_state.app_config.target_win_size,
-            square_size,
-            opacity as u8,
-        );
-    }
+    let cvars = &game_state.debug_cvars;
+    let draw_entities = cvars.draw_entities.read(&engine_state.config);
+    let draw_velocities = cvars.draw_entities_velocities.read(&engine_state.config);
+    let draw_colliders = cvars.draw_colliders.read(&engine_state.config);
+    let draw_collision_quadtree = cvars.draw_collision_quadtree.read(&engine_state.config);
+    let draw_debug_grid = cvars.draw_debug_grid.read(&engine_state.config);
+    let square_size = cvars.debug_grid_square_size.read(&engine_state.config);
+    let opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
 
-    let draw_entities = game_state
-        .debug_cvars
-        .draw_entities
-        .read(&engine_state.config);
-    if draw_entities {
-        debug_draw_transforms(debug_painter, &game_state.gameplay_system.ecs_world);
-    }
+    game_state.gameplay_system.foreach_active_level(|level| {
+        let debug_painter = painters
+            .get_mut(&level.id)
+            .unwrap_or_else(|| fatal!("Debug painter not found for level {:?}", level.id));
 
-    let draw_velocities = game_state
-        .debug_cvars
-        .draw_entities_velocities
-        .read(&engine_state.config);
-    if draw_velocities {
-        debug_draw_velocities(debug_painter, &game_state.gameplay_system.ecs_world);
-    }
+        update_entities_debug_overlay(ui_system.get_overlay(sid_entities), &level.world);
 
-    let draw_colliders = game_state
-        .debug_cvars
-        .draw_colliders
-        .read(&engine_state.config);
-    if draw_colliders {
-        debug_draw_colliders(debug_painter, &game_state.gameplay_system.ecs_world);
-    }
+        update_camera_debug_overlay(ui_system.get_overlay(sid_camera), &level.get_camera());
 
-    let draw_collision_quadtree = game_state
-        .debug_cvars
-        .draw_collision_quadtree
-        .read(&engine_state.config);
-    if draw_collision_quadtree {
-        engine_state
-            .systems
-            .collision_system
-            .debug_draw_quadtree(debug_painter);
+        if draw_entities {
+            debug_draw_transforms(debug_painter, &level.world);
+        }
 
-        engine_state
-            .systems
-            .collision_system
-            .debug_draw_entities_quad_id(&game_state.gameplay_system.ecs_world, debug_painter);
-    }
+        if draw_velocities {
+            debug_draw_velocities(debug_painter, &level.world);
+        }
 
-    engine_state
-        .systems
-        .collision_system
-        .debug_draw_applied_impulses(debug_painter);
+        if draw_colliders {
+            debug_draw_colliders(debug_painter, &level.world);
+        }
+
+        if draw_collision_quadtree {
+            collision_system.debug_draw_quadtree(debug_painter);
+
+            collision_system.debug_draw_entities_quad_id(&level.world, debug_painter);
+        }
+
+        // Debug grid
+        if draw_debug_grid {
+            debug_draw_grid(
+                debug_painter,
+                &level.get_camera().transform,
+                target_win_size,
+                square_size,
+                opacity,
+            );
+        }
+
+        collision_system.debug_draw_applied_impulses(debug_painter);
+    });
 }
 
 #[cfg(debug_assertions)]

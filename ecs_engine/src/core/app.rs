@@ -221,11 +221,6 @@ pub fn init_engine_debug(
         graph.data.y_range = 0.0..120.0;
     }
 
-    engine_state
-        .debug_systems
-        .debug_painter
-        .init(gfx_resources, &engine_state.env);
-
     {
         use crate::input::bindings::Input_Action;
 

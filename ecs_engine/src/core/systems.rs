@@ -1,7 +1,9 @@
 use super::env::Env_Info;
 use crate::audio::audio_system;
 use crate::collisions::collision_system;
+use crate::common::stringid::String_Id;
 use crate::gfx::render_system;
+use std::collections::HashMap;
 
 #[cfg(debug_assertions)]
 use {
@@ -21,7 +23,8 @@ pub struct Debug_Systems {
     pub debug_ui_system: debug_ui_system::Debug_Ui_System,
 
     pub replay_recording_system: recording_system::Replay_Recording_System,
-    pub debug_painter: Debug_Painter,
+    // Note: we have one painter per level
+    pub painters: HashMap<String_Id, Debug_Painter>,
     pub console: console::Console,
 
     pub show_trace_overlay: bool,
@@ -54,7 +57,7 @@ impl Debug_Systems {
                     .read(cfg),
                 },
             ),
-            debug_painter: Debug_Painter::new(),
+            painters: HashMap::new(),
             show_trace_overlay: false,
             trace_overlay_update_t: 0.0,
             console: console::Console::new(),

@@ -87,15 +87,15 @@ impl Persistent_Game_State for Debug_Base_State {
                     ));
                     engine_state.time.paused = true;
                     engine_state.time.step(&step_delta);
-                    gs.step(
-                        &step_delta,
-                        &engine_state.time,
-                        &engine_state.config,
-                        clone_tracer!(engine_state.tracer),
-                    );
+                    //gs.step(
+                    //    &step_delta,
+                    //    &engine_state.time,
+                    //    &engine_state.config,
+                    //    clone_tracer!(engine_state.tracer),
+                    //);
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_print_em_debug_info => {
-                    gs.print_debug_info();
+                    //gs.print_debug_info();
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_toggle_trace_overlay => {
                     let show_trace = &mut engine_state.debug_systems.show_trace_overlay;
@@ -103,7 +103,7 @@ impl Persistent_Game_State for Debug_Base_State {
                     debug_ui.set_overlay_enabled(String_Id::from("trace"), *show_trace);
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_move_camera_to_origin => {
-                    gs.move_camera_to(Vec2f::new(0., 0.));
+                    gs.foreach_active_level(|level| level.move_camera_to(Vec2f::new(0., 0.)));
                     let msg_overlay = debug_ui.get_fadeout_overlay(String_Id::from("msg"));
                     msg_overlay.add_line("Moved camera to origin");
                 }

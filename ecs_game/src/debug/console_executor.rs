@@ -79,7 +79,7 @@ fn execute_command(
             None
         }
         Console_Cmd::Move_Camera { to } => {
-            gs.move_camera_to(to);
+            //gs.move_camera_to(to);
             None
         }
         Console_Cmd::Get_Cfg_Var { name } => Some((
