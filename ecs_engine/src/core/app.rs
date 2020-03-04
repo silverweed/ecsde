@@ -46,7 +46,7 @@ pub fn create_engine_state<'r>(
     config: cfg::Config,
     app_config: App_Config,
 ) -> Engine_State<'r> {
-    let systems = Core_Systems::new(&env);
+    let systems = Core_Systems::new();
     let input_state = input::input_system::create_input_state(&env);
     let time = time::Time::new();
     #[cfg(debug_assertions)]

@@ -38,10 +38,14 @@ pub fn execute(
 }
 
 fn parse_cmd(cmdline: &str) -> Result<Console_Cmd, Console_Error> {
-    let tokens = cmdline.split(' ').collect::<Vec<_>>();
+    let tokens = cmdline
+        .split(' ')
+        .filter(|t| !t.is_empty())
+        .collect::<Vec<_>>();
     if tokens.is_empty() {
         Err(Console_Error::new("Empty command"))
     } else {
+        println!("{:?}", tokens);
         match tokens.as_slice() {
             ["quit"] => Ok(Console_Cmd::Quit),
             ["cam", x, y] => Ok(Console_Cmd::Move_Camera {
@@ -61,7 +65,7 @@ fn parse_cmd(cmdline: &str) -> Result<Console_Cmd, Console_Error> {
                 name: (*name).to_string(),
             }),
             ["fps"] => Ok(Console_Cmd::Toggle_Cfg_Var {
-                name: String::from("engine/debug/draw_fps_graph"),
+                name: String::from("engine/debug/graphs/fps"),
             }),
             _ => Err(Console_Error::new(format!("Unknown command: {}", cmdline))),
         }

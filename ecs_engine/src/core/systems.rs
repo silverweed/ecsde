@@ -32,7 +32,7 @@ pub struct Debug_Systems {
 }
 
 impl Core_Systems<'_> {
-    pub fn new(env: &Env_Info) -> Self {
+    pub fn new() -> Self {
         Core_Systems {
             audio_system: audio_system::Audio_System::new(&audio_system::Audio_System_Config {
                 max_concurrent_sounds: 10,

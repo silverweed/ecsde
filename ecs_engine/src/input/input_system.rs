@@ -2,11 +2,10 @@ use super::axes;
 use super::bindings::joystick;
 use super::bindings::{Axis_Emulation_Type, Input_Bindings};
 use super::core_actions::Core_Action;
-use super::joystick_state::{self, Joystick_State, Real_Axes_Values};
+use super::joystick_state::{self, Joystick_State};
 use super::provider::{Input_Provider, Input_Provider_Input};
 use crate::cfg;
 use crate::common::stringid::String_Id;
-use crate::common::Maybe_Error;
 use crate::core::env::Env_Info;
 use std::convert::TryInto;
 
@@ -102,8 +101,6 @@ fn read_events_to_actions(
     };
 
     for &event in events.iter() {
-        let prev_core_actions_len = state.core_actions.len();
-
         state.raw_events.push(event);
         process_event_func(state, event);
     }
