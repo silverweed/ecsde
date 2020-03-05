@@ -1,4 +1,4 @@
-use crate::alloc::generational_allocator::{Generational_Allocator, Generational_Index};
+use crate::alloc::gen_alloc::{Generational_Allocator, Generational_Index};
 use crate::common::transform::Transform2D;
 use crate::ecs::ecs_world::Entity;
 

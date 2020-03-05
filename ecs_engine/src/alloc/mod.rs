@@ -1,1 +1,2 @@
-pub mod generational_allocator;
+pub mod gen_alloc;
+pub mod temp_alloc;
