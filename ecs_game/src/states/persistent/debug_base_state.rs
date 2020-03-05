@@ -91,7 +91,6 @@ impl Persistent_Game_State for Debug_Base_State {
                     //    &step_delta,
                     //    &engine_state.time,
                     //    &engine_state.config,
-                    //    clone_tracer!(engine_state.tracer),
                     //);
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_print_em_debug_info => {

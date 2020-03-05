@@ -7,7 +7,6 @@ use crate::core::env::Env_Info;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render::{self, Text};
 use crate::gfx::window::Window_Handle;
-use crate::prelude::*;
 use crate::resources::gfx;
 
 pub struct Debug_Painter {
@@ -76,13 +75,12 @@ impl Debug_Painter {
         window: &mut Window_Handle,
         gres: &mut gfx::Gfx_Resources,
         camera: &Transform2D,
-        tracer: Debug_Tracer,
     ) {
-        trace!("painter::draw", tracer);
+        trace!("painter::draw");
 
         for (size, transform, props) in &self.rects {
             let rect = Rect::new(0., 0., size.x, size.y);
-            trace!("painter::fill_rect", tracer);
+            trace!("painter::fill_rect");
             render::fill_color_rect_ws(window, *props, rect, transform, camera);
         }
 
@@ -91,13 +89,13 @@ impl Debug_Painter {
         }
 
         for (arrow, props) in &self.arrows {
-            trace!("painter::draw_arrow", tracer);
+            trace!("painter::draw_arrow");
             draw_arrow(window, arrow, props, camera);
         }
 
         let font = self.font;
         for (text, world_pos, font_size, props) in &self.texts {
-            trace!("painter::draw_text", tracer);
+            trace!("painter::draw_text");
             let mut txt = Text::new(text, gres.get_font(font), (*font_size).into());
             txt.set_fill_color(props.color.into());
             txt.set_outline_thickness(props.border_thick);

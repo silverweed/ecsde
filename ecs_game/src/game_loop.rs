@@ -20,8 +20,7 @@ pub fn tick_game<'a>(
     game_state: &'a mut Game_State<'a>,
     game_resources: &'a mut Game_Resources<'a>,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    let _tracer = clone_tracer!(game_state.engine_state.tracer);
-    trace!("tick_game", _tracer);
+    trace!("tick_game");
 
     // @Speed @WaitForStable: these should all be computed at compile time.
     // Probably will do that when either const fn or proc macros/syntax extensions are stable.
@@ -58,7 +57,7 @@ pub fn tick_game<'a>(
 
     // Update input
     {
-        trace!("input_system::update", _tracer);
+        trace!("input_system::update");
 
         let process_game_actions;
         #[cfg(debug_assertions)]
@@ -84,7 +83,7 @@ pub fn tick_game<'a>(
     {
         use crate::debug::console_executor;
 
-        trace!("console::update", _tracer);
+        trace!("console::update");
         if debug_systems.console.status == debug::console::Console_Status::Open {
             debug_systems
                 .console
@@ -125,7 +124,7 @@ pub fn tick_game<'a>(
 
     // Handle actions
     {
-        trace!("app::handle_core_actions", _tracer);
+        trace!("app::handle_core_actions");
         if app::handle_core_actions(
             &game_state
                 .engine_state
@@ -181,7 +180,7 @@ pub fn tick_game<'a>(
         }
 
         {
-            trace!("state_mgr::handle_actions", _tracer);
+            trace!("state_mgr::handle_actions");
             if game_state.state_mgr.handle_actions(
                 &actions,
                 &mut game_state.engine_state,
@@ -204,7 +203,7 @@ pub fn tick_game<'a>(
 
         // Update game systems
         {
-            trace!("game_update", _tracer);
+            trace!("game_update");
 
             let axes = &game_state.engine_state.input_state.axes;
 
@@ -230,7 +229,6 @@ pub fn tick_game<'a>(
                 &actions,
                 axes,
                 &game_state.engine_state.config,
-                clone_tracer!(_tracer),
             );
 
             while game_state.execution_time > update_time {
@@ -249,7 +247,6 @@ pub fn tick_game<'a>(
                     &actions,
                     axes,
                     &game_state.engine_state.config,
-                    clone_tracer!(_tracer),
                 );
                 game_state.execution_time -= update_time;
 
@@ -274,18 +271,18 @@ pub fn tick_game<'a>(
 
     // Update collisions
     {
-        trace!("collision_system::update", _tracer);
+        trace!("collision_system::update");
 
         let gameplay_system = &mut game_state.gameplay_system;
         let collision_system = &mut game_state.engine_state.systems.collision_system;
         gameplay_system.foreach_active_level(|level| {
-            collision_system.update(&mut level.world, clone_tracer!(_tracer));
+            collision_system.update(&mut level.world);
         });
     }
 
     // Update audio
     {
-        trace!("audio_system_update", _tracer);
+        trace!("audio_system_update");
         game_state.engine_state.systems.audio_system.update();
     }
 
@@ -320,7 +317,7 @@ fn update_graphics(
     real_dt: Duration,
     frame_lag_normalized: f32,
 ) -> Maybe_Error {
-    trace!("update_graphics", game_state.engine_state.tracer);
+    trace!("update_graphics");
 
     let window = &mut game_state.window;
 
@@ -343,7 +340,7 @@ fn update_graphics(
     }
 
     {
-        trace!("clear_window", game_state.engine_state.tracer);
+        trace!("clear_window");
 
         gfx::window::set_clear_color(window, colors::rgb(0, 0, 0));
         gfx::window::clear(window);
@@ -366,7 +363,6 @@ fn update_graphics(
 
     let gameplay_system = &mut game_state.gameplay_system;
     let render_system = &mut game_state.engine_state.systems.render_system;
-    let tracer = clone_tracer!(game_state.engine_state.tracer);
     gameplay_system.foreach_active_level(|level| {
         let render_args = render_system::Render_System_Update_Args {
             window,
@@ -376,7 +372,6 @@ fn update_graphics(
             frame_lag_normalized,
             cfg: render_cfg,
             dt: real_dt,
-            _tracer: clone_tracer!(tracer),
         };
 
         render_system.update(render_args);
@@ -387,38 +382,27 @@ fn update_graphics(
         // Draw debug painter (one per active level)
         let painters = &mut game_state.engine_state.debug_systems.painters;
         let window = &mut game_state.window;
-        let tracer = clone_tracer!(game_state.engine_state.tracer);
         game_state.gameplay_system.foreach_active_level(|level| {
             let painter = painters
                 .get_mut(&level.id)
                 .unwrap_or_else(|| panic!("Debug painter not found for level {:?}", level.id));
-            painter.draw(
-                window,
-                gres,
-                &level.get_camera().transform,
-                clone_tracer!(tracer),
-            );
+            painter.draw(window, gres, &level.get_camera().transform);
             painter.clear();
         });
 
         // Draw debug UI
         {
-            trace!("debug_ui_system::update", game_state.engine_state.tracer);
+            trace!("debug_ui_system::update");
             game_state
                 .engine_state
                 .debug_systems
                 .debug_ui_system
-                .update(
-                    &real_dt,
-                    &mut game_state.window,
-                    gres,
-                    clone_tracer!(game_state.engine_state.tracer),
-                );
+                .update(&real_dt, &mut game_state.window, gres);
         }
 
         // Draw console
         {
-            trace!("console::draw", game_state.engine_state.tracer);
+            trace!("console::draw");
             game_state
                 .engine_state
                 .debug_systems
@@ -428,7 +412,7 @@ fn update_graphics(
     }
 
     {
-        trace!("vsync", game_state.engine_state.tracer);
+        trace!("vsync");
         gfx::window::display(&mut game_state.window);
     }
 

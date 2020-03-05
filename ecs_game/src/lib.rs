@@ -176,7 +176,10 @@ pub unsafe extern "C" fn game_update<'a>(
 
         #[cfg(debug_assertions)]
         {
-            game_state.engine_state.tracer.lock().unwrap().start_frame();
+            ecs_engine::prelude::DEBUG_TRACER
+                .lock()
+                .unwrap()
+                .start_frame();
         }
 
         {

@@ -5,7 +5,6 @@ use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2u};
 use crate::gfx::render;
 use crate::gfx::window::Window_Handle;
-use crate::prelude::*;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
 use std::ops::Range;
@@ -41,8 +40,8 @@ pub struct Debug_Graph {
 }
 
 impl Debug_Element for Debug_Graph_View {
-    fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources, _tracer: Debug_Tracer) {
-        trace!("graph::draw", _tracer);
+    fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
+        trace!("graph::draw");
 
         // Draw background
         {

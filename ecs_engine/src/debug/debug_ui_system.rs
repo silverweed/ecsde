@@ -4,7 +4,6 @@ use super::graph;
 use super::overlay;
 use crate::common::stringid::String_Id;
 use crate::gfx::window::Window_Handle;
-use crate::prelude::*;
 use crate::resources::gfx::Gfx_Resources;
 use std::any::type_name;
 use std::collections::hash_map::Entry;
@@ -176,26 +175,20 @@ impl Debug_Ui_System {
         set_graph_enabled
     );
 
-    pub fn update(
-        &mut self,
-        dt: &Duration,
-        window: &mut Window_Handle,
-        gres: &mut Gfx_Resources,
-        _tracer: Debug_Tracer,
-    ) {
+    pub fn update(&mut self, dt: &Duration, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
         for elem in &mut self.graphs.actives {
             elem.update(dt);
-            elem.draw(window, gres, clone_tracer!(_tracer));
+            elem.draw(window, gres);
         }
 
         for elem in &mut self.overlays.actives {
             elem.update(dt);
-            elem.draw(window, gres, clone_tracer!(_tracer));
+            elem.draw(window, gres);
         }
 
         for elem in &mut self.fadeout_overlays.actives {
             elem.update(dt);
-            elem.draw(window, gres, clone_tracer!(_tracer));
+            elem.draw(window, gres);
         }
     }
 }

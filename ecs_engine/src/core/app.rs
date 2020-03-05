@@ -6,7 +6,6 @@ use crate::common::Maybe_Error;
 use crate::core::systems::Core_Systems;
 use crate::gfx;
 use crate::input;
-use crate::prelude::{new_debug_tracer, Debug_Tracer};
 
 #[cfg(debug_assertions)]
 use {
@@ -31,8 +30,6 @@ pub struct Engine_State<'r> {
 
     pub input_state: input::input_system::Input_State,
     pub systems: Core_Systems<'r>,
-
-    pub tracer: Debug_Tracer,
 
     #[cfg(debug_assertions)]
     pub debug_systems: Debug_Systems,
@@ -64,7 +61,6 @@ pub fn create_engine_state<'r>(
         debug_systems,
         #[cfg(debug_assertions)]
         replay_data: None,
-        tracer: new_debug_tracer(),
     }
 }
 
@@ -325,7 +321,7 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
     use crate::debug::overlay::Debug_Overlay;
     use crate::debug::tracer::{build_trace_trees, sort_trace_trees, Trace_Tree, Tracer_Node};
 
-    let mut tracer = engine_state.tracer.lock().unwrap();
+    let mut tracer = crate::prelude::DEBUG_TRACER.lock().unwrap();
     let overlay = engine_state
         .debug_systems
         .debug_ui_system

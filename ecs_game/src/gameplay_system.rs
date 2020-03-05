@@ -23,7 +23,6 @@ use ecs_engine::gfx as ngfx;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::bindings::keyboard;
 use ecs_engine::input::input_system::{Action_Kind, Game_Action};
-use ecs_engine::prelude::*;
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -114,9 +113,8 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
-        _tracer: Debug_Tracer,
     ) {
-        trace!("gameplay_system::update", _tracer);
+        trace!("gameplay_system::update");
 
         #[cfg(debug_assertions)]
         {
@@ -137,7 +135,7 @@ impl Gameplay_System {
             controllable_system::update(&dt, actions, axes, world, input_cfg, cfg);
 
             {
-                trace!("scene_tree::copy_transforms", _tracer);
+                trace!("scene_tree::copy_transforms");
                 for e in level.entities.iter().copied() {
                     if let Some(t) = world.get_component::<C_Spatial2D>(e) {
                         level.scene_tree.set_local_transform(e, &t.local_transform);
@@ -146,12 +144,12 @@ impl Gameplay_System {
             }
 
             {
-                trace!("scene_tree::compute_global_transforms", _tracer);
+                trace!("scene_tree::compute_global_transforms");
                 level.scene_tree.compute_global_transforms();
             }
 
             {
-                trace!("scene_tree::backcopy_transforms", _tracer);
+                trace!("scene_tree::backcopy_transforms");
                 for e in level.entities.iter().copied() {
                     if let Some(t) = world.get_component_mut::<C_Spatial2D>(e) {
                         t.global_transform = *level.scene_tree.get_global_transform(e).unwrap();
@@ -173,9 +171,8 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
-        _tracer: Debug_Tracer,
     ) {
-        trace!("gameplay_system::realtime_update", _tracer);
+        trace!("gameplay_system::realtime_update");
         //self.update_camera(real_dt, actions, axes, cfg);
     }
 
@@ -188,7 +185,7 @@ impl Gameplay_System {
         cfg: &cfg::Config,
         _tracer: Debug_Tracer,
     ) {
-        self.update_with_latest_frame_actions(dt, time, cfg, _tracer);
+        self.update_with_latest_frame_actions(dt, time, cfg);
     }
 
     fn update_with_latest_frame_actions(
@@ -202,7 +199,7 @@ impl Gameplay_System {
         std::mem::swap(&mut self.latest_frame_actions, &mut actions);
         let mut axes = Virtual_Axes::default();
         std::mem::swap(&mut self.latest_frame_axes, &mut axes);
-        self.update(&dt, time, &actions, &axes, cfg, _tracer);
+        self.update(&dt, time, &actions, &axes, cfg);
     }
 
     fn register_all_components(&mut self) {
