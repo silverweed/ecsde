@@ -15,7 +15,7 @@ pub type Config = config::Config;
 pub type Cfg_Value = value::Cfg_Value;
 
 pub fn cfg_path(env: &Env_Info, dir: &str, file: &str) -> PathBuf {
-    let mut s = PathBuf::from(env.get_cfg_root());
+    let mut s = PathBuf::from(env.cfg_root.as_ref());
     s.push(dir);
     s.push(file);
     s.set_extension("cfg");

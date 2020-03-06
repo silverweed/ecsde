@@ -5,12 +5,12 @@ use std::path::{Path, PathBuf};
 
 #[derive(Clone)]
 pub struct Env_Info {
-    full_exe_path: Box<Path>,
-    working_dir: Box<Path>,
-    assets_root: Box<Path>,
-    cfg_root: Box<Path>,
+    pub full_exe_path: Box<Path>,
+    pub working_dir: Box<Path>,
+    pub assets_root: Box<Path>,
+    pub cfg_root: Box<Path>,
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     test_paths: Test_Paths,
 }
 
@@ -32,30 +32,16 @@ impl Env_Info {
             cfgs_root_buf.push("cfg");
             cfgs_root_buf.into_boxed_path()
         };
+        #[cfg(test)]
         let test_cfg = Self::build_test_cfg(&working_dir);
         Ok(Env_Info {
             full_exe_path: full_exe_path.into_boxed_path(),
             working_dir: working_dir.into_boxed_path(),
             assets_root,
             cfg_root,
+            #[cfg(test)]
             test_paths: Test_Paths::new(test_cfg),
         })
-    }
-
-    pub fn get_cwd(&self) -> &Path {
-        &self.working_dir
-    }
-
-    pub fn get_exe(&self) -> &Path {
-        &self.full_exe_path
-    }
-
-    pub fn get_assets_root(&self) -> &Path {
-        &self.assets_root
-    }
-
-    pub fn get_cfg_root(&self) -> &Path {
-        &self.cfg_root
     }
 
     #[cfg(test)]
@@ -83,22 +69,11 @@ struct Test_Paths {
     pub cfg_root: Box<Path>,
 }
 
-#[cfg(not(test))]
-#[allow(dead_code)]
-#[derive(Clone)]
-struct Test_Paths {}
-
+#[cfg(test)]
 impl Test_Paths {
-    #[cfg(test)]
     pub fn new(cfg_root: Option<Box<Path>>) -> Test_Paths {
         Test_Paths {
             cfg_root: cfg_root.unwrap(),
         }
-    }
-
-    #[cfg(not(test))]
-    #[allow(dead_code)]
-    pub fn new(_cfg_root: Option<Box<Path>>) -> Test_Paths {
-        Test_Paths {}
     }
 }

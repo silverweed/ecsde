@@ -8,6 +8,7 @@ pub mod serialize;
 pub mod shapes;
 pub mod stringid;
 pub mod transform;
+pub mod units;
 pub mod vector;
 
 pub type Maybe_Error = Result<(), Box<dyn std::error::Error>>;

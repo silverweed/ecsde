@@ -1,14 +1,14 @@
 use crate::audio::audio_system;
 use crate::collisions::collision_system;
-use crate::common::stringid::String_Id;
 use crate::gfx::render_system;
-use std::collections::HashMap;
 
 #[cfg(debug_assertions)]
 use {
     crate::cfg,
-    crate::debug::{console, debug_ui_system, painter::Debug_Painter, log},
+    crate::common::stringid::String_Id,
+    crate::debug::{console, debug_ui_system, log, painter::Debug_Painter},
     crate::replay::recording_system,
+    std::collections::HashMap,
 };
 
 pub struct Core_Systems<'r> {

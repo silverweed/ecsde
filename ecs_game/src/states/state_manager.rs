@@ -183,7 +183,7 @@ mod tests {
         let data = Rc::new(RefCell::new(Test_State_Data::default()));
         let state = Box::new(Test_State_1 { data: data.clone() });
         let env = ecs_engine::core::env::Env_Info::gather().unwrap();
-        let config = ecs_engine::cfg::Config::new_from_dir(env.get_cfg_root());
+        let config = ecs_engine::cfg::Config::new_from_dir(&env.cfg_root);
         let mut engine_state = ecs_engine::core::app::create_engine_state(
             env,
             config,
