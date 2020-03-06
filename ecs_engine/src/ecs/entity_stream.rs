@@ -1,6 +1,7 @@
 use super::ecs_world::{Ecs_World, Entity};
 use crate::common::bitset::Bit_Set;
 use std::any::type_name;
+use crate::alloc::temp::{Temp_Array, Exclusive_Temp_Array};
 use std::convert::TryFrom;
 
 pub struct Entity_Stream {
@@ -40,7 +41,7 @@ impl Entity_Stream {
 
     /// Fills `vec` with all entities retrieved calling `next` on self.
     /// Does not clear the Vec!
-    pub fn collect(&mut self, world: &Ecs_World, vec: &mut Vec<Entity>) {
+    pub fn collect<T: Pushable<Entity>>(&mut self, world: &Ecs_World, vec: &mut T) {
         while let Some(entity) = self.next(world) {
             vec.push(entity);
         }
@@ -90,6 +91,28 @@ pub fn new_entity_stream(world: &Ecs_World) -> Entity_Stream_Builder {
         world,
         required_components: Bit_Set::default(),
         excluded_components: Bit_Set::default(),
+    }
+}
+
+pub trait Pushable<T> {
+    fn push(&mut self, elem: T);
+}
+
+impl<T> Pushable<T> for Vec<T> {
+    fn push(&mut self, elem: T) {
+        self.push(elem);
+    }
+}
+
+impl<T: Copy> Pushable<T> for Temp_Array<'_, T> {
+    fn push(&mut self, elem: T) {
+        self.push(elem);
+    }
+}
+
+impl<T: Copy> Pushable<T> for Exclusive_Temp_Array<'_, T> {
+    fn push(&mut self, elem: T) {
+        self.push(elem);
     }
 }
 
