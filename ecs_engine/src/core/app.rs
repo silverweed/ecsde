@@ -366,8 +366,14 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
         }
     };
 
+    let debug_log = &mut engine_state.debug_systems.log;
     let total_traced_time = tracer.total_traced_time();
     let traces = tracer.collate_traces();
+    debug_log.push_trace(traces);
+
+    // @Incomplete: add logic to get either latest or some previous frame
+    let traces = &debug_log.frames.back().unwrap().traces;
+
     let mut trace_trees = build_trace_trees(traces);
     sort_trace_trees(&mut trace_trees);
 

@@ -180,6 +180,7 @@ pub unsafe extern "C" fn game_update<'a>(
                 .lock()
                 .unwrap()
                 .start_frame();
+            game_state.engine_state.debug_systems.log.start_frame();
         }
 
         {

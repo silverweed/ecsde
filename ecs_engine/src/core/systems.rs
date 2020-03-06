@@ -7,7 +7,7 @@ use std::collections::HashMap;
 #[cfg(debug_assertions)]
 use {
     crate::cfg,
-    crate::debug::{console, debug_ui_system, painter::Debug_Painter},
+    crate::debug::{console, debug_ui_system, painter::Debug_Painter, log},
     crate::replay::recording_system,
 };
 
@@ -25,6 +25,7 @@ pub struct Debug_Systems {
     // Note: we have one painter per level
     pub painters: HashMap<String_Id, Debug_Painter>,
     pub console: console::Console,
+    pub log: log::Debug_Log,
 
     pub show_trace_overlay: bool,
     pub trace_overlay_update_t: f32,
@@ -60,6 +61,7 @@ impl Debug_Systems {
             show_trace_overlay: false,
             trace_overlay_update_t: 0.0,
             console: console::Console::new(),
+            log: log::Debug_Log::with_hist_len(30 * 60),
         }
     }
 }

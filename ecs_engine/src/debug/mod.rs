@@ -2,6 +2,7 @@ pub mod console;
 pub mod debug_ui_system;
 pub mod element;
 pub mod fadeout_overlay;
+pub mod log;
 pub mod fps;
 pub mod graph;
 pub mod overlay;
