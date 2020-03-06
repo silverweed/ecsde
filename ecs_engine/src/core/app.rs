@@ -1,7 +1,9 @@
 use super::app_config::App_Config;
 use super::env::Env_Info;
 use super::time;
+use crate::alloc::temp_alloc::Temp_Allocator;
 use crate::cfg;
+use crate::common::units::*;
 use crate::common::Maybe_Error;
 use crate::core::systems::Core_Systems;
 use crate::gfx;
@@ -33,6 +35,8 @@ pub struct Engine_State<'r> {
     pub input_state: input::input_system::Input_State,
     pub systems: Core_Systems<'r>,
 
+    pub frame_alloc: Temp_Allocator,
+
     #[cfg(debug_assertions)]
     pub debug_systems: Debug_Systems,
 
@@ -60,6 +64,7 @@ pub fn create_engine_state<'r>(
         time,
         input_state,
         systems,
+        frame_alloc: Temp_Allocator::with_capacity(megabytes(1)),
         #[cfg(debug_assertions)]
         debug_systems,
         #[cfg(debug_assertions)]
@@ -77,7 +82,7 @@ pub fn start_config_watch(env: &Env_Info, config: &mut cfg::Config) -> Maybe_Err
         recursive_mode: RecursiveMode::Recursive,
     };
     fs::file_watcher::start_file_watch(
-        env.get_cfg_root().to_path_buf(),
+        env.cfg_root.to_path_buf(),
         config_watcher_cfg,
         vec![config_watcher],
     )?;

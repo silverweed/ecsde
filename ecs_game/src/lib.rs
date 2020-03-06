@@ -310,7 +310,7 @@ fn create_game_state<'a>(
 ) -> Result<(Box<Game_State<'a>>, cmdline::Cmdline_Args), Box<dyn std::error::Error>> {
     // Load Config first, as it's needed to setup everything that follows.
     let env = Env_Info::gather().unwrap();
-    let config = cfg::Config::new_from_dir(env.get_cfg_root());
+    let config = cfg::Config::new_from_dir(&env.cfg_root);
 
     // Load initial App_Config (some values may be overwritten by cmdline args)
     let mut_in_debug!(app_config) = {
@@ -357,8 +357,8 @@ fn create_game_state<'a>(
         }
     }
 
-    linfo!("Working dir = {:?}", engine_state.env.get_cwd());
-    linfo!("Exe = {:?}", engine_state.env.get_exe());
+    linfo!("Working dir = {:?}", engine_state.env.working_dir);
+    linfo!("Exe = {:?}", engine_state.env.full_exe_path);
 
     app::init_engine_systems(&mut engine_state)?;
 
