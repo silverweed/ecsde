@@ -1,7 +1,7 @@
 use super::app_config::App_Config;
 use super::env::Env_Info;
 use super::time;
-use crate::alloc::temp_alloc::Temp_Allocator;
+use crate::alloc::temp::Temp_Allocator;
 use crate::cfg;
 use crate::common::units::*;
 use crate::common::Maybe_Error;
