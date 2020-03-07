@@ -167,17 +167,17 @@ mod tests {
     #[test]
     fn capacity_consistency() {
         let mut allocator = Temp_Allocator::with_capacity(16);
-        let cap = allocator.cap;
+        let used = allocator.used;
 
         let t1 = unsafe { allocator.alloc_default::<Test>() };
         assert_eq!(*t1, Test::default());
 
-        assert!(allocator.cap < cap);
+        assert!(allocator.used > used);
 
         unsafe {
             allocator.dealloc_all();
         }
-        assert_eq!(allocator.cap, cap);
+        assert_eq!(allocator.used, used);
     }
 
     #[test]
