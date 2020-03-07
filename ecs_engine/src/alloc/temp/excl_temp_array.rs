@@ -32,7 +32,10 @@ where
                 "Exclusive_Temp_Array accessed after free!"
             );
         }
+	// @WaitForStable here we'll want to use offset_from().
+	let diff = self.parent_allocator.ptr as usize + self.parent_allocator.used - self.ptr as usize;
         self.parent_allocator.ptr = self.ptr as *mut u8;
+	self.parent_allocator.used -= diff;
     }
 }
 
