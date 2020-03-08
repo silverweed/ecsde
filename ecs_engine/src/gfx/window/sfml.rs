@@ -137,6 +137,11 @@ pub fn set_vsync(window: &mut Window_Handle, vsync: bool) {
     window.vsync = vsync;
 }
 
-pub fn mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
+pub fn raw_mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
     window.handle.mouse_position().into()
+}
+
+pub fn get_window_real_size(window: &Window_Handle) -> (u32, u32) {
+    let v = window.handle.size();
+    (v.x, v.y)
 }

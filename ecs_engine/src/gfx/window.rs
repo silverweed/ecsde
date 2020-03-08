@@ -1,6 +1,6 @@
 use crate::common::colors::Color;
 use crate::common::rect::Rect;
-use crate::common::vector::Vec2i;
+use crate::common::vector::{Vec2f, Vec2i, Vec2u};
 
 #[cfg(feature = "use-sfml")]
 mod sfml;
@@ -93,6 +93,36 @@ pub fn get_window_target_size(window: &Window_Handle) -> (u32, u32) {
     backend::get_window_target_size(window)
 }
 
+pub fn get_window_real_size(window: &Window_Handle) -> (u32, u32) {
+    backend::get_window_real_size(window)
+}
+
+pub fn raw_mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
+    backend::raw_mouse_pos_in_window(window)
+}
+
 pub fn mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
-    backend::mouse_pos_in_window(window)
+    let v = Vec2f::from(backend::raw_mouse_pos_in_window(window));
+
+    let ts: Vec2u = backend::get_window_target_size(window).into();
+    let target_ratio = ts.y as f32 / ts.x as f32;
+
+    let rs: Vec2u = backend::get_window_real_size(window).into();
+    let real_ratio = rs.y as f32 / rs.x as f32;
+
+    let ratio = Vec2f::from(rs) / Vec2f::from(ts);
+
+    let x;
+    let y;
+    if real_ratio <= target_ratio {
+        let delta = (rs.x as f32 - rs.y as f32 / target_ratio) * 0.5;
+        y = v.y / ratio.y;
+        x = (v.x - delta) / ratio.y;
+    } else {
+        let delta = (rs.y as f32 - rs.x as f32 * target_ratio) * 0.5;
+        x = v.x / ratio.x;
+        y = (v.y - delta) / ratio.x;
+    }
+
+    Vec2i::new(x as _, y as _)
 }

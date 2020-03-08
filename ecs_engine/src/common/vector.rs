@@ -45,15 +45,33 @@ impl<T: Copy> From<(T, T)> for Vector2<T> {
     }
 }
 
+impl<T: Copy> From<Vector2<T>> for (T, T) {
+    fn from(v: Vector2<T>) -> Self {
+        (v.x, v.y)
+    }
+}
+
 impl From<Vec2u> for Vec2f {
     fn from(v: Vec2u) -> Self {
-        Self::new(v.x as f32, v.y as f32)
+        Self::new(v.x as _, v.y as _)
     }
 }
 
 impl From<Vec2i> for Vec2f {
     fn from(v: Vec2i) -> Self {
-        Self::new(v.x as f32, v.y as f32)
+        Self::new(v.x as _, v.y as _)
+    }
+}
+
+impl From<Vec2f> for Vec2u {
+    fn from(v: Vec2f) -> Self {
+        Self::new(v.x as _, v.y as _)
+    }
+}
+
+impl From<Vec2f> for Vec2i {
+    fn from(v: Vec2f) -> Self {
+        Self::new(v.x as _, v.y as _)
     }
 }
 
@@ -206,6 +224,17 @@ impl<T: Copy + Div<Output = T>> Div<T> for Vector2<T> {
         Self {
             x: self.x / other,
             y: self.y / other,
+        }
+    }
+}
+
+impl<T: Copy + Div<Output = T>> Div for Vector2<T> {
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self::Output {
+        Self {
+            x: self.x / other.x,
+            y: self.y / other.y,
         }
     }
 }
@@ -363,6 +392,16 @@ mod tests {
         assert_eq!(
             Vec2f::new(5., 0.1) * Vec2f::new(0.5, 1.),
             Vec2f::new(2.5, 0.1)
+        );
+    }
+
+    #[test]
+    fn vector_div_compwise() {
+        assert_eq!(Vec2i::new(0, 3) / Vec2i::new(2, 3), Vec2i::new(0, 1));
+        assert_eq!(Vec2u::new(200, 10) / Vec2u::new(2, 5), Vec2u::new(100, 2));
+        assert_eq!(
+            Vec2f::new(5., 0.1) / Vec2f::new(0.5, 1.),
+            Vec2f::new(10., 0.1)
         );
     }
 

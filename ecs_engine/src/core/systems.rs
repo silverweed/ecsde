@@ -7,7 +7,7 @@ use std::collections::HashMap;
 #[cfg(debug_assertions)]
 use {
     crate::cfg,
-    crate::debug::{console, debug_ui_system, painter::Debug_Painter, log},
+    crate::debug::{console, debug_ui_system, log, painter::Debug_Painter},
     crate::replay::recording_system,
 };
 
@@ -22,7 +22,7 @@ pub struct Debug_Systems {
     pub debug_ui_system: debug_ui_system::Debug_Ui_System,
 
     pub replay_recording_system: recording_system::Replay_Recording_System,
-    // Note: we have one painter per level
+    // Note: we have one painter per level plus the "global" painter (with empty Id)
     pub painters: HashMap<String_Id, Debug_Painter>,
     pub console: console::Console,
     pub log: log::Debug_Log,
@@ -46,6 +46,8 @@ impl Core_Systems<'_> {
 #[cfg(debug_assertions)]
 impl Debug_Systems {
     pub fn new(cfg: &cfg::Config) -> Debug_Systems {
+        let mut painters = HashMap::new();
+        painters.insert(String_Id::from(""), Debug_Painter::new());
         Debug_Systems {
             debug_ui_system: debug_ui_system::Debug_Ui_System::new(),
             replay_recording_system: recording_system::Replay_Recording_System::new(
@@ -57,11 +59,15 @@ impl Debug_Systems {
                     .read(cfg),
                 },
             ),
-            painters: HashMap::new(),
+            painters,
             show_trace_overlay: false,
             trace_overlay_update_t: 0.0,
             console: console::Console::new(),
             log: log::Debug_Log::with_hist_len(30 * 60),
         }
+    }
+
+    pub fn global_painter(&mut self) -> &mut Debug_Painter {
+        self.painters.get_mut(&String_Id::from("")).unwrap()
     }
 }

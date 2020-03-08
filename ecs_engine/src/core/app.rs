@@ -110,7 +110,7 @@ pub fn init_engine_debug(
 ) -> Maybe_Error {
     use crate::common::colors;
     use crate::common::vector::{Vec2f, Vec2u};
-    use crate::gfx::align;
+    use crate::gfx::align::Align;
     use debug::{fadeout_overlay, graph, overlay};
 
     const FONT: &str = "Hack-Regular.ttf";
@@ -142,30 +142,46 @@ pub fn init_engine_debug(
         let mut joy_overlay = debug_ui_system
             .create_overlay(String_Id::from("joysticks"), debug_overlay_config)
             .unwrap();
-        joy_overlay.config.horiz_align = align::Align::End;
-        joy_overlay.config.vert_align = align::Align::Middle;
+        joy_overlay.config.horiz_align = Align::End;
+        joy_overlay.config.vert_align = Align::Middle;
         joy_overlay.position = Vec2f::new(target_win_size_x, target_win_size_y * 0.5);
 
         debug_overlay_config.font_size = (13.0 * ui_scale) as _;
         let time_overlay = debug_ui_system
             .create_overlay(String_Id::from("time"), debug_overlay_config)
             .unwrap();
-        time_overlay.config.horiz_align = align::Align::End;
-        time_overlay.config.vert_align = align::Align::End;
+        time_overlay.config.horiz_align = Align::End;
+        time_overlay.config.vert_align = Align::End;
         time_overlay.position = Vec2f::new(target_win_size_x, target_win_size_y);
+
+        let win_overlay = debug_ui_system
+            .create_overlay(String_Id::from("window"), debug_overlay_config)
+            .unwrap();
+        win_overlay.config.horiz_align = Align::End;
+        win_overlay.config.vert_align = Align::End;
+        win_overlay.position = Vec2f::new(target_win_size_x, target_win_size_y - 20. * ui_scale);
 
         let fps_overlay = debug_ui_system
             .create_overlay(String_Id::from("fps"), debug_overlay_config)
             .unwrap();
-        fps_overlay.config.vert_align = align::Align::End;
+        fps_overlay.config.vert_align = Align::End;
         fps_overlay.position = Vec2f::new(0.0, target_win_size_y as f32);
+
+        debug_overlay_config.pad_x = 0.;
+        debug_overlay_config.pad_y = 0.;
+        debug_overlay_config.background = colors::TRANSPARENT;
+        let mouse_overlay = debug_ui_system
+            .create_overlay(String_Id::from("mouse"), debug_overlay_config)
+            .unwrap();
+        mouse_overlay.config.horiz_align = Align::Begin;
+        mouse_overlay.config.vert_align = Align::Begin;
 
         debug_overlay_config.font_size = (11.0 * ui_scale) as _;
         let trace_overlay = debug_ui_system
             .create_overlay(String_Id::from("trace"), debug_overlay_config)
             .unwrap();
-        trace_overlay.config.vert_align = align::Align::Middle;
-        trace_overlay.config.horiz_align = align::Align::Middle;
+        trace_overlay.config.vert_align = Align::Middle;
+        trace_overlay.config.horiz_align = Align::Middle;
         trace_overlay.position = Vec2f::new(
             target_win_size_x as f32 * 0.5,
             target_win_size_y as f32 * 0.5,
@@ -191,7 +207,7 @@ pub fn init_engine_debug(
         let fadeout_overlay = debug_ui_system
             .create_fadeout_overlay(String_Id::from("msg"), fadeout_overlay_config)
             .unwrap();
-        fadeout_overlay.config.horiz_align = align::Align::Begin;
+        fadeout_overlay.config.horiz_align = Align::Begin;
         fadeout_overlay.position = Vec2f::new(0.0, 0.0);
     }
 

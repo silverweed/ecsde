@@ -34,13 +34,13 @@ impl Debug_Frame_Scroller {
         self.draw_bar_at(
             window,
             self.pos.y as f32,
-            self.size.y as f32 * 0.5,
+            self.size.y as f32 * 0.5 - 1.,
             self.n_frames,
         );
         self.draw_bar_at(
             window,
             self.pos.y as f32 + self.size.y as f32 * 0.5,
-            self.size.y as f32 * 0.5,
+            self.size.y as f32 * 0.5 - 1.,
             self.n_seconds,
         );
     }
@@ -54,7 +54,12 @@ impl Debug_Frame_Scroller {
                 let subdiv_rect =
                     rect::Rectf::new(self.pos.x as f32 + i as f32 * subdiv_w, y, subdiv_w, height);
                 let hovered = rect::rect_contains(&subdiv_rect, mpos.into());
-                let color = colors::rgba(20, 20, 20, if hovered { 250 } else { 100 });
+                let color = if i != cur_frame {
+                    let c = if hovered { 160 } else { 20 };
+                    colors::rgba(c, c, c, if hovered { 250 } else { 100 })
+                } else {
+                    colors::rgba(40, 100, 200, 240)
+                };
                 let paint_props = Paint_Properties {
                     color,
                     border_thick: 1.0,

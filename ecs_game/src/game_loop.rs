@@ -13,7 +13,7 @@ use std::time::Duration;
 use ecs_engine::{
     common::angle::rad, common::stringid::String_Id, common::transform::Transform2D,
     common::vector::Vec2f, debug, debug::painter::Debug_Painter,
-    gfx::paint_props::Paint_Properties,
+    gfx::paint_props::Paint_Properties, gfx::render, gfx::window,
 };
 
 pub fn tick_game<'a>(
@@ -390,6 +390,11 @@ fn update_graphics(
             painter.clear();
         });
 
+        // Global painter
+        let painter = game_state.engine_state.debug_systems.global_painter();
+        painter.draw(window, gres, &Transform2D::default());
+        painter.clear();
+
         // Draw debug UI
         {
             trace!("debug_ui_system::update");
@@ -425,12 +430,14 @@ fn update_debug(game_state: &mut Game_State) {
     let debug_systems = &mut engine_state.debug_systems;
 
     // @Speed @WaitForStable: these should all be computed at compile time.
-    let (sid_time, sid_fps, sid_entities, sid_camera, sid_execution_time) = (
+    let (sid_time, sid_fps, sid_entities, sid_camera, sid_execution_time, sid_mouse, sid_window) = (
         String_Id::from("time"),
         String_Id::from("fps"),
         String_Id::from("entities"),
         String_Id::from("camera"),
         String_Id::from("execution_time"),
+        String_Id::from("mouse"),
+        String_Id::from("window"),
     );
 
     // Overlays
@@ -443,6 +450,27 @@ fn update_debug(game_state: &mut Game_State) {
         debug_systems.debug_ui_system.get_overlay(sid_fps),
         &game_state.fps_debug,
         game_state.cvars.vsync.read(&engine_state.config),
+    );
+
+    let draw_mouse_rulers = game_state
+        .debug_cvars
+        .draw_mouse_rulers
+        .read(&engine_state.config);
+    if draw_mouse_rulers {
+        let painter = debug_systems
+            .painters
+            .get_mut(&String_Id::from(""))
+            .unwrap();
+        update_mouse_debug_overlay(
+            debug_systems.debug_ui_system.get_overlay(sid_mouse),
+            painter,
+            &game_state.window,
+        );
+    }
+
+    update_win_debug_overlay(
+        debug_systems.debug_ui_system.get_overlay(sid_window),
+        &game_state.window,
     );
 
     let draw_fps_graph = game_state
@@ -607,6 +635,63 @@ fn update_fps_debug_overlay(
             if vsync { "on" } else { "off" },
         ),
         colors::rgba(180, 180, 180, 200),
+    );
+}
+
+#[cfg(debug_assertions)]
+fn update_mouse_debug_overlay(
+    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    painter: &mut Debug_Painter,
+    window: &window::Window_Handle,
+) {
+    use ecs_engine::common::shapes::Line;
+
+    debug_overlay.clear();
+    let pos = window::mouse_pos_in_window(window);
+    debug_overlay.position = pos.into();
+    debug_overlay.add_line_color(
+        &format!("{},{}", pos.x, pos.y),
+        colors::rgba(220, 220, 220, 220),
+    );
+
+    let color = colors::rgba(255, 255, 255, 150);
+    let (win_w, win_h) = window::get_window_real_size(window);
+    let from_x = Vec2f::new(0., pos.y as _);
+    let to_x = Vec2f::new(win_w as _, pos.y as _);
+    let from_y = Vec2f::new(pos.x as _, 0.);
+    let to_y = Vec2f::new(pos.x as _, win_h as _);
+    painter.add_line(
+        Line {
+            from: from_x,
+            to: to_x,
+            thickness: 1.0,
+        },
+        color,
+    );
+    painter.add_line(
+        Line {
+            from: from_y,
+            to: to_y,
+            thickness: 1.0,
+        },
+        color,
+    );
+}
+
+#[cfg(debug_assertions)]
+fn update_win_debug_overlay(
+    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    window: &window::Window_Handle,
+) {
+    let tsize = window::get_window_target_size(window);
+    let rsize = window::get_window_real_size(window);
+    debug_overlay.clear();
+    debug_overlay.add_line_color(
+        &format!(
+            "WinSize: target = {}x{}, real = {}x{}",
+            tsize.0, tsize.1, rsize.0, rsize.1
+        ),
+        colors::rgba(110, 190, 250, 220),
     );
 }
 

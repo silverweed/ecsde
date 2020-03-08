@@ -14,6 +14,13 @@ pub struct Arrow {
     pub arrow_size: f32,
 }
 
+#[derive(Clone)]
+pub struct Line {
+    pub from: Vec2f,
+    pub to: Vec2f,
+    pub thickness: f32,
+}
+
 impl Circle {
     pub fn intersects(&self, other: &Circle) -> bool {
         let cdist2 = self.center.distance2(other.center);

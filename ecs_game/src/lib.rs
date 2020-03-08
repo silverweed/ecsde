@@ -93,6 +93,8 @@ pub struct Debug_CVars {
 
     pub draw_fps_graph: Cfg_Var<bool>,
     pub draw_exe_time_graph: Cfg_Var<bool>,
+
+    pub draw_mouse_rulers: Cfg_Var<bool>,
 }
 
 #[repr(C)]
@@ -446,6 +448,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     let debug_grid_opacity = Cfg_Var::new("engine/debug/rendering/grid/opacity", cfg);
     let draw_fps_graph = Cfg_Var::new("engine/debug/graphs/fps", cfg);
     let draw_exe_time_graph = Cfg_Var::new("engine/debug/graphs/exe_time", cfg);
+    let draw_mouse_rulers = Cfg_Var::new("engine/debug/window/draw_mouse_rulers", cfg);
 
     Debug_CVars {
         draw_sprites_bg,
@@ -462,6 +465,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
         debug_grid_opacity,
         draw_fps_graph,
         draw_exe_time_graph,
+        draw_mouse_rulers,
     }
 }
 
