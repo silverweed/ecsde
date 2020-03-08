@@ -2,7 +2,7 @@
 quit: Q
 game_speed_up: Num2, Equal, PageUp
 game_speed_down: Num1, Dash, PageDown
-pause_toggle: Period
+pause_toggle: P
 step_sim: Slash
 
 # Movement

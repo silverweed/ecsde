@@ -40,20 +40,22 @@ mod win32 {
     // Note: this is not the real value of TIMERR_NOCANDO
     const TIMERR_NOCANDO: MMRESULT = 999;
 
+    #[allow(non_snake_case)]
     #[repr(C)]
     struct TIMECAPS {
         pub wPeriodMin: UINT,
         pub wPeriodMax: UINT,
     }
 
-    extern "stdcall" {
-        #[link(name = "winmm")]
+    #[link(name = "winmm")]
+    extern "system" {
         fn timeGetDevCaps(time_caps: LPTIMECAPS, sizeof_time_caps: UINT) -> MMRESULT;
 
-        #[link(name = "winmm")]
         fn timeBeginPeriod(period: UINT) -> MMRESULT;
+    }
 
-        #[link(name = "Kernel32")]
+    #[link(name = "Kernel32")]
+    extern "system" {
         fn Sleep(milliseconds: DWORD);
     }
 
@@ -106,9 +108,9 @@ mod win32 {
     pub(super) fn init_sleep_internal() -> super::Sleep_Init_Result {
         use std::mem::MaybeUninit;
 
-        let mut tc = MaybeUninit::uninit::<TIMECAPS>();
+        let mut tc = MaybeUninit::uninit();
         unsafe {
-            let res = timeGetDevCaps(tc.as_mut_ptr(), std::mem::size_of::<TIMECAPS>());
+            let res = timeGetDevCaps(tc.as_mut_ptr(), std::mem::size_of::<TIMECAPS>() as UINT);
             if res != MMRESULT_NOERROR {
                 return Err(Box::new(Sleep_Init_Error { code: res }));
             }
@@ -120,14 +122,13 @@ mod win32 {
                     code: TIMERR_NOCANDO,
                 }));
             }
+            Ok(Duration::from_millis(tc.wPeriodMin as u64))
         }
-
-        Ok(Duration::from_millis(tc.wPeriodMin))
     }
 
     pub(super) fn sleep_internal(time: Duration) {
         unsafe {
-            Sleep(time.as_millis());
+            Sleep(time.as_millis() as UINT);
         }
     }
 }

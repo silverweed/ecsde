@@ -342,12 +342,6 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
     use crate::debug::tracer::{build_trace_trees, sort_trace_trees, Trace_Tree, Tracer_Node};
 
     let mut tracer = crate::prelude::DEBUG_TRACER.lock().unwrap();
-    let overlay = engine_state
-        .debug_systems
-        .debug_ui_system
-        .get_overlay(String_Id::from("trace"));
-
-    overlay.clear();
 
     fn add_node_line(
         node: &Tracer_Node,
@@ -394,7 +388,22 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
     debug_log.push_trace(traces);
 
     // @Incomplete: add logic to get either latest or some previous frame
-    let traces = &debug_log.frames.back().unwrap().traces;
+    let scroller = &engine_state.debug_systems.debug_ui_system.frame_scroller;
+    let scroller_seconds_offset = scroller.n_filled_seconds - scroller.cur_second - 1;
+    let scroller_frame_offset = scroller_seconds_offset * scroller.n_frames
+        + scroller.n_filled_frames
+        - scroller.cur_frame
+        - 1;
+    let frame = debug_log.cur_frame - scroller_frame_offset as u64;
+    println!("frame : {} / {}", frame, debug_log.cur_frame);
+    let traces = &debug_log.get_frame(frame).unwrap().traces;
+
+    let overlay = engine_state
+        .debug_systems
+        .debug_ui_system
+        .get_overlay(String_Id::from("trace"));
+
+    overlay.clear();
 
     let mut trace_trees = build_trace_trees(traces);
     sort_trace_trees(&mut trace_trees);

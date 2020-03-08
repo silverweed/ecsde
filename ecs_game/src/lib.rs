@@ -176,6 +176,7 @@ pub unsafe extern "C" fn game_update<'a>(
 
         #[cfg(debug_assertions)]
         {
+            // @Incomplete: probably only update if not paused
             ecs_engine::prelude::DEBUG_TRACER
                 .lock()
                 .unwrap()

@@ -121,6 +121,14 @@ pub fn tick_game<'a>(
     #[cfg(debug_assertions)]
     let debug_systems = &mut game_state.engine_state.debug_systems;
 
+    #[cfg(debug_assertions)]
+    {
+        debug_systems
+            .debug_ui_system
+            .frame_scroller
+            .handle_events(&game_state.engine_state.input_state.raw_events);
+    }
+
     // Handle core actions (resize, quit, ..)
     {
         trace!("app::handle_core_actions");
@@ -405,15 +413,14 @@ fn update_debug(game_state: &mut Game_State) {
                     .cvars
                     .gameplay_update_tick_ms
                     .read(&engine_state.config)) as u64;
-            let log_len = debug_systems.log.max_hist_len as u64;
-            scroller.n_frames = fps;
-            scroller.n_seconds = log_len;
-            scroller.cur_frame = engine_state.cur_frame % fps;
-            scroller.cur_second = (engine_state.cur_frame / fps).min(log_len);
-            //if scroller.n_frames == fps {
-            //scroller.cur_frame = 0;
-            //scroller.n_seconds = log_len.min(scroller.n_seconds + 1);
-            //}
+            let log_len = debug_systems.log.max_hist_len;
+            scroller.n_frames = fps as _;
+            scroller.n_seconds = (log_len / fps as u32) as _;
+            scroller.cur_frame = (engine_state.cur_frame % fps) as u16;
+            scroller.n_filled_frames = scroller.cur_frame + 1;
+            scroller.cur_second =
+                (engine_state.cur_frame / fps).min(scroller.n_seconds as u64 - 1) as _;
+            scroller.n_filled_seconds = scroller.cur_second + 1;
         }
     }
 

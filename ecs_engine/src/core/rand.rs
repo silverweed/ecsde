@@ -77,18 +77,18 @@ fn get_entropy_from_os(buf: &mut [u8]) -> std::io::Result<()> {
 #[cfg(target_os = "windows")]
 mod win32 {
     use std::os::raw::*;
-    type PVOID = *mut c_void;
-    type BOOL = c_int;
-    type ULONG = c_ulong;
+    pub(super) type PVOID = *mut c_void;
+    pub(super) type BOOL = c_int;
+    pub(super) type ULONG = c_ulong;
 
-    extern "stdcall" {
+    extern "system" {
         /// @Portability: this function is not strictly standard, but it's just SO MUCH more convenient
         /// to use than the "recommended" BCrypt* API, which is a total mess.
         /// In case Windows 12 or something breaks this, then I'll take the trouble of using the
         /// Official(R) MDSN-Approved(TM) API.
         #[link(name = "Advapi32")]
         #[link_name = "SystemFunction036"]
-        fn RtlGenRandom(buf: PVOID, buf_len: ULONG) -> BOOL;
+        pub(super) fn RtlGenRandom(buf: PVOID, buf_len: ULONG) -> BOOL;
     }
 }
 

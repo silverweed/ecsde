@@ -3,9 +3,9 @@ use std::collections::VecDeque;
 
 #[derive(Default)]
 pub struct Debug_Log {
-    pub cur_frame: usize,
-    pub hist_len: usize,
-    pub max_hist_len: usize,
+    pub cur_frame: u64,
+    pub hist_len: u32,
+    pub max_hist_len: u32,
     pub frames: VecDeque<Debug_Log_Frame>,
 }
 
@@ -15,10 +15,10 @@ pub struct Debug_Log_Frame {
 }
 
 impl Debug_Log {
-    pub fn with_hist_len(max_hist_len: usize) -> Self {
+    pub fn with_hist_len(max_hist_len: u32) -> Self {
         Debug_Log {
             max_hist_len,
-            frames: VecDeque::with_capacity(max_hist_len),
+            frames: VecDeque::with_capacity(max_hist_len as usize),
             ..Default::default()
         }
     }
@@ -33,11 +33,11 @@ impl Debug_Log {
         self.frames.push_back(Debug_Log_Frame::default());
     }
 
-    pub fn get_frame(&self, frame_number: usize) -> Option<&Debug_Log_Frame> {
-        if (self.cur_frame - self.hist_len..self.cur_frame).contains(&frame_number) {
+    pub fn get_frame(&self, frame_number: u64) -> Option<&Debug_Log_Frame> {
+        if (self.cur_frame - self.hist_len as u64 + 1..=self.cur_frame).contains(&frame_number) {
             let idx = self.cur_frame - frame_number;
-            let idx = self.hist_len - idx;
-            Some(&self.frames[idx])
+            let idx = self.hist_len as u64 - idx - 1;
+            Some(&self.frames[idx as usize])
         } else {
             None
         }
