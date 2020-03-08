@@ -1,4 +1,4 @@
-use super::joystick_mgr::Joystick_Manager;
+use super::joystick_state::Joystick_State;
 use crate::common::stringid::String_Id;
 use std::collections::HashMap;
 use std::path::Path;
@@ -25,7 +25,7 @@ pub enum Input_Action {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub(super) enum Axis_Emulation_Type {
+pub enum Axis_Emulation_Type {
     Min,
     Max,
 }
@@ -40,18 +40,18 @@ impl Axis_Emulation_Type {
     }
 }
 
-pub(super) struct Axis_Bindings {
-    axes_names: Vec<String_Id>,
-    real: [Vec<String_Id>; joystick::Joystick_Axis::_Count as usize],
-    emulated: HashMap<Input_Action, Vec<(String_Id, Axis_Emulation_Type)>>,
+pub struct Axis_Bindings {
+    pub axes_names: Vec<String_Id>,
+    pub real: [Vec<String_Id>; joystick::Joystick_Axis::_Count as usize],
+    pub emulated: HashMap<Input_Action, Vec<(String_Id, Axis_Emulation_Type)>>,
 }
 
 /// Struct containing the mappings between input and user-defined actions and axes_mappings.
 /// e.g. "Key::Q => action_quit".
 pub struct Input_Bindings {
     /// { input_action => [action_name] }
-    action_bindings: HashMap<Input_Action, Vec<String_Id>>,
-    axis_bindings: Axis_Bindings,
+    pub action_bindings: HashMap<Input_Action, Vec<String_Id>>,
+    pub axis_bindings: Axis_Bindings,
 }
 
 impl Input_Bindings {
@@ -63,10 +63,6 @@ impl Input_Bindings {
             action_bindings: parsing::parse_action_bindings_file(action_bindings_file)?,
             axis_bindings: parsing::parse_axis_bindings_file(axis_bindings_file)?,
         })
-    }
-
-    pub fn get_all_virtual_axes_names(&self) -> &[String_Id] {
-        &self.axis_bindings.axes_names
     }
 
     pub fn get_virtual_axes_from_real_axis(
@@ -99,18 +95,17 @@ impl Input_Bindings {
         &self,
         joystick_id: u32,
         button: u32,
-        joy_mgr: &Joystick_Manager,
-    ) -> Option<&Vec<String_Id>> {
-        let joystick = joy_mgr.get_joystick(joystick_id).unwrap_or_else(|| {
+        joy_state: &Joystick_State,
+    ) -> Option<&[String_Id]> {
+        let joystick = &joy_state.joysticks[joystick_id as usize].unwrap_or_else(|| {
             fatal!(
                 "Tried to get action for joystick {}, but it is not registered!",
                 joystick_id
             )
         });
-        self.action_bindings
-            .get(&Input_Action::Joystick(joystick::get_joy_btn_from_id(
-                *joystick, button,
-            )?))
+        let joystick = joystick::get_joy_btn_from_id(*joystick, button)?;
+        let input_action = Input_Action::Joystick(joystick);
+        self.action_bindings.get(&input_action).map(Vec::as_slice)
     }
 
     pub(super) fn get_mouse_actions(&self, button: mouse::Button) -> Option<&Vec<String_Id>> {
@@ -134,9 +129,9 @@ impl Input_Bindings {
         &self,
         joystick_id: u32,
         button: u32,
-        joy_mgr: &Joystick_Manager,
+        joy_state: &Joystick_State,
     ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
-        let joystick = joy_mgr.get_joystick(joystick_id).unwrap_or_else(|| {
+        let joystick = &joy_state.joysticks[joystick_id as usize].unwrap_or_else(|| {
             panic!(
                 "[ ERROR ] Tried to get emulated axes for joystick {}, but it is not registered!",
                 joystick_id

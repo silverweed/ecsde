@@ -1,6 +1,6 @@
 use super::bindings::joystick;
 use super::input_system::Input_Raw_Event;
-use super::joystick_mgr::{Joystick_Manager, Real_Axes_Values};
+use super::joystick_state::{Joystick_State, Real_Axes_Values};
 use crate::cfg;
 
 #[cfg(feature = "use-sfml")]
@@ -12,7 +12,7 @@ pub trait Input_Provider {
     fn update(
         &mut self,
         args: &mut Input_Provider_Input,
-        joy_mgr: Option<&Joystick_Manager>,
+        joy_mgr: Option<&Joystick_State>,
         cfg: &cfg::Config,
     );
     fn get_events(&self) -> &[Input_Raw_Event];

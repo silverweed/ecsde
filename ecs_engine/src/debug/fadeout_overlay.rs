@@ -7,7 +7,6 @@ use crate::gfx;
 use crate::gfx::align::Align;
 use crate::gfx::render::Text;
 use crate::gfx::window::Window_Handle;
-use crate::prelude::*;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
 use std::time::Duration;
@@ -58,8 +57,8 @@ impl Debug_Element for Fadeout_Debug_Overlay {
     }
 
     // @Refactor: this is mostly @Cutnpaste from overlay.rs
-    fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources, _tracer: Debug_Tracer) {
-        trace!("fadeout_overlay::draw", _tracer);
+    fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
+        trace!("fadeout_overlay::draw");
 
         if self.fadeout_texts.is_empty() {
             return;

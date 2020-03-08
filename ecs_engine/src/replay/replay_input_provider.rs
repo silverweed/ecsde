@@ -3,7 +3,7 @@ use crate::cfg::{self, Cfg_Var};
 use crate::input::bindings::joystick;
 use crate::input::default_input_provider::Default_Input_Provider;
 use crate::input::input_system::Input_Raw_Event;
-use crate::input::joystick_mgr::{Joystick_Manager, Real_Axes_Values};
+use crate::input::joystick_state::{Joystick_State, Real_Axes_Values};
 use crate::input::provider::{Input_Provider, Input_Provider_Input};
 use std::iter::Peekable;
 
@@ -38,7 +38,7 @@ impl Input_Provider for Replay_Input_Provider {
     fn update(
         &mut self,
         window: &mut Input_Provider_Input,
-        joy_mgr: Option<&Joystick_Manager>,
+        joy_mgr: Option<&Joystick_State>,
         cfg: &cfg::Config,
     ) {
         self.dip.events.clear();
@@ -124,7 +124,7 @@ mod tests {
 
     use crate::input::bindings::keyboard::sfml::keypressed;
     use crate::input::bindings::mouse::sfml::mousepressed;
-    use crate::input::joystick_mgr::Joystick_Manager;
+    use crate::input::joystick_state::Joystick_State;
     use sfml::window::mouse::Button;
     use sfml::window::Event;
     use sfml::window::Key;
@@ -175,7 +175,7 @@ mod tests {
                 .collect()
         }
 
-        let joy_mgr = Joystick_Manager::new();
+        let joy_mgr = Joystick_State::default();
 
         // frame 0
         replay_provider.update(&mut window, Some(&joy_mgr), &config);

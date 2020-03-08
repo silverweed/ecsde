@@ -5,7 +5,6 @@ use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2u};
 use crate::gfx::render;
 use crate::gfx::window::Window_Handle;
-use crate::prelude::*;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
 use std::ops::Range;
@@ -41,13 +40,15 @@ pub struct Debug_Graph {
 }
 
 impl Debug_Element for Debug_Graph_View {
-    fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources, _tracer: Debug_Tracer) {
-        trace!("graph::draw", _tracer);
+    fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
+        trace!("graph::draw");
 
         // Draw background
-        let Vec2u { x, y } = self.pos;
-        let Vec2u { x: w, y: h } = self.size;
-        render::fill_color_rect(window, colors::rgba(0, 0, 0, 200), Rect::new(x, y, w, h));
+        {
+            let Vec2u { x, y } = self.pos;
+            let Vec2u { x: w, y: h } = self.size;
+            render::fill_color_rect(window, colors::rgba(0, 0, 0, 200), Rect::new(x, y, w, h));
+        }
 
         let xr = &self.data.x_range;
         let yr = &self.data.y_range;
@@ -55,14 +56,15 @@ impl Debug_Element for Debug_Graph_View {
         // Draw grid
         let font = gres.get_font(self.config.font);
         let font_size = self.config.label_font_size;
+        let pos = Vec2f::from(self.pos);
         if let Some(xstep) = self.config.grid_xstep {
             let mut x = xr.start;
             let mut iters = 0;
             while x <= xr.end && iters < 100 {
-                let pos1 = self.get_coords_for(Vec2f::new(x, yr.start));
+                let pos1 = pos + self.get_coords_for(Vec2f::new(x, yr.start));
                 let v1 =
                     render::new_vertex(pos1, colors::rgba(180, 180, 180, 200), Vec2f::default());
-                let pos2 = self.get_coords_for(Vec2f::new(x, yr.end));
+                let pos2 = pos + self.get_coords_for(Vec2f::new(x, yr.end));
                 let v2 =
                     render::new_vertex(pos2, colors::rgba(180, 180, 180, 200), Vec2f::default());
 
@@ -79,17 +81,17 @@ impl Debug_Element for Debug_Graph_View {
             let mut y = yr.start;
             let mut iters = 0;
             while y <= yr.end && iters < 100 {
-                let pos1 = self.get_coords_for(Vec2f::new(xr.start, y));
+                let pos1 = pos + self.get_coords_for(Vec2f::new(xr.start, y));
                 let v1 =
                     render::new_vertex(pos1, colors::rgba(180, 180, 180, 200), Vec2f::default());
-                let pos2 = self.get_coords_for(Vec2f::new(xr.end, y));
+                let pos2 = pos + self.get_coords_for(Vec2f::new(xr.end, y));
                 let v2 =
                     render::new_vertex(pos2, colors::rgba(180, 180, 180, 200), Vec2f::default());
 
                 let mut text = render::create_text(&format!("{:.1}", y), font, font_size);
 
-                render::render_text(window, &mut text, pos1 + Vec2f::new(0., -2.));
                 render::render_line(window, &v1, &v2);
+                render::render_text(window, &mut text, pos1 + Vec2f::new(0., -2.));
 
                 y += ystep;
                 iters += 1;
@@ -136,19 +138,18 @@ impl Debug_Graph_View {
         use crate::common::math::lerp;
         let w = self.data.x_range.end - self.data.x_range.start;
         let h = self.data.y_range.end - self.data.y_range.start;
-        Vec2f::from(self.pos)
-            + Vec2f::new(
-                lerp(
-                    0.0,
-                    self.size.x as f32,
-                    (point.x - self.data.x_range.start) / w,
-                ),
-                lerp(
-                    0.0,
-                    self.size.y as f32,
-                    1.0 - (point.y - self.data.y_range.start) / h,
-                ),
-            )
+        Vec2f::new(
+            lerp(
+                0.0,
+                self.size.x as f32,
+                (point.x - self.data.x_range.start) / w,
+            ),
+            lerp(
+                0.0,
+                self.size.y as f32,
+                1.0 - (point.y - self.data.y_range.start) / h,
+            ),
+        )
     }
 
     fn get_color_for(&self, point: Vec2f) -> colors::Color {

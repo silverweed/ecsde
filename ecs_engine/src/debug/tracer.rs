@@ -10,7 +10,7 @@ pub struct Tracer {
 }
 
 /// Represents a traced scope with its info and a link to its parent.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Tracer_Node {
     pub info: Scope_Trace_Info,
     pub parent_idx: Option<usize>,

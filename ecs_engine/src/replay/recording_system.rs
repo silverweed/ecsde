@@ -4,13 +4,13 @@ use crate::cfg::{self, Cfg_Var};
 use crate::common::Maybe_Error;
 use crate::input::bindings::joystick::{self, Joystick_Axis};
 use crate::input::input_system::Input_Raw_Event;
-use crate::input::joystick_mgr::Real_Axes_Values;
+use crate::input::joystick_state::Real_Axes_Values;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::JoinHandle;
 
 #[derive(Copy, Clone)]
 pub struct Replay_Recording_System_Config {
-    pub ms_per_frame: i32,
+    pub ms_per_frame: f32,
 }
 
 pub struct Replay_Recording_System {

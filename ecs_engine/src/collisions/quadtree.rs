@@ -3,7 +3,6 @@ use crate::common::rect::{Rect, Rectf};
 use crate::common::transform::Transform2D;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Ecs_World, Entity};
-use crate::prelude::*;
 
 #[cfg(debug_assertions)]
 use crate::debug::painter::Debug_Painter;
@@ -66,20 +65,13 @@ impl Quad_Tree {
         collider: &Collider,
         transform: &Transform2D,
         ecs_world: &Ecs_World,
-        _tracer: Debug_Tracer,
     ) {
-        trace!("quadtree::add", _tracer);
+        trace!("quadtree::add");
 
         if let Some(subnodes) = &mut self.subnodes {
             let index = get_index(collider, transform, &self.bounds);
             if index >= 0 {
-                subnodes[index as usize].add(
-                    entity,
-                    collider,
-                    transform,
-                    ecs_world,
-                    clone_tracer!(_tracer),
-                );
+                subnodes[index as usize].add(entity, collider, transform, ecs_world);
                 return;
             }
         }
@@ -88,7 +80,7 @@ impl Quad_Tree {
 
         if self.objects.len() > MAX_OBJECTS && self.level < MAX_DEPTH {
             if self.subnodes.is_none() {
-                trace!("quadtree::split", clone_tracer!(_tracer));
+                trace!("quadtree::split");
                 self.split();
             }
 
@@ -108,7 +100,6 @@ impl Quad_Tree {
                         collider,
                         transform,
                         ecs_world,
-                        clone_tracer!(_tracer),
                     );
                 } else {
                     i += 1;
@@ -122,19 +113,13 @@ impl Quad_Tree {
         collider: &Collider,
         transform: &Transform2D,
         result: &mut Vec<Entity>,
-        _tracer: Debug_Tracer,
     ) {
-        trace!("quadtree::get_neighbours", _tracer);
+        trace!("quadtree::get_neighbours");
 
         if let Some(subnodes) = &self.subnodes {
             let index = get_index(collider, transform, &self.bounds);
             if index >= 0 {
-                subnodes[index as usize].get_neighbours(
-                    collider,
-                    transform,
-                    result,
-                    clone_tracer!(_tracer),
-                );
+                subnodes[index as usize].get_neighbours(collider, transform, result);
             }
         }
 
@@ -401,35 +386,34 @@ mod tests {
         }
 
         let mut results = vec![];
-        let tracer = new_debug_tracer();
 
         let (e1, c1, t1) = cld(&mut ecs_world, (0., 0.), (1., 1.), (10., 10.));
-        tree.add(e1, &c1, &t1, &ecs_world, clone_tracer!(tracer));
+        tree.add(e1, &c1, &t1, &ecs_world);
 
-        tree.get_neighbours(&c1, &t1, &mut results, clone_tracer!(tracer));
+        tree.get_neighbours(&c1, &t1, &mut results);
         assert_eq!(results.len(), 1);
         assert_eq!(depth(&tree), 1);
 
         let (e2, c2, t2) = cld(&mut ecs_world, (50., 0.), (2., 2.), (3., 3.));
-        tree.add(e2, &c2, &t2, &ecs_world, clone_tracer!(tracer));
+        tree.add(e2, &c2, &t2, &ecs_world);
 
         let (e3, c3, t3) = cld(&mut ecs_world, (-35., -70.), (1.5, 1.5), (2.5, 2.5));
-        tree.add(e3, &c3, &t3, &ecs_world, clone_tracer!(tracer));
+        tree.add(e3, &c3, &t3, &ecs_world);
 
         results.clear();
-        tree.get_neighbours(&c1, &t1, &mut results, clone_tracer!(tracer));
+        tree.get_neighbours(&c1, &t1, &mut results);
         assert_eq!(results.len(), 3);
         assert_eq!(depth(&tree), 1);
 
         // Check the tree splits after MAX_OBJECTS adds
         for _ in 3..=MAX_OBJECTS {
-            tree.add(e3, &c3, &t3, &ecs_world, clone_tracer!(tracer));
+            tree.add(e3, &c3, &t3, &ecs_world);
         }
 
         assert_eq!(depth(&tree), 2);
 
         results.clear();
-        tree.get_neighbours(&c2, &t2, &mut results, clone_tracer!(tracer));
+        tree.get_neighbours(&c2, &t2, &mut results);
         // All c3's should not be in the neighbour list.
         assert_eq!(results.len(), 2);
 

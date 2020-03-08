@@ -23,34 +23,74 @@ use ecs_engine::gfx as ngfx;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::bindings::keyboard;
 use ecs_engine::input::input_system::{Action_Kind, Game_Action};
-use ecs_engine::prelude::*;
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 pub struct Gameplay_System_Config {
     pub n_entities_to_spawn: usize,
 }
 
+pub struct Level {
+    pub id: String_Id,
+    pub world: Ecs_World,
+    pub entities: Vec<Entity>, // @Cleanup: maybe this should be in world
+    pub cameras: Vec<Entity>,
+    pub active_camera: usize, // index inside 'cameras'
+    pub scene_tree: scene_tree::Scene_Tree,
+}
+
+impl Level {
+    // @Temporary: we need to better decide how to handle cameras
+    pub fn get_camera(&self) -> &C_Camera2D {
+        self.world.get_components::<C_Camera2D>().first().unwrap()
+    }
+
+    // @Temporary
+    pub fn move_camera_to(&mut self, pos: Vec2f) {
+        self.world
+            .get_components_mut::<C_Camera2D>()
+            .first_mut()
+            .unwrap()
+            .transform
+            .set_position_v(pos);
+    }
+}
+
 pub struct Gameplay_System {
-    pub ecs_world: Ecs_World,
-    entities: Vec<Entity>,
-    camera: Entity,
-    latest_frame_actions: Vec<Game_Action>,
-    latest_frame_axes: Virtual_Axes,
+    pub loaded_levels: Vec<Arc<Mutex<Level>>>,
+    pub active_levels: Vec<usize>, // indices inside 'loaded_levels'
     pub input_cfg: Input_Config,
-    scene_tree: scene_tree::Scene_Tree,
+
+    #[cfg(debug_assertions)]
+    debug_data: Debug_Data,
+}
+
+#[cfg(debug_assertions)]
+#[derive(Default)]
+struct Debug_Data {
+    pub latest_frame_actions: Vec<Game_Action>,
+    pub latest_frame_axes: Virtual_Axes,
 }
 
 impl Gameplay_System {
     pub fn new() -> Gameplay_System {
         Gameplay_System {
-            ecs_world: Ecs_World::new(),
-            entities: vec![],
-            camera: Entity::INVALID,
-            latest_frame_actions: vec![],
-            latest_frame_axes: Virtual_Axes::default(),
-            scene_tree: scene_tree::Scene_Tree::new(),
+            loaded_levels: vec![],
+            active_levels: vec![],
             input_cfg: Input_Config::default(),
+            #[cfg(debug_assertions)]
+            debug_data: Debug_Data::default(),
+        }
+    }
+
+    #[inline]
+    pub fn foreach_active_level<F: FnMut(&mut Level)>(&self, mut f: F) {
+        for &idx in &self.active_levels {
+            let mut level = self.loaded_levels[idx]
+                .lock()
+                .unwrap_or_else(|err| fatal!("Failed to lock level {}: {}", idx, err));
+            f(&mut *level);
         }
     }
 
@@ -63,9 +103,6 @@ impl Gameplay_System {
         gs_cfg: Gameplay_System_Config,
     ) -> common::Maybe_Error {
         self.input_cfg = read_input_cfg(cfg);
-        self.register_all_components();
-        self.init_demo_entities(gres, env, rng, cfg, gs_cfg);
-
         Ok(())
     }
 
@@ -76,48 +113,55 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
-        _tracer: Debug_Tracer,
     ) {
-        trace!("gameplay_system::update", _tracer);
-        // Used for stepping
-        self.latest_frame_actions = actions.to_vec();
+        trace!("gameplay_system::update");
 
-        ///// Update all game systems /////
+        #[cfg(debug_assertions)]
         {
-            let stream = new_entity_stream(&self.ecs_world)
+            self.debug_data.latest_frame_actions = actions.to_vec();
+        }
+
+        ///// Update all game systems in all worlds /////
+        let input_cfg = self.input_cfg;
+        self.foreach_active_level(|level| {
+            let world = &mut level.world;
+
+            let stream = new_entity_stream(world)
                 .require::<C_Renderable>()
                 .require::<C_Animated_Sprite>()
                 .build();
-            gfx::animation_system::update(&dt, &mut self.ecs_world, stream);
-        }
-        controllable_system::update(&dt, actions, axes, &mut self.ecs_world, self.input_cfg, cfg);
 
-        {
-            trace!("scene_tree::copy_transforms", _tracer);
-            for e in self.entities.iter().copied() {
-                if let Some(t) = self.ecs_world.get_component::<C_Spatial2D>(e) {
-                    self.scene_tree.set_local_transform(e, &t.local_transform);
+            gfx::animation_system::update(&dt, world, stream);
+            controllable_system::update(&dt, actions, axes, world, input_cfg, cfg);
+
+            {
+                trace!("scene_tree::copy_transforms");
+                for e in level.entities.iter().copied() {
+                    if let Some(t) = world.get_component::<C_Spatial2D>(e) {
+                        level.scene_tree.set_local_transform(e, &t.local_transform);
+                    }
                 }
             }
-        }
 
-        {
-            trace!("scene_tree::compute_global_transforms", _tracer);
-            self.scene_tree.compute_global_transforms();
-        }
+            {
+                trace!("scene_tree::compute_global_transforms");
+                level.scene_tree.compute_global_transforms();
+            }
 
-        {
-            trace!("scene_tree::backcopy_transforms", _tracer);
-            for e in self.entities.iter().copied() {
-                if let Some(t) = self.ecs_world.get_component_mut::<C_Spatial2D>(e) {
-                    t.global_transform = *self.scene_tree.get_global_transform(e).unwrap();
+            {
+                trace!("scene_tree::backcopy_transforms");
+                for e in level.entities.iter().copied() {
+                    if let Some(t) = world.get_component_mut::<C_Spatial2D>(e) {
+                        t.global_transform = *level.scene_tree.get_global_transform(e).unwrap();
+                    }
                 }
             }
-        }
 
-        self.update_demo_entites(&dt, time);
+            // @Incomplete: level-specific gameplay update
+            //self.update_demo_entites(&dt, time);
 
-        movement_system::update(&dt, &mut self.ecs_world);
+            movement_system::update(&dt, world);
+        });
     }
 
     pub fn realtime_update(
@@ -127,12 +171,12 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
-        _tracer: Debug_Tracer,
     ) {
-        trace!("gameplay_system::realtime_update", _tracer);
-        self.update_camera(real_dt, actions, axes, cfg);
+        trace!("gameplay_system::realtime_update");
+        //self.update_camera(real_dt, actions, axes, cfg);
     }
 
+    /*
     #[cfg(debug_assertions)]
     pub fn step(
         &mut self,
@@ -141,13 +185,7 @@ impl Gameplay_System {
         cfg: &cfg::Config,
         _tracer: Debug_Tracer,
     ) {
-        self.update_with_latest_frame_actions(dt, time, cfg, _tracer);
-    }
-
-    #[cfg(debug_assertions)]
-    pub fn print_debug_info(&self) {
-        // @Incomplete
-        //self.ecs_world.print_debug_info();
+        self.update_with_latest_frame_actions(dt, time, cfg);
     }
 
     fn update_with_latest_frame_actions(
@@ -161,22 +199,7 @@ impl Gameplay_System {
         std::mem::swap(&mut self.latest_frame_actions, &mut actions);
         let mut axes = Virtual_Axes::default();
         std::mem::swap(&mut self.latest_frame_axes, &mut axes);
-        self.update(&dt, time, &actions, &axes, cfg, _tracer);
-    }
-
-    pub fn get_camera(&self) -> &C_Camera2D {
-        self.ecs_world
-            .get_components::<C_Camera2D>()
-            .first()
-            .unwrap()
-    }
-
-    pub fn move_camera_to(&mut self, pos: Vec2f) {
-        self.ecs_world
-            .get_component_mut::<C_Camera2D>(self.camera)
-            .unwrap()
-            .transform
-            .set_position_v(pos);
+        self.update(&dt, time, &actions, &axes, cfg);
     }
 
     fn register_all_components(&mut self) {
@@ -330,6 +353,7 @@ impl Gameplay_System {
                 }
                 self.scene_tree.add(entity, fst_entity, &t.local_transform);
             }
+            /*
             {
                 let c = em.add_component::<collider::Collider>(entity);
                 let width = (sw / n_frames) as f32;
@@ -340,6 +364,7 @@ impl Gameplay_System {
                 //};
                 c.offset = -Vec2f::new(width * 0.5, height * 0.5);
             }
+            */
             {
                 let s = em.add_component::<C_Animated_Sprite>(entity);
                 s.n_frames = n_frames;
@@ -419,7 +444,7 @@ impl Gameplay_System {
 
             i += 1;
         }
-    }
+    }*/
 }
 
 fn read_input_cfg(cfg: &cfg::Config) -> Input_Config {

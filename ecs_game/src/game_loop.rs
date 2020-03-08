@@ -5,6 +5,7 @@ use ecs_engine::core::app;
 use ecs_engine::core::time;
 use ecs_engine::gfx;
 use ecs_engine::gfx::render_system;
+use ecs_engine::input;
 use ecs_engine::resources::gfx::Gfx_Resources;
 use std::time::Duration;
 
@@ -12,15 +13,14 @@ use std::time::Duration;
 use ecs_engine::{
     common::angle::rad, common::stringid::String_Id, common::transform::Transform2D,
     common::vector::Vec2f, debug, debug::painter::Debug_Painter,
-    gfx::paint_props::Paint_Properties, input,
+    gfx::paint_props::Paint_Properties,
 };
 
 pub fn tick_game<'a>(
     game_state: &'a mut Game_State<'a>,
     game_resources: &'a mut Game_Resources<'a>,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    let _tracer = clone_tracer!(game_state.engine_state.tracer);
-    trace!("tick_game", _tracer);
+    trace!("tick_game");
 
     // @Speed @WaitForStable: these should all be computed at compile time.
     // Probably will do that when either const fn or proc macros/syntax extensions are stable.
@@ -32,15 +32,15 @@ pub fn tick_game<'a>(
 
     let dt = game_state.engine_state.time.dt();
     let real_dt = game_state.engine_state.time.real_dt();
-    let systems = &mut game_state.engine_state.systems;
     #[cfg(debug_assertions)]
     let debug_systems = &mut game_state.engine_state.debug_systems;
 
-    let update_time = Duration::from_millis(
-        game_state
+    let update_time = Duration::from_micros(
+        (game_state
             .cvars
             .gameplay_update_tick_ms
-            .read(&game_state.engine_state.config) as u64,
+            .read(&game_state.engine_state.config)
+            * 1000.0) as u64,
     );
 
     game_state.execution_time += dt;
@@ -56,18 +56,26 @@ pub fn tick_game<'a>(
     }
 
     // Update input
-    #[cfg(debug_assertions)]
     {
-        systems.input_system.process_game_actions =
-            debug_systems.console.status != debug::console::Console_Status::Open;
-    }
+        trace!("input_system::update");
 
-    {
-        trace!("input_system::update", _tracer);
-        systems.input_system.update(
+        let process_game_actions;
+        #[cfg(debug_assertions)]
+        {
+            process_game_actions =
+                debug_systems.console.status != debug::console::Console_Status::Open;
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            process_game_actions = true;
+        }
+
+        input::input_system::update_input(
+            &mut game_state.engine_state.input_state,
             window,
             &mut *game_state.input_provider,
             &game_state.engine_state.config,
+            process_game_actions,
         );
     }
 
@@ -75,11 +83,11 @@ pub fn tick_game<'a>(
     {
         use crate::debug::console_executor;
 
-        trace!("console::update", _tracer);
+        trace!("console::update");
         if debug_systems.console.status == debug::console::Console_Status::Open {
             debug_systems
                 .console
-                .update(systems.input_system.get_raw_events());
+                .update(&game_state.engine_state.input_state.raw_events);
 
             let mut output = vec![];
             while let Some(cmd) = game_state
@@ -116,22 +124,34 @@ pub fn tick_game<'a>(
 
     // Handle actions
     {
-        trace!("app::handle_core_actions", _tracer);
-        if app::handle_core_actions(&systems.input_system.extract_core_actions(), window) {
+        trace!("app::handle_core_actions");
+        if app::handle_core_actions(
+            &game_state
+                .engine_state
+                .input_state
+                .core_actions
+                .split_off(0),
+            window,
+        ) {
             game_state.engine_state.should_close = true;
             return Ok(false);
         }
     }
 
     {
-        let actions = systems.input_system.extract_game_actions();
+        let actions = game_state
+            .engine_state
+            .input_state
+            .game_actions
+            .split_off(0);
 
         #[cfg(debug_assertions)]
-        let input_system = &systems.input_system;
+        let input_state = &game_state.engine_state.input_state;
         #[cfg(debug_assertions)]
-        let raw_events = input_system.get_raw_events();
+        let raw_events = &input_state.raw_events;
         #[cfg(debug_assertions)]
-        let (real_axes, joy_mask) = input_system.get_all_real_axes();
+        let (real_axes, joy_mask) =
+            input::joystick_state::all_joysticks_values(&input_state.joy_state);
 
         #[cfg(debug_assertions)]
         {
@@ -160,7 +180,7 @@ pub fn tick_game<'a>(
         }
 
         {
-            trace!("state_mgr::handle_actions", _tracer);
+            trace!("state_mgr::handle_actions");
             if game_state.state_mgr.handle_actions(
                 &actions,
                 &mut game_state.engine_state,
@@ -183,13 +203,9 @@ pub fn tick_game<'a>(
 
         // Update game systems
         {
-            trace!("game_update", _tracer);
+            trace!("game_update");
 
-            let axes = game_state
-                .engine_state
-                .systems
-                .input_system
-                .get_virtual_axes();
+            let axes = &game_state.engine_state.input_state.axes;
 
             #[cfg(feature = "prof_gameplay")]
             let mut n_gameplay_updates = 0;
@@ -213,7 +229,6 @@ pub fn tick_game<'a>(
                 &actions,
                 axes,
                 &game_state.engine_state.config,
-                clone_tracer!(_tracer),
             );
 
             while game_state.execution_time > update_time {
@@ -232,7 +247,6 @@ pub fn tick_game<'a>(
                     &actions,
                     axes,
                     &game_state.engine_state.config,
-                    clone_tracer!(_tracer),
                 );
                 game_state.execution_time -= update_time;
 
@@ -257,17 +271,18 @@ pub fn tick_game<'a>(
 
     // Update collisions
     {
-        trace!("collision_system::update", _tracer);
+        trace!("collision_system::update");
 
-        game_state.engine_state.systems.collision_system.update(
-            &mut game_state.gameplay_system.ecs_world,
-            clone_tracer!(_tracer),
-        );
+        let gameplay_system = &mut game_state.gameplay_system;
+        let collision_system = &mut game_state.engine_state.systems.collision_system;
+        gameplay_system.foreach_active_level(|level| {
+            collision_system.update(&mut level.world);
+        });
     }
 
     // Update audio
     {
-        trace!("audio_system_update", _tracer);
+        trace!("audio_system_update");
         game_state.engine_state.systems.audio_system.update();
     }
 
@@ -302,7 +317,7 @@ fn update_graphics(
     real_dt: Duration,
     frame_lag_normalized: f32,
 ) -> Maybe_Error {
-    trace!("update_graphics", game_state.engine_state.tracer);
+    trace!("update_graphics");
 
     let window = &mut game_state.window;
 
@@ -325,7 +340,7 @@ fn update_graphics(
     }
 
     {
-        trace!("clear_window", game_state.engine_state.tracer);
+        trace!("clear_window");
 
         gfx::window::set_clear_color(window, colors::rgb(0, 0, 0));
         gfx::window::clear(window);
@@ -345,65 +360,60 @@ fn update_graphics(
             game_state.debug_cvars.draw_sprites_bg_color.read(cfg) as u32,
         ),
     };
-    let render_args = render_system::Render_System_Update_Args {
-        window,
-        resources: gres,
-        camera: game_state.gameplay_system.get_camera(),
-        ecs_world: &game_state.gameplay_system.ecs_world,
-        frame_lag_normalized,
-        cfg: render_cfg,
-        dt: real_dt,
-        _tracer: clone_tracer!(game_state.engine_state.tracer),
-    };
 
-    game_state
-        .engine_state
-        .systems
-        .render_system
-        .update(render_args);
+    let gameplay_system = &mut game_state.gameplay_system;
+    let render_system = &mut game_state.engine_state.systems.render_system;
+    gameplay_system.foreach_active_level(|level| {
+        let render_args = render_system::Render_System_Update_Args {
+            window,
+            resources: gres,
+            camera: level.get_camera(),
+            ecs_world: &level.world,
+            frame_lag_normalized,
+            cfg: render_cfg,
+            dt: real_dt,
+        };
+
+        render_system.update(render_args);
+    });
 
     #[cfg(debug_assertions)]
     {
-        // Draw debug painter
-        {
-            game_state.engine_state.debug_systems.debug_painter.draw(
-                window,
-                gres,
-                &game_state.gameplay_system.get_camera().transform,
-                clone_tracer!(game_state.engine_state.tracer),
-            );
-            game_state.engine_state.debug_systems.debug_painter.clear();
-        }
+        // Draw debug painter (one per active level)
+        let painters = &mut game_state.engine_state.debug_systems.painters;
+        let window = &mut game_state.window;
+        game_state.gameplay_system.foreach_active_level(|level| {
+            let painter = painters
+                .get_mut(&level.id)
+                .unwrap_or_else(|| panic!("Debug painter not found for level {:?}", level.id));
+            painter.draw(window, gres, &level.get_camera().transform);
+            painter.clear();
+        });
 
         // Draw debug UI
         {
-            trace!("debug_ui_system::update", game_state.engine_state.tracer);
+            trace!("debug_ui_system::update");
             game_state
                 .engine_state
                 .debug_systems
                 .debug_ui_system
-                .update(
-                    &real_dt,
-                    window,
-                    gres,
-                    clone_tracer!(game_state.engine_state.tracer),
-                );
+                .update(&real_dt, &mut game_state.window, gres);
         }
 
         // Draw console
         {
-            trace!("console::draw", game_state.engine_state.tracer);
+            trace!("console::draw");
             game_state
                 .engine_state
                 .debug_systems
                 .console
-                .draw(window, gres);
+                .draw(&mut game_state.window, gres);
         }
     }
 
     {
-        trace!("vsync", game_state.engine_state.tracer);
-        gfx::window::display(window);
+        trace!("vsync");
+        gfx::window::display(&mut game_state.window);
     }
 
     Ok(())
@@ -415,11 +425,12 @@ fn update_debug(game_state: &mut Game_State) {
     let debug_systems = &mut engine_state.debug_systems;
 
     // @Speed @WaitForStable: these should all be computed at compile time.
-    let (sid_time, sid_fps, sid_entities, sid_camera) = (
+    let (sid_time, sid_fps, sid_entities, sid_camera, sid_execution_time) = (
         String_Id::from("time"),
         String_Id::from("fps"),
         String_Id::from("entities"),
         String_Id::from("camera"),
+        String_Id::from("execution_time"),
     );
 
     // Overlays
@@ -427,18 +438,11 @@ fn update_debug(game_state: &mut Game_State) {
         debug_systems.debug_ui_system.get_overlay(sid_time),
         &engine_state.time,
     );
+
     update_fps_debug_overlay(
         debug_systems.debug_ui_system.get_overlay(sid_fps),
         &game_state.fps_debug,
         game_state.cvars.vsync.read(&engine_state.config),
-    );
-    update_entities_debug_overlay(
-        debug_systems.debug_ui_system.get_overlay(sid_entities),
-        &game_state.gameplay_system.ecs_world,
-    );
-    update_camera_debug_overlay(
-        debug_systems.debug_ui_system.get_overlay(sid_camera),
-        &game_state.gameplay_system.get_camera(),
     );
 
     let draw_fps_graph = game_state
@@ -459,81 +463,85 @@ fn update_debug(game_state: &mut Game_State) {
         );
     }
 
-    let debug_painter = &mut engine_state.debug_systems.debug_painter;
-
-    // Debug grid
-    if game_state
+    let draw_exe_time_graph = game_state
         .debug_cvars
-        .draw_debug_grid
-        .read(&engine_state.config)
-    {
-        let square_size = game_state
-            .debug_cvars
-            .debug_grid_square_size
-            .read(&engine_state.config);
-        let opacity = game_state
-            .debug_cvars
-            .debug_grid_opacity
-            .read(&engine_state.config);
-        debug_draw_grid(
-            debug_painter,
-            &game_state.gameplay_system.get_camera().transform,
-            engine_state.app_config.target_win_size,
-            square_size,
-            opacity as u8,
+        .draw_exe_time_graph
+        .read(&engine_state.config);
+    debug_systems
+        .debug_ui_system
+        .set_graph_enabled(sid_execution_time, draw_exe_time_graph);
+    if draw_exe_time_graph {
+        debug_systems
+            .debug_ui_system
+            .set_graph_enabled(sid_execution_time, true);
+        update_graph_exe_time(
+            debug_systems.debug_ui_system.get_graph(sid_execution_time),
+            &engine_state.time,
+            &game_state.execution_time,
         );
     }
 
-    let draw_entities = game_state
-        .debug_cvars
-        .draw_entities
-        .read(&engine_state.config);
-    if draw_entities {
-        debug_draw_transforms(debug_painter, &game_state.gameplay_system.ecs_world);
-    }
+    ////// Per-Level debugs //////
+    let painters = &mut debug_systems.painters;
+    let collision_system = &engine_state.systems.collision_system;
+    let ui_system = &mut debug_systems.debug_ui_system;
+    let target_win_size = engine_state.app_config.target_win_size;
 
-    let draw_velocities = game_state
-        .debug_cvars
-        .draw_entities_velocities
-        .read(&engine_state.config);
-    if draw_velocities {
-        debug_draw_velocities(debug_painter, &game_state.gameplay_system.ecs_world);
-    }
+    let cvars = &game_state.debug_cvars;
+    let draw_entities = cvars.draw_entities.read(&engine_state.config);
+    let draw_velocities = cvars.draw_entities_velocities.read(&engine_state.config);
+    let draw_colliders = cvars.draw_colliders.read(&engine_state.config);
+    let draw_collision_quadtree = cvars.draw_collision_quadtree.read(&engine_state.config);
+    let draw_debug_grid = cvars.draw_debug_grid.read(&engine_state.config);
+    let square_size = cvars.debug_grid_square_size.read(&engine_state.config);
+    let opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
 
-    let draw_colliders = game_state
-        .debug_cvars
-        .draw_colliders
-        .read(&engine_state.config);
-    if draw_colliders {
-        debug_draw_colliders(debug_painter, &game_state.gameplay_system.ecs_world);
-    }
+    game_state.gameplay_system.foreach_active_level(|level| {
+        let debug_painter = painters
+            .get_mut(&level.id)
+            .unwrap_or_else(|| fatal!("Debug painter not found for level {:?}", level.id));
 
-    let draw_collision_quadtree = game_state
-        .debug_cvars
-        .draw_collision_quadtree
-        .read(&engine_state.config);
-    if draw_collision_quadtree {
-        engine_state
-            .systems
-            .collision_system
-            .debug_draw_quadtree(debug_painter);
+        update_entities_debug_overlay(ui_system.get_overlay(sid_entities), &level.world);
 
-        engine_state
-            .systems
-            .collision_system
-            .debug_draw_entities_quad_id(&game_state.gameplay_system.ecs_world, debug_painter);
-    }
+        update_camera_debug_overlay(ui_system.get_overlay(sid_camera), &level.get_camera());
 
-    engine_state
-        .systems
-        .collision_system
-        .debug_draw_applied_impulses(debug_painter);
+        if draw_entities {
+            debug_draw_transforms(debug_painter, &level.world);
+        }
+
+        if draw_velocities {
+            debug_draw_velocities(debug_painter, &level.world);
+        }
+
+        if draw_colliders {
+            debug_draw_colliders(debug_painter, &level.world);
+        }
+
+        if draw_collision_quadtree {
+            collision_system.debug_draw_quadtree(debug_painter);
+
+            collision_system.debug_draw_entities_quad_id(&level.world, debug_painter);
+        }
+
+        // Debug grid
+        if draw_debug_grid {
+            debug_draw_grid(
+                debug_painter,
+                &level.get_camera().transform,
+                target_win_size,
+                square_size,
+                opacity,
+            );
+        }
+
+        collision_system.debug_draw_applied_impulses(debug_painter);
+    });
 }
 
 #[cfg(debug_assertions)]
 fn update_joystick_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
-    real_axes: &[input::joystick_mgr::Real_Axes_Values;
+    real_axes: &[input::joystick_state::Real_Axes_Values;
          input::bindings::joystick::JOY_COUNT as usize],
     joy_mask: u8,
     input_cfg: crate::input_utils::Input_Config,
@@ -837,4 +845,22 @@ fn update_graph_fps(
         graph.data.x_range.start = graph.data.x_range.end - TIME_LIMIT;
     }
     graph.data.add_point(now, fps);
+}
+
+#[cfg(debug_assertions)]
+fn update_graph_exe_time(
+    graph: &mut debug::graph::Debug_Graph_View,
+    time: &time::Time,
+    execution_time: &std::time::Duration,
+) {
+    const TIME_LIMIT: f32 = 60.0;
+
+    let now = time::to_secs_frac(&time.get_real_time());
+    graph.data.x_range.end = now;
+    if graph.data.x_range.end - graph.data.x_range.start > TIME_LIMIT {
+        graph.data.x_range.start = graph.data.x_range.end - TIME_LIMIT
+    }
+    graph
+        .data
+        .add_point(now, time::to_secs_frac(&execution_time) * 1000.0);
 }

@@ -137,12 +137,10 @@ impl Console {
                         self.cur_line = line.to_string();
                         self.cur_pos = self.cur_line.len();
                     }
+                } else if self.selected_hint == self.hints_displayed.len() - 1 {
+                    self.selected_hint = 0;
                 } else {
-                    if self.selected_hint == self.hints_displayed.len() - 1 {
-                        self.selected_hint = 0;
-                    } else {
-                        self.selected_hint += 1;
-                    }
+                    self.selected_hint += 1;
                 }
             }
             Event::KeyPressed {
@@ -156,12 +154,10 @@ impl Console {
                             .map_or_else(|| String::from(""), |s| s.to_string());
                         self.cur_pos = self.cur_line.len();
                     }
+                } else if self.selected_hint == 0 {
+                    self.selected_hint = self.hints_displayed.len() - 1;
                 } else {
-                    if self.selected_hint == 0 {
-                        self.selected_hint = self.hints_displayed.len() - 1;
-                    } else {
-                        self.selected_hint -= 1;
-                    }
+                    self.selected_hint -= 1;
                 }
             }
             Event::KeyPressed {

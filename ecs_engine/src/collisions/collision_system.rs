@@ -7,7 +7,6 @@ use crate::common::vector::Vec2f;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Components_Map_Safe, Ecs_World, Entity};
 use crate::ecs::entity_stream::new_entity_stream;
-use crate::prelude::*;
 use crossbeam_utils::thread;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
@@ -93,25 +92,28 @@ impl Collision_System {
         }
     }
 
-    pub fn update(&mut self, ecs_world: &mut Ecs_World, _tracer: Debug_Tracer) {
+    pub fn update(&mut self, ecs_world: &mut Ecs_World) {
         // Step 1: fill quadtree
         {
-            trace!("collision_system::clear_quadtree", _tracer);
+            trace!("collision_system::clear_quadtree");
             self.quadtree.clear();
         }
 
         #[cfg(debug_assertions)]
         self.debug_applied_impulses.clear();
 
-        self.entities_buf.clear();
-        new_entity_stream(ecs_world)
-            .require::<Collider>()
-            .require::<C_Spatial2D>()
-            .build()
-            .collect(ecs_world, &mut self.entities_buf);
+        {
+            trace!("collision_system::collect_entities");
+            self.entities_buf.clear();
+            new_entity_stream(ecs_world)
+                .require::<Collider>()
+                .require::<C_Spatial2D>()
+                .build()
+                .collect(ecs_world, &mut self.entities_buf);
+        }
 
         {
-            trace!("collision_system::fill_quadtree", _tracer);
+            trace!("collision_system::fill_quadtree");
             let mut map_collider = unsafe { ecs_world.get_components_map_unsafe::<Collider>() };
             let map_spatial = unsafe { ecs_world.get_components_map_unsafe::<C_Spatial2D>() };
 
@@ -126,32 +128,25 @@ impl Collision_System {
                     .unwrap()
                     .global_transform;
 
-                self.quadtree.add(
-                    entity,
-                    &collider,
-                    transform,
-                    ecs_world,
-                    clone_tracer!(_tracer),
-                );
+                self.quadtree.add(entity, &collider, transform, ecs_world);
             }
         }
 
         // Step 2: do collision detection
 
         {
-            trace!("collision_detection_and_solving", _tracer);
+            trace!("collision_detection_and_solving");
 
             let n_collisions_total = Arc::new(AtomicUsize::new(0));
             let n_entities = self.entities_buf.len();
             self.collided_entities.lock().unwrap().clear();
 
             {
-                trace!("collision_detection", _tracer);
+                trace!("collision_detection");
 
                 thread::scope(|s| {
                     let n_threads = num_cpus::get();
                     for ent_chunk in self.entities_buf.chunks(n_entities / n_threads + 1) {
-                        let _tracer = clone_tracer!(_tracer);
                         let quadtree = &self.quadtree;
                         let n_collisions_total = n_collisions_total.clone();
                         let collided_entities = self.collided_entities.clone();
@@ -167,12 +162,7 @@ impl Collision_System {
                                 let velocity = spatial.velocity;
 
                                 neighbours.clear();
-                                quadtree.get_neighbours(
-                                    collider,
-                                    transform,
-                                    &mut neighbours,
-                                    clone_tracer!(_tracer),
-                                );
+                                quadtree.get_neighbours(collider, transform, &mut neighbours);
                                 if !neighbours.is_empty() {
                                     check_collision_with_neighbours(
                                         entity,
@@ -194,7 +184,7 @@ impl Collision_System {
             }
 
             {
-                trace!("collision_solving", _tracer);
+                trace!("collision_solving");
 
                 // @Audit: is this safe to do?
                 let mut map_collider = unsafe { ecs_world.get_components_map_unsafe::<Collider>() };
@@ -313,17 +303,6 @@ fn check_collision_with_neighbours(
                                     penetration,
                                 },
                             );
-                            cld.insert(
-                                neighbour,
-                                Collision_Info {
-                                    my_pos: oth_pos,
-                                    other: entity,
-                                    oth_pos: pos,
-                                    my_velocity: oth_velocity,
-                                    oth_velocity: velocity,
-                                    penetration: -penetration,
-                                },
-                            );
                         }
                         n_collisions_total
                             .fetch_add(neighbours.len(), std::sync::atomic::Ordering::Relaxed);
@@ -357,17 +336,6 @@ fn check_collision_with_neighbours(
                                     oth_pos,
                                     my_velocity: velocity,
                                     oth_velocity,
-                                    penetration: (oth_pos - pos).normalized() * penetration_dist,
-                                },
-                            );
-                            cld.insert(
-                                neighbour,
-                                Collision_Info {
-                                    my_pos: oth_pos,
-                                    other: entity,
-                                    oth_pos: pos,
-                                    my_velocity: oth_velocity,
-                                    oth_velocity: velocity,
                                     penetration: (oth_pos - pos).normalized() * penetration_dist,
                                 },
                             );

@@ -6,7 +6,6 @@ use crate::common::Maybe_Error;
 use crate::core::systems::Core_Systems;
 use crate::gfx;
 use crate::input;
-use crate::prelude::{new_debug_tracer, Debug_Tracer};
 
 #[cfg(debug_assertions)]
 use {
@@ -29,9 +28,8 @@ pub struct Engine_State<'r> {
 
     pub time: time::Time,
 
+    pub input_state: input::input_system::Input_State,
     pub systems: Core_Systems<'r>,
-
-    pub tracer: Debug_Tracer,
 
     #[cfg(debug_assertions)]
     pub debug_systems: Debug_Systems,
@@ -45,7 +43,8 @@ pub fn create_engine_state<'r>(
     config: cfg::Config,
     app_config: App_Config,
 ) -> Engine_State<'r> {
-    let systems = Core_Systems::new(&env);
+    let systems = Core_Systems::new();
+    let input_state = input::input_system::create_input_state(&env);
     let time = time::Time::new();
     #[cfg(debug_assertions)]
     let debug_systems = Debug_Systems::new(&config);
@@ -56,12 +55,12 @@ pub fn create_engine_state<'r>(
         config,
         app_config,
         time,
+        input_state,
         systems,
         #[cfg(debug_assertions)]
         debug_systems,
         #[cfg(debug_assertions)]
         replay_data: None,
-        tracer: new_debug_tracer(),
     }
 }
 
@@ -83,7 +82,7 @@ pub fn start_config_watch(env: &Env_Info, config: &mut cfg::Config) -> Maybe_Err
 }
 
 pub fn init_engine_systems(engine_state: &mut Engine_State) -> Maybe_Error {
-    engine_state.systems.input_system.init()?;
+    input::joystick_state::init_joysticks(&mut engine_state.input_state.joy_state);
 
     Ok(())
 }
@@ -218,11 +217,6 @@ pub fn init_engine_debug(
         graph.data.y_range = 0.0..120.0;
     }
 
-    engine_state
-        .debug_systems
-        .debug_painter
-        .init(gfx_resources, &engine_state.env);
-
     {
         use crate::input::bindings::Input_Action;
 
@@ -231,9 +225,8 @@ pub fn init_engine_debug(
         console.size = Vec2u::new(win_width, win_height / 2);
         console.font_size = (console.font_size as f32 * ui_scale) as _;
         console.toggle_console_keys = engine_state
-            .systems
-            .input_system
-            .get_bindings()
+            .input_state
+            .bindings
             .get_all_actions_triggering(String_Id::from("toggle_console"))
             .iter()
             .filter_map(|action| {
@@ -328,7 +321,7 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
     use crate::debug::overlay::Debug_Overlay;
     use crate::debug::tracer::{build_trace_trees, sort_trace_trees, Trace_Tree, Tracer_Node};
 
-    let mut tracer = engine_state.tracer.lock().unwrap();
+    let mut tracer = crate::prelude::DEBUG_TRACER.lock().unwrap();
     let overlay = engine_state
         .debug_systems
         .debug_ui_system
@@ -373,8 +366,14 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
         }
     };
 
+    let debug_log = &mut engine_state.debug_systems.log;
     let total_traced_time = tracer.total_traced_time();
     let traces = tracer.collate_traces();
+    debug_log.push_trace(traces);
+
+    // @Incomplete: add logic to get either latest or some previous frame
+    let traces = &debug_log.frames.back().unwrap().traces;
+
     let mut trace_trees = build_trace_trees(traces);
     sort_trace_trees(&mut trace_trees);
 
