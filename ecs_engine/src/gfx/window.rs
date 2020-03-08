@@ -1,5 +1,6 @@
 use crate::common::colors::Color;
 use crate::common::rect::Rect;
+use crate::common::vector::Vec2i;
 
 #[cfg(feature = "use-sfml")]
 mod sfml;
@@ -90,4 +91,8 @@ pub fn resize_keep_ratio(window: &mut Window_Handle, new_width: u32, new_height:
 
 pub fn get_window_target_size(window: &Window_Handle) -> (u32, u32) {
     backend::get_window_target_size(window)
+}
+
+pub fn mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
+    backend::mouse_pos_in_window(window)
 }

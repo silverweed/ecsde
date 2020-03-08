@@ -358,7 +358,10 @@ fn create_game_state<'a>(
 
         let ui_scale = Cfg_Var::<f32>::new("engine/debug/ui/ui_scale", &engine_state.config)
             .read(&engine_state.config);
-        let cfg = ngdebug::debug_ui_system::Debug_Ui_System_Config { ui_scale };
+        let cfg = ngdebug::debug_ui_system::Debug_Ui_System_Config {
+            ui_scale,
+            target_win_size: engine_state.app_config.target_win_size,
+        };
         app::init_engine_debug(&mut engine_state, &mut game_resources.gfx, cfg)?;
 
         app::start_recording(&mut engine_state)?;

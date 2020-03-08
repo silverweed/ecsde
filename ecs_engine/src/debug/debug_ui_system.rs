@@ -1,5 +1,6 @@
 use super::element::Debug_Element;
 use super::fadeout_overlay;
+use super::frame_scroller::Debug_Frame_Scroller;
 use super::graph;
 use super::overlay;
 use crate::common::stringid::String_Id;
@@ -13,11 +14,15 @@ use std::time::Duration;
 #[derive(Debug)]
 pub struct Debug_Ui_System_Config {
     pub ui_scale: f32,
+    pub target_win_size: (u32, u32),
 }
 
 impl Default for Debug_Ui_System_Config {
     fn default() -> Self {
-        Self { ui_scale: 1.0 }
+        Self {
+            ui_scale: 1.0,
+            target_win_size: (800, 600),
+        }
     }
 }
 
@@ -110,6 +115,7 @@ pub struct Debug_Ui_System {
     overlays: Debug_Element_Container<overlay::Debug_Overlay>,
     fadeout_overlays: Debug_Element_Container<fadeout_overlay::Fadeout_Debug_Overlay>,
     graphs: Debug_Element_Container<graph::Debug_Graph_View>,
+    frame_scroller: Debug_Frame_Scroller,
     cfg: Debug_Ui_System_Config,
 }
 
@@ -136,11 +142,19 @@ impl Debug_Ui_System {
             overlays: Debug_Element_Container::new(),
             fadeout_overlays: Debug_Element_Container::new(),
             graphs: Debug_Element_Container::new(),
+            frame_scroller: Debug_Frame_Scroller::default(),
             cfg: Debug_Ui_System_Config::default(),
         }
     }
 
     pub fn init(&mut self, cfg: Debug_Ui_System_Config) {
+        let (win_w, win_h) = cfg.target_win_size;
+        self.frame_scroller.size.x = (win_w as f32 * 0.75) as _;
+        self.frame_scroller.pos.x = (win_w as f32 * 0.125) as _;
+        self.frame_scroller.size.y = 35;
+        self.frame_scroller.pos.y = 15;
+        self.frame_scroller.n_frames = 60;
+        self.frame_scroller.n_seconds = 30;
         self.cfg = cfg;
     }
 
@@ -190,6 +204,9 @@ impl Debug_Ui_System {
             elem.update(dt);
             elem.draw(window, gres);
         }
+
+        self.frame_scroller.update(window);
+        self.frame_scroller.draw(window);
     }
 }
 

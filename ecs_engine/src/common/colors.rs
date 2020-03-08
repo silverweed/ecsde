@@ -9,6 +9,7 @@ pub struct Color {
     pub a: u8,
 }
 
+pub const TRANSPARENT: Color = rgba(0, 0, 0, 0);
 pub const RED: Color = rgb(255, 0, 0);
 pub const GREEN: Color = rgb(0, 255, 0);
 pub const BLUE: Color = rgb(0, 0, 255);

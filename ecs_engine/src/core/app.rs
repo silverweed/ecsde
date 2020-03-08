@@ -143,7 +143,8 @@ pub fn init_engine_debug(
             .create_overlay(String_Id::from("joysticks"), debug_overlay_config)
             .unwrap();
         joy_overlay.config.horiz_align = align::Align::End;
-        joy_overlay.position = Vec2f::new(target_win_size_x, 0.0);
+        joy_overlay.config.vert_align = align::Align::Middle;
+        joy_overlay.position = Vec2f::new(target_win_size_x, target_win_size_y * 0.5);
 
         debug_overlay_config.font_size = (13.0 * ui_scale) as _;
         let time_overlay = debug_ui_system

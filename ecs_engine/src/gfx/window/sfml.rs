@@ -2,6 +2,7 @@
 
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rectf;
+use crate::common::vector::Vec2i;
 use sfml::graphics::blend_mode::BlendMode;
 use sfml::graphics::{RenderTarget, RenderWindow};
 use sfml::window;
@@ -134,4 +135,8 @@ pub fn has_vsync(window: &Window_Handle) -> bool {
 pub fn set_vsync(window: &mut Window_Handle, vsync: bool) {
     window.handle.set_vertical_sync_enabled(vsync);
     window.vsync = vsync;
+}
+
+pub fn mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
+    window.handle.mouse_position().into()
 }

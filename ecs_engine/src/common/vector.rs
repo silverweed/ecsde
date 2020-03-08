@@ -25,6 +25,20 @@ impl From<sfml::system::Vector2f> for Vec2f {
     }
 }
 
+#[cfg(feature = "use-sfml")]
+impl From<Vec2i> for sfml::system::Vector2i {
+    fn from(v: Vec2i) -> sfml::system::Vector2i {
+        sfml::system::Vector2i::new(v.x, v.y)
+    }
+}
+
+#[cfg(feature = "use-sfml")]
+impl From<sfml::system::Vector2i> for Vec2i {
+    fn from(v: sfml::system::Vector2i) -> Vec2i {
+        Vec2i::new(v.x, v.y)
+    }
+}
+
 impl<T: Copy> From<(T, T)> for Vector2<T> {
     fn from((x, y): (T, T)) -> Self {
         Self::new(x, y)
