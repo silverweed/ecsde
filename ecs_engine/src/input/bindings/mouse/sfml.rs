@@ -27,6 +27,11 @@ pub(super) fn num_to_mouse_btn(num: usize) -> Option<Mouse_Button> {
     }
 }
 
+pub(super) fn is_mouse_btn_pressed(button: Mouse_Button) -> bool {
+    let b: Button = button.into();
+    b.is_pressed()
+}
+
 impl std::convert::From<Mouse_Button> for Button {
     fn from(b: Mouse_Button) -> Button {
         match b {

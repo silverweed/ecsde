@@ -217,14 +217,15 @@ pub fn init_engine_debug(
     // Graphs
     {
         let graph_config = graph::Debug_Graph_View_Config {
-            grid_xstep: Some(5.0),
-            grid_ystep: Some(20.0),
+            grid_xstep: Some(graph::Grid_Step::Fixed_Step(5.)),
+            grid_ystep: Some(graph::Grid_Step::Fixed_Step(30.)),
             label_font_size: (10.0 * ui_scale) as _,
             title: Some(String::from("FPS")),
             title_font_size: (18.0 * ui_scale) as _,
             color: colors::YELLOW,
             low_threshold: Some((25.0, colors::RED)),
             high_threshold: Some((55.0, colors::GREEN)),
+            fixed_y_range: Some(0. ..120.),
             font,
         };
         let graph = engine_state
@@ -234,7 +235,6 @@ pub fn init_engine_debug(
             .unwrap();
 
         graph.size = Vec2u::new(target_win_size_x as _, (0.2 * target_win_size_y) as _);
-        graph.data.y_range = 0.0..120.0;
     }
 
     {

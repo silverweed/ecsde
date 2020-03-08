@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 use ecs_engine::{
     common::angle::rad, common::stringid::String_Id, common::transform::Transform2D,
     common::vector::Vec2f, debug, debug::painter::Debug_Painter,
-    gfx::paint_props::Paint_Properties, gfx::render, gfx::window,
+    gfx::paint_props::Paint_Properties, gfx::window,
 };
 
 pub fn tick_game<'a>(
@@ -118,7 +118,6 @@ pub fn tick_game<'a>(
         }
     }
 
-    let systems = &mut game_state.engine_state.systems;
     #[cfg(debug_assertions)]
     let debug_systems = &mut game_state.engine_state.debug_systems;
 
@@ -260,10 +259,7 @@ pub fn tick_game<'a>(
         trace!("wait_end_frame");
         if t_elapsed_for_work < target_time_per_frame {
             let mut t_elapsed = t_elapsed_for_work;
-            let mut i = 0;
             while t_elapsed < target_time_per_frame {
-                i += 1;
-
                 if let Some(granularity) = game_state.sleep_granularity {
                     if granularity < target_time_per_frame - t_elapsed {
                         let gra_ns = granularity.as_nanos();
@@ -284,12 +280,6 @@ pub fn tick_game<'a>(
             );
         }
     }
-
-    println!(
-        "{} {}",
-        time::to_ms_frac(&t_elapsed_for_work),
-        time::to_ms_frac(&t_before_work.elapsed())
-    );
 
     Ok(())
 }
@@ -397,15 +387,35 @@ fn update_debug(game_state: &mut Game_State) {
     let debug_systems = &mut engine_state.debug_systems;
 
     // @Speed @WaitForStable: these should all be computed at compile time.
-    let (sid_time, sid_fps, sid_entities, sid_camera, sid_execution_time, sid_mouse, sid_window) = (
+    let (sid_time, sid_fps, sid_entities, sid_camera, sid_mouse, sid_window) = (
         String_Id::from("time"),
         String_Id::from("fps"),
         String_Id::from("entities"),
         String_Id::from("camera"),
-        String_Id::from("execution_time"),
         String_Id::from("mouse"),
         String_Id::from("window"),
     );
+
+    // Frame scroller
+    {
+        let scroller = &mut debug_systems.debug_ui_system.frame_scroller;
+        if !scroller.manually_selected {
+            let fps = (1000.
+                / game_state
+                    .cvars
+                    .gameplay_update_tick_ms
+                    .read(&engine_state.config)) as u64;
+            let log_len = debug_systems.log.max_hist_len as u64;
+            scroller.n_frames = fps;
+            scroller.n_seconds = log_len;
+            scroller.cur_frame = engine_state.cur_frame % fps;
+            scroller.cur_second = (engine_state.cur_frame / fps).min(log_len);
+            //if scroller.n_frames == fps {
+            //scroller.cur_frame = 0;
+            //scroller.n_seconds = log_len.min(scroller.n_seconds + 1);
+            //}
+        }
+    }
 
     // Overlays
     update_time_debug_overlay(
@@ -460,24 +470,6 @@ fn update_debug(game_state: &mut Game_State) {
             debug_systems.debug_ui_system.get_graph(sid_fps),
             &engine_state.time,
             &game_state.fps_debug,
-        );
-    }
-
-    let draw_exe_time_graph = game_state
-        .debug_cvars
-        .draw_exe_time_graph
-        .read(&engine_state.config);
-    debug_systems
-        .debug_ui_system
-        .set_graph_enabled(sid_execution_time, draw_exe_time_graph);
-    if draw_exe_time_graph {
-        debug_systems
-            .debug_ui_system
-            .set_graph_enabled(sid_execution_time, true);
-        update_graph_exe_time(
-            debug_systems.debug_ui_system.get_graph(sid_execution_time),
-            &engine_state.time,
-            &game_state.execution_time,
         );
     }
 
@@ -903,22 +895,4 @@ fn update_graph_fps(
         graph.data.x_range.start = graph.data.x_range.end - TIME_LIMIT;
     }
     graph.data.add_point(now, fps);
-}
-
-#[cfg(debug_assertions)]
-fn update_graph_exe_time(
-    graph: &mut debug::graph::Debug_Graph_View,
-    time: &time::Time,
-    execution_time: &std::time::Duration,
-) {
-    const TIME_LIMIT: f32 = 60.0;
-
-    let now = time::to_secs_frac(&time.get_real_time());
-    graph.data.x_range.end = now;
-    if graph.data.x_range.end - graph.data.x_range.start > TIME_LIMIT {
-        graph.data.x_range.start = graph.data.x_range.end - TIME_LIMIT
-    }
-    graph
-        .data
-        .add_point(now, time::to_secs_frac(&execution_time) * 1000.0);
 }

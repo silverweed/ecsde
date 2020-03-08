@@ -29,3 +29,7 @@ pub fn num_to_mouse_btn(num: usize) -> Option<Mouse_Button> {
 pub fn get_mouse_btn(button: backend::Button) -> Option<Mouse_Button> {
     backend::get_mouse_btn(button)
 }
+
+pub fn is_mouse_btn_pressed(button: Mouse_Button) -> bool {
+    backend::is_mouse_btn_pressed(button)
+}

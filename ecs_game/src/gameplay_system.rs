@@ -1,3 +1,5 @@
+#![allow(warnings)] // @Temporary
+
 use super::controllable_system::C_Controllable;
 use crate::controllable_system;
 use crate::input_utils::{get_movement_from_input, Input_Config};

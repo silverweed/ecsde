@@ -115,7 +115,7 @@ pub struct Debug_Ui_System {
     overlays: Debug_Element_Container<overlay::Debug_Overlay>,
     fadeout_overlays: Debug_Element_Container<fadeout_overlay::Fadeout_Debug_Overlay>,
     graphs: Debug_Element_Container<graph::Debug_Graph_View>,
-    frame_scroller: Debug_Frame_Scroller,
+    pub frame_scroller: Debug_Frame_Scroller,
     cfg: Debug_Ui_System_Config,
 }
 
@@ -148,7 +148,7 @@ impl Debug_Ui_System {
     }
 
     pub fn init(&mut self, cfg: Debug_Ui_System_Config) {
-        let (win_w, win_h) = cfg.target_win_size;
+        let (win_w, _) = cfg.target_win_size;
         self.frame_scroller.size.x = (win_w as f32 * 0.75) as _;
         self.frame_scroller.pos.x = (win_w as f32 * 0.125) as _;
         self.frame_scroller.size.y = 35;

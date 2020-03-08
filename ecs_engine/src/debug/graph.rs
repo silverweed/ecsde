@@ -9,10 +9,16 @@ use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
 use std::ops::Range;
 
+#[derive(Copy, Clone)]
+pub enum Grid_Step {
+    Fixed_Step(f32),
+    Fixed_Subdivs(usize),
+}
+
 #[derive(Default, Clone)]
 pub struct Debug_Graph_View_Config {
-    pub grid_xstep: Option<f32>,
-    pub grid_ystep: Option<f32>,
+    pub grid_xstep: Option<Grid_Step>,
+    pub grid_ystep: Option<Grid_Step>,
     pub font: Font_Handle,
     pub label_font_size: u16,
     pub title: Option<String>,
@@ -22,6 +28,7 @@ pub struct Debug_Graph_View_Config {
     pub low_threshold: Option<(f32, colors::Color)>,
     // If value is < than this, use this other color
     pub high_threshold: Option<(f32, colors::Color)>,
+    pub fixed_y_range: Option<Range<f32>>,
 }
 
 #[derive(Default)]
@@ -36,7 +43,8 @@ pub struct Debug_Graph_View {
 pub struct Debug_Graph {
     pub points: VecDeque<Vec2f>,
     pub x_range: Range<f32>,
-    pub y_range: Range<f32>,
+    max_y_value: Option<f32>,
+    min_y_value: Option<f32>,
 }
 
 impl Debug_Element for Debug_Graph_View {
@@ -51,13 +59,17 @@ impl Debug_Element for Debug_Graph_View {
         }
 
         let xr = &self.data.x_range;
-        let yr = &self.data.y_range;
+        let yr = self.y_range();
 
         // Draw grid
         let font = gres.get_font(self.config.font);
         let font_size = self.config.label_font_size;
         let pos = Vec2f::from(self.pos);
         if let Some(xstep) = self.config.grid_xstep {
+            let xstep = match xstep {
+                Grid_Step::Fixed_Step(step) => step,
+                Grid_Step::Fixed_Subdivs(sub) => (xr.end - xr.start) / sub as f32,
+            };
             let mut x = xr.start;
             let mut iters = 0;
             while x <= xr.end && iters < 100 {
@@ -78,6 +90,10 @@ impl Debug_Element for Debug_Graph_View {
             }
         }
         if let Some(ystep) = self.config.grid_ystep {
+            let ystep = match ystep {
+                Grid_Step::Fixed_Step(step) => step,
+                Grid_Step::Fixed_Subdivs(sub) => (yr.end - yr.start) / sub as f32,
+            };
             let mut y = yr.start;
             let mut iters = 0;
             while y <= yr.end && iters < 100 {
@@ -134,21 +150,29 @@ impl Debug_Graph_View {
         }
     }
 
+    fn y_range(&self) -> Range<f32> {
+        if let Some(y_range) = &self.config.fixed_y_range {
+            y_range.clone()
+        } else {
+            let min_y = self.data.min_y_value.unwrap_or(0.);
+            let max_y = self.data.max_y_value.unwrap_or(0.);
+            let diff = max_y - min_y;
+            (min_y - diff * 0.1)..(max_y + diff * 0.1)
+        }
+    }
+
     fn get_coords_for(&self, point: Vec2f) -> Vec2f {
         use crate::common::math::lerp;
         let w = self.data.x_range.end - self.data.x_range.start;
-        let h = self.data.y_range.end - self.data.y_range.start;
+        let yr = self.y_range();
+        let h = yr.end - yr.start;
         Vec2f::new(
             lerp(
                 0.0,
                 self.size.x as f32,
                 (point.x - self.data.x_range.start) / w,
             ),
-            lerp(
-                0.0,
-                self.size.y as f32,
-                1.0 - (point.y - self.data.y_range.start) / h,
-            ),
+            lerp(0.0, self.size.y as f32, 1.0 - (point.y - yr.start) / h),
         )
     }
 
@@ -172,21 +196,16 @@ impl Default for Debug_Graph {
         Self {
             points: VecDeque::new(),
             x_range: 0.0..0.0,
-            y_range: 0.0..0.0,
+            max_y_value: None,
+            min_y_value: None,
         }
     }
 }
 
 impl Debug_Graph {
-    pub fn with_xy_range(x_range: Range<f32>, y_range: Range<f32>) -> Self {
-        Debug_Graph {
-            points: VecDeque::new(),
-            x_range,
-            y_range,
-        }
-    }
-
     pub fn add_point(&mut self, x: f32, y: f32) {
+        self.min_y_value = Some(self.min_y_value.unwrap_or(y).min(y));
+        self.max_y_value = Some(self.max_y_value.unwrap_or(y).max(y));
         self.points.push_back(Vec2f::new(x, y));
     }
 
