@@ -1,11 +1,11 @@
 use std::time::Duration;
 use std::time::SystemTime;
 
-type Time_t = u64;
+type Microseconds = u64;
 
 pub struct Time {
-    game_time: Time_t, // in microseconds
-    prev_game_time: Time_t,
+    game_time: Microseconds,
+    prev_game_time: Microseconds,
     start_time: SystemTime,
     real_time: SystemTime,
     prev_real_time: SystemTime,
@@ -13,20 +13,28 @@ pub struct Time {
     pub paused: bool,
 }
 
-impl Time {
-    const MAX_FRAME_TIME: Time_t = 1_000_000 / 15;
-
-    pub fn new() -> Time {
+impl Default for Time {
+    fn default() -> Self {
         let now = SystemTime::now();
         Time {
-            game_time: 0,
-            prev_game_time: 0,
-            start_time: now,
             real_time: now,
             prev_real_time: now,
-            time_scale: 1.0,
+            start_time: now,
+            game_time: 0,
+            prev_game_time: 0,
+            time_scale: 1.,
             paused: false,
         }
+    }
+}
+
+impl Time {
+    const MAX_FRAME_TIME: Microseconds = 1_000_000 / 15;
+
+    pub fn start(&mut self) {
+        let now = SystemTime::now();
+        self.start_time = now;
+        self.prev_real_time = now;
     }
 
     pub fn update(&mut self) {
@@ -41,14 +49,14 @@ impl Time {
                 .duration_since(self.prev_real_time)
                 .unwrap_or(Duration::from_secs(0));
 
-            self.game_time += (self.time_scale * real_delta.as_micros() as f32) as Time_t;
+            self.game_time += (self.time_scale * real_delta.as_micros() as f32) as Microseconds;
         }
     }
 
     pub fn dt(&self) -> Duration {
         let tscale = self.time_scale;
         let delta_microseconds = self.game_time - self.prev_game_time;
-        let scaled_max_frame_time = (Self::MAX_FRAME_TIME as f32 * tscale) as Time_t;
+        let scaled_max_frame_time = (Self::MAX_FRAME_TIME as f32 * tscale) as Microseconds;
         let delta_microseconds = if delta_microseconds > scaled_max_frame_time {
             // frame lock
             scaled_max_frame_time
@@ -61,7 +69,7 @@ impl Time {
 
     pub fn step(&mut self, dt: &Duration) {
         self.prev_game_time = self.game_time;
-        self.game_time += (to_secs_frac(dt) * 1_000_000.0) as Time_t;
+        self.game_time += (to_secs_frac(dt) * 1_000_000.0) as Microseconds;
     }
 
     pub fn dt_secs(&self) -> f32 {
@@ -87,6 +95,10 @@ impl Time {
 
 pub fn to_secs_frac(d: &Duration) -> f32 {
     d.as_secs() as f32 + d.subsec_nanos() as f32 * 1e-9
+}
+
+pub fn to_ms_frac(d: &Duration) -> f32 {
+    to_secs_frac(d) * 1000.
 }
 
 // @WaitForStable: replace with div_duration() when API is stable

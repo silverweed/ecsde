@@ -21,6 +21,8 @@ use {
 
 pub struct Engine_State<'r> {
     pub should_close: bool,
+    // First frame is 1
+    pub cur_frame: u64,
 
     pub env: Env_Info,
     pub config: cfg::Config,
@@ -45,12 +47,13 @@ pub fn create_engine_state<'r>(
 ) -> Engine_State<'r> {
     let systems = Core_Systems::new();
     let input_state = input::input_system::create_input_state(&env);
-    let time = time::Time::new();
+    let time = time::Time::default();
     #[cfg(debug_assertions)]
     let debug_systems = Debug_Systems::new(&config);
 
     Engine_State {
         should_close: false,
+        cur_frame: 0,
         env,
         config,
         app_config,
@@ -131,7 +134,7 @@ pub fn init_engine_debug(
     {
         let mut debug_overlay_config = overlay::Debug_Overlay_Config {
             row_spacing: 2.0 * ui_scale,
-            font_size: (14.0 * ui_scale) as _,
+            font_size: (10.0 * ui_scale) as _,
             pad_x: 5.0 * ui_scale,
             pad_y: 5.0 * ui_scale,
             background: colors::rgba(25, 25, 25, 210),
@@ -359,12 +362,14 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
         for _ in 0..indent {
             line.push(' ');
         }
+        let duration_ms = time::to_ms_frac(&duration);
         line.push_str(&format!(
-            "{:width$}: {:>6.3}ms ({:3}%): {:>7}",
+            "{:width$}: {:>6.3}ms ({:3}%): {:>7}: {:6.3}ms",
             node.info.tag,
-            duration.as_micros() as f32 * 0.001,
+            duration_ms,
             (ratio * 100.0) as u32,
             node.info.n_calls,
+            duration_ms / node.info.n_calls as f32,
             width = 40 - indent
         ));
         let bg_col = colors::Color { a: 50, ..color };
@@ -396,12 +401,12 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
 
     overlay.add_line_color(
         &format!(
-            "{:40}: {:15}: {:7}",
-            "procedure_name", "tot_time", "n_calls"
+            "{:<39}: {:<15}: {:7}: {:>7}",
+            "procedure_name", "tot_time", "n_calls", "t/call"
         ),
         colors::rgb(204, 0, 102),
     );
-    overlay.add_line_color(&format!("{:─^60}", ""), colors::rgba(60, 60, 60, 180));
+    overlay.add_line_color(&format!("{:─^80}", ""), colors::rgba(60, 60, 60, 180));
     for tree in &trace_trees {
         add_tree_lines(tree, &total_traced_time, 0, overlay);
     }

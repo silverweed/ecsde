@@ -11,15 +11,11 @@ pub type Blend_Mode = sfml::graphics::blend_mode::BlendMode;
 
 pub struct Create_Render_Window_Args {
     pub vsync: bool,
-    pub framerate_limit: u32,
 }
 
 impl Default for Create_Render_Window_Args {
     fn default() -> Self {
-        Create_Render_Window_Args {
-            vsync: true,
-            framerate_limit: 60,
-        }
+        Create_Render_Window_Args { vsync: true }
     }
 }
 
@@ -28,7 +24,6 @@ pub struct Window_Handle {
     clear_color: Color,
     blend_mode: Blend_Mode,
     target_size: (u32, u32),
-    framerate_limit: u32,
     vsync: bool,
 }
 
@@ -70,14 +65,12 @@ pub fn create_render_window(
         &window::ContextSettings::default(),
     );
     window.set_vertical_sync_enabled(create_args.vsync);
-    window.set_framerate_limit(create_args.framerate_limit);
     window.set_key_repeat_enabled(false);
     Window_Handle {
         handle: window,
         clear_color: colors::rgb(0, 0, 0),
         blend_mode: BlendMode::ALPHA,
         target_size,
-        framerate_limit: create_args.framerate_limit,
         vsync: create_args.vsync,
     }
 }
@@ -117,15 +110,6 @@ pub(super) fn set_viewport(window: &mut Window_Handle, viewport: &Rectf, view_re
 
 pub fn get_window_target_size(window: &Window_Handle) -> (u32, u32) {
     window.target_size
-}
-
-pub fn get_framerate_limit(window: &Window_Handle) -> u32 {
-    window.framerate_limit
-}
-
-pub fn set_framerate_limit(window: &mut Window_Handle, limit: u32) {
-    window.handle.set_framerate_limit(limit);
-    window.framerate_limit = limit;
 }
 
 pub fn has_vsync(window: &Window_Handle) -> bool {

@@ -181,7 +181,7 @@ pub fn debug_trace(tag: &'static str, tracer: Debug_Tracer) -> Scope_Trace {
 pub fn sort_trace_trees(trees: &mut [Trace_Tree]) {
     fn sort_tree_internal(tree: &mut Trace_Tree) {
         tree.children
-            .sort_by(|a, b| b.node.info.duration().cmp(&a.node.info.duration()));
+            .sort_by(|a, b| b.node.info.tot_duration.cmp(&a.node.info.tot_duration));
         for c in &mut tree.children {
             sort_tree_internal(c);
         }

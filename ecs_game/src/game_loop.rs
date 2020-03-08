@@ -2,12 +2,14 @@ use super::{Game_Resources, Game_State};
 use ecs_engine::common::colors;
 use ecs_engine::common::Maybe_Error;
 use ecs_engine::core::app;
+use ecs_engine::core::sleep;
 use ecs_engine::core::time;
 use ecs_engine::gfx;
 use ecs_engine::gfx::render_system;
 use ecs_engine::input;
 use ecs_engine::resources::gfx::Gfx_Resources;
-use std::time::Duration;
+use std::convert::TryInto;
+use std::time::{Duration, Instant};
 
 #[cfg(debug_assertions)]
 use ecs_engine::{
@@ -19,31 +21,29 @@ use ecs_engine::{
 pub fn tick_game<'a>(
     game_state: &'a mut Game_State<'a>,
     game_resources: &'a mut Game_Resources<'a>,
-) -> Result<bool, Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error>> {
     trace!("tick_game");
+
+    game_state.engine_state.cur_frame += 1;
+    game_state.engine_state.time.update();
+    let real_dt = game_state.engine_state.time.real_dt();
 
     // @Speed @WaitForStable: these should all be computed at compile time.
     // Probably will do that when either const fn or proc macros/syntax extensions are stable.
     #[cfg(debug_assertions)]
     let (sid_joysticks, sid_msg) = (String_Id::from("joysticks"), String_Id::from("msg"));
 
-    let window = &mut game_state.window;
-    game_state.engine_state.time.update();
-
-    let dt = game_state.engine_state.time.dt();
-    let real_dt = game_state.engine_state.time.real_dt();
     #[cfg(debug_assertions)]
     let debug_systems = &mut game_state.engine_state.debug_systems;
 
-    let update_time = Duration::from_micros(
+    let target_time_per_frame = Duration::from_micros(
         (game_state
             .cvars
             .gameplay_update_tick_ms
             .read(&game_state.engine_state.config)
             * 1000.0) as u64,
     );
-
-    game_state.execution_time += dt;
+    let t_before_work = Instant::now();
 
     // Check if the replay ended this frame
     if game_state.is_replaying && game_state.input_provider.is_realtime_player_input() {
@@ -72,7 +72,7 @@ pub fn tick_game<'a>(
 
         input::input_system::update_input(
             &mut game_state.engine_state.input_state,
-            window,
+            &mut game_state.window,
             &mut *game_state.input_provider,
             &game_state.engine_state.config,
             process_game_actions,
@@ -122,7 +122,7 @@ pub fn tick_game<'a>(
     #[cfg(debug_assertions)]
     let debug_systems = &mut game_state.engine_state.debug_systems;
 
-    // Handle actions
+    // Handle core actions (resize, quit, ..)
     {
         trace!("app::handle_core_actions");
         if app::handle_core_actions(
@@ -131,10 +131,10 @@ pub fn tick_game<'a>(
                 .input_state
                 .core_actions
                 .split_off(0),
-            window,
+            &mut game_state.window,
         ) {
             game_state.engine_state.should_close = true;
-            return Ok(false);
+            return Ok(());
         }
     }
 
@@ -163,7 +163,7 @@ pub fn tick_game<'a>(
                 &game_state.engine_state.config,
             );
 
-            // Only record replay data if we're not already playing back a replay.
+            // Record replay data (only if we're not already playing back a replay).
             if debug_systems.replay_recording_system.is_recording()
                 && game_state.input_provider.is_realtime_player_input()
             {
@@ -179,6 +179,7 @@ pub fn tick_game<'a>(
             }
         }
 
+        // Update states
         {
             trace!("state_mgr::handle_actions");
             if game_state.state_mgr.handle_actions(
@@ -187,7 +188,7 @@ pub fn tick_game<'a>(
                 &mut game_state.gameplay_system,
             ) {
                 game_state.engine_state.should_close = true;
-                return Ok(false);
+                return Ok(());
             }
         }
 
@@ -207,23 +208,7 @@ pub fn tick_game<'a>(
 
             let axes = &game_state.engine_state.input_state.axes;
 
-            #[cfg(feature = "prof_gameplay")]
-            let mut n_gameplay_updates = 0;
-
-            // @Audit
-            // Maybe we should have a time budget that is more than the one asked by the strict target fps...
-            // like 2x, 4x or something.
-            let mut frame_budget = {
-                let target_fps = game_state
-                    .cvars
-                    .target_fps
-                    .read(&game_state.engine_state.config);
-                Some(3 * std::time::Duration::from_millis((1000 / target_fps) as u64))
-            };
-            let gameplay_system = &mut game_state.gameplay_system;
-            let gameplay_start_t = std::time::Instant::now();
-
-            gameplay_system.realtime_update(
+            game_state.gameplay_system.realtime_update(
                 &real_dt,
                 &game_state.engine_state.time,
                 &actions,
@@ -231,40 +216,12 @@ pub fn tick_game<'a>(
                 &game_state.engine_state.config,
             );
 
-            while game_state.execution_time > update_time {
-                if frame_budget.is_none() {
-                    // We consumed all our time budget. Let's go on next frame.
-                    lwarn!("Frame budget exhausted. Skipping remaining updates (time remaining: {} ms / {} updates)",
-                    game_state.execution_time.as_millis(),
-                    ecs_engine::core::time::duration_ratio(&game_state.execution_time,
-                                                     &update_time) as u32);
-                    break;
-                }
-
-                gameplay_system.update(
-                    &update_time,
-                    &game_state.engine_state.time,
-                    &actions,
-                    axes,
-                    &game_state.engine_state.config,
-                );
-                game_state.execution_time -= update_time;
-
-                #[cfg(feature = "prof_gameplay")]
-                {
-                    n_gameplay_updates += 1;
-                }
-
-                let actual_time_taken = gameplay_start_t.elapsed();
-                frame_budget = frame_budget.unwrap().checked_sub(actual_time_taken);
-            }
-
-            #[cfg(feature = "prof_gameplay")]
-            println!(
-                "[prof_gameplay] gameplay update took {} ms ({} updates, avg = {})",
-                gameplay_start_t.elapsed().as_millis(),
-                n_gameplay_updates,
-                gameplay_start_t.elapsed().as_millis() / n_gameplay_updates,
+            game_state.gameplay_system.update(
+                &target_time_per_frame,
+                &game_state.engine_state.time,
+                &actions,
+                axes,
+                &game_state.engine_state.config,
             );
         }
     }
@@ -289,33 +246,58 @@ pub fn tick_game<'a>(
     #[cfg(debug_assertions)]
     update_debug(game_state);
 
-    update_graphics(
-        game_state,
-        &mut game_resources.gfx,
-        real_dt,
-        time::duration_ratio(&game_state.execution_time, &update_time) as f32,
-    )?;
+    update_graphics(game_state, &mut game_resources.gfx, real_dt)?;
+
+    let t_elapsed_for_work = t_before_work.elapsed();
 
     #[cfg(debug_assertions)]
     {
-        let sleep = game_state
-            .debug_cvars
-            .extra_frame_sleep_ms
-            .read(&game_state.engine_state.config) as u64;
-        std::thread::sleep(Duration::from_millis(sleep));
-
         game_state.engine_state.config.update();
         game_state.fps_debug.tick(&real_dt);
     }
 
-    Ok(true)
+    {
+        trace!("wait_end_frame");
+        if t_elapsed_for_work < target_time_per_frame {
+            let mut t_elapsed = t_elapsed_for_work;
+            let mut i = 0;
+            while t_elapsed < target_time_per_frame {
+                i += 1;
+
+                if let Some(granularity) = game_state.sleep_granularity {
+                    if granularity < target_time_per_frame - t_elapsed {
+                        let gra_ns = granularity.as_nanos();
+                        let rem_ns = (target_time_per_frame - t_elapsed).as_nanos();
+                        let time_to_sleep =
+                            Duration::from_nanos((rem_ns / gra_ns).try_into().unwrap());
+                        sleep::sleep(time_to_sleep);
+                    }
+                }
+
+                t_elapsed = t_before_work.elapsed();
+            }
+        } else {
+            lerr!(
+                "Frame budget exceeded! {} / {} ms",
+                time::to_ms_frac(&t_elapsed_for_work),
+                time::to_ms_frac(&target_time_per_frame)
+            );
+        }
+    }
+
+    println!(
+        "{} {}",
+        time::to_ms_frac(&t_elapsed_for_work),
+        time::to_ms_frac(&t_before_work.elapsed())
+    );
+
+    Ok(())
 }
 
 fn update_graphics(
     game_state: &mut Game_State,
     gres: &mut Gfx_Resources,
     real_dt: Duration,
-    frame_lag_normalized: f32,
 ) -> Maybe_Error {
     trace!("update_graphics");
 
@@ -323,15 +305,6 @@ fn update_graphics(
 
     #[cfg(debug_assertions)]
     {
-        let cur_framerate_limit = gfx::window::get_framerate_limit(window);
-        let desired_framerate_limit = game_state
-            .cvars
-            .target_fps
-            .read(&game_state.engine_state.config) as u32;
-        if desired_framerate_limit != cur_framerate_limit {
-            gfx::window::set_framerate_limit(window, desired_framerate_limit);
-        }
-
         let cur_vsync = gfx::window::has_vsync(window);
         let desired_vsync = game_state.cvars.vsync.read(&game_state.engine_state.config);
         if desired_vsync != cur_vsync {
@@ -349,10 +322,6 @@ fn update_graphics(
     let cfg = &game_state.engine_state.config;
     let render_cfg = render_system::Render_System_Config {
         clear_color: colors::color_from_hex(game_state.cvars.clear_color.read(cfg) as u32),
-        smooth_by_extrapolating_velocity: game_state
-            .cvars
-            .smooth_by_extrapolating_velocity
-            .read(cfg),
         #[cfg(debug_assertions)]
         draw_sprites_bg: game_state.debug_cvars.draw_sprites_bg.read(cfg),
         #[cfg(debug_assertions)]
@@ -369,9 +338,7 @@ fn update_graphics(
             resources: gres,
             camera: level.get_camera(),
             ecs_world: &level.world,
-            frame_lag_normalized,
             cfg: render_cfg,
-            dt: real_dt,
         };
 
         render_system.update(render_args);
@@ -417,7 +384,7 @@ fn update_graphics(
     }
 
     {
-        trace!("vsync");
+        trace!("display");
         gfx::window::display(&mut game_state.window);
     }
 
@@ -449,6 +416,11 @@ fn update_debug(game_state: &mut Game_State) {
     update_fps_debug_overlay(
         debug_systems.debug_ui_system.get_overlay(sid_fps),
         &game_state.fps_debug,
+        (1000.
+            / game_state
+                .cvars
+                .gameplay_update_tick_ms
+                .read(&engine_state.config)) as u64,
         game_state.cvars.vsync.read(&engine_state.config),
     );
 
@@ -576,7 +548,6 @@ fn update_joystick_debug_overlay(
     cfg: &ecs_engine::cfg::Config,
 ) {
     use input::bindings::joystick;
-    use std::convert::TryInto;
 
     debug_overlay.clear();
 
@@ -625,13 +596,15 @@ fn update_time_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, 
 fn update_fps_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
     fps: &debug::fps::Fps_Console_Printer,
+    target_fps: u64,
     vsync: bool,
 ) {
     debug_overlay.clear();
     debug_overlay.add_line_color(
         &format!(
-            "FPS: {} (vsync {})",
+            "FPS: {} (target ~{}, vsync {})",
             fps.get_fps() as u32,
+            target_fps,
             if vsync { "on" } else { "off" },
         ),
         colors::rgba(180, 180, 180, 200),

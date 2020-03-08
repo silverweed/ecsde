@@ -9,7 +9,6 @@ use crate::resources;
 #[derive(Copy, Clone)]
 pub struct Render_System_Config {
     pub clear_color: Color,
-    pub smooth_by_extrapolating_velocity: bool,
     #[cfg(debug_assertions)]
     pub draw_sprites_bg: bool,
     #[cfg(debug_assertions)]
@@ -21,9 +20,7 @@ pub struct Render_System_Update_Args<'a> {
     pub resources: &'a resources::gfx::Gfx_Resources<'a>,
     pub camera: &'a C_Camera2D,
     pub ecs_world: &'a Ecs_World,
-    pub frame_lag_normalized: f32,
     pub cfg: Render_System_Config,
-    pub dt: std::time::Duration,
 }
 
 pub struct Render_System {
@@ -43,9 +40,7 @@ impl Render_System {
             resources,
             camera,
             ecs_world,
-            frame_lag_normalized,
             cfg,
-            dt,
         } = args;
 
         trace!("render_system::update");
@@ -75,12 +70,7 @@ impl Render_System {
 
             let texture = resources.get_texture(*tex_id);
             let mut sprite = gfx::render::create_sprite(texture, src_rect);
-
-            let mut rend_transform = spatial.global_transform;
-            if cfg.smooth_by_extrapolating_velocity {
-                let v = spatial.velocity * crate::core::time::to_secs_frac(&dt);
-                rend_transform.translate(v.x * frame_lag_normalized, v.y * frame_lag_normalized);
-            }
+            let rend_transform = spatial.global_transform;
 
             #[cfg(debug_assertions)]
             {

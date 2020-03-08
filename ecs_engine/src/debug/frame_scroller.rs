@@ -31,28 +31,34 @@ impl Debug_Frame_Scroller {
     }
 
     pub fn draw(&self, window: &mut window::Window_Handle) {
+        trace!("frame_scroller::draw");
+
         self.draw_bar_at(
             window,
-            self.pos.y as f32,
-            self.size.y as f32 * 0.5 - 1.,
-            self.n_frames,
+            self.pos.y as f32 + 1.,
+            self.size.y as f32 * 0.5 - 2.,
+            self.n_seconds,
         );
         self.draw_bar_at(
             window,
             self.pos.y as f32 + self.size.y as f32 * 0.5,
-            self.size.y as f32 * 0.5 - 1.,
-            self.n_seconds,
+            self.size.y as f32 * 0.5 - 2.,
+            self.n_frames,
         );
     }
 
     fn draw_bar_at(&self, window: &mut window::Window_Handle, y: f32, height: f32, subdivs: usize) {
         let mpos = window::mouse_pos_in_window(window);
         if subdivs > 0 {
-            let subdiv_w = self.size.x as f32 / subdivs as f32;
+            let subdiv_w = self.size.x as f32 / subdivs as f32 - 1.;
             let cur_frame = self.cur_frame.unwrap_or(self.n_frames - 1);
-            for i in 0..self.n_frames {
-                let subdiv_rect =
-                    rect::Rectf::new(self.pos.x as f32 + i as f32 * subdiv_w, y, subdiv_w, height);
+            for i in 0..subdivs {
+                let subdiv_rect = rect::Rectf::new(
+                    self.pos.x as f32 + i as f32 * (1. + subdiv_w),
+                    y,
+                    subdiv_w,
+                    height,
+                );
                 let hovered = rect::rect_contains(&subdiv_rect, mpos.into());
                 let color = if i != cur_frame {
                     let c = if hovered { 160 } else { 20 };
@@ -77,7 +83,7 @@ impl Debug_Frame_Scroller {
             let paint_props = Paint_Properties {
                 color: colors::TRANSPARENT,
                 border_thick: 1.0,
-                border_color: colors::rgba(200, 200, 200, if hovered { 250 } else { 100 }),
+                border_color: colors::rgba(200, 200, 200, if hovered { 250 } else { 0 }),
                 ..Default::default()
             };
             render::fill_color_rect(window, paint_props, r);

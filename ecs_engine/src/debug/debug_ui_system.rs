@@ -153,8 +153,6 @@ impl Debug_Ui_System {
         self.frame_scroller.pos.x = (win_w as f32 * 0.125) as _;
         self.frame_scroller.size.y = 35;
         self.frame_scroller.pos.y = 15;
-        self.frame_scroller.n_frames = 60;
-        self.frame_scroller.n_seconds = 30;
         self.cfg = cfg;
     }
 

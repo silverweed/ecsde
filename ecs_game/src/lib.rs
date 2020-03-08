@@ -53,6 +53,8 @@ pub struct Game_State<'a> {
     pub input_provider: Box<dyn input::provider::Input_Provider>,
     pub is_replaying: bool,
 
+    pub sleep_granularity: Option<Duration>,
+
     //// Cfg vars
     pub cvars: CVars,
 
@@ -64,9 +66,7 @@ pub struct Game_State<'a> {
 
 pub struct CVars {
     pub gameplay_update_tick_ms: Cfg_Var<f32>,
-    pub target_fps: Cfg_Var<i32>,
     pub vsync: Cfg_Var<bool>,
-    pub smooth_by_extrapolating_velocity: Cfg_Var<bool>,
     pub clear_color: Cfg_Var<u32>,
 }
 
@@ -74,8 +74,6 @@ pub struct CVars {
 pub struct Debug_CVars {
     pub draw_sprites_bg: Cfg_Var<bool>,
     pub draw_sprites_bg_color: Cfg_Var<u32>,
-
-    pub extra_frame_sleep_ms: Cfg_Var<i32>,
 
     pub record_replay: Cfg_Var<bool>,
 
@@ -187,9 +185,7 @@ pub unsafe extern "C" fn game_update<'a>(
 
         {
             let game_resources = &mut *game_resources;
-            if let Ok(true) = game_loop::tick_game(game_state, game_resources) {
-                // All green
-            } else {
+            if game_loop::tick_game(game_state, game_resources).is_err() {
                 return false;
             }
         }
@@ -204,7 +200,7 @@ pub unsafe extern "C" fn game_update<'a>(
         );
     }
 
-    true
+    !(*game_state).engine_state.should_close
 }
 
 /// # Safety
@@ -292,6 +288,13 @@ fn internal_game_init<'a>(
         }
     }
 
+    game_state.sleep_granularity = ecs_engine::core::sleep::init_sleep()
+        .ok()
+        .map(|g| g.max(Duration::from_micros(1)));
+
+    // This happens after all the initialization
+    game_state.engine_state.time.start();
+
     Ok((game_state, game_resources))
 }
 
@@ -333,7 +336,6 @@ fn create_game_state<'a>(
 
     let window_create_args = ngfx::window::Create_Render_Window_Args {
         vsync: cvars.vsync.read(cfg),
-        framerate_limit: cvars.target_fps.read(cfg) as u32,
     };
     let window = ngfx::window::create_render_window(
         &window_create_args,
@@ -390,6 +392,8 @@ fn create_game_state<'a>(
             #[cfg(debug_assertions)]
             fps_debug: ngdebug::fps::Fps_Console_Printer::new(&Duration::from_secs(2), "game"),
 
+            sleep_granularity: None,
+
             execution_time: Duration::default(),
             input_provider,
             is_replaying,
@@ -415,18 +419,13 @@ fn create_game_state<'a>(
 
 fn create_cvars(cfg: &ecs_engine::cfg::Config) -> CVars {
     let gameplay_update_tick_ms = Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg);
-    let smooth_by_extrapolating_velocity =
-        Cfg_Var::new("engine/rendering/smooth_by_extrapolating_velocity", cfg);
     let clear_color = Cfg_Var::new("engine/rendering/clear_color", cfg);
     let vsync = Cfg_Var::new("engine/window/vsync", cfg);
-    let target_fps = Cfg_Var::new("engine/rendering/target_fps", cfg);
 
     CVars {
         gameplay_update_tick_ms,
-        smooth_by_extrapolating_velocity,
         clear_color,
         vsync,
-        target_fps,
     }
 }
 
@@ -434,7 +433,6 @@ fn create_cvars(cfg: &ecs_engine::cfg::Config) -> CVars {
 fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     let draw_sprites_bg = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg", cfg);
     let draw_sprites_bg_color = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg_color", cfg);
-    let extra_frame_sleep_ms = Cfg_Var::new("engine/debug/gameplay/extra_frame_sleep_ms", cfg);
     let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
     let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
     let draw_entities = Cfg_Var::new("engine/debug/entities/draw_entities", cfg);
@@ -453,7 +451,6 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     Debug_CVars {
         draw_sprites_bg,
         draw_sprites_bg_color,
-        extra_frame_sleep_ms,
         record_replay,
         trace_overlay_refresh_rate,
         draw_entities,

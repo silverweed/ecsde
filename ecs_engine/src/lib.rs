@@ -9,6 +9,9 @@ extern crate crossbeam_utils;
 extern crate num_cpus;
 extern crate num_enum;
 
+#[cfg(not(target_os = "windows"))]
+extern crate libc;
+
 #[macro_use]
 extern crate bitflags;
 
