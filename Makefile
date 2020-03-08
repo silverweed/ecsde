@@ -16,6 +16,9 @@ run_release: release
 watch:
 	cargo watch -w ecs_engine/src -w ecs_game/src -x 'build --all'
 
+tags:
+	rusty-tags vi
+
 fmt:
 	find ecs_engine/src ecs_game/src ecs_runner/src -type f -exec rustfmt {} +
 
