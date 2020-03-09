@@ -122,13 +122,26 @@ pub fn init_engine_debug(
 
     // @Robustness: add font validity check
 
-    let (target_win_size_x, target_win_size_y) = (
+    let (win_w, win_h) = (
         engine_state.app_config.target_win_size.0 as f32,
         engine_state.app_config.target_win_size.1 as f32,
     );
     let ui_scale = cfg.ui_scale;
     let debug_ui_system = &mut engine_state.debug_systems.debug_ui_system;
-    debug_ui_system.init(cfg);
+    debug_ui_system.cfg = cfg;
+
+    // Frame scroller
+    {
+        let scroller = &mut debug_ui_system.frame_scroller;
+        scroller.size.x = (win_w * 0.75) as _;
+        scroller.pos.x = (win_w * 0.125) as _;
+        scroller.size.y = 35;
+        scroller.pos.y = 15;
+        scroller.cfg = debug::frame_scroller::Debug_Frame_Scroller_Config {
+            font: font,
+            font_size: (7. * ui_scale) as _,
+        };
+    }
 
     // Debug overlays
     {
@@ -147,7 +160,7 @@ pub fn init_engine_debug(
             .unwrap();
         joy_overlay.config.horiz_align = Align::End;
         joy_overlay.config.vert_align = Align::Middle;
-        joy_overlay.position = Vec2f::new(target_win_size_x, target_win_size_y * 0.5);
+        joy_overlay.position = Vec2f::new(win_w, win_h * 0.5);
 
         debug_overlay_config.font_size = (13.0 * ui_scale) as _;
         let time_overlay = debug_ui_system
@@ -155,20 +168,20 @@ pub fn init_engine_debug(
             .unwrap();
         time_overlay.config.horiz_align = Align::End;
         time_overlay.config.vert_align = Align::End;
-        time_overlay.position = Vec2f::new(target_win_size_x, target_win_size_y);
+        time_overlay.position = Vec2f::new(win_w, win_h);
 
         let win_overlay = debug_ui_system
             .create_overlay(String_Id::from("window"), debug_overlay_config)
             .unwrap();
         win_overlay.config.horiz_align = Align::End;
         win_overlay.config.vert_align = Align::End;
-        win_overlay.position = Vec2f::new(target_win_size_x, target_win_size_y - 20. * ui_scale);
+        win_overlay.position = Vec2f::new(win_w, win_h - 20. * ui_scale);
 
         let fps_overlay = debug_ui_system
             .create_overlay(String_Id::from("fps"), debug_overlay_config)
             .unwrap();
         fps_overlay.config.vert_align = Align::End;
-        fps_overlay.position = Vec2f::new(0.0, target_win_size_y as f32);
+        fps_overlay.position = Vec2f::new(0.0, win_h);
 
         debug_overlay_config.pad_x = 0.;
         debug_overlay_config.pad_y = 0.;
@@ -185,10 +198,7 @@ pub fn init_engine_debug(
             .unwrap();
         trace_overlay.config.vert_align = Align::Middle;
         trace_overlay.config.horiz_align = Align::Middle;
-        trace_overlay.position = Vec2f::new(
-            target_win_size_x as f32 * 0.5,
-            target_win_size_y as f32 * 0.5,
-        );
+        trace_overlay.position = Vec2f::new(win_w * 0.5, win_h * 0.5);
         // Trace overlay starts disabled
         debug_ui_system.set_overlay_enabled(String_Id::from("trace"), false);
     }
@@ -234,15 +244,14 @@ pub fn init_engine_debug(
             .create_graph(String_Id::from("fps"), graph_config)
             .unwrap();
 
-        graph.size = Vec2u::new(target_win_size_x as _, (0.2 * target_win_size_y) as _);
+        graph.size = Vec2u::new(win_w as _, (0.2 * win_h) as _);
     }
 
     {
         use crate::input::bindings::Input_Action;
 
-        let (win_width, win_height) = engine_state.app_config.target_win_size;
         let console = &mut engine_state.debug_systems.console;
-        console.size = Vec2u::new(win_width, win_height / 2);
+        console.size = Vec2u::new(win_w as _, win_h as u32 / 2);
         console.font_size = (console.font_size as f32 * ui_scale) as _;
         console.toggle_console_keys = engine_state
             .input_state
@@ -401,22 +410,9 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
     };
 
     let scroller = &engine_state.debug_systems.debug_ui_system.frame_scroller;
-    let scroller_seconds_offset = scroller.n_filled_seconds - scroller.cur_second - 1;
-    let scroller_frame_offset = scroller_seconds_offset * scroller.n_frames
-        + scroller.n_filled_frames
-        - scroller.cur_frame
-        - 1;
     let debug_log = &mut engine_state.debug_systems.log;
-    let frame = debug_log.cur_frame - scroller_frame_offset as u64;
+    let frame = scroller.get_real_selected_frame();
     let traces = &debug_log.get_frame(frame).unwrap().traces;
-    println!(
-        "frame : {} / {}, log hist len: {}, traces: {}",
-        frame,
-        debug_log.cur_frame,
-        debug_log.frames.len(),
-        traces.len()
-    );
-
     let overlay = engine_state
         .debug_systems
         .debug_ui_system
@@ -428,6 +424,7 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
     let mut trace_trees = tracer::build_trace_trees(traces);
     tracer::sort_trace_trees(&mut trace_trees);
 
+    overlay.add_line_color(&format!("frame {:<70}", frame), colors::rgb(144, 144, 144));
     overlay.add_line_color(
         &format!(
             "{:<39}: {:<15}: {:7}: {:>7}",

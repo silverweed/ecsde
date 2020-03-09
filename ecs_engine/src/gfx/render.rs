@@ -30,6 +30,7 @@ pub fn render_sprite(
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
+    trace!("render_sprite");
     backend::render_sprite(window, sprite, transform, camera);
 }
 
@@ -47,6 +48,7 @@ where
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
     P: Into<Paint_Properties>,
 {
+    trace!("fill_color_rect");
     backend::fill_color_rect(window, &paint_props.into(), rect);
 }
 
@@ -61,6 +63,7 @@ pub fn fill_color_rect_ws<R, P>(
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
     P: Into<Paint_Properties>,
 {
+    trace!("fill_color_rect_ws");
     backend::fill_color_rect_ws(window, &paint_props.into(), rect, transform, camera);
 }
 
@@ -73,10 +76,12 @@ pub fn fill_color_circle_ws<P>(
 ) where
     P: Into<Paint_Properties>,
 {
+    trace!("fill_color_circle_ws");
     backend::fill_color_circle_ws(window, &paint_props.into(), circle, camera);
 }
 
 pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: Rect<i32>) {
+    trace!("render_texture");
     backend::render_texture(window, texture, rect);
 }
 
@@ -85,11 +90,13 @@ pub fn get_texture_size(texture: &Texture<'_>) -> (u32, u32) {
 }
 
 pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
+    trace!("create_text");
     backend::create_text(string, font, size)
 }
 
 // @Cleanup: ideally we'd want to pass a &Text, not a &mut Text.
 pub fn render_text(window: &mut Window_Handle, text: &mut Text, screen_pos: Vec2f) {
+    trace!("render_text");
     backend::render_text(window, text, screen_pos);
 }
 
@@ -99,6 +106,7 @@ pub fn render_text_ws(
     world_transform: &Transform2D,
     camera: &Transform2D,
 ) {
+    trace!("render_text_ws");
     backend::render_text_ws(window, text, world_transform, camera);
 }
 
@@ -114,14 +122,17 @@ pub fn get_text_local_bounds(text: &Text) -> Rectf {
 }
 
 pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer {
+    trace!("start_draw_quads");
     backend::start_draw_quads(n_quads)
 }
 
 pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
+    trace!("add_quad");
     backend::add_quad(vbuf, v1, v2, v3, v4);
 }
 
 pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {
+    trace!("add_vertex");
     backend::add_vertex(vbuf, v);
 }
 
@@ -130,6 +141,7 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
 }
 
 pub fn render_vbuf(window: &mut Window_Handle, vbuf: &Vertex_Buffer, transform: &Transform2D) {
+    trace!("render_vbuf");
     backend::render_vbuf(window, vbuf, transform);
 }
 
@@ -139,13 +151,16 @@ pub fn render_vbuf_ws(
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
+    trace!("render_vbuf_ws");
     backend::render_vbuf_ws(window, vbuf, transform, camera);
 }
 
 pub fn start_draw_linestrip(n_vertices: usize) -> Vertex_Buffer {
+    trace!("start_draw_linestrip");
     backend::start_draw_linestrip(n_vertices)
 }
 
 pub fn render_line(window: &mut Window_Handle, start: &Vertex, end: &Vertex) {
+    trace!("render_line");
     backend::render_line(window, start, end);
 }

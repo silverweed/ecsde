@@ -293,7 +293,8 @@ pub fn tick_game<'a>(
             }
         } else {
             lerr!(
-                "Frame budget exceeded! {} / {} ms",
+                "Frame budget exceeded! At frame {}: {} / {} ms",
+                game_state.engine_state.cur_frame,
                 time::to_ms_frac(&t_elapsed_for_work),
                 time::to_ms_frac(&target_time_per_frame)
             );
@@ -382,7 +383,7 @@ fn update_graphics(
                     &real_dt,
                     &mut game_state.window,
                     gres,
-                    game_state.engine_state.cur_frame,
+                    &game_state.engine_state.debug_systems.log,
                 );
         }
 

@@ -176,27 +176,25 @@ pub unsafe extern "C" fn game_update<'a>(
 
         #[cfg(debug_assertions)]
         {
-            // @Incomplete: probably only update if not paused
             ecs_engine::prelude::DEBUG_TRACER
                 .lock()
                 .unwrap()
                 .start_frame();
-            if !game_state
-                .engine_state
-                .debug_systems
-                .debug_ui_system
-                .frame_scroller
-                .manually_selected
-            {
-                game_state.engine_state.debug_systems.log.start_frame();
+
+            let log = &mut game_state.engine_state.debug_systems.log;
+
+            if !game_state.engine_state.time.paused {
+                if game_state.engine_state.time.was_paused {
+                    // Just resumed
+                    log.reset_from_frame(game_state.engine_state.cur_frame);
+                }
+                log.start_frame();
             }
         }
 
-        {
-            let game_resources = &mut *game_resources;
-            if game_loop::tick_game(game_state, game_resources).is_err() {
-                return false;
-            }
+        let game_resources = &mut *game_resources;
+        if game_loop::tick_game(game_state, game_resources).is_err() {
+            return false;
         }
     }
 
@@ -513,16 +511,18 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         &game_state.engine_state.env,
         FONT,
     ));
-    let ui_scale = debug_ui.config().ui_scale;
+    let ui_scale = debug_ui.cfg.ui_scale;
+    let (win_w, win_h) = game_state.engine_state.app_config.target_win_size;
 
-    // Frame scroller
     {
+        // Frame scroller
         let scroller = &mut debug_ui.frame_scroller;
         let fps = (1000.
             / game_state
                 .cvars
                 .gameplay_update_tick_ms
-                .read(&game_state.engine_state.config)) as u64;
+                .read(&game_state.engine_state.config)
+            + 0.5) as u64;
         let log_len = game_state.engine_state.debug_systems.log.max_hist_len;
         scroller.n_frames = fps as _;
         scroller.n_seconds = (log_len / fps as u32) as _;
@@ -543,20 +543,14 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         .unwrap();
     overlay.config.vert_align = Align::End;
     overlay.config.horiz_align = Align::Begin;
-    overlay.position = Vec2f::new(
-        0.0,
-        game_state.engine_state.app_config.target_win_size.1 as f32 - 22. * ui_scale,
-    );
+    overlay.position = Vec2f::new(0.0, win_h as f32 - 22. * ui_scale);
     // Camera overlay
     let overlay = debug_ui
         .create_overlay(String_Id::from("camera"), overlay_cfg)
         .unwrap();
     overlay.config.vert_align = Align::End;
     overlay.config.horiz_align = Align::End;
-    overlay.position = Vec2f::new(
-        game_state.engine_state.app_config.target_win_size.0 as f32,
-        game_state.engine_state.app_config.target_win_size.1 as f32 - 20. * ui_scale,
-    );
+    overlay.position = Vec2f::new(win_w as f32, win_h as f32 - 20. * ui_scale);
 
     // Console hints
     game_state.engine_state.debug_systems.console.add_hints(

@@ -1,10 +1,12 @@
+use super::log::Debug_Log;
 use crate::common::colors;
 use crate::common::rect;
-use crate::common::vector::{Vec2i, Vec2u};
+use crate::common::vector::{Vec2f, Vec2i, Vec2u};
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
 use crate::gfx::window;
 use crate::input::input_system::Input_Raw_Event;
+use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum Row {
@@ -13,8 +15,16 @@ enum Row {
 }
 
 #[derive(Default)]
+pub struct Debug_Frame_Scroller_Config {
+    pub font: Font_Handle,
+    pub font_size: u16,
+}
+
+#[derive(Default)]
 pub struct Debug_Frame_Scroller {
-    pub latest_frame_ever: u32, // in terms of n_frames * cur_second + cur_frame
+    pub cfg: Debug_Frame_Scroller_Config,
+    pub tot_scroller_frames: u32, // in terms of n_frames * cur_second + cur_frame
+    real_cur_frame: u64,
     // Note: 'cur_frame' is not an absolute value, but it always goes from 0 to n_frames - 1
     // (so it does not map directly to Debug_Log's 'cur_frame', but it must be shifted)
     pub cur_frame: u16,
@@ -29,9 +39,17 @@ pub struct Debug_Frame_Scroller {
     hovered: Option<(Row, u16)>,
 }
 
+struct Row_Props {
+    pub y: f32,
+    pub height: f32,
+    pub subdivs: u16,
+    pub filled: u16,
+    pub show_labels: bool,
+}
+
 impl Debug_Frame_Scroller {
-    pub fn update(&mut self, window: &window::Window_Handle, cur_frame: u64) {
-        self.update_frame(cur_frame);
+    pub fn update(&mut self, window: &window::Window_Handle, log: &Debug_Log) {
+        self.update_frame(log);
 
         let mpos = window::mouse_pos_in_window(window);
         self.hovered = None;
@@ -41,21 +59,26 @@ impl Debug_Frame_Scroller {
         }
     }
 
-    fn update_frame(&mut self, engine_frame: u64) {
+    fn update_frame(&mut self, log: &Debug_Log) {
         if !self.manually_selected {
-            self.cur_frame = (engine_frame % self.n_frames as u64) as u16;
+            self.cur_frame = ((log.hist_len - 1) % self.n_frames as u32) as u16;
             self.n_filled_frames = self.cur_frame + 1;
-            self.cur_second = (engine_frame / self.n_frames as u64).min(self.n_seconds as u64 - 1) as _;
-            self.n_filled_seconds = self.cur_second + 1;
-            self.latest_frame_ever =
-                self.cur_second as u32 * self.n_frames as u32 + self.cur_frame as u32;
+
+            self.n_filled_seconds =
+                ((log.hist_len - 1) / self.n_frames as u32).min(self.n_seconds as u32 - 1) as u16 + 1;
+            self.cur_second = self.n_filled_seconds - 1;
+
+            self.tot_scroller_frames =
+                self.cur_second as u32 * self.n_frames as u32 + self.cur_frame as u32 + 1;
+            self.real_cur_frame = log.cur_frame;
         }
     }
 
     pub fn handle_events(&mut self, events: &[Input_Raw_Event]) {
-		fn calc_filled_frames(this: &Debug_Frame_Scroller) -> u16 {
-			(this.latest_frame_ever - (this.cur_second as u32 * this.n_frames as u32)).min(this.n_frames as u32) as _
-		};
+        fn calc_filled_frames(this: &Debug_Frame_Scroller) -> u16 {
+            (this.tot_scroller_frames - (this.cur_second as u32 * this.n_frames as u32))
+                .min(this.n_frames as u32) as _
+        };
 
         #[cfg(feature = "use-sfml")]
         use sfml::window::Event;
@@ -71,7 +94,7 @@ impl Debug_Frame_Scroller {
                         Some((Row::Frames, i)) => self.cur_frame = i,
                         Some((Row::Seconds, i)) => {
                             self.cur_second = i;
-							self.n_filled_frames = calc_filled_frames(self);
+                            self.n_filled_frames = calc_filled_frames(self);
                         }
                         _ => unreachable!(),
                     }
@@ -87,28 +110,38 @@ impl Debug_Frame_Scroller {
                 Event::KeyPressed {
                     code: sfml::window::Key::Period,
                     ..
-                } if self.manually_selected => {
-                    if self.cur_second as u32 * self.n_frames as u32 + (self.cur_frame as u32) < self.latest_frame_ever {
-                        if self.cur_frame < self.n_filled_frames - 1 {
-                            self.cur_frame += 1;
-                        } else if self.cur_second < self.n_filled_seconds - 1 {
-                            self.cur_frame = 0;
-                            self.cur_second += 1;
-							self.n_filled_frames = calc_filled_frames(self);
+                } => {
+                    if self.manually_selected {
+                        if self.cur_second as u32 * self.n_frames as u32 + (self.cur_frame as u32)
+                            < self.tot_scroller_frames
+                        {
+                            if self.cur_frame < self.n_filled_frames - 1 {
+                                self.cur_frame += 1;
+                            } else if self.cur_second < self.n_filled_seconds - 1 {
+                                self.cur_frame = 0;
+                                self.cur_second += 1;
+                                self.n_filled_frames = calc_filled_frames(self);
+                            }
                         }
+                    } else {
+                        self.manually_selected = true;
                     }
                 }
                 // @Incomplete: make this button configurable
                 Event::KeyPressed {
                     code: sfml::window::Key::Comma,
                     ..
-                } if self.manually_selected => {
-                    if self.cur_frame > 0 {
-                        self.cur_frame -= 1;
-                    } else if self.cur_second > 0 {
-                        self.n_filled_frames = self.n_frames;
-                        self.cur_frame = self.n_filled_frames - 1;
-                        self.cur_second -= 1;
+                } => {
+                    if self.manually_selected {
+                        if self.cur_frame > 0 {
+                            self.cur_frame -= 1;
+                        } else if self.cur_second > 0 {
+                            self.n_filled_frames = self.n_frames;
+                            self.cur_frame = self.n_filled_frames - 1;
+                            self.cur_second -= 1;
+                        }
+                    } else {
+                        self.manually_selected = true;
                     }
                 }
                 _ => {}
@@ -116,25 +149,33 @@ impl Debug_Frame_Scroller {
         }
     }
 
-    fn get_row_y_height_subdivs_filled(&self, row: Row) -> (f32, f32, u16, u16) {
+    fn get_row_props(&self, row: Row) -> Row_Props {
         match row {
-            Row::Seconds => (
-                self.pos.y as f32 + 1.,
-                self.size.y as f32 * 0.5 - 2.,
-                self.n_seconds,
-                self.n_filled_seconds,
-            ),
-            Row::Frames => (
-                self.pos.y as f32 + self.size.y as f32 * 0.5,
-                self.size.y as f32 * 0.5 - 2.,
-                self.n_frames,
-                self.n_filled_frames,
-            ),
+            Row::Seconds => Row_Props {
+                y: self.pos.y as f32 + 1.,
+                height: self.size.y as f32 * 0.5 - 2.,
+                subdivs: self.n_seconds,
+                filled: self.n_filled_seconds,
+                show_labels: true,
+            },
+            Row::Frames => Row_Props {
+                y: self.pos.y as f32 + self.size.y as f32 * 0.5,
+                height: self.size.y as f32 * 0.5 - 2.,
+                subdivs: self.n_frames,
+                filled: self.n_filled_frames,
+                show_labels: false,
+            },
         }
     }
 
     fn check_hovered_row(&mut self, row: Row, mpos: Vec2i) {
-        let (y, height, subdivs, filled) = self.get_row_y_height_subdivs_filled(row);
+        let Row_Props {
+            y,
+            height,
+            subdivs,
+            filled,
+            ..
+        } = self.get_row_props(row);
         if filled > 0 {
             let subdiv_w = self.size.x as f32 / subdivs as f32 - 1.;
             for i in 0..filled {
@@ -153,15 +194,21 @@ impl Debug_Frame_Scroller {
         }
     }
 
-    pub fn draw(&self, window: &mut window::Window_Handle) {
+    pub fn draw(&self, window: &mut window::Window_Handle, gres: &mut Gfx_Resources) {
         trace!("frame_scroller::draw");
 
-        self.draw_row(window, Row::Seconds);
-        self.draw_row(window, Row::Frames);
+        self.draw_row(window, gres, Row::Seconds);
+        self.draw_row(window, gres, Row::Frames);
     }
 
-    fn draw_row(&self, window: &mut window::Window_Handle, row: Row) {
-        let (y, height, subdivs, filled) = self.get_row_y_height_subdivs_filled(row);
+    fn draw_row(&self, window: &mut window::Window_Handle, gres: &mut Gfx_Resources, row: Row) {
+        let Row_Props {
+            y,
+            height,
+            subdivs,
+            filled,
+            show_labels,
+        } = self.get_row_props(row);
         let mpos = window::mouse_pos_in_window(window);
         let cur = if row == Row::Frames {
             self.cur_frame
@@ -209,6 +256,24 @@ impl Debug_Frame_Scroller {
                 };
                 render::fill_color_rect(window, paint_props, subdiv_rect);
             }
+
+            if show_labels {
+                let font = gres.get_font(self.cfg.font);
+                for i in 0..filled {
+                    let x = self.pos.x as f32 + i as f32 * (1. + subdiv_w);
+					// The very_first_frame is initially 1, but it can change if the game is paused and resumed
+					// (in which case the debug log will drop old history and restart from a later frame).
+					// It can also change simply due to the scroller filling up.
+					let very_first_frame = self.real_cur_frame - self.tot_scroller_frames as u64;
+                    let row_first_frame = (self.n_frames as u64 * i as u64) + very_first_frame;
+                    let mut text = render::create_text(
+                        &(row_first_frame + 1).to_string(),
+                        font,
+                        self.cfg.font_size,
+                    );
+                    render::render_text(window, &mut text, Vec2f::new(x, y));
+                }
+            }
         }
 
         {
@@ -224,4 +289,10 @@ impl Debug_Frame_Scroller {
             render::fill_color_rect(window, paint_props, r);
         }
     }
+
+	pub fn get_real_selected_frame(&self) -> u64 {
+		let very_first_frame = self.real_cur_frame - self.tot_scroller_frames as u64;
+        let selected_scroller_frame = self.cur_second as u32 * self.n_frames as u32 + self.cur_frame as u32 + 1;
+		very_first_frame + selected_scroller_frame as u64
+	}
 }

@@ -33,6 +33,12 @@ impl Debug_Log {
         self.frames.push_back(Debug_Log_Frame::default());
     }
 
+    pub fn reset_from_frame(&mut self, new_cur_frame: u64) {
+        self.cur_frame = new_cur_frame;
+        self.hist_len = 0;
+        self.frames.clear();
+    }
+
     pub fn get_frame(&self, frame_number: u64) -> Option<&Debug_Log_Frame> {
         if (self.cur_frame - self.hist_len as u64 + 1..=self.cur_frame).contains(&frame_number) {
             let idx = self.cur_frame - frame_number;

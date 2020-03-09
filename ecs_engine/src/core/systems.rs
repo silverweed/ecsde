@@ -47,23 +47,22 @@ impl Core_Systems<'_> {
 impl Debug_Systems {
     pub fn new(cfg: &cfg::Config) -> Debug_Systems {
         let mut painters = HashMap::new();
+        let ms_per_frame =
+            cfg::Cfg_Var::<f32>::new("engine/gameplay/gameplay_update_tick_ms", cfg).read(cfg);
+        let debug_log_size =
+            cfg::Cfg_Var::<i32>::new("engine/debug/log/hist_size_seconds", cfg).read(cfg);
+        let fps = (1000. / ms_per_frame + 0.5) as i32;
         painters.insert(String_Id::from(""), Debug_Painter::new());
         Debug_Systems {
             debug_ui_system: debug_ui_system::Debug_Ui_System::new(),
             replay_recording_system: recording_system::Replay_Recording_System::new(
-                recording_system::Replay_Recording_System_Config {
-                    ms_per_frame: crate::cfg::Cfg_Var::<f32>::new(
-                        "engine/gameplay/gameplay_update_tick_ms",
-                        cfg,
-                    )
-                    .read(cfg),
-                },
+                recording_system::Replay_Recording_System_Config { ms_per_frame },
             ),
             painters,
             show_trace_overlay: false,
             trace_overlay_update_t: 0.0,
             console: console::Console::new(),
-            log: log::Debug_Log::with_hist_len(30 * 60),
+            log: log::Debug_Log::with_hist_len((debug_log_size * fps) as _),
         }
     }
 

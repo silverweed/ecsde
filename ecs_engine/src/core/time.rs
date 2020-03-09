@@ -11,6 +11,7 @@ pub struct Time {
     prev_real_time: SystemTime,
     pub time_scale: f32,
     pub paused: bool,
+    pub was_paused: bool,
 }
 
 impl Default for Time {
@@ -24,6 +25,7 @@ impl Default for Time {
             prev_game_time: 0,
             time_scale: 1.,
             paused: false,
+            was_paused: false,
         }
     }
 }
@@ -32,6 +34,10 @@ impl Time {
     const MAX_FRAME_TIME: Microseconds = 1_000_000 / 15;
 
     pub fn start(&mut self) {
+        assert!(
+            self.game_time == 0,
+            "Time::start() called while already running!"
+        );
         let now = SystemTime::now();
         self.start_time = now;
         self.prev_real_time = now;
@@ -44,6 +50,8 @@ impl Time {
         self.real_time = now;
 
         self.prev_game_time = self.game_time;
+
+        self.was_paused = self.paused;
         if !self.paused {
             let real_delta = now
                 .duration_since(self.prev_real_time)

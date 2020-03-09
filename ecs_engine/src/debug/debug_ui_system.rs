@@ -2,6 +2,7 @@ use super::element::Debug_Element;
 use super::fadeout_overlay;
 use super::frame_scroller::Debug_Frame_Scroller;
 use super::graph;
+use super::log::Debug_Log;
 use super::overlay;
 use crate::common::stringid::String_Id;
 use crate::gfx::window::Window_Handle;
@@ -116,7 +117,7 @@ pub struct Debug_Ui_System {
     fadeout_overlays: Debug_Element_Container<fadeout_overlay::Fadeout_Debug_Overlay>,
     graphs: Debug_Element_Container<graph::Debug_Graph_View>,
     pub frame_scroller: Debug_Frame_Scroller,
-    cfg: Debug_Ui_System_Config,
+    pub cfg: Debug_Ui_System_Config,
 }
 
 macro_rules! add_debug_elem {
@@ -145,19 +146,6 @@ impl Debug_Ui_System {
             frame_scroller: Debug_Frame_Scroller::default(),
             cfg: Debug_Ui_System_Config::default(),
         }
-    }
-
-    pub fn init(&mut self, cfg: Debug_Ui_System_Config) {
-        let (win_w, _) = cfg.target_win_size;
-        self.frame_scroller.size.x = (win_w as f32 * 0.75) as _;
-        self.frame_scroller.pos.x = (win_w as f32 * 0.125) as _;
-        self.frame_scroller.size.y = 35;
-        self.frame_scroller.pos.y = 15;
-        self.cfg = cfg;
-    }
-
-    pub fn config(&self) -> &Debug_Ui_System_Config {
-        &self.cfg
     }
 
     add_debug_elem!(
@@ -192,7 +180,7 @@ impl Debug_Ui_System {
         dt: &Duration,
         window: &mut Window_Handle,
         gres: &mut Gfx_Resources,
-        cur_frame: u64,
+        log: &Debug_Log,
     ) {
         for elem in &mut self.graphs.actives {
             elem.update(dt);
@@ -209,8 +197,8 @@ impl Debug_Ui_System {
             elem.draw(window, gres);
         }
 
-        self.frame_scroller.update(window, cur_frame);
-        self.frame_scroller.draw(window);
+        self.frame_scroller.update(window, log);
+        self.frame_scroller.draw(window, gres);
     }
 }
 
