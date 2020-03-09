@@ -81,7 +81,7 @@ mod tests {
         log.push_trace(&[node.clone()]);
 
         {
-            let n = &log.get_frame(0).unwrap().traces;
+            let n = &log.get_frame(1).unwrap().traces;
             assert_eq!(n, &[node.clone()]);
         }
 
@@ -96,10 +96,10 @@ mod tests {
         log.push_trace(&[node2.clone()]);
 
         {
-            let n = &log.get_frame(0).unwrap().traces;
+            let n = &log.get_frame(1).unwrap().traces;
             assert_eq!(n, &[node.clone()]);
 
-            let n = &log.get_frame(1).unwrap().traces;
+            let n = &log.get_frame(2).unwrap().traces;
             assert_eq!(n, &[node2.clone()]);
         }
 
@@ -116,10 +116,10 @@ mod tests {
         // At frame 11
 
         {
-            let n = log.get_frame(0);
+            let n = log.get_frame(1);
             assert!(n.is_none());
 
-            let n = &log.get_frame(1).unwrap().traces;
+            let n = &log.get_frame(2).unwrap().traces;
             assert_eq!(n, &[node2.clone()]);
         }
     }
