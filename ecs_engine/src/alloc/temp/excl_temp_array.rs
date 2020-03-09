@@ -47,13 +47,12 @@ where
     T: Copy + Default,
 {
     let offset = allocator.ptr.align_offset(std::mem::align_of::<T>());
-    let gen = allocator.gen;
     Exclusive_Temp_Array {
         ptr: unsafe { allocator.ptr.add(offset) } as *mut T,
         n_elems: 0,
         parent_allocator: allocator,
         #[cfg(debug_assertions)]
-        gen,
+        gen: allocator.gen,
     }
 }
 
