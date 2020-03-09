@@ -49,11 +49,6 @@ impl Env_Info {
         &self.test_paths.cfg_root
     }
 
-    #[cfg(not(test))]
-    fn build_test_cfg(_working_dir: &PathBuf) -> Option<Box<Path>> {
-        None
-    }
-
     #[cfg(test)]
     fn build_test_cfg(working_dir: &PathBuf) -> Option<Box<Path>> {
         let mut tests_root_buf = working_dir.clone();
