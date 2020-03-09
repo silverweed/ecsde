@@ -64,8 +64,9 @@ impl Debug_Frame_Scroller {
             self.cur_frame = ((log.hist_len - 1) % self.n_frames as u32) as u16;
             self.n_filled_frames = self.cur_frame + 1;
 
-            self.n_filled_seconds =
-                ((log.hist_len - 1) / self.n_frames as u32).min(self.n_seconds as u32 - 1) as u16 + 1;
+            self.n_filled_seconds = ((log.hist_len - 1) / self.n_frames as u32)
+                .min(self.n_seconds as u32 - 1) as u16
+                + 1;
             self.cur_second = self.n_filled_seconds - 1;
 
             self.tot_scroller_frames =
@@ -261,10 +262,10 @@ impl Debug_Frame_Scroller {
                 let font = gres.get_font(self.cfg.font);
                 for i in 0..filled {
                     let x = self.pos.x as f32 + i as f32 * (1. + subdiv_w);
-					// The very_first_frame is initially 1, but it can change if the game is paused and resumed
-					// (in which case the debug log will drop old history and restart from a later frame).
-					// It can also change simply due to the scroller filling up.
-					let very_first_frame = self.real_cur_frame - self.tot_scroller_frames as u64;
+                    // The very_first_frame is initially 1, but it can change if the game is paused and resumed
+                    // (in which case the debug log will drop old history and restart from a later frame).
+                    // It can also change simply due to the scroller filling up.
+                    let very_first_frame = self.real_cur_frame - self.tot_scroller_frames as u64;
                     let row_first_frame = (self.n_frames as u64 * i as u64) + very_first_frame;
                     let mut text = render::create_text(
                         &(row_first_frame + 1).to_string(),
@@ -290,9 +291,10 @@ impl Debug_Frame_Scroller {
         }
     }
 
-	pub fn get_real_selected_frame(&self) -> u64 {
-		let very_first_frame = self.real_cur_frame - self.tot_scroller_frames as u64;
-        let selected_scroller_frame = self.cur_second as u32 * self.n_frames as u32 + self.cur_frame as u32 + 1;
-		very_first_frame + selected_scroller_frame as u64
-	}
+    pub fn get_real_selected_frame(&self) -> u64 {
+        let very_first_frame = self.real_cur_frame - self.tot_scroller_frames as u64;
+        let selected_scroller_frame =
+            self.cur_second as u32 * self.n_frames as u32 + self.cur_frame as u32 + 1;
+        very_first_frame + selected_scroller_frame as u64
+    }
 }

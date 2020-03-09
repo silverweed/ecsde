@@ -15,14 +15,6 @@ impl String_Id {
     pub fn from_u32(x: u32) -> String_Id {
         String_Id(x)
     }
-
-    #[cfg(debug_assertions)]
-    pub fn to_string(&self) -> String {
-        STRING_ID_MAP
-            .read()
-            .expect("[ ERROR ] Failed to lock STRING_ID_MAP")[self]
-            .clone()
-    }
 }
 
 impl<'a, T> From<T> for String_Id
@@ -67,8 +59,7 @@ impl std::fmt::Display for String_Id {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
-            "{} (orig = \"{}\")",
-            self.0,
+            "{}",
             STRING_ID_MAP
                 .read()
                 .expect("[ ERROR ] Failed to lock STRING_ID_MAP")[self]
@@ -127,4 +118,9 @@ mod tests {
         assert_eq!(String_Id::from("A test string"), String_Id(943117577));
         assert_eq!(String_Id::from("A test string").0, fnv1a(b"A test string"));
     }
+
+	#[test]
+	fn stringid_to_str() {
+		assert_eq!(String_Id::from("Another test string").to_string(), String::from("Another test string"));
+	}
 }

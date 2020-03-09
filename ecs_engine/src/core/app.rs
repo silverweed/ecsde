@@ -138,7 +138,7 @@ pub fn init_engine_debug(
         scroller.size.y = 35;
         scroller.pos.y = 15;
         scroller.cfg = debug::frame_scroller::Debug_Frame_Scroller_Config {
-            font: font,
+            font,
             font_size: (7. * ui_scale) as _,
         };
     }

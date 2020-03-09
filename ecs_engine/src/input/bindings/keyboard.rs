@@ -15,6 +15,7 @@ pub fn is_key_pressed(key: Key) -> bool {
 }
 
 #[cfg(debug_assertions)]
+#[allow(clippy::cognitive_complexity)]
 // Note: this assumes an english layout
 pub fn key_to_char(key: Key, maiusc: bool) -> Option<char> {
     match key {
