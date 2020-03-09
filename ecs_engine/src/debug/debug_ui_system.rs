@@ -187,7 +187,13 @@ impl Debug_Ui_System {
         set_graph_enabled
     );
 
-    pub fn update(&mut self, dt: &Duration, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
+    pub fn update_and_draw(
+        &mut self,
+        dt: &Duration,
+        window: &mut Window_Handle,
+        gres: &mut Gfx_Resources,
+        cur_frame: u64,
+    ) {
         for elem in &mut self.graphs.actives {
             elem.update(dt);
             elem.draw(window, gres);
@@ -203,7 +209,7 @@ impl Debug_Ui_System {
             elem.draw(window, gres);
         }
 
-        self.frame_scroller.update(window);
+        self.frame_scroller.update(window, cur_frame);
         self.frame_scroller.draw(window);
     }
 }

@@ -322,26 +322,44 @@ pub fn try_create_replay_data(replay_file: &std::path::Path) -> Option<replay_da
 }
 
 #[cfg(debug_assertions)]
-pub fn maybe_update_trace_overlay(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
-    if engine_state.debug_systems.show_trace_overlay && !engine_state.time.paused {
+pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
+    use crate::debug::tracer;
+
+    let mut tracer = crate::prelude::DEBUG_TRACER.lock().unwrap();
+
+    let debug_log = &mut engine_state.debug_systems.log;
+    let mut traces = tracer.saved_traces.split_off(0);
+    tracer::collate_traces(&mut traces);
+
+    let scroller = &engine_state.debug_systems.debug_ui_system.frame_scroller;
+    if !scroller.manually_selected {
+        debug_log.push_trace(&traces);
+    }
+
+    if engine_state.debug_systems.show_trace_overlay {
         let t = &mut engine_state.debug_systems.trace_overlay_update_t;
-        *t -= time::to_secs_frac(&engine_state.time.real_dt());
+        if !engine_state.time.paused {
+            *t -= time::to_secs_frac(&engine_state.time.real_dt());
+        }
 
         if *t <= 0. {
-            debug_update_trace_overlay(engine_state);
+            update_trace_overlay(engine_state);
             engine_state.debug_systems.trace_overlay_update_t =
                 refresh_rate.read(&engine_state.config);
+
+            if engine_state.time.paused {
+                // Don't bother refreshing this the next frame: we're paused.
+                engine_state.debug_systems.trace_overlay_update_t = 0.1;
+            }
         }
     }
 }
 
 #[cfg(debug_assertions)]
-fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
+fn update_trace_overlay(engine_state: &mut Engine_State) {
     use crate::common::colors;
     use crate::debug::overlay::Debug_Overlay;
-    use crate::debug::tracer::{build_trace_trees, sort_trace_trees, Trace_Tree, Tracer_Node};
-
-    let mut tracer = crate::prelude::DEBUG_TRACER.lock().unwrap();
+    use crate::debug::tracer::{self, Trace_Tree, Tracer_Node};
 
     fn add_node_line(
         node: &Tracer_Node,
@@ -382,21 +400,22 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
         }
     };
 
-    let debug_log = &mut engine_state.debug_systems.log;
-    let total_traced_time = tracer.total_traced_time();
-    let traces = tracer.collate_traces();
-    debug_log.push_trace(traces);
-
-    // @Incomplete: add logic to get either latest or some previous frame
     let scroller = &engine_state.debug_systems.debug_ui_system.frame_scroller;
     let scroller_seconds_offset = scroller.n_filled_seconds - scroller.cur_second - 1;
     let scroller_frame_offset = scroller_seconds_offset * scroller.n_frames
         + scroller.n_filled_frames
         - scroller.cur_frame
         - 1;
+    let debug_log = &mut engine_state.debug_systems.log;
     let frame = debug_log.cur_frame - scroller_frame_offset as u64;
-    println!("frame : {} / {}", frame, debug_log.cur_frame);
     let traces = &debug_log.get_frame(frame).unwrap().traces;
+    println!(
+        "frame : {} / {}, log hist len: {}, traces: {}",
+        frame,
+        debug_log.cur_frame,
+        debug_log.frames.len(),
+        traces.len()
+    );
 
     let overlay = engine_state
         .debug_systems
@@ -405,8 +424,9 @@ fn debug_update_trace_overlay(engine_state: &mut Engine_State) {
 
     overlay.clear();
 
-    let mut trace_trees = build_trace_trees(traces);
-    sort_trace_trees(&mut trace_trees);
+    let total_traced_time = tracer::total_traced_time(traces);
+    let mut trace_trees = tracer::build_trace_trees(traces);
+    tracer::sort_trace_trees(&mut trace_trees);
 
     overlay.add_line_color(
         &format!(

@@ -121,12 +121,23 @@ pub fn tick_game<'a>(
     #[cfg(debug_assertions)]
     let debug_systems = &mut game_state.engine_state.debug_systems;
 
+    // Frame scroller events
     #[cfg(debug_assertions)]
     {
-        debug_systems
-            .debug_ui_system
-            .frame_scroller
-            .handle_events(&game_state.engine_state.input_state.raw_events);
+        let scroller = &mut debug_systems.debug_ui_system.frame_scroller;
+        let prev_selected_frame = scroller.cur_frame;
+        let prev_selected_second = scroller.cur_second;
+        let was_manually_selected = scroller.manually_selected;
+
+        scroller.handle_events(&game_state.engine_state.input_state.raw_events);
+
+        if scroller.cur_frame != prev_selected_frame
+            || scroller.cur_second != prev_selected_second
+            || was_manually_selected != scroller.manually_selected
+        {
+            game_state.engine_state.time.paused = scroller.manually_selected;
+            debug_systems.trace_overlay_update_t = 0.;
+        }
     }
 
     // Handle core actions (resize, quit, ..)
@@ -367,7 +378,12 @@ fn update_graphics(
                 .engine_state
                 .debug_systems
                 .debug_ui_system
-                .update(&real_dt, &mut game_state.window, gres);
+                .update_and_draw(
+                    &real_dt,
+                    &mut game_state.window,
+                    gres,
+                    game_state.engine_state.cur_frame,
+                );
         }
 
         // Draw console
@@ -405,24 +421,6 @@ fn update_debug(game_state: &mut Game_State) {
     );
 
     // Frame scroller
-    {
-        let scroller = &mut debug_systems.debug_ui_system.frame_scroller;
-        if !scroller.manually_selected {
-            let fps = (1000.
-                / game_state
-                    .cvars
-                    .gameplay_update_tick_ms
-                    .read(&engine_state.config)) as u64;
-            let log_len = debug_systems.log.max_hist_len;
-            scroller.n_frames = fps as _;
-            scroller.n_seconds = (log_len / fps as u32) as _;
-            scroller.cur_frame = (engine_state.cur_frame % fps) as u16;
-            scroller.n_filled_frames = scroller.cur_frame + 1;
-            scroller.cur_second =
-                (engine_state.cur_frame / fps).min(scroller.n_seconds as u64 - 1) as _;
-            scroller.n_filled_seconds = scroller.cur_second + 1;
-        }
-    }
 
     // Overlays
     update_time_debug_overlay(

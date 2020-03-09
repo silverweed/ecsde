@@ -4,7 +4,7 @@ use std::time;
 
 pub struct Tracer {
     // Tree of Tracer_Nodes representing the call tree.
-    saved_traces: Vec<Tracer_Node>,
+    pub saved_traces: Vec<Tracer_Node>,
     // Latest pushed (and not-yet-popped) node index
     cur_active: Option<usize>,
 }
@@ -104,40 +104,6 @@ impl Tracer {
         self.cur_active = active_node.parent_idx;
     }
 
-    /// Deduplicates tracer nodes and returns a reference to the final traces.
-    // @Incomplete: handle multiple threads in a sane way (right now tot_duration
-    // ends up being the sum of all threads, which may be ok, but should be made explicit
-    // in the debug overlay).
-    pub fn collate_traces(&mut self) -> &[Tracer_Node] {
-        use std::collections::hash_map::Entry;
-        use std::collections::HashMap;
-
-        // Map { tag => (index_into_saved_traces, tot_n_calls, tot_duration) }
-        let mut tag_map: HashMap<&'static str, (usize, usize, time::Duration)> = HashMap::new();
-
-        // Accumulate n_calls of all nodes with the same tag in the first one found,
-        // and leave all others with n_calls = 0.
-        for (i, node) in self.saved_traces.iter_mut().enumerate() {
-            match tag_map.entry(&node.info.tag) {
-                Entry::Vacant(v) => {
-                    v.insert((i, 1, node.info.duration()));
-                }
-                Entry::Occupied(mut o) => {
-                    let (idx, n_calls, duration) = *o.get();
-                    o.insert((idx, n_calls + 1, duration + node.info.duration()));
-                    node.info.n_calls = 0;
-                }
-            }
-        }
-
-        for (_, (idx, tot_calls, tot_duration)) in tag_map {
-            self.saved_traces[idx].info.n_calls = tot_calls;
-            self.saved_traces[idx].info.tot_duration = tot_duration;
-        }
-
-        &self.saved_traces
-    }
-
     pub fn start_frame(&mut self) {
         self.saved_traces.clear();
         self.cur_active = None;
@@ -152,30 +118,29 @@ impl Tracer {
             );
         }
     }
-
-    pub fn total_traced_time(&self) -> time::Duration {
-        self.saved_traces
-            .iter()
-            .filter_map(|node| {
-                if node.parent_idx.is_none() {
-                    Some(node.info.end_t.duration_since(node.info.start_t))
-                } else {
-                    None
-                }
-            })
-            .fold(time::Duration::default(), |acc, x| acc + x)
-    }
-
-    pub fn sort(&mut self) {
-        self.saved_traces
-            .sort_by(|a, b| b.info.duration().cmp(&a.info.duration()));
-    }
 }
 
 #[inline]
 pub fn debug_trace(tag: &'static str, tracer: Debug_Tracer) -> Scope_Trace {
     tracer.lock().unwrap().push_scope_trace(tag);
     Scope_Trace { tracer }
+}
+
+pub fn total_traced_time(traces: &[Tracer_Node]) -> time::Duration {
+    traces
+        .iter()
+        .filter_map(|node| {
+            if node.parent_idx.is_none() {
+                Some(node.info.end_t.duration_since(node.info.start_t))
+            } else {
+                None
+            }
+        })
+        .fold(time::Duration::default(), |acc, x| acc + x)
+}
+
+pub fn sort_traces_by_duration(traces: &mut Vec<Tracer_Node>) {
+    traces.sort_by(|a, b| b.info.duration().cmp(&a.info.duration()));
 }
 
 pub fn sort_trace_trees(trees: &mut [Trace_Tree]) {
@@ -189,6 +154,38 @@ pub fn sort_trace_trees(trees: &mut [Trace_Tree]) {
 
     for tree in trees {
         sort_tree_internal(tree);
+    }
+}
+
+/// Deduplicates tracer nodes and returns the final traces.
+// @Incomplete: handle multiple threads in a sane way (right now tot_duration
+// ends up being the sum of all threads, which may be ok, but should be made explicit
+// in the debug overlay).
+pub fn collate_traces(saved_traces: &mut Vec<Tracer_Node>) {
+    use std::collections::hash_map::Entry;
+    use std::collections::HashMap;
+
+    // Map { tag => (index_into_saved_traces, tot_n_calls, tot_duration) }
+    let mut tag_map: HashMap<&'static str, (usize, usize, time::Duration)> = HashMap::new();
+
+    // Accumulate n_calls of all nodes with the same tag in the first one found,
+    // and leave all others with n_calls = 0.
+    for (i, node) in saved_traces.iter_mut().enumerate() {
+        match tag_map.entry(&node.info.tag) {
+            Entry::Vacant(v) => {
+                v.insert((i, 1, node.info.duration()));
+            }
+            Entry::Occupied(mut o) => {
+                let (idx, n_calls, duration) = *o.get();
+                o.insert((idx, n_calls + 1, duration + node.info.duration()));
+                node.info.n_calls = 0;
+            }
+        }
+    }
+
+    for (_, (idx, tot_calls, tot_duration)) in tag_map {
+        saved_traces[idx].info.n_calls = tot_calls;
+        saved_traces[idx].info.tot_duration = tot_duration;
     }
 }
 

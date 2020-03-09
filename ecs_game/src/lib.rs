@@ -181,7 +181,15 @@ pub unsafe extern "C" fn game_update<'a>(
                 .lock()
                 .unwrap()
                 .start_frame();
-            game_state.engine_state.debug_systems.log.start_frame();
+            if !game_state
+                .engine_state
+                .debug_systems
+                .debug_ui_system
+                .frame_scroller
+                .manually_selected
+            {
+                game_state.engine_state.debug_systems.log.start_frame();
+            }
         }
 
         {
@@ -195,7 +203,7 @@ pub unsafe extern "C" fn game_update<'a>(
     #[cfg(debug_assertions)]
     {
         let game_state = &mut *game_state;
-        app::maybe_update_trace_overlay(
+        app::update_traces(
             &mut game_state.engine_state,
             game_state.debug_cvars.trace_overlay_refresh_rate,
         );
@@ -506,6 +514,19 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         FONT,
     ));
     let ui_scale = debug_ui.config().ui_scale;
+
+    // Frame scroller
+    {
+        let scroller = &mut debug_ui.frame_scroller;
+        let fps = (1000.
+            / game_state
+                .cvars
+                .gameplay_update_tick_ms
+                .read(&game_state.engine_state.config)) as u64;
+        let log_len = game_state.engine_state.debug_systems.log.max_hist_len;
+        scroller.n_frames = fps as _;
+        scroller.n_seconds = (log_len / fps as u32) as _;
+    }
 
     let overlay_cfg = Debug_Overlay_Config {
         row_spacing: 20.0 * ui_scale,

@@ -14,6 +14,7 @@ enum Row {
 
 #[derive(Default)]
 pub struct Debug_Frame_Scroller {
+    pub latest_frame_ever: u32, // in terms of n_frames * cur_second + cur_frame
     // Note: 'cur_frame' is not an absolute value, but it always goes from 0 to n_frames - 1
     // (so it does not map directly to Debug_Log's 'cur_frame', but it must be shifted)
     pub cur_frame: u16,
@@ -29,9 +30,10 @@ pub struct Debug_Frame_Scroller {
 }
 
 impl Debug_Frame_Scroller {
-    pub fn update(&mut self, window: &window::Window_Handle) {
-        let mpos = window::mouse_pos_in_window(window);
+    pub fn update(&mut self, window: &window::Window_Handle, cur_frame: u64) {
+        self.update_frame(cur_frame);
 
+        let mpos = window::mouse_pos_in_window(window);
         self.hovered = None;
         self.check_hovered_row(Row::Seconds, mpos);
         if self.hovered.is_none() {
@@ -39,7 +41,22 @@ impl Debug_Frame_Scroller {
         }
     }
 
+    fn update_frame(&mut self, engine_frame: u64) {
+        if !self.manually_selected {
+            self.cur_frame = (engine_frame % self.n_frames as u64) as u16;
+            self.n_filled_frames = self.cur_frame + 1;
+            self.cur_second = (engine_frame / self.n_frames as u64).min(self.n_seconds as u64 - 1) as _;
+            self.n_filled_seconds = self.cur_second + 1;
+            self.latest_frame_ever =
+                self.cur_second as u32 * self.n_frames as u32 + self.cur_frame as u32;
+        }
+    }
+
     pub fn handle_events(&mut self, events: &[Input_Raw_Event]) {
+		fn calc_filled_frames(this: &Debug_Frame_Scroller) -> u16 {
+			(this.latest_frame_ever - (this.cur_second as u32 * this.n_frames as u32)).min(this.n_frames as u32) as _
+		};
+
         #[cfg(feature = "use-sfml")]
         use sfml::window::Event;
 
@@ -54,6 +71,7 @@ impl Debug_Frame_Scroller {
                         Some((Row::Frames, i)) => self.cur_frame = i,
                         Some((Row::Seconds, i)) => {
                             self.cur_second = i;
+							self.n_filled_frames = calc_filled_frames(self);
                         }
                         _ => unreachable!(),
                     }
@@ -70,11 +88,14 @@ impl Debug_Frame_Scroller {
                     code: sfml::window::Key::Period,
                     ..
                 } if self.manually_selected => {
-                    if self.cur_frame < self.n_frames {
-                        self.cur_frame += 1;
-                    } else if self.cur_second < self.n_seconds {
-                        self.cur_frame = 0;
-                        self.cur_second += 1;
+                    if self.cur_second as u32 * self.n_frames as u32 + (self.cur_frame as u32) < self.latest_frame_ever {
+                        if self.cur_frame < self.n_filled_frames - 1 {
+                            self.cur_frame += 1;
+                        } else if self.cur_second < self.n_filled_seconds - 1 {
+                            self.cur_frame = 0;
+                            self.cur_second += 1;
+							self.n_filled_frames = calc_filled_frames(self);
+                        }
                     }
                 }
                 // @Incomplete: make this button configurable
@@ -85,7 +106,8 @@ impl Debug_Frame_Scroller {
                     if self.cur_frame > 0 {
                         self.cur_frame -= 1;
                     } else if self.cur_second > 0 {
-                        self.cur_frame = self.n_frames - 1;
+                        self.n_filled_frames = self.n_frames;
+                        self.cur_frame = self.n_filled_frames - 1;
                         self.cur_second -= 1;
                     }
                 }
