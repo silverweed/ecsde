@@ -95,26 +95,30 @@ pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
 }
 
 // @Cleanup: ideally we'd want to pass a &Text, not a &mut Text.
-pub fn render_text(window: &mut Window_Handle, text: &mut Text, screen_pos: Vec2f) {
-    trace!("render_text");
-    backend::render_text(window, text, screen_pos);
-}
-
-pub fn render_text_ws(
+pub fn render_text<P>(
     window: &mut Window_Handle,
-    text: &Text,
-    world_transform: &Transform2D,
-    camera: &Transform2D,
-) {
-    trace!("render_text_ws");
-    backend::render_text_ws(window, text, world_transform, camera);
-}
-
-pub fn set_text_paint_props<P>(text: &mut Text, paint_props: P)
-where
+    text: &mut Text,
+    paint_props: P,
+    screen_pos: Vec2f,
+) where
     P: Into<Paint_Properties>,
 {
-    backend::set_text_paint_props(text, paint_props.into());
+    trace!("render_text");
+    backend::render_text(window, text, &paint_props.into(), screen_pos);
+}
+
+// @Cleanup: ideally we'd want to pass a &Text, not a &mut Text.
+pub fn render_text_ws<P>(
+    window: &mut Window_Handle,
+    text: &mut Text,
+    paint_props: P,
+    world_transform: &Transform2D,
+    camera: &Transform2D,
+) where
+    P: Into<Paint_Properties>,
+{
+    trace!("render_text_ws");
+    backend::render_text_ws(window, text, &paint_props.into(), world_transform, camera);
 }
 
 pub fn get_text_local_bounds(text: &Text) -> Rectf {

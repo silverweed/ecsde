@@ -216,6 +216,25 @@ impl Debug_Frame_Scroller {
         } else {
             self.cur_second
         };
+
+        let row_r = rect::Rectf::new(self.pos.x as _, y, self.size.x as _, height);
+        let row_hovered = rect::rect_contains(&row_r, mpos.into());
+        {
+            // Draw outline
+            let paint_props = Paint_Properties {
+                color: colors::TRANSPARENT,
+                border_thick: 1.0,
+                border_color: colors::rgba(200, 200, 200, if row_hovered { 250 } else { 0 }),
+                ..Default::default()
+            };
+            render::fill_color_rect(window, paint_props, row_r);
+        }
+
+        let (filled_col, outline_col) = if row_hovered || self.manually_selected {
+            (70, 200)
+        } else {
+            (30, 60)
+        };
         if subdivs > 0 {
             let subdiv_w = self.size.x as f32 / subdivs as f32 - 1.;
             for i in 0..subdivs {
@@ -230,7 +249,7 @@ impl Debug_Frame_Scroller {
                     let c = if hovered {
                         160
                     } else if i < filled {
-                        70
+                        filled_col
                     } else {
                         20
                     };
@@ -252,7 +271,7 @@ impl Debug_Frame_Scroller {
                 let paint_props = Paint_Properties {
                     color,
                     border_thick: 1.0,
-                    border_color: colors::rgba(200, 200, 200, color.a),
+                    border_color: colors::rgba(outline_col, outline_col, outline_col, color.a),
                     ..Default::default()
                 };
                 render::fill_color_rect(window, paint_props, subdiv_rect);
@@ -260,6 +279,11 @@ impl Debug_Frame_Scroller {
 
             if show_labels {
                 let font = gres.get_font(self.cfg.font);
+                let text_col = if row_hovered || self.manually_selected {
+                    colors::WHITE
+                } else {
+                    colors::rgba(120, 120, 120, 180)
+                };
                 for i in 0..filled {
                     let x = self.pos.x as f32 + i as f32 * (1. + subdiv_w);
                     // The very_first_frame is initially 1, but it can change if the game is paused and resumed
@@ -272,22 +296,9 @@ impl Debug_Frame_Scroller {
                         font,
                         self.cfg.font_size,
                     );
-                    render::render_text(window, &mut text, Vec2f::new(x, y));
+                    render::render_text(window, &mut text, text_col, Vec2f::new(x, y));
                 }
             }
-        }
-
-        {
-            // Draw outline
-            let r = rect::Rectf::new(self.pos.x as _, y, self.size.x as _, height);
-            let hovered = rect::rect_contains(&r, mpos.into());
-            let paint_props = Paint_Properties {
-                color: colors::TRANSPARENT,
-                border_thick: 1.0,
-                border_color: colors::rgba(200, 200, 200, if hovered { 250 } else { 0 }),
-                ..Default::default()
-            };
-            render::fill_color_rect(window, paint_props, r);
         }
     }
 

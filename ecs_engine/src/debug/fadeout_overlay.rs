@@ -85,16 +85,14 @@ impl Debug_Element for Fadeout_Debug_Overlay {
 
             let d = core::time::duration_ratio(&time, &fadeout_time);
             let alpha = 255 - (d * d * 255.0f32) as u8;
-            let mut text = Text::new(text, gres.get_font(font), font_size.into());
-            // @Incomplete: our Text should accept our Color, not sfml::Color!
+            let text = Text::new(text, gres.get_font(font), font_size.into());
             let color = Color { a: alpha, ..*color };
-            text.set_fill_color(color.into());
 
             let txt_bounds = text.local_bounds();
             max_row_width = max_row_width.max(txt_bounds.width);
             max_row_height = max_row_height.max(txt_bounds.height);
 
-            texts.push((text, txt_bounds));
+            texts.push((text, color, txt_bounds));
         }
 
         let position = self.position;
@@ -114,13 +112,13 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         );
 
         // Draw lines
-        for (i, (text, bounds)) in texts.iter_mut().enumerate() {
+        for (i, (text, color, bounds)) in texts.iter_mut().enumerate() {
             let pos = Vec2f::new(
                 horiz_align.aligned_pos(pad_x, bounds.width),
                 vert_align.aligned_pos(pad_y, tot_height)
                     + (i as f32) * (max_row_height + row_spacing),
             );
-            gfx::render::render_text(window, text, position + pos);
+            gfx::render::render_text(window, text, *color, position + pos);
         }
     }
 }

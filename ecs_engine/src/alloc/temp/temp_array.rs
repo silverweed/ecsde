@@ -21,7 +21,7 @@ pub struct Temp_Array<'a, T> {
 /// Creates a growable array that allocates from the given Temp_Allocator.
 /// Cannot outlive the allocator, and its elements MUST NOT be accessed after calling
 /// allocator.dealloc_all().
-pub fn temp_array<'a, T>(allocator: &'a mut Temp_Allocator, capacity: usize) -> Temp_Array<'a, T>
+pub fn temp_array<T>(allocator: &mut Temp_Allocator, capacity: usize) -> Temp_Array<'_, T>
 where
     T: Copy + Default,
 {
@@ -54,6 +54,8 @@ where
         }
         self.n_elems
     }
+
+    pub fn is_empty(&self) -> bool { self.len() == 0 }
 
     pub fn push(&mut self, elem: T) {
         #[cfg(debug_assertions)]

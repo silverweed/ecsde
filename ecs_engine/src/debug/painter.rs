@@ -113,11 +113,8 @@ impl Debug_Painter {
         for (text, world_pos, font_size, props) in &self.texts {
             trace!("painter::draw_text");
             let mut txt = Text::new(text, gres.get_font(font), (*font_size).into());
-            txt.set_fill_color(props.color.into());
-            txt.set_outline_thickness(props.border_thick);
-            txt.set_outline_color(props.border_color.into());
             let transform = Transform2D::from_pos(*world_pos);
-            render::render_text_ws(window, &txt, &transform, camera);
+            render::render_text_ws(window, &mut txt, *props, &transform, camera);
         }
     }
 }

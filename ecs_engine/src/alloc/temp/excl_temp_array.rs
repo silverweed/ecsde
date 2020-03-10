@@ -32,17 +32,18 @@ where
                 "Exclusive_Temp_Array accessed after free!"
             );
         }
-	// @WaitForStable here we'll want to use offset_from().
-	let diff = self.parent_allocator.ptr as usize + self.parent_allocator.used - self.ptr as usize;
+        // @WaitForStable here we'll want to use offset_from().
+        let diff =
+            self.parent_allocator.ptr as usize + self.parent_allocator.used - self.ptr as usize;
         self.parent_allocator.ptr = self.ptr as *mut u8;
-	self.parent_allocator.used -= diff;
+        self.parent_allocator.used -= diff;
     }
 }
 
 /// Creates a growable array that allocates from the given Temp_Allocator.
 /// Cannot outlive the allocator, and its elements MUST NOT be accessed after calling
 /// allocator.dealloc_all().
-pub fn excl_temp_array<'a, T>(allocator: &'a mut Temp_Allocator) -> Exclusive_Temp_Array<'a, T>
+pub fn excl_temp_array<T>(allocator: &mut Temp_Allocator) -> Exclusive_Temp_Array<'_, T>
 where
     T: Copy + Default,
 {
@@ -72,6 +73,8 @@ where
         }
         self.n_elems
     }
+
+    pub fn is_empty(&self) -> bool { self.len() == 0 }
 
     pub fn push(&mut self, elem: T) {
         #[cfg(debug_assertions)]

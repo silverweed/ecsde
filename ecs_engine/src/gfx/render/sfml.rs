@@ -79,14 +79,28 @@ pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: R
         .draw_rectangle_shape(&rectangle_shape, render_states);
 }
 
-pub fn render_text(window: &mut Window_Handle, text: &mut Text, screen_pos: Vec2f) {
+fn set_text_paint_props(text: &mut Text, paint_props: &Paint_Properties) {
+    text.set_fill_color(paint_props.color.into());
+    text.set_outline_color(paint_props.border_color.into());
+    text.set_outline_thickness(paint_props.border_thick);
+}
+
+pub fn render_text(
+    window: &mut Window_Handle,
+    text: &mut Text,
+    paint_props: &Paint_Properties,
+    screen_pos: Vec2f,
+) {
     text.set_position(Vector2f::from(screen_pos));
+    set_text_paint_props(text, paint_props);
+
     window.raw_handle_mut().draw(text);
 }
 
 pub fn render_text_ws(
     window: &mut Window_Handle,
-    text: &Text,
+    text: &mut Text,
+    paint_props: &Paint_Properties,
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
@@ -98,6 +112,8 @@ pub fn render_text_ws(
         blend_mode: get_blend_mode(window),
         ..Default::default()
     };
+
+    set_text_paint_props(text, paint_props);
 
     window
         .raw_handle_mut()
@@ -323,12 +339,6 @@ fn render_vbuf_internal(
     render_states: RenderStates,
 ) {
     window.draw_vertex_array(vbuf, render_states);
-}
-
-pub fn set_text_paint_props(text: &mut Text, paint_props: Paint_Properties) {
-    text.set_fill_color(paint_props.color.into());
-    text.set_outline_color(paint_props.border_color.into());
-    text.set_outline_thickness(paint_props.border_thick);
 }
 
 pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {

@@ -74,8 +74,7 @@ impl Temp_Allocator {
 
         self.used += offset + n_bytes;
 
-        let ptr = ptr.add(offset);
-        ptr
+        ptr.add(offset)
     }
 
     /// # Safety

@@ -59,14 +59,13 @@ impl Debug_Element for Debug_Overlay {
 
         for line in self.lines.iter() {
             let Debug_Line { text, color, .. } = line;
-            let mut text = gfx::render::create_text(text, gres.get_font(font), font_size);
-            gfx::render::set_text_paint_props(&mut text, *color);
+            let text = gfx::render::create_text(text, gres.get_font(font), font_size);
 
             let txt_bounds = gfx::render::get_text_local_bounds(&text);
             max_row_width = max_row_width.max(txt_bounds.width);
             max_row_height = max_row_height.max(txt_bounds.height);
 
-            texts.push((text, txt_bounds));
+            texts.push((text, *color, txt_bounds));
         }
 
         let position = self.position;
@@ -104,13 +103,13 @@ impl Debug_Element for Debug_Overlay {
         }
 
         // Draw texts
-        for (i, (text, bounds)) in texts.iter_mut().enumerate() {
+        for (i, (text, color, bounds)) in texts.iter_mut().enumerate() {
             let pos = Vec2f::new(
                 horiz_align.aligned_pos(pad_x, bounds.width),
                 vert_align.aligned_pos(pad_y, tot_height)
                     + (i as f32) * (max_row_height + row_spacing),
             );
-            gfx::render::render_text(window, text, position + pos);
+            gfx::render::render_text(window, text, *color, position + pos);
         }
     }
 }

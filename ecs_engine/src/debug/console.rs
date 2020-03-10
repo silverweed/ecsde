@@ -442,7 +442,7 @@ impl Console {
         let font = gres.get_font(self.font);
         let mut text = render::create_text(&self.cur_line, font, self.font_size);
         let mut pos = Vec2f::from(self.pos) + Vec2f::new(pad_x, self.size.y as f32 - linesep);
-        render::render_text(window, &mut text, pos);
+        render::render_text(window, &mut text, colors::WHITE, pos);
 
         // Draw cursor
         let Rect { width: line_w, .. } = render::get_text_local_bounds(&text);
@@ -459,8 +459,7 @@ impl Console {
             let mut pos = pos - Vec2f::new(0.0, linesep as f32);
             for (line, color) in self.output.iter().rev() {
                 let mut text = render::create_text(line, font, self.font_size);
-                render::set_text_paint_props(&mut text, *color);
-                render::render_text(window, &mut text, pos);
+                render::render_text(window, &mut text, *color, pos);
                 pos.y -= linesep;
                 if pos.y < -linesep {
                     break;
@@ -473,16 +472,14 @@ impl Console {
         if let Some((cmd, _)) = self.get_hint_key_and_rest() {
             if let Some(hints) = &self.hints.get(cmd) {
                 for (i, idx) in self.hints_displayed.iter().enumerate() {
-                    let mut text =
+                    let text =
                         render::create_text(&hints[*idx], font, (self.font_size as f32 * 0.9) as _);
                     let color = if i == self.selected_hint {
                         colors::YELLOW
                     } else {
                         colors::rgba(200, 200, 200, 255)
                     };
-                    render::set_text_paint_props(&mut text, color);
-
-                    texts.push(text);
+                    texts.push((text, color));
                 }
             }
         }
@@ -497,9 +494,9 @@ impl Console {
             );
         }
 
-        for mut text in texts {
+        for (mut text, color) in texts {
             pos.y -= linesep;
-            render::render_text(window, &mut text, pos);
+            render::render_text(window, &mut text, color, pos);
         }
     }
 }

@@ -119,8 +119,11 @@ mod tests {
         assert_eq!(String_Id::from("A test string").0, fnv1a(b"A test string"));
     }
 
-	#[test]
-	fn stringid_to_str() {
-		assert_eq!(String_Id::from("Another test string").to_string(), String::from("Another test string"));
-	}
+    #[test]
+    fn stringid_to_str() {
+        assert_eq!(
+            String_Id::from("Another test string").to_string(),
+            String::from("Another test string")
+        );
+    }
 }
