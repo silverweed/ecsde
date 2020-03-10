@@ -69,7 +69,6 @@ impl Render_System {
             } = rend;
 
             let texture = resources.get_texture(*tex_id);
-            let mut sprite = gfx::render::create_sprite(texture, src_rect);
             let rend_transform = spatial.global_transform;
 
             #[cfg(debug_assertions)]
@@ -85,10 +84,13 @@ impl Render_System {
                 }
             }
 
-            gfx::render::set_sprite_modulate(&mut sprite, *modulate);
             {
-                trace!("render_system::render_sprite");
-                gfx::render::render_sprite(window, &mut sprite, &rend_transform, &camera.transform);
+                gfx::render::render_texture_ws(window, 
+                    texture, 
+                    &src_rect,
+                    *modulate,
+                    &rend_transform,
+                    &camera.transform);
             }
         }
     }

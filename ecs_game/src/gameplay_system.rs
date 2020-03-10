@@ -1,13 +1,12 @@
 #![allow(warnings)] // @Temporary
 
-use crate::load::load_system;
 use super::controllable_system::C_Controllable;
 use crate::controllable_system;
 use crate::input_utils::{get_movement_from_input, Input_Config};
+use crate::load::load_system;
 use crate::movement_system;
-use ecs_engine::cfg::{self, Cfg_Var};
 use crate::Game_Resources;
-use ecs_engine::core::app::Engine_State;
+use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider;
 use ecs_engine::common;
 use ecs_engine::common::colors;
@@ -15,6 +14,7 @@ use ecs_engine::common::rect::Rect;
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::transform::Transform2D;
 use ecs_engine::common::vector::Vec2f;
+use ecs_engine::core::app::Engine_State;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::rand;
 use ecs_engine::core::scene_tree;
@@ -115,19 +115,25 @@ impl Gameplay_System {
         Ok(())
     }
 
-    pub fn load_test_level(&mut self, engine_state: &mut Engine_State, game_res: &mut Game_Resources,
-                           rng: &mut rand::Default_Rng) {
-
+    pub fn load_test_level(
+        &mut self,
+        engine_state: &mut Engine_State,
+        game_res: &mut Game_Resources,
+        rng: &mut rand::Default_Rng,
+    ) {
         let level_id = String_Id::from("test");
-        let level = load_system::level_load_sync(level_id,
-                        engine_state, game_res, rng, self.cfg);
-                        
+        let level = load_system::level_load_sync(level_id, engine_state, game_res, rng, self.cfg);
+
         self.loaded_levels.push(Arc::new(Mutex::new(level)));
         self.active_levels.push(self.loaded_levels.len() - 1);
-        
+
         #[cfg(debug_assertions)]
         {
-            engine_state.debug_systems.new_debug_painter_for_level(level_id, &mut game_res.gfx, &engine_state.env);
+            engine_state.debug_systems.new_debug_painter_for_level(
+                level_id,
+                &mut game_res.gfx,
+                &engine_state.env,
+            );
         }
     }
 

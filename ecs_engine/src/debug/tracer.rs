@@ -1,4 +1,4 @@
-use crate::prelude::Debug_Tracer;
+use crate::prelude::{Debug_Tracer};
 use std::fmt::Debug;
 use std::time;
 
@@ -51,10 +51,23 @@ pub struct Scope_Trace {
     tracer: Debug_Tracer,
 }
 
+impl Scope_Trace {
+    pub fn new(tracer: Debug_Tracer, tag: &'static str) -> Self {
+        tracer.lock().unwrap().push_scope_trace(tag);
+        Self { tracer }
+    }
+}
+
 impl Drop for Scope_Trace {
     fn drop(&mut self) {
         self.tracer.lock().unwrap().pop_scope_trace();
     }
+}
+
+
+#[inline]
+pub fn debug_trace(tag: &'static str, tracer: Debug_Tracer) -> Option<Scope_Trace> {
+    Some(Scope_Trace::new(tracer, tag))
 }
 
 #[derive(Clone, Debug)]
@@ -120,12 +133,6 @@ impl Tracer {
     }
 }
 
-#[inline]
-pub fn debug_trace(tag: &'static str, tracer: Debug_Tracer) -> Scope_Trace {
-    tracer.lock().unwrap().push_scope_trace(tag);
-    Scope_Trace { tracer }
-}
-
 pub fn total_traced_time(traces: &[Tracer_Node]) -> time::Duration {
     traces
         .iter()
@@ -139,9 +146,6 @@ pub fn total_traced_time(traces: &[Tracer_Node]) -> time::Duration {
         .fold(time::Duration::default(), |acc, x| acc + x)
 }
 
-pub fn sort_traces_by_duration(traces: &mut Vec<Tracer_Node>) {
-    traces.sort_by(|a, b| b.info.duration().cmp(&a.info.duration()));
-}
 
 pub fn sort_trace_trees(trees: &mut [Trace_Tree]) {
     fn sort_tree_internal(tree: &mut Trace_Tree) {

@@ -14,33 +14,10 @@ mod sfml;
 use self::sfml as backend;
 
 pub type Texture<'a> = backend::Texture<'a>;
-pub type Sprite<'a> = backend::Sprite<'a>;
 pub type Text<'a> = backend::Text<'a>;
 pub type Font<'a> = backend::Font<'a>;
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
-
-pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: &Rect<i32>) -> Sprite<'a> {
-    backend::create_sprite(texture, rect)
-}
-
-pub fn render_sprite(
-    window: &mut Window_Handle,
-    sprite: &mut Sprite,
-    transform: &Transform2D,
-    camera: &Transform2D,
-) {
-    trace!("render_sprite");
-    backend::render_sprite(window, sprite, transform, camera);
-}
-
-pub fn set_sprite_modulate(sprite: &mut Sprite, modulate: Color) {
-    backend::set_sprite_modulate(sprite, modulate);
-}
-
-pub fn sprite_global_bounds(sprite: &Sprite) -> Rect<f32> {
-    backend::sprite_global_bounds(sprite)
-}
 
 /// Draws a color-filled rectangle in screen space
 pub fn fill_color_rect<R, P>(window: &mut Window_Handle, paint_props: P, rect: R)
@@ -84,6 +61,19 @@ pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: R
     trace!("render_texture");
     backend::render_texture(window, texture, rect);
 }
+
+pub fn render_texture_ws(
+    window: &mut Window_Handle,
+    texture: &Texture,
+    tex_rect: &Rect<f32>,
+    color: Color,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) {
+    trace!("render_texture_ws");
+    backend::render_sprite(window, texture, tex_rect, color, transform, camera);
+}
+
 
 pub fn get_texture_size(texture: &Texture<'_>) -> (u32, u32) {
     backend::get_texture_size(texture)

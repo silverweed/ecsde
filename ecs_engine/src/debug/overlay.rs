@@ -32,6 +32,8 @@ pub struct Debug_Overlay {
 
     pub config: Debug_Overlay_Config,
     pub position: Vec2f,
+
+    texts_buf: Vec<(gfx::render::Text, Color, Rect<f32>)>,
 }
 
 impl Debug_Element for Debug_Overlay {
@@ -53,7 +55,9 @@ impl Debug_Element for Debug_Overlay {
             ..
         } = self.config;
 
-        let mut texts = Vec::with_capacity(self.lines.len());
+        self.texts_buf.clear();
+        self.texts_buf.reserve(self.lines.len());
+
         let mut max_row_width = 0f32;
         let mut max_row_height = 0f32;
 
@@ -65,11 +69,11 @@ impl Debug_Element for Debug_Overlay {
             max_row_width = max_row_width.max(txt_bounds.width);
             max_row_height = max_row_height.max(txt_bounds.height);
 
-            texts.push((text, *color, txt_bounds));
+            self.texts_buf.push((text, *color, txt_bounds));
         }
 
         let position = self.position;
-        let n_texts_f = texts.len() as f32;
+        let n_texts_f = self.texts_buf.len() as f32;
         let tot_height = max_row_height * n_texts_f + row_spacing * (n_texts_f - 1.0);
 
         // Draw background
@@ -103,7 +107,7 @@ impl Debug_Element for Debug_Overlay {
         }
 
         // Draw texts
-        for (i, (text, color, bounds)) in texts.iter_mut().enumerate() {
+        for (i, (text, color, bounds)) in self.texts_buf.iter_mut().enumerate() {
             let pos = Vec2f::new(
                 horiz_align.aligned_pos(pad_x, bounds.width),
                 vert_align.aligned_pos(pad_y, tot_height)

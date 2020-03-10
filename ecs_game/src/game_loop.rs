@@ -235,7 +235,10 @@ pub fn tick_game<'a>(
             );
 
             let time = &game_state.engine_state.time;
-            let update_dt = time::mul_duration(&target_time_per_frame ,time.time_scale * (!time.paused as u32 as f32));
+            let update_dt = time::mul_duration(
+                &target_time_per_frame,
+                time.time_scale * (!time.paused as u32 as f32),
+            );
             game_state.gameplay_system.update(
                 &update_dt,
                 &game_state.engine_state.time,

@@ -74,7 +74,9 @@ where
         self.n_elems
     }
 
-    pub fn is_empty(&self) -> bool { self.len() == 0 }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 
     pub fn push(&mut self, elem: T) {
         #[cfg(debug_assertions)]

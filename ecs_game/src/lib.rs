@@ -10,9 +10,9 @@ extern crate float_cmp;
 mod cmdline;
 mod controllable_system;
 mod game_loop;
-mod load;
 mod gameplay_system;
 mod input_utils;
+mod load;
 mod movement_system;
 mod states;
 
@@ -285,9 +285,12 @@ fn internal_game_init<'a>(
         )?;
 
         // @Temporary
-        game_state.gameplay_system.load_test_level(&mut game_state.engine_state, &mut *game_resources,
-                                                   &mut game_state.rng);
-        
+        game_state.gameplay_system.load_test_level(
+            &mut game_state.engine_state,
+            &mut *game_resources,
+            &mut game_state.rng,
+        );
+
         init_states(
             &mut game_state.state_mgr,
             &mut game_state.engine_state,

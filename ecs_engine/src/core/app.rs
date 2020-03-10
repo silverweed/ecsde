@@ -197,7 +197,6 @@ pub fn init_engine_debug(
         mouse_overlay.config.horiz_align = Align::Begin;
         mouse_overlay.config.vert_align = Align::Begin;
 
-        debug_overlay_config.font_size = (11.0 * ui_scale) as _;
         debug_overlay_config.background = colors::rgba(20, 20, 20, 220);
         let trace_overlay = debug_ui_system
             .create_overlay(String_Id::from("trace"), debug_overlay_config)
@@ -339,8 +338,9 @@ pub fn try_create_replay_data(replay_file: &std::path::Path) -> Option<replay_da
 #[cfg(debug_assertions)]
 pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
     use crate::debug::tracer;
+    use crate::prelude;
 
-    let mut tracer = crate::prelude::DEBUG_TRACER.lock().unwrap();
+    let mut tracer = prelude::DEBUG_TRACER.lock().unwrap();
 
     let debug_log = &mut engine_state.debug_systems.log;
     let mut traces = tracer.saved_traces.split_off(0);
@@ -375,7 +375,7 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
     use crate::common::colors;
     use crate::debug::overlay::Debug_Overlay;
     use crate::debug::tracer::{self, Trace_Tree, Tracer_Node};
-
+    
     fn add_node_line(
         node: &Tracer_Node,
         total_traced_time: &Duration,
@@ -415,6 +415,7 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
         }
     };
 
+    let ui_scale = engine_state.debug_systems.debug_ui_system.cfg.ui_scale;
     let scroller = &engine_state.debug_systems.debug_ui_system.frame_scroller;
     let debug_log = &mut engine_state.debug_systems.log;
     let frame = scroller.get_real_selected_frame();
@@ -429,6 +430,10 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
     let total_traced_time = tracer::total_traced_time(traces);
     let mut trace_trees = tracer::build_trace_trees(traces);
     tracer::sort_trace_trees(&mut trace_trees);
+
+    let font_size = cfg::Cfg_Var::<i32>::new("engine/debug/trace/font_size", &engine_state.config)
+        .read(&engine_state.config);
+    overlay.config.font_size = (font_size as f32 * ui_scale) as _;
 
     overlay.add_line_color(&format!("frame {:<70}", frame), colors::rgb(144, 144, 144));
     overlay.add_line_color(

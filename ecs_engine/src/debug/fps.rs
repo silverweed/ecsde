@@ -28,8 +28,7 @@ impl Fps_Console_Printer {
         self.time_elapsed += *dt;
 
         if self.time_elapsed >= self.update_rate {
-            self.latest_calc_fps =
-                self.frames_elapsed as f32 / self.update_rate.as_secs_f32();
+            self.latest_calc_fps = self.frames_elapsed as f32 / self.update_rate.as_secs_f32();
             self.frames_elapsed = 0;
             self.time_elapsed = Duration::new(0, 0);
         }

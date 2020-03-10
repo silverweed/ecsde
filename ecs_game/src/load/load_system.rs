@@ -1,31 +1,32 @@
-use crate::gameplay_system::Level;
-use ecs_engine::common::vector::Vec2f;
-use ecs_engine::common::rect::Rect;
-use ecs_engine::core::scene_tree::Scene_Tree;
-use ecs_engine::collisions::collider::{Collider,Collider_Shape};
-use ecs_engine::common::transform::Transform2D;
-use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
-use ecs_engine::ecs::components::base::C_Spatial2D;
 use crate::controllable_system::C_Controllable;
-use ecs_engine::core::env::Env_Info;
-use ecs_engine::cfg::{self, Cfg_Var};
-use ecs_engine::core::app::Engine_State;
-use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
-use ecs_engine::common::colors;
-use ecs_engine::gfx;
-use ecs_engine::common::stringid::String_Id;
-use ecs_engine::resources::gfx::{tex_path,Gfx_Resources};
-use ecs_engine::core::rand;
 use crate::gameplay_system::Gameplay_System_Config;
+use crate::gameplay_system::Level;
 use crate::Game_Resources;
+use ecs_engine::cfg::{self, Cfg_Var};
+use ecs_engine::collisions::collider::{Collider, Collider_Shape};
+use ecs_engine::common::colors;
+use ecs_engine::common::rect::Rect;
+use ecs_engine::common::stringid::String_Id;
+use ecs_engine::common::transform::Transform2D;
+use ecs_engine::common::vector::Vec2f;
+use ecs_engine::core::app::Engine_State;
+use ecs_engine::core::env::Env_Info;
+use ecs_engine::core::rand;
+use ecs_engine::core::scene_tree::Scene_Tree;
+use ecs_engine::ecs::components::base::C_Spatial2D;
+use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
+use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
+use ecs_engine::gfx;
+use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 
-pub fn level_load_sync(level_id: String_Id, 
-                       engine_state: &mut Engine_State,
-                       game_resources: &mut Game_Resources,
-                       rng: &mut rand::Default_Rng,
-                       gs_cfg: Gameplay_System_Config
+pub fn level_load_sync(
+    level_id: String_Id,
+    engine_state: &mut Engine_State,
+    game_resources: &mut Game_Resources,
+    rng: &mut rand::Default_Rng,
+    gs_cfg: Gameplay_System_Config,
 ) -> Level {
-    let mut level = Level{
+    let mut level = Level {
         id: level_id,
         world: Ecs_World::new(),
         entities: vec![],
@@ -36,13 +37,20 @@ pub fn level_load_sync(level_id: String_Id,
 
     linfo!("Loading level {} ...", level_id);
     register_all_components(&mut level.world);
-    init_demo_entities(&mut game_resources.gfx, 
-                       &engine_state.env,
-                       rng,
-                       &engine_state.config,
-                       &mut level,
-                       gs_cfg);
-    lok!("Loaded level {}. N. entities = {}, n. cameras = {}", level_id, level.entities.len(), level.cameras.len());
+    init_demo_entities(
+        &mut game_resources.gfx,
+        &engine_state.env,
+        rng,
+        &engine_state.config,
+        &mut level,
+        gs_cfg,
+    );
+    lok!(
+        "Loaded level {}. N. entities = {}, n. cameras = {}",
+        level_id,
+        level.entities.len(),
+        level.cameras.len()
+    );
 
     level
 }
@@ -56,7 +64,6 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Controllable>();
     world.register_component::<Collider>();
 }
-
 
 // @Temporary
 fn init_demo_entities(
@@ -145,4 +152,3 @@ fn init_demo_entities(
         level.entities.push(entity);
     }
 }
-

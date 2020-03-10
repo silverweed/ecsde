@@ -30,53 +30,69 @@ pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: &Rect<i32>) -> Sprite<'
     sprite
 }
 
-pub fn render_sprite(
+pub fn render_texture_ws(
     window: &mut Window_Handle,
-    sprite: &mut Sprite,
+    texture: &Texture,
+    tex_rect: &Rect<f32>,
+    color: Color,
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
     // @Incomplete? Do we need this?
     //let origin = vector::from_framework_vec(sprite.origin());
     let render_transform = camera.get_matrix_sfml().inverse();
-    //render_transform.combine(&transform.get_matrix_sfml());
+    render_transform.combine(&transform.get_matrix_sfml());
 
-    {
-        sprite.set_position(Vector2f::from(transform.position()));
-        let angle = transform.rotation().as_deg();
-        sprite.set_rotation(angle);
-        sprite.set_scale(Vector2f::from(transform.scale()));
-    }
+    //{
+    //    sprite.set_position(Vector2f::from(transform.position()));
+    //    let angle = transform.rotation().as_deg();
+    //    sprite.set_rotation(angle);
+    //    sprite.set_scale(Vector2f::from(transform.scale()));
+    //}
+    
+    let (tex_w, tex_h) = get_texture_size(texture);
+    let uv = Rect::new(
+        tex_rect.x / tex_w,
+        tex_rect.y / tex_h,
+        tex_rect.width / tex_w,
+        tex_rect.height / tex_h);
 
     let render_states = RenderStates {
         transform: render_transform,
         blend_mode: get_blend_mode(window),
+        texture,
         ..Default::default()
     };
-    window
-        .raw_handle_mut()
-        .draw_with_renderstates(sprite, render_states);
-}
 
-pub fn sprite_global_bounds(sprite: &Sprite) -> Rect<f32> {
-    sprite.global_bounds().into()
+    let mut vbuf = start_draw_quads(1);
+    let v1 = new_vertex(Vec2f::new(-0.5, -0.5), color, Vec2f::new(uv.x, uv.y));
+    let v2 = new_vertex(Vec2f::new( 0.5, -0.5), color, Vec2f::new(uv.x + uv.width, uv.y)); 
+    let v3 = new_vertex(Vec2f::new( 0.5,  0.5), color, Vec2f::new(uv.x + uv.width, uv.y + uv.height)); 
+    let v4 = new_vertex(Vec2f::new(-0.5,  0.5), color, Vec2f::new(uv.x, uv.y + uv.height)); 
+    add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
+
+    render_vbuf_internal(window, &vbuf, render_states);
 }
 
 pub fn set_sprite_modulate(sprite: &mut Sprite, modulate: Color) {
     sprite.set_color(modulate.into());
 }
 
-pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: Rect<i32>) {
+pub fn render_texture(window: &mut Window_Handle, texture: &Texture, rect: Rect<i32>) {
     let render_states = RenderStates {
         blend_mode: get_blend_mode(window),
+        texture,
         ..Default::default()
     };
-    let mut rectangle_shape = RectangleShape::with_texture(texture);
-    rectangle_shape.set_position(Vector2f::new(rect.x as f32, rect.y as f32));
-    rectangle_shape.set_size(Vector2f::new(rect.width as f32, rect.height as f32));
-    window
-        .raw_handle_mut()
-        .draw_rectangle_shape(&rectangle_shape, render_states);
+
+    //let mut vbuf = start_draw_quads(1);
+    //let v1 = new_vertex(Vec2f::new(-0.5, -0.5), color, Vec2f::new(0., 0.)); 
+    //let v2 = new_vertex(Vec2f::new( 0.5, -0.5), color, Vec2f::new(1., 0.)); 
+    //let v3 = new_vertex(Vec2f::new( 0.5,  0.5), color, Vec2f::new(1., 1.)); 
+    //let v4 = new_vertex(Vec2f::new(-0.5,  0.5), color, Vec2f::new(0., 1.)); 
+    //add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
+
+    //render_vbuf_internal(window, &vbuf, render_states);
 }
 
 fn set_text_paint_props(text: &mut Text, paint_props: &Paint_Properties) {
