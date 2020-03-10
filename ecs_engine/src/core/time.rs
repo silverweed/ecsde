@@ -3,6 +3,7 @@ use std::time::SystemTime;
 
 type Microseconds = u64;
 
+// @Cleanup: do we still all this?
 pub struct Time {
     game_time: Microseconds,
     prev_game_time: Microseconds,
@@ -77,11 +78,11 @@ impl Time {
 
     pub fn step(&mut self, dt: &Duration) {
         self.prev_game_time = self.game_time;
-        self.game_time += (to_secs_frac(dt) * 1_000_000.0) as Microseconds;
+        self.game_time += (dt.as_secs_f32() * 1_000_000.0) as Microseconds;
     }
 
     pub fn dt_secs(&self) -> f32 {
-        to_secs_frac(&self.dt())
+        self.dt().as_secs_f32()
     }
 
     pub fn real_dt(&self) -> Duration {
@@ -101,15 +102,16 @@ impl Time {
     }
 }
 
-pub fn to_secs_frac(d: &Duration) -> f32 {
-    d.as_secs() as f32 + d.subsec_nanos() as f32 * 1e-9
-}
-
+#[inline(always)]
 pub fn to_ms_frac(d: &Duration) -> f32 {
-    to_secs_frac(d) * 1000.
+    d.as_secs_f32() * 1000.
 }
 
 // @WaitForStable: replace with div_duration() when API is stable
 pub fn duration_ratio(a: &Duration, b: &Duration) -> f32 {
-    to_secs_frac(a) / to_secs_frac(b)
+    a.as_secs_f32() / b.as_secs_f32()
+}
+
+pub fn mul_duration(d: &Duration, s: f32) -> Duration {
+    Duration::from_secs_f32(d.as_secs_f32() * s)
 }

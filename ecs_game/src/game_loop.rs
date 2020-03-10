@@ -234,8 +234,10 @@ pub fn tick_game<'a>(
                 &game_state.engine_state.config,
             );
 
+            let time = &game_state.engine_state.time;
+            let update_dt = time::mul_duration(&target_time_per_frame ,time.time_scale * (!time.paused as u32 as f32));
             game_state.gameplay_system.update(
-                &target_time_per_frame,
+                &update_dt,
                 &game_state.engine_state.time,
                 &actions,
                 axes,
@@ -574,15 +576,13 @@ fn update_joystick_debug_overlay(
 
 #[cfg(debug_assertions)]
 fn update_time_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, time: &time::Time) {
-    use ecs_engine::core::time::to_secs_frac;
-
     debug_overlay.clear();
 
     debug_overlay.add_line_color(
         &format!(
             "[time] game: {:.2}, real: {:.2}, scale: {:.2}, paused: {}",
-            to_secs_frac(&time.get_game_time()),
-            to_secs_frac(&time.get_real_time()),
+            time.get_game_time().as_secs_f32(),
+            time.get_real_time().as_secs_f32(),
             time.time_scale,
             if time.paused { "yes" } else { "no" }
         ),
@@ -895,7 +895,7 @@ fn update_graph_fps(
     const TIME_LIMIT: f32 = 60.0;
 
     let fps = fps.get_fps();
-    let now = time::to_secs_frac(&time.get_real_time());
+    let now = time.get_real_time().as_secs_f32();
     graph.data.x_range.end = now;
     if graph.data.x_range.end - graph.data.x_range.start > TIME_LIMIT {
         graph.data.x_range.start = graph.data.x_range.end - TIME_LIMIT;

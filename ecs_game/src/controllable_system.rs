@@ -1,7 +1,6 @@
 use crate::input_utils::{get_movement_from_input, Input_Config};
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::common::vector::Vec2f;
-use ecs_engine::core::time;
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::ecs_world::Ecs_World;
 use ecs_engine::ecs::entity_stream::new_entity_stream;
@@ -33,7 +32,7 @@ pub fn update(
     cfg: &cfg::Config,
 ) {
     let movement = get_movement_from_input(axes, input_cfg, cfg);
-    let dt_secs = time::to_secs_frac(&dt);
+    let dt_secs = dt.as_secs_f32();
 
     let mut entity_stream = new_entity_stream(ecs_world)
         .require::<C_Controllable>()

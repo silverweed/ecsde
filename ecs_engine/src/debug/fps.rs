@@ -1,4 +1,3 @@
-use crate::core::time;
 use std::time::Duration;
 
 pub struct Fps_Console_Printer {
@@ -30,7 +29,7 @@ impl Fps_Console_Printer {
 
         if self.time_elapsed >= self.update_rate {
             self.latest_calc_fps =
-                self.frames_elapsed as f32 / time::to_secs_frac(&self.update_rate);
+                self.frames_elapsed as f32 / self.update_rate.as_secs_f32();
             self.frames_elapsed = 0;
             self.time_elapsed = Duration::new(0, 0);
         }

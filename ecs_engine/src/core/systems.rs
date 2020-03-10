@@ -5,6 +5,8 @@ use crate::gfx::render_system;
 #[cfg(debug_assertions)]
 use {
     crate::cfg,
+    crate::resources::gfx::Gfx_Resources,
+    crate::core::env::Env_Info,
     crate::common::stringid::String_Id,
     crate::debug::{console, debug_ui_system, log, painter::Debug_Painter},
     crate::replay::recording_system,
@@ -68,5 +70,13 @@ impl Debug_Systems {
 
     pub fn global_painter(&mut self) -> &mut Debug_Painter {
         self.painters.get_mut(&String_Id::from("")).unwrap()
+    }
+
+    pub fn new_debug_painter_for_level(&mut self, lvid: String_Id, gres: &mut Gfx_Resources, env: &Env_Info) {
+        assert!(!self.painters.contains_key(&lvid), "Multiple painters added for level {}", lvid);
+
+        let mut painter = Debug_Painter::new();
+        painter.init(gres, env);
+        self.painters.insert(lvid, painter);
     }
 }

@@ -1,11 +1,10 @@
-use crate::core::time;
 use crate::ecs::components::gfx::{C_Animated_Sprite, C_Renderable};
 use crate::ecs::ecs_world::Ecs_World;
 use crate::ecs::entity_stream::Entity_Stream;
 use std::time::Duration;
 
 pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, mut entity_stream: Entity_Stream) {
-    let dt_secs = time::to_secs_frac(&dt);
+    let dt_secs = dt.as_secs_f32();
 
     loop {
         let entity = entity_stream.next(ecs_world);

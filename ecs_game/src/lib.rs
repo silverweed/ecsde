@@ -10,6 +10,7 @@ extern crate float_cmp;
 mod cmdline;
 mod controllable_system;
 mod game_loop;
+mod load;
 mod gameplay_system;
 mod input_utils;
 mod movement_system;
@@ -282,6 +283,11 @@ fn internal_game_init<'a>(
                 n_entities_to_spawn: parsed_cmdline_args.n_entities_to_spawn.unwrap_or(2),
             },
         )?;
+
+        // @Temporary
+        game_state.gameplay_system.load_test_level(&mut game_state.engine_state, &mut *game_resources,
+                                                   &mut game_state.rng);
+        
         init_states(
             &mut game_state.state_mgr,
             &mut game_state.engine_state,
@@ -547,7 +553,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         .unwrap();
     overlay.config.vert_align = Align::End;
     overlay.config.horiz_align = Align::End;
-    overlay.position = Vec2f::new(win_w as f32, win_h as f32 - 20. * ui_scale);
+    overlay.position = Vec2f::new(win_w as f32, win_h as f32 - 40. * ui_scale);
 
     // Console hints
     game_state.engine_state.debug_systems.console.add_hints(

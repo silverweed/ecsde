@@ -4,7 +4,6 @@ use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::vector::Vec2f;
 use ecs_engine::core::app::Engine_State;
-use ecs_engine::core::time;
 use ecs_engine::input::input_system::{Action_Kind, Game_Action};
 
 pub struct Debug_Base_State {
@@ -83,7 +82,7 @@ impl Persistent_Game_State for Debug_Base_State {
                     );
                     msg_overlay.add_line(&format!(
                         "Stepping of: {:.2} ms",
-                        time::to_secs_frac(&step_delta) * 1000.0
+                        step_delta.as_secs_f32() * 1000.0
                     ));
                     engine_state.time.paused = true;
                     engine_state.time.step(&step_delta);

@@ -46,7 +46,7 @@ impl Config {
             lok!(
                 "Loaded cfg dir {:?} in {} ms.",
                 dir_path,
-                crate::core::time::to_secs_frac(&diff) * 1000.0,
+                diff.as_secs_f32() * 1000.0,
             );
         }
 

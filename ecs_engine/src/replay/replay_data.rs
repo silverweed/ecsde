@@ -1,7 +1,6 @@
 // @Incomplete! We should save the rng seed somewhere, or the replay won't be deterministic.
 
 use crate::common::serialize::{Binary_Serializable, Byte_Stream};
-use crate::core::time;
 use crate::input::bindings::joystick;
 use std::default::Default;
 use std::fs::File;
@@ -193,7 +192,7 @@ impl Replay_Data {
             "Loaded replay data from {:?} in {} ms. Replay duration = {} s.",
             path,
             start_t.elapsed().as_millis(),
-            time::to_secs_frac(&replay.duration)
+            replay.duration.as_secs_f32(),
         );
 
         Ok(replay)

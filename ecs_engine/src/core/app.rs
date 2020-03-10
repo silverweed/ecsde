@@ -198,6 +198,7 @@ pub fn init_engine_debug(
         mouse_overlay.config.vert_align = Align::Begin;
 
         debug_overlay_config.font_size = (11.0 * ui_scale) as _;
+        debug_overlay_config.background = colors::rgba(20, 20, 20, 220);
         let trace_overlay = debug_ui_system
             .create_overlay(String_Id::from("trace"), debug_overlay_config)
             .unwrap();
@@ -353,7 +354,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
     if engine_state.debug_systems.show_trace_overlay {
         let t = &mut engine_state.debug_systems.trace_overlay_update_t;
         if !engine_state.time.paused {
-            *t -= time::to_secs_frac(&engine_state.time.real_dt());
+            *t -= engine_state.time.real_dt().as_secs_f32();
         }
 
         if *t <= 0. {

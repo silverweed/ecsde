@@ -1,10 +1,13 @@
 #![allow(warnings)] // @Temporary
 
+use crate::load::load_system;
 use super::controllable_system::C_Controllable;
 use crate::controllable_system;
 use crate::input_utils::{get_movement_from_input, Input_Config};
 use crate::movement_system;
 use ecs_engine::cfg::{self, Cfg_Var};
+use crate::Game_Resources;
+use ecs_engine::core::app::Engine_State;
 use ecs_engine::collisions::collider;
 use ecs_engine::common;
 use ecs_engine::common::colors;
@@ -21,7 +24,6 @@ use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderab
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::ecs::entity_stream::new_entity_stream;
 use ecs_engine::gfx;
-use ecs_engine::gfx as ngfx;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::bindings::keyboard;
 use ecs_engine::input::input_system::{Action_Kind, Game_Action};
@@ -29,10 +31,12 @@ use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+#[derive(Default, Copy, Clone)]
 pub struct Gameplay_System_Config {
     pub n_entities_to_spawn: usize,
 }
 
+// A Level is what gets loaded and unloaded
 pub struct Level {
     pub id: String_Id,
     pub world: Ecs_World,
@@ -63,6 +67,7 @@ pub struct Gameplay_System {
     pub loaded_levels: Vec<Arc<Mutex<Level>>>,
     pub active_levels: Vec<usize>, // indices inside 'loaded_levels'
     pub input_cfg: Input_Config,
+    cfg: Gameplay_System_Config,
 
     #[cfg(debug_assertions)]
     debug_data: Debug_Data,
@@ -81,6 +86,7 @@ impl Gameplay_System {
             loaded_levels: vec![],
             active_levels: vec![],
             input_cfg: Input_Config::default(),
+            cfg: Gameplay_System_Config::default(),
             #[cfg(debug_assertions)]
             debug_data: Debug_Data::default(),
         }
@@ -105,7 +111,24 @@ impl Gameplay_System {
         gs_cfg: Gameplay_System_Config,
     ) -> common::Maybe_Error {
         self.input_cfg = read_input_cfg(cfg);
+        self.cfg = gs_cfg;
         Ok(())
+    }
+
+    pub fn load_test_level(&mut self, engine_state: &mut Engine_State, game_res: &mut Game_Resources,
+                           rng: &mut rand::Default_Rng) {
+
+        let level_id = String_Id::from("test");
+        let level = load_system::level_load_sync(level_id,
+                        engine_state, game_res, rng, self.cfg);
+                        
+        self.loaded_levels.push(Arc::new(Mutex::new(level)));
+        self.active_levels.push(self.loaded_levels.len() - 1);
+        
+        #[cfg(debug_assertions)]
+        {
+            engine_state.debug_systems.new_debug_painter_for_level(level_id, &mut game_res.gfx, &engine_state.env);
+        }
     }
 
     pub fn update(
@@ -202,18 +225,6 @@ impl Gameplay_System {
         let mut axes = Virtual_Axes::default();
         std::mem::swap(&mut self.latest_frame_axes, &mut axes);
         self.update(&dt, time, &actions, &axes, cfg);
-    }
-
-    fn register_all_components(&mut self) {
-        let em = &mut self.ecs_world;
-
-        em.register_component::<C_Spatial2D>();
-        em.register_component::<Transform2D>();
-        em.register_component::<C_Camera2D>();
-        em.register_component::<C_Renderable>();
-        em.register_component::<C_Animated_Sprite>();
-        em.register_component::<C_Controllable>();
-        em.register_component::<collider::Collider>();
     }
 
     fn update_camera(
