@@ -1,3 +1,5 @@
+// @Incomplete! We should save the rng seed somewhere, or the replay won't be deterministic.
+
 use crate::common::serialize::{Binary_Serializable, Byte_Stream};
 use crate::core::time;
 use crate::input::bindings::joystick;

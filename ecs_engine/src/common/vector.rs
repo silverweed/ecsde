@@ -1,6 +1,7 @@
 use super::math;
 use std::fmt::Debug;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::hash::{Hasher, Hash};
 
 pub struct Vector2<T> {
     pub x: T,
@@ -10,6 +11,13 @@ pub struct Vector2<T> {
 pub type Vec2u = Vector2<u32>;
 pub type Vec2f = Vector2<f32>;
 pub type Vec2i = Vector2<i32>;
+
+impl<T: Hash> Hash for Vector2<T> {
+    fn hash<H>(&self, state: &mut H) where H:Hasher {
+        self.x.hash(state);
+        self.y.hash(state);
+    }
+}
 
 #[cfg(feature = "use-sfml")]
 impl From<Vec2f> for sfml::system::Vector2f {
