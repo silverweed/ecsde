@@ -6,8 +6,7 @@ use crate::common::vector::Vec2f;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::window::{get_blend_mode, Window_Handle};
 use sfml::graphics::{
-    Shape, CircleShape, PrimitiveType, RectangleShape, RenderStates, RenderTarget,
-    Transformable,
+    CircleShape, PrimitiveType, RectangleShape, RenderStates, RenderTarget, Shape, Transformable,
 };
 use sfml::system::Vector2f;
 
@@ -38,7 +37,7 @@ pub fn render_texture_ws(
     camera: &Transform2D,
 ) {
     // @Incomplete: add support for sprite pivot different from 0.5, 0.5
-    
+
     let mut render_transform = camera.get_matrix_sfml().inverse();
     render_transform.combine(&transform.get_matrix_sfml());
 
@@ -50,10 +49,13 @@ pub fn render_texture_ws(
     };
 
     let uv: Rect<f32> = (*tex_rect).into();
-    let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _); 
+    let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
     let mut vbuf = start_draw_quads(1);
     let v1 = new_vertex(
-        tex_size * Vec2f::new(-0.5, -0.5), color, Vec2f::new(uv.x, uv.y));
+        tex_size * Vec2f::new(-0.5, -0.5),
+        color,
+        Vec2f::new(uv.x, uv.y),
+    );
     let v2 = new_vertex(
         tex_size * Vec2f::new(0.5, -0.5),
         color,

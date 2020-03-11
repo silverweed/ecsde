@@ -1,5 +1,5 @@
 use super::temp_alloc::Temp_Allocator;
-use std::ops::{Index, IndexMut};
+use std::ops::{Deref, DerefMut, Index, IndexMut};
 
 #[cfg(debug_assertions)]
 use super::temp_alloc::Gen_Type;
@@ -8,10 +8,7 @@ use super::temp_alloc::Gen_Type;
 /// This means that:
 /// a) it can grow indefinitely (up to the allocator's capacity)
 /// b) it gives back the allocated memory on drop
-pub struct Exclusive_Temp_Array<'a, T>
-where
-    T: Copy,
-{
+pub struct Exclusive_Temp_Array<'a, T> {
     ptr: *mut T,
     n_elems: usize,
     parent_allocator: &'a mut Temp_Allocator,
@@ -20,10 +17,7 @@ where
     gen: Gen_Type,
 }
 
-impl<T> Drop for Exclusive_Temp_Array<'_, T>
-where
-    T: Copy,
-{
+impl<T> Drop for Exclusive_Temp_Array<'_, T> {
     fn drop(&mut self) {
         #[cfg(debug_assertions)]
         {
@@ -32,6 +26,15 @@ where
                 "Exclusive_Temp_Array accessed after free!"
             );
         }
+
+        if std::mem::needs_drop::<T>() {
+            for i in 0..self.n_elems {
+                unsafe {
+                    self.ptr.add(i).drop_in_place();
+                }
+            }
+        }
+
         // @WaitForStable here we'll want to use offset_from().
         let diff =
             self.parent_allocator.ptr as usize + self.parent_allocator.used - self.ptr as usize;
@@ -43,10 +46,7 @@ where
 /// Creates a growable array that allocates from the given Temp_Allocator.
 /// Cannot outlive the allocator, and its elements MUST NOT be accessed after calling
 /// allocator.dealloc_all().
-pub fn excl_temp_array<T>(allocator: &mut Temp_Allocator) -> Exclusive_Temp_Array<'_, T>
-where
-    T: Copy + Default,
-{
+pub fn excl_temp_array<T>(allocator: &mut Temp_Allocator) -> Exclusive_Temp_Array<'_, T> {
     let offset = allocator.ptr.align_offset(std::mem::align_of::<T>());
     #[cfg(debug_assertions)]
     let gen = allocator.gen;
@@ -59,10 +59,15 @@ where
     }
 }
 
-impl<T> Exclusive_Temp_Array<'_, T>
-where
-    T: Copy,
-{
+impl<T> Exclusive_Temp_Array<'_, T> {
+    pub fn as_slice(&self) -> &'_ [T] {
+        unsafe { std::slice::from_raw_parts(self.ptr, self.n_elems) }
+    }
+
+    pub fn as_slice_mut(&mut self) -> &'_ mut [T] {
+        unsafe { std::slice::from_raw_parts_mut(self.ptr, self.n_elems) }
+    }
+
     pub fn len(&self) -> usize {
         #[cfg(debug_assertions)]
         {
@@ -101,7 +106,7 @@ where
         if self.n_elems > 0 {
             let elem = unsafe {
                 let ptr = self.ptr.add(self.n_elems);
-                *ptr
+                ptr.read()
             };
             self.n_elems -= 1;
             Some(elem)
@@ -109,13 +114,9 @@ where
             None
         }
     }
-
-    pub fn iter(&self) -> Exclusive_Temp_Array_Iterator<'_, T> {
-        Exclusive_Temp_Array_Iterator { array: self, i: 0 }
-    }
 }
 
-impl<T: Copy> Index<usize> for Exclusive_Temp_Array<'_, T> {
+impl<T> Index<usize> for Exclusive_Temp_Array<'_, T> {
     type Output = T;
 
     fn index(&self, idx: usize) -> &Self::Output {
@@ -131,7 +132,7 @@ impl<T: Copy> Index<usize> for Exclusive_Temp_Array<'_, T> {
     }
 }
 
-impl<T: Copy> IndexMut<usize> for Exclusive_Temp_Array<'_, T> {
+impl<T> IndexMut<usize> for Exclusive_Temp_Array<'_, T> {
     fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
         assert!(idx < self.n_elems);
         #[cfg(debug_assertions)]
@@ -145,40 +146,17 @@ impl<T: Copy> IndexMut<usize> for Exclusive_Temp_Array<'_, T> {
     }
 }
 
-pub struct Exclusive_Temp_Array_Iterator<'a, T>
-where
-    T: Copy,
-{
-    array: &'a Exclusive_Temp_Array<'a, T>,
-    i: usize,
-}
+impl<T> Deref for Exclusive_Temp_Array<'_, T> {
+    type Target = [T];
 
-impl<'a, T> Iterator for Exclusive_Temp_Array_Iterator<'a, T>
-where
-    T: Copy,
-{
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.i < self.array.n_elems {
-            let item = &self.array[self.i];
-            self.i += 1;
-            Some(item)
-        } else {
-            None
-        }
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
     }
 }
 
-impl<'a, T> IntoIterator for &'a Exclusive_Temp_Array<'a, T>
-where
-    T: Copy,
-{
-    type Item = &'a T;
-    type IntoIter = Exclusive_Temp_Array_Iterator<'a, T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
+impl<T> DerefMut for Exclusive_Temp_Array<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_slice_mut()
     }
 }
 

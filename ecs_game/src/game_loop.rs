@@ -389,6 +389,7 @@ fn update_graphics(
                     &mut game_state.window,
                     gres,
                     &game_state.engine_state.debug_systems.log,
+                    &mut game_state.engine_state.frame_alloc,
                 );
         }
 

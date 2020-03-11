@@ -5,8 +5,8 @@ use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::core::env::Env_Info;
 use crate::gfx::paint_props::Paint_Properties;
-use crate::gfx::render::Vertex_Buffer;
 use crate::gfx::render;
+use crate::gfx::render::Vertex_Buffer;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx;
 

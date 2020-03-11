@@ -1,4 +1,5 @@
 use super::element::Debug_Element;
+use crate::alloc::temp;
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
 use crate::common::vector::Vec2f;
@@ -56,7 +57,12 @@ impl Debug_Element for Fadeout_Debug_Overlay {
     }
 
     // @Refactor: this is mostly @Cutnpaste from overlay.rs
-    fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
+    fn draw(
+        &self,
+        window: &mut Window_Handle,
+        gres: &mut Gfx_Resources,
+        frame_alloc: &mut temp::Temp_Allocator,
+    ) {
         trace!("fadeout_overlay::draw");
 
         if self.fadeout_texts.is_empty() {
@@ -75,7 +81,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
             ..
         } = self.config;
 
-        let mut texts = vec![];
+        let mut texts = temp::excl_temp_array(frame_alloc);
         let mut max_row_height = 0f32;
         let mut max_row_width = 0f32;
 

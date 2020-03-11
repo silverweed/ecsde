@@ -1,4 +1,5 @@
 use super::element::Debug_Element;
+use crate::alloc::temp;
 use crate::common::colors;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
@@ -48,7 +49,12 @@ pub struct Debug_Graph {
 }
 
 impl Debug_Element for Debug_Graph_View {
-    fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
+    fn draw(
+        &self,
+        window: &mut Window_Handle,
+        gres: &mut Gfx_Resources,
+        _frame_alloc: &mut temp::Temp_Allocator,
+    ) {
         trace!("graph::draw");
 
         // Draw background

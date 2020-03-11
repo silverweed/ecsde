@@ -375,7 +375,7 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
     use crate::common::colors;
     use crate::debug::overlay::Debug_Overlay;
     use crate::debug::tracer::{self, Trace_Tree, Tracer_Node};
-    
+
     fn add_node_line(
         node: &Tracer_Node,
         total_traced_time: &Duration,
@@ -440,10 +440,20 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
         .read(&engine_state.config);
     overlay.config.font_size = (font_size as f32 * ui_scale) as _;
 
-    let prune_duration_ms = cfg::Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config).read(&engine_state.config);
+    let prune_duration_ms =
+        cfg::Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config)
+            .read(&engine_state.config);
     let prune_duration = Duration::from_secs_f32(prune_duration_ms * 0.001);
 
-    overlay.add_line_color(&format!("frame {:<70}", frame), colors::rgb(144, 144, 144));
+    overlay.add_line_color(
+        &format!(
+            "frame {:<30} temp_mem_max_usage {} / {}",
+            frame,
+            format_bytes_pretty(engine_state.frame_alloc.high_water_mark),
+            format_bytes_pretty(engine_state.frame_alloc.cap)
+        ),
+        colors::rgb(144, 144, 144),
+    );
     overlay.add_line_color(
         &format!(
             "{:<39}: {:<15}: {:7}: {:>7}",

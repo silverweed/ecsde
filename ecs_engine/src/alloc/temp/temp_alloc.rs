@@ -14,6 +14,10 @@ pub struct Temp_Allocator {
 
     #[cfg(debug_assertions)]
     pub gen: Gen_Type,
+
+    // Highest usage ever
+    #[cfg(debug_assertions)]
+    pub high_water_mark: usize,
 }
 
 impl Drop for Temp_Allocator {
@@ -35,15 +39,14 @@ impl Temp_Allocator {
             ptr,
             #[cfg(debug_assertions)]
             gen: 0,
+            high_water_mark: 0,
         }
     }
 
     /// # Safety
     /// The caller must ensure that the returned reference is not accessed after `dealloc_all` is called.
-    pub unsafe fn alloc<T>(&mut self, value: T) -> Temp_Ref<T>
-    where
-        T: Copy,
-    {
+    // @Audit: can T be not Copy? Is this UB?
+    pub unsafe fn alloc<T>(&mut self, value: T) -> Temp_Ref<T> {
         let size = size_of::<T>();
         let align = align_of::<T>();
 
@@ -73,6 +76,10 @@ impl Temp_Allocator {
         assert!(self.used + offset <= self.cap - n_bytes, "Out of memory!");
 
         self.used += offset + n_bytes;
+        #[cfg(debug_assertions)]
+        {
+            self.high_water_mark = self.high_water_mark.max(self.used);
+        }
 
         ptr.add(offset)
     }
@@ -81,7 +88,7 @@ impl Temp_Allocator {
     /// See `alloc`
     pub unsafe fn alloc_default<T>(&mut self) -> Temp_Ref<T>
     where
-        T: Default + Copy,
+        T: Default,
     {
         self.alloc(T::default())
     }

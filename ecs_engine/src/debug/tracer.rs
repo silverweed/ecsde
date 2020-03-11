@@ -1,4 +1,4 @@
-use crate::prelude::{Debug_Tracer};
+use crate::prelude::Debug_Tracer;
 use std::fmt::Debug;
 use std::time;
 
@@ -63,7 +63,6 @@ impl Drop for Scope_Trace {
         self.tracer.lock().unwrap().pop_scope_trace();
     }
 }
-
 
 #[inline]
 pub fn debug_trace(tag: &'static str, tracer: Debug_Tracer) -> Option<Scope_Trace> {
@@ -146,7 +145,6 @@ pub fn total_traced_time(traces: &[Tracer_Node]) -> time::Duration {
         .fold(time::Duration::default(), |acc, x| acc + x)
 }
 
-
 pub fn sort_trace_trees(trees: &mut [Trace_Tree]) {
     fn sort_tree_internal(tree: &mut Trace_Tree) {
         tree.children
@@ -169,13 +167,37 @@ pub fn collate_traces(saved_traces: &mut Vec<Tracer_Node>) {
     use std::collections::hash_map::Entry;
     use std::collections::HashMap;
 
-    // Map { tag => (index_into_saved_traces, tot_n_calls, tot_duration) }
-    let mut tag_map: HashMap<&'static str, (usize, usize, time::Duration)> = HashMap::new();
+    // Map { (hash, parent_tag) => (index_into_saved_traces, tot_n_calls, tot_duration) }
+    // where `hash` is computed from the entire call stack (we can't just use the tag,
+    // or the trace will only show the call under the first caller).
+    let mut tag_map: HashMap<u32, (usize, usize, time::Duration)> = HashMap::new();
+
+    fn hash_node(nodes: &[Tracer_Node], node: &Tracer_Node) -> u32 {
+        use crate::common::stringid::{FNV1A_START32, FNV1A_PRIME32};
+
+        let mut result = FNV1A_START32;
+        let mut node = node;
+        loop {
+            let tag = node.info.tag;
+            for b in tag.bytes() {
+                result ^= u32::from(b);
+                result = result.wrapping_mul(FNV1A_PRIME32);
+            }
+            if let Some(parent_idx) = node.parent_idx {
+                node = &nodes[parent_idx];
+            } else {
+                break;
+            }
+        }
+        result
+    }
 
     // Accumulate n_calls of all nodes with the same tag in the first one found,
     // and leave all others with n_calls = 0.
+    // @Speed: this could use the frame_allocator.
+    let hashes = saved_traces.iter().map(|node| hash_node(saved_traces, node)).collect::<Vec<_>>();
     for (i, node) in saved_traces.iter_mut().enumerate() {
-        match tag_map.entry(&node.info.tag) {
+        match tag_map.entry(hashes[i]) {
             Entry::Vacant(v) => {
                 v.insert((i, 1, node.info.duration()));
             }
@@ -194,6 +216,7 @@ pub fn collate_traces(saved_traces: &mut Vec<Tracer_Node>) {
 }
 
 /// Construct a forest of Trace_Trees from the saved_traces array.
+// @Audit @Soundness: verify this function is actually working, after the collate_traces change.
 pub fn build_trace_trees(traces: &[Tracer_Node]) -> Vec<Trace_Tree<'_>> {
     let mut forest = vec![];
 

@@ -86,14 +86,14 @@ impl std::fmt::Debug for String_Id {
     }
 }
 
-const FNV_PRIME32: u32 = 16_777_619;
+pub const FNV1A_PRIME32: u32 = 16_777_619;
+pub const FNV1A_START32: u32 = 2_166_136_261;
 
-#[inline]
 fn fnv1a(bytes: &[u8]) -> u32 {
-    let mut result = 2_166_136_261;
+    let mut result = FNV1A_START32;
     for &b in bytes {
         result ^= u32::from(b);
-        result = result.wrapping_mul(FNV_PRIME32);
+        result = result.wrapping_mul(FNV1A_PRIME32);
     }
     result
 }

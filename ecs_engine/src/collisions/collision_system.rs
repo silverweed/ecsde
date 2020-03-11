@@ -160,6 +160,9 @@ impl Collision_System {
                                 let spatial = map_spatial.get_component(entity).unwrap();
                                 let transform = &spatial.global_transform;
                                 let velocity = spatial.velocity;
+                                if velocity.magnitude2() <= 0.0001 {
+                                    continue;
+                                }
 
                                 neighbours.clear();
                                 quadtree.get_neighbours(collider, transform, &mut neighbours);

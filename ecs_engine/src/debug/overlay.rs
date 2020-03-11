@@ -1,4 +1,5 @@
 use super::element::Debug_Element;
+use crate::alloc::temp;
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
 use crate::common::vector::Vec2f;
@@ -32,11 +33,15 @@ pub struct Debug_Overlay {
 
     pub config: Debug_Overlay_Config,
     pub position: Vec2f,
-    //texts_buf: Vec<(gfx::render::Text, Color, Rect<f32>)>,
 }
 
 impl Debug_Element for Debug_Overlay {
-    fn draw(&self, window: &mut Window_Handle, gres: &mut Gfx_Resources) {
+    fn draw(
+        &self,
+        window: &mut Window_Handle,
+        gres: &mut Gfx_Resources,
+        frame_alloc: &mut temp::Temp_Allocator,
+    ) {
         trace!("overlay::draw");
 
         if self.lines.is_empty() {
@@ -54,10 +59,7 @@ impl Debug_Element for Debug_Overlay {
             ..
         } = self.config;
 
-        let mut texts_buf = vec![];
-        //self.texts_buf.clear();
-        texts_buf.reserve(self.lines.len());
-
+        let mut texts = temp::excl_temp_array(frame_alloc);
         let mut max_row_width = 0f32;
         let mut max_row_height = 0f32;
 
@@ -69,11 +71,11 @@ impl Debug_Element for Debug_Overlay {
             max_row_width = max_row_width.max(txt_bounds.width);
             max_row_height = max_row_height.max(txt_bounds.height);
 
-            texts_buf.push((text, *color, txt_bounds));
+            texts.push((text, *color, txt_bounds));
         }
 
         let position = self.position;
-        let n_texts_f = texts_buf.len() as f32;
+        let n_texts_f = texts.len() as f32;
         let tot_height = max_row_height * n_texts_f + row_spacing * (n_texts_f - 1.0);
 
         // Draw background
@@ -107,7 +109,7 @@ impl Debug_Element for Debug_Overlay {
         }
 
         // Draw texts
-        for (i, (text, color, bounds)) in texts_buf.iter_mut().enumerate() {
+        for (i, (text, color, bounds)) in texts.iter_mut().enumerate() {
             let pos = Vec2f::new(
                 horiz_align.aligned_pos(pad_x, bounds.width),
                 vert_align.aligned_pos(pad_y, tot_height)

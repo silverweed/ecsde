@@ -4,6 +4,7 @@ use super::frame_scroller::Debug_Frame_Scroller;
 use super::graph;
 use super::log::Debug_Log;
 use super::overlay;
+use crate::alloc::temp;
 use crate::common::stringid::String_Id;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::Gfx_Resources;
@@ -181,20 +182,21 @@ impl Debug_Ui_System {
         window: &mut Window_Handle,
         gres: &mut Gfx_Resources,
         log: &Debug_Log,
+        frame_alloc: &mut temp::Temp_Allocator,
     ) {
         for elem in &mut self.graphs.actives {
             elem.update(dt);
-            elem.draw(window, gres);
+            elem.draw(window, gres, frame_alloc);
         }
 
         for elem in &mut self.overlays.actives {
             elem.update(dt);
-            elem.draw(window, gres);
+            elem.draw(window, gres, frame_alloc);
         }
 
         for elem in &mut self.fadeout_overlays.actives {
             elem.update(dt);
-            elem.draw(window, gres);
+            elem.draw(window, gres, frame_alloc);
         }
 
         self.frame_scroller.update(window, log);

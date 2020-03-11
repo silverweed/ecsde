@@ -198,6 +198,8 @@ impl Quad_Tree {
 fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8 {
     use crate::common::vector::Vec2f;
 
+    trace!("quadtree::get_index");
+
     let horiz_mid = bounds.x + bounds.width * 0.5;
     let vert_mid = bounds.y + bounds.height * 0.5;
     let Vec2f { x: obj_x, y: obj_y } = transform.position() + collider.offset;

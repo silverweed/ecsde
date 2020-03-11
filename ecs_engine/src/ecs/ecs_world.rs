@@ -54,6 +54,7 @@ impl<'a, T> Components_Map_Safe<'a, T> {
     where
         'a: 'b,
     {
+        trace!("comp_map_safe::get_component");
         self.comp_storage
             .get_component(entity)
             .map(|comp| unsafe { &*(comp as *const T) })
@@ -80,6 +81,7 @@ impl<T> Components_Map_Unsafe<T> {
     /// The suggested usage of a Components_Map_Unsafe is to limit its existence to a single function.
     // @Audit: it looks like this method returns an unbounded reference: do we need to add some bound here?
     pub unsafe fn get_component(&self, entity: Entity) -> Option<&T> {
+        trace!("comp_map_unsafe::get_component");
         (*self.comp_storage)
             .get_component(entity)
             .map(|comp| &*(comp as *const T))
@@ -91,6 +93,7 @@ impl<T> Components_Map_Unsafe<T> {
     /// The suggested usage of a Components_Map_Unsafe is to limit its existence to a single function.
     // @Audit: it looks like this method returns an unbounded reference: do we need to add some bound here?
     pub unsafe fn get_component_mut(&mut self, entity: Entity) -> Option<&mut T> {
+        trace!("comp_map_unsafe::get_component_mut");
         (*self.comp_storage)
             .get_component_mut(entity)
             .map(|comp| &mut *(comp as *mut T))
@@ -327,6 +330,8 @@ impl Ecs_World {
     }
 
     pub fn get_component<T: 'static + Copy>(&self, entity: Entity) -> Option<&T> {
+        trace!("get_component");
+
         if !self.entity_manager.is_valid_entity(entity) {
             fatal!(
                 "get_component::<{}?>: invalid entity {:?}",
@@ -348,6 +353,8 @@ impl Ecs_World {
     }
 
     pub fn get_component_mut<T: 'static + Copy>(&mut self, entity: Entity) -> Option<&mut T> {
+        trace!("get_component_mut");
+
         if !self.entity_manager.is_valid_entity(entity) {
             fatal!(
                 "get_component_mut::<{}?>: invalid entity {:?}",
@@ -369,6 +376,8 @@ impl Ecs_World {
     }
 
     pub fn remove_component<T: 'static + Copy>(&mut self, entity: Entity) {
+        trace!("remove_component");
+
         if !self.entity_manager.is_valid_entity(entity) {
             fatal!(
                 "remove_component::<{}?>: invalid entity {:?}",
@@ -385,6 +394,8 @@ impl Ecs_World {
     }
 
     pub fn has_component<T: 'static + Copy>(&self, entity: Entity) -> bool {
+        trace!("has_component");
+
         if !self.entity_manager.is_valid_entity(entity) {
             fatal!(
                 "has_component::<{}?>: invalid entity {:?}",
@@ -401,6 +412,8 @@ impl Ecs_World {
     }
 
     pub fn get_components<T: 'static + Copy>(&self) -> &[T] {
+        trace!("get_components");
+
         // @Cleanup: this should be able to be const, but a pesky compiler error
         // prevents it. Investigate on this later.
         let comp_size = std::mem::size_of::<T>();
@@ -418,6 +431,8 @@ impl Ecs_World {
     }
 
     pub fn get_components_mut<T: 'static + Copy>(&mut self) -> &mut [T] {
+        trace!("get_components_mut");
+
         let comp_size = std::mem::size_of::<T>();
         if comp_size == 0 {
             return &mut [];

@@ -1,7 +1,7 @@
 use super::temp_alloc::Temp_Allocator;
 use std::marker::PhantomData;
 use std::mem::{align_of, size_of};
-use std::ops::{Index, IndexMut};
+use std::ops::{Deref, DerefMut, Index, IndexMut};
 
 #[cfg(debug_assertions)]
 use super::temp_alloc::Gen_Type;
@@ -21,10 +21,7 @@ pub struct Temp_Array<'a, T> {
 /// Creates a growable array that allocates from the given Temp_Allocator.
 /// Cannot outlive the allocator, and its elements MUST NOT be accessed after calling
 /// allocator.dealloc_all().
-pub fn temp_array<T>(allocator: &mut Temp_Allocator, capacity: usize) -> Temp_Array<'_, T>
-where
-    T: Copy + Default,
-{
+pub fn temp_array<T>(allocator: &mut Temp_Allocator, capacity: usize) -> Temp_Array<'_, T> {
     let ptr = unsafe { allocator.alloc_bytes_aligned(capacity * size_of::<T>(), align_of::<T>()) }
         as *mut T;
 
@@ -40,10 +37,7 @@ where
     }
 }
 
-impl<T> Temp_Array<'_, T>
-where
-    T: Copy,
-{
+impl<T> Temp_Array<'_, T> {
     pub fn len(&self) -> usize {
         #[cfg(debug_assertions)]
         {
@@ -93,7 +87,7 @@ where
         if self.n_elems > 0 {
             let elem = unsafe {
                 let ptr = self.ptr.add(self.n_elems);
-                *ptr
+                ptr.read()
             };
             self.n_elems -= 1;
             Some(elem)
@@ -102,8 +96,12 @@ where
         }
     }
 
-    pub fn iter(&self) -> Temp_Array_Iterator<'_, T> {
-        Temp_Array_Iterator { array: self, i: 0 }
+    pub fn as_slice(&self) -> &[T] {
+        unsafe { std::slice::from_raw_parts(self.ptr, self.n_elems) }
+    }
+
+    pub fn as_slice_mut(&self) -> &mut [T] {
+        unsafe { std::slice::from_raw_parts_mut(self.ptr, self.n_elems) }
     }
 }
 
@@ -137,40 +135,17 @@ impl<T> IndexMut<usize> for Temp_Array<'_, T> {
     }
 }
 
-pub struct Temp_Array_Iterator<'a, T>
-where
-    T: Copy,
-{
-    array: &'a Temp_Array<'a, T>,
-    i: usize,
-}
+impl<T> Deref for Temp_Array<'_, T> {
+    type Target = [T];
 
-impl<'a, T> Iterator for Temp_Array_Iterator<'a, T>
-where
-    T: Copy,
-{
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.i < self.array.n_elems {
-            let item = &self.array[self.i];
-            self.i += 1;
-            Some(item)
-        } else {
-            None
-        }
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
     }
 }
 
-impl<'a, T> IntoIterator for &'a Temp_Array<'a, T>
-where
-    T: Copy,
-{
-    type Item = &'a T;
-    type IntoIter = Temp_Array_Iterator<'a, T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
+impl<T> DerefMut for Temp_Array<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_slice_mut()
     }
 }
 
