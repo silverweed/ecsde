@@ -271,8 +271,6 @@ pub fn tick_game<'a>(
 
     update_graphics(game_state, &mut game_resources.gfx, real_dt)?;
 
-    let t_elapsed_for_work = t_before_work.elapsed();
-
     #[cfg(debug_assertions)]
     {
         game_state.engine_state.config.update();
@@ -281,20 +279,21 @@ pub fn tick_game<'a>(
 
     {
         trace!("wait_end_frame");
+
+        let mut t_elapsed_for_work = t_before_work.elapsed();
         if t_elapsed_for_work < target_time_per_frame {
-            let mut t_elapsed = t_elapsed_for_work;
-            while t_elapsed < target_time_per_frame {
+            while t_elapsed_for_work < target_time_per_frame {
                 if let Some(granularity) = game_state.sleep_granularity {
-                    if granularity < target_time_per_frame - t_elapsed {
+                    if granularity < target_time_per_frame - t_elapsed_for_work {
                         let gra_ns = granularity.as_nanos();
-                        let rem_ns = (target_time_per_frame - t_elapsed).as_nanos();
+                        let rem_ns = (target_time_per_frame - t_elapsed_for_work).as_nanos();
                         let time_to_sleep =
                             Duration::from_nanos((rem_ns / gra_ns).try_into().unwrap());
                         sleep::sleep(time_to_sleep);
                     }
                 }
 
-                t_elapsed = t_before_work.elapsed();
+                t_elapsed_for_work = t_before_work.elapsed();
             }
         } else {
             lerr!(
@@ -305,6 +304,19 @@ pub fn tick_game<'a>(
             );
         }
     }
+
+    {
+        trace!("display");
+        gfx::window::display(&mut game_state.window);
+    }
+
+    println!(
+        "drift = {} ms, real_dt = {}",
+        (game_state.engine_state.time.get_game_time().as_secs_f32()
+            - target_time_per_frame.as_secs_f32() * game_state.engine_state.cur_frame as f32)
+            * 1000.,
+        real_dt.as_secs_f32() * 1000.0
+    );
 
     Ok(())
 }
@@ -403,11 +415,6 @@ fn update_graphics(
                 .console
                 .draw(&mut game_state.window, gres);
         }
-    }
-
-    {
-        trace!("display");
-        gfx::window::display(&mut game_state.window);
     }
 
     Ok(())
