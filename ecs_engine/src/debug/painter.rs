@@ -6,6 +6,7 @@ use crate::common::vector::Vec2f;
 use crate::core::env::Env_Info;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
+use crate::gfx::render::batcher::Batches;
 use crate::gfx::render::Vertex_Buffer;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx;
@@ -85,6 +86,7 @@ impl Debug_Painter {
         &self,
         window: &mut Window_Handle,
         gres: &mut gfx::Gfx_Resources,
+        batches: &mut Batches,
         camera: &Transform2D,
     ) {
         trace!("painter::draw");
@@ -92,7 +94,7 @@ impl Debug_Painter {
         for (size, transform, props) in &self.rects {
             let rect = Rect::new(0., 0., size.x, size.y);
             trace!("painter::fill_rect");
-            render::fill_color_rect_ws(window, *props, rect, transform, camera);
+            render::fill_color_rect_ws(window, batches, *props, rect, transform, camera);
         }
 
         for (circle, props) in &self.circles {

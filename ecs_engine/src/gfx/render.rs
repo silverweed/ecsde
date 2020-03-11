@@ -5,7 +5,10 @@ use crate::common::shapes::Circle;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::gfx::window::Window_Handle;
+use crate::resources::gfx::Texture_Handle;
 use std::convert::Into;
+
+pub mod batcher;
 
 #[cfg(feature = "use-sfml")]
 mod sfml;
@@ -32,6 +35,7 @@ where
 /// Draws a color-filled rectangle in world space
 pub fn fill_color_rect_ws<R, P>(
     window: &mut Window_Handle,
+    batches: &mut batcher::Batches,
     paint_props: P,
     rect: R,
     transform: &Transform2D,
@@ -59,14 +63,16 @@ pub fn fill_color_circle_ws<P>(
 
 pub fn render_texture_ws(
     window: &mut Window_Handle,
-    texture: &Texture,
+    batches: &mut batcher::Batches,
+    texture: Texture_Handle,
     tex_rect: &Rect<i32>,
     color: Color,
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
     trace!("render_texture_ws");
-    backend::render_texture_ws(window, texture, tex_rect, color, transform, camera);
+    //backend::render_texture_ws(window, texture, tex_rect, color, transform, camera);
+    batcher::add_texture_ws(batches, texture, tex_rect, color, transform);
 }
 
 pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
@@ -148,6 +154,15 @@ pub fn render_vbuf_ws(
 ) {
     trace!("render_vbuf_ws");
     backend::render_vbuf_ws(window, vbuf, transform, camera);
+}
+
+pub fn render_vbuf_texture(
+    window: &mut Window_Handle,
+    vbuf: &Vertex_Buffer,
+    texture: &Texture
+) {
+    trace!("render_vbuf_texture");
+    backend::render_vbuf_texture(window, vbuf, texture);
 }
 
 pub fn start_draw_linestrip(n_vertices: usize) -> Vertex_Buffer {

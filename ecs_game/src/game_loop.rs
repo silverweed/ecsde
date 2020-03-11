@@ -364,17 +364,18 @@ fn update_graphics(
         // Draw debug painter (one per active level)
         let painters = &mut game_state.engine_state.debug_systems.painters;
         let window = &mut game_state.window;
+        let batches = &mut game_state.engine_state.systems.render_system.batches;
         game_state.gameplay_system.foreach_active_level(|level| {
             let painter = painters
                 .get_mut(&level.id)
                 .unwrap_or_else(|| panic!("Debug painter not found for level {:?}", level.id));
-            painter.draw(window, gres, &level.get_camera().transform);
+            painter.draw(window, gres, batches, &level.get_camera().transform);
             painter.clear();
         });
 
         // Global painter
         let painter = game_state.engine_state.debug_systems.global_painter();
-        painter.draw(window, gres, &Transform2D::default());
+        painter.draw(window, gres, batches, &Transform2D::default());
         painter.clear();
 
         // Draw debug UI

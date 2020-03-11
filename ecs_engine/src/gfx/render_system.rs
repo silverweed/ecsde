@@ -3,7 +3,8 @@ use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::components::gfx::{C_Camera2D, C_Renderable};
 use crate::ecs::ecs_world::{Ecs_World, Entity};
 use crate::ecs::entity_stream::new_entity_stream;
-use crate::gfx;
+use crate::gfx::render;
+use crate::gfx::window;
 use crate::resources;
 
 #[derive(Copy, Clone)]
@@ -16,7 +17,7 @@ pub struct Render_System_Config {
 }
 
 pub struct Render_System_Update_Args<'a> {
-    pub window: &'a mut gfx::window::Window_Handle,
+    pub window: &'a mut window::Window_Handle,
     pub resources: &'a resources::gfx::Gfx_Resources<'a>,
     pub camera: &'a C_Camera2D,
     pub ecs_world: &'a Ecs_World,
@@ -25,12 +26,14 @@ pub struct Render_System_Update_Args<'a> {
 
 pub struct Render_System {
     entities_buf: Vec<Entity>,
+    pub batches: render::batcher::Batches,
 }
 
 impl Render_System {
     pub fn new() -> Render_System {
         Render_System {
             entities_buf: vec![],
+            batches: render::batcher::Batches::default(),
         }
     }
 
@@ -45,8 +48,8 @@ impl Render_System {
 
         trace!("render_system::update");
 
-        gfx::window::set_clear_color(window, cfg.clear_color);
-        gfx::window::clear(window);
+        window::set_clear_color(window, cfg.clear_color);
+        window::clear(window);
 
         self.entities_buf.clear();
         new_entity_stream(ecs_world)
@@ -68,7 +71,7 @@ impl Render_System {
                 modulate,
             } = rend;
 
-            let texture = resources.get_texture(*tex_id);
+            //let texture = resources.get_texture(*tex_id);
             let rend_transform = spatial.global_transform;
 
             //#[cfg(debug_assertions)]
@@ -85,9 +88,10 @@ impl Render_System {
             //}
 
             {
-                gfx::render::render_texture_ws(
+                render::render_texture_ws(
                     window,
-                    texture,
+                    &mut self.batches,
+                    *tex_id,
                     src_rect,
                     *modulate,
                     &rend_transform,
@@ -95,5 +99,7 @@ impl Render_System {
                 );
             }
         }
+
+        render::batcher::draw_all_batches(window, resources, &mut self.batches, &camera.transform);
     }
 }

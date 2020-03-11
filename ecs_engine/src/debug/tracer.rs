@@ -167,13 +167,19 @@ pub fn collate_traces(saved_traces: &mut Vec<Tracer_Node>) {
     use std::collections::hash_map::Entry;
     use std::collections::HashMap;
 
-    // Map { (hash, parent_tag) => (index_into_saved_traces, tot_n_calls, tot_duration) }
+    #[derive(Copy, Clone)]
+    struct Tag_Map_Info {
+        pub idx_into_saved_traces: usize,
+        pub tot_n_calls: usize,
+        pub tot_duration: time::Duration,
+    }
+
     // where `hash` is computed from the entire call stack (we can't just use the tag,
     // or the trace will only show the call under the first caller).
-    let mut tag_map: HashMap<u32, (usize, usize, time::Duration)> = HashMap::new();
+    let mut tag_map: HashMap<u32, Tag_Map_Info> = HashMap::new();
 
     fn hash_node(nodes: &[Tracer_Node], node: &Tracer_Node) -> u32 {
-        use crate::common::stringid::{FNV1A_START32, FNV1A_PRIME32};
+        use crate::common::stringid::{FNV1A_PRIME32, FNV1A_START32};
 
         let mut result = FNV1A_START32;
         let mut node = node;
@@ -195,23 +201,42 @@ pub fn collate_traces(saved_traces: &mut Vec<Tracer_Node>) {
     // Accumulate n_calls of all nodes with the same tag in the first one found,
     // and leave all others with n_calls = 0.
     // @Speed: this could use the frame_allocator.
-    let hashes = saved_traces.iter().map(|node| hash_node(saved_traces, node)).collect::<Vec<_>>();
+    let hashes = saved_traces
+        .iter()
+        .map(|node| hash_node(saved_traces, node))
+        .collect::<Vec<_>>();
     for (i, node) in saved_traces.iter_mut().enumerate() {
         match tag_map.entry(hashes[i]) {
             Entry::Vacant(v) => {
-                v.insert((i, 1, node.info.duration()));
+                v.insert(Tag_Map_Info {
+                    idx_into_saved_traces: i,
+                    tot_n_calls: 1,
+                    tot_duration: node.info.duration(),
+                });
             }
             Entry::Occupied(mut o) => {
-                let (idx, n_calls, duration) = *o.get();
-                o.insert((idx, n_calls + 1, duration + node.info.duration()));
+                let tag_map_info = *o.get();
+                o.insert(Tag_Map_Info {
+                    tot_n_calls: tag_map_info.tot_n_calls + 1,
+                    tot_duration: tag_map_info.tot_duration + node.info.duration(),
+                    ..tag_map_info
+                });
                 node.info.n_calls = 0;
             }
         }
     }
 
-    for (_, (idx, tot_calls, tot_duration)) in tag_map {
-        saved_traces[idx].info.n_calls = tot_calls;
-        saved_traces[idx].info.tot_duration = tot_duration;
+    for (
+        _,
+        Tag_Map_Info {
+            idx_into_saved_traces,
+            tot_n_calls,
+            tot_duration,
+        },
+    ) in tag_map
+    {
+        saved_traces[idx_into_saved_traces].info.n_calls = tot_n_calls;
+        saved_traces[idx_into_saved_traces].info.tot_duration = tot_duration;
     }
 }
 
@@ -225,7 +250,7 @@ pub fn build_trace_trees(traces: &[Tracer_Node]) -> Vec<Trace_Tree<'_>> {
     }
 
     // Note: we exploit the fact that saved_traces elements are ordered as
-    // a reversed tree. i.e.:
+    // a tree. i.e.:
     //
     //      A
     //    /   \
@@ -233,7 +258,7 @@ pub fn build_trace_trees(traces: &[Tracer_Node]) -> Vec<Trace_Tree<'_>> {
     //  / \     \
     // D   E     F
     //
-    // saved_traces = [F, C, E, D, B, A]
+    // saved_traces = [A, B, D, E, C, F]
     //
 
     let mut trees: Vec<Option<Trace_Tree>> = traces
