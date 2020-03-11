@@ -21,6 +21,7 @@ mod debug;
 
 use ecs_engine::cfg;
 use ecs_engine::cfg::Cfg_Var;
+use ecs_engine::common::stringid::String_Id;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::rand;
 use ecs_engine::core::{app, app_config};
@@ -36,7 +37,6 @@ use std::time::Duration;
 #[rustfmt::skip]
 use ecs_engine::{
     common::colors,
-    common::stringid::String_Id,
     debug as ngdebug
 };
 

@@ -1,5 +1,6 @@
 use super::{Game_Resources, Game_State};
 use ecs_engine::common::colors;
+use ecs_engine::common::transform::Transform2D;
 use ecs_engine::common::Maybe_Error;
 use ecs_engine::core::app;
 use ecs_engine::core::sleep;
@@ -13,9 +14,8 @@ use std::time::{Duration, Instant};
 
 #[cfg(debug_assertions)]
 use ecs_engine::{
-    common::angle::rad, common::stringid::String_Id, common::transform::Transform2D,
-    common::vector::Vec2f, debug, debug::painter::Debug_Painter,
-    gfx::paint_props::Paint_Properties, gfx::window,
+    common::angle::rad, common::stringid::String_Id, common::vector::Vec2f, debug,
+    debug::painter::Debug_Painter, gfx::paint_props::Paint_Properties, gfx::window,
 };
 
 pub fn tick_game<'a>(

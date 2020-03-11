@@ -39,6 +39,7 @@ impl Temp_Allocator {
             ptr,
             #[cfg(debug_assertions)]
             gen: 0,
+            #[cfg(debug_assertions)]
             high_water_mark: 0,
         }
     }
