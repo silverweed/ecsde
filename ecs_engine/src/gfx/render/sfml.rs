@@ -2,17 +2,16 @@ use crate::common::colors::Color;
 use crate::common::rect::{Rect, Rectf};
 use crate::common::shapes;
 use crate::common::transform::Transform2D;
-use crate::common::vector::{Vec2f, Vec2u};
+use crate::common::vector::Vec2f;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::window::{get_blend_mode, Window_Handle};
-use sfml::graphics::Shape;
 use sfml::graphics::{
-    CircleShape, PrimitiveType, RectangleShape, RenderStates, RenderTarget, Transform,
+    Shape, CircleShape, PrimitiveType, RectangleShape, RenderStates, RenderTarget,
     Transformable,
 };
 use sfml::system::Vector2f;
 
-// @Speed: replace this with a VertexBuffer
+// @Speed: probably replace this with a VertexBuffer
 pub type Vertex_Buffer = sfml::graphics::VertexArray;
 pub type Vertex = sfml::graphics::Vertex;
 
@@ -38,12 +37,10 @@ pub fn render_texture_ws(
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
-    // @Incomplete? Do we need this?
-    //let origin = vector::from_framework_vec(sprite.origin());
+    // @Incomplete: add support for sprite pivot different from 0.5, 0.5
+    
     let mut render_transform = camera.get_matrix_sfml().inverse();
     render_transform.combine(&transform.get_matrix_sfml());
-
-    let uv: Rect<f32> = (*tex_rect).into();
 
     let render_states = RenderStates {
         transform: render_transform,
@@ -52,9 +49,11 @@ pub fn render_texture_ws(
         ..Default::default()
     };
 
-    let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _); //Vec2f::from(Vec2u::from(get_texture_size(texture)));
-    let mut vbuf = start_draw_triangles(2);
-    let v1 = new_vertex(Vec2f::new(-0.5, -0.5), color, Vec2f::new(uv.x, uv.y));
+    let uv: Rect<f32> = (*tex_rect).into();
+    let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _); 
+    let mut vbuf = start_draw_quads(1);
+    let v1 = new_vertex(
+        tex_size * Vec2f::new(-0.5, -0.5), color, Vec2f::new(uv.x, uv.y));
     let v2 = new_vertex(
         tex_size * Vec2f::new(0.5, -0.5),
         color,
@@ -70,27 +69,9 @@ pub fn render_texture_ws(
         color,
         Vec2f::new(uv.x, uv.y + uv.height),
     );
-    add_triangle(&mut vbuf, &v1, &v2, &v4);
-    add_triangle(&mut vbuf, &v3, &v2, &v4);
+    add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
 
     render_vbuf_internal(window, &vbuf, render_states);
-}
-
-pub fn render_texture(window: &mut Window_Handle, texture: &Texture, rect: Rect<i32>) {
-    let render_states = RenderStates {
-        blend_mode: get_blend_mode(window),
-        texture: Some(texture),
-        ..Default::default()
-    };
-
-    //let mut vbuf = start_draw_quads(1);
-    //let v1 = new_vertex(Vec2f::new(-0.5, -0.5), color, Vec2f::new(0., 0.));
-    //let v2 = new_vertex(Vec2f::new( 0.5, -0.5), color, Vec2f::new(1., 0.));
-    //let v3 = new_vertex(Vec2f::new( 0.5,  0.5), color, Vec2f::new(1., 1.));
-    //let v4 = new_vertex(Vec2f::new(-0.5,  0.5), color, Vec2f::new(0., 1.));
-    //add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
-
-    //render_vbuf_internal(window, &vbuf, render_states);
 }
 
 fn set_text_paint_props(text: &mut Text, paint_props: &Paint_Properties) {
@@ -170,6 +151,8 @@ pub fn fill_color_rect_ws<T>(
     fill_color_rect_internal(window, paint_props, rect, render_states);
 }
 
+// @Refactoring: we should migrate shape code outside sfml and leverage
+// render_texture_ws for everything.
 fn fill_color_rect_internal<T>(
     window: &mut Window_Handle,
     paint_props: &Paint_Properties,
@@ -226,76 +209,6 @@ fn fill_color_circle_internal(
 pub fn get_texture_size(texture: &sfml::graphics::Texture) -> (u32, u32) {
     let s = texture.size();
     (s.x, s.y)
-}
-
-// @Cleanup
-// who's using this? Do we need it?
-fn calc_render_transform(
-    transform: &Transform2D,
-    camera: &Transform2D,
-    rot_origin: Vec2f,
-    scale_origin: Vec2f,
-) -> Transform {
-    let epsilon = 0.0001;
-
-    let spos = transform.position();
-    let cpos = camera.position();
-    let pos = spos - cpos;
-
-    // Apply rotation
-    let srot = transform.rotation().as_rad();
-    let crot = camera.rotation().as_rad();
-    let rot = srot - crot;
-    let rel_rot_origin = rot_origin;
-    println!(
-        "rot_origin = {:?}, spos = {:?}, rel_rot_origin = {:?}",
-        rot_origin, spos, rel_rot_origin
-    );
-    //if rot > epsilon {
-    let cos = rot.cos();
-    let sin = rot.sin();
-    let mut translation = Transform::new(
-        1.0,
-        0.0,
-        pos.x + rot_origin.x,
-        0.0,
-        1.0,
-        pos.y + rot_origin.y,
-        0.0,
-        0.0,
-        1.0,
-    );
-    println!("translation = {:?}", translation);
-    let mut rotation = Transform::new(cos, sin, 0.0, -sin, cos, 0.0, 0.0, 0.0, 1.0);
-    rotation.combine(&translation.inverse());
-    println!("rotation = {:?}", rotation);
-    translation.combine(&rotation);
-    let mut t = translation;
-    //}
-    println!("t = {:?}", t);
-
-    let sscale = transform.scale();
-    let cscale = camera.scale();
-    let scale = Vec2f::new(sscale.x / cscale.x, sscale.y / cscale.y);
-    if (scale.x - 1.0).abs() > epsilon || (scale.y - 1.0).abs() > epsilon {
-        let mut scale_translation = Transform::new(
-            1.0,
-            0.0,
-            pos.x + scale_origin.x,
-            0.0,
-            1.0,
-            pos.y + scale_origin.y,
-            0.0,
-            0.0,
-            1.0,
-        );
-        let mut scale_mat = Transform::new(scale.x, 0.0, 0.0, 0.0, scale.y, 0.0, 0.0, 0.0, 1.0);
-        scale_mat.combine(&scale_translation.inverse());
-        scale_translation.combine(&scale_mat);
-        t.combine(&scale_translation);
-    }
-
-    t
 }
 
 pub fn start_draw_quads(_n_quads: usize) -> Vertex_Buffer {

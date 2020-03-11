@@ -57,11 +57,6 @@ pub fn fill_color_circle_ws<P>(
     backend::fill_color_circle_ws(window, &paint_props.into(), circle, camera);
 }
 
-pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: Rect<i32>) {
-    trace!("render_texture");
-    backend::render_texture(window, texture, rect);
-}
-
 pub fn render_texture_ws(
     window: &mut Window_Handle,
     texture: &Texture,
@@ -74,7 +69,7 @@ pub fn render_texture_ws(
     backend::render_texture_ws(window, texture, tex_rect, color, transform, camera);
 }
 
-pub fn get_texture_size(texture: &Texture<'_>) -> (u32, u32) {
+pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
     backend::get_texture_size(texture)
 }
 

@@ -113,6 +113,8 @@ impl Transform2D {
     }
 
     pub fn get_matrix(&self) -> Matrix3<f32> {
+        trace!("get_matrix");
+
         let angle = self.rotation.as_rad();
         let angle = -angle;
         let cosine = angle.cos();
@@ -131,6 +133,8 @@ impl Transform2D {
 
     #[cfg(feature = "use-sfml")]
     pub fn get_matrix_sfml(&self) -> sfml::graphics::Transform {
+        trace!("get_matrix_sfml");
+
         let angle = self.rotation.as_rad();
         let angle = -angle;
         let cosine = angle.cos();
@@ -148,10 +152,12 @@ impl Transform2D {
     }
 
     pub fn combine(&self, other: &Transform2D) -> Transform2D {
+        trace!("matrix::combine");
         Transform2D::new_from_matrix(&(self.get_matrix() * other.get_matrix()))
     }
 
     pub fn inverse(&self) -> Transform2D {
+        trace!("matrix::inverse");
         let s = self.scale();
         Transform2D::from_pos_rot_scale(
             -self.position(),

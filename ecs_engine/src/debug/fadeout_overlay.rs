@@ -5,7 +5,6 @@ use crate::common::vector::Vec2f;
 use crate::core;
 use crate::gfx;
 use crate::gfx::align::Align;
-use crate::gfx::render::Text;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
@@ -85,10 +84,10 @@ impl Debug_Element for Fadeout_Debug_Overlay {
 
             let d = core::time::duration_ratio(&time, &fadeout_time);
             let alpha = 255 - (d * d * 255.0f32) as u8;
-            let text = Text::new(text, gres.get_font(font), font_size.into());
+            let text = gfx::render::create_text(text, gres.get_font(font), font_size.into());
             let color = Color { a: alpha, ..*color };
 
-            let txt_bounds = text.local_bounds();
+            let txt_bounds = gfx::render::get_text_local_bounds(&text);
             max_row_width = max_row_width.max(txt_bounds.width);
             max_row_height = max_row_height.max(txt_bounds.height);
 

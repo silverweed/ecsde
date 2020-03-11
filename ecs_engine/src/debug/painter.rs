@@ -6,7 +6,7 @@ use crate::common::vector::Vec2f;
 use crate::core::env::Env_Info;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render::Vertex_Buffer;
-use crate::gfx::render::{self, Text};
+use crate::gfx::render;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx;
 
@@ -112,7 +112,7 @@ impl Debug_Painter {
         let font = self.font;
         for (text, world_pos, font_size, props) in &self.texts {
             trace!("painter::draw_text");
-            let mut txt = Text::new(text, gres.get_font(font), (*font_size).into());
+            let mut txt = render::create_text(text, gres.get_font(font), (*font_size).into());
             let transform = Transform2D::from_pos(*world_pos);
             render::render_text_ws(window, &mut txt, *props, &transform, camera);
         }

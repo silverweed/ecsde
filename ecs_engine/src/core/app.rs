@@ -408,10 +408,15 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
         total_traced_time: &Duration,
         indent: usize,
         overlay: &mut Debug_Overlay,
+        prune_duration: &Duration,
     ) {
+        if tree.node.info.tot_duration < *prune_duration {
+            return;
+        }
+
         add_node_line(&tree.node, total_traced_time, indent, overlay);
         for t in &tree.children {
-            add_tree_lines(t, total_traced_time, indent + 1, overlay);
+            add_tree_lines(t, total_traced_time, indent + 1, overlay, prune_duration);
         }
     };
 
@@ -435,6 +440,9 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
         .read(&engine_state.config);
     overlay.config.font_size = (font_size as f32 * ui_scale) as _;
 
+    let prune_duration_ms = cfg::Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config).read(&engine_state.config);
+    let prune_duration = Duration::from_secs_f32(prune_duration_ms * 0.001);
+
     overlay.add_line_color(&format!("frame {:<70}", frame), colors::rgb(144, 144, 144));
     overlay.add_line_color(
         &format!(
@@ -445,6 +453,6 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
     );
     overlay.add_line_color(&format!("{:─^80}", ""), colors::rgba(60, 60, 60, 180));
     for tree in &trace_trees {
-        add_tree_lines(tree, &total_traced_time, 0, overlay);
+        add_tree_lines(tree, &total_traced_time, 0, overlay, &prune_duration);
     }
 }
