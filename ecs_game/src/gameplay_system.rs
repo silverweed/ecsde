@@ -24,10 +24,12 @@ use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderab
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::ecs::entity_stream::new_entity_stream;
 use ecs_engine::gfx;
+use ecs_engine::gfx::render::batcher::Batches;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::bindings::keyboard;
 use ecs_engine::input::input_system::{Action_Kind, Game_Action};
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -119,6 +121,7 @@ impl Gameplay_System {
         &mut self,
         engine_state: &mut Engine_State,
         game_res: &mut Game_Resources,
+        level_batches: &mut HashMap<String_Id, Batches>,
         rng: &mut rand::Default_Rng,
     ) {
         let level_id = String_Id::from("test");
@@ -126,6 +129,8 @@ impl Gameplay_System {
 
         self.loaded_levels.push(Arc::new(Mutex::new(level)));
         self.active_levels.push(self.loaded_levels.len() - 1);
+
+        level_batches.insert(level_id, Batches::default());
 
         #[cfg(debug_assertions)]
         {

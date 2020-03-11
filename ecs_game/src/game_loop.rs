@@ -310,14 +310,6 @@ pub fn tick_game<'a>(
         gfx::window::display(&mut game_state.window);
     }
 
-    println!(
-        "drift = {} ms, real_dt = {}",
-        (game_state.engine_state.time.get_game_time().as_secs_f32()
-            - target_time_per_frame.as_secs_f32() * game_state.engine_state.cur_frame as f32)
-            * 1000.,
-        real_dt.as_secs_f32() * 1000.0
-    );
-
     Ok(())
 }
 
@@ -346,6 +338,14 @@ fn update_graphics(
         gfx::window::clear(window);
     }
 
+    {
+        trace!("clear_batches");
+        gfx::render::batcher::clear_batches(&mut game_state.engine_state.global_batches);
+        for (_, batches) in &mut game_state.level_batches {
+            gfx::render::batcher::clear_batches(batches);
+        }
+    }
+
     let cfg = &game_state.engine_state.config;
     let render_cfg = render_system::Render_System_Config {
         clear_color: colors::color_from_hex(game_state.cvars.clear_color.read(cfg) as u32),
@@ -357,37 +357,47 @@ fn update_graphics(
         ),
     };
 
-    let gameplay_system = &mut game_state.gameplay_system;
-    let render_system = &mut game_state.engine_state.systems.render_system;
-    gameplay_system.foreach_active_level(|level| {
-        let render_args = render_system::Render_System_Update_Args {
-            window,
-            resources: gres,
-            camera: level.get_camera(),
-            ecs_world: &level.world,
-            cfg: render_cfg,
-        };
+    {
+        let gameplay_system = &mut game_state.gameplay_system;
+        let render_system = &mut game_state.engine_state.systems.render_system;
+        let batches = &mut game_state.level_batches;
+        gameplay_system.foreach_active_level(|level| {
+            let render_args = render_system::Render_System_Update_Args {
+                window,
+                resources: gres,
+                batches: batches.get_mut(&level.id).unwrap(),
+                camera: level.get_camera(),
+                ecs_world: &level.world,
+                cfg: render_cfg,
+            };
 
-        render_system.update(render_args);
-    });
+            render_system.update(render_args);
+        });
+    }
 
     #[cfg(debug_assertions)]
     {
         // Draw debug painter (one per active level)
         let painters = &mut game_state.engine_state.debug_systems.painters;
         let window = &mut game_state.window;
-        let batches = &mut game_state.engine_state.systems.render_system.batches;
+        let batches = &mut game_state.level_batches;
         game_state.gameplay_system.foreach_active_level(|level| {
             let painter = painters
                 .get_mut(&level.id)
                 .unwrap_or_else(|| panic!("Debug painter not found for level {:?}", level.id));
+            let batches = batches.get_mut(&level.id).unwrap();
             painter.draw(window, gres, batches, &level.get_camera().transform);
             painter.clear();
         });
 
         // Global painter
         let painter = game_state.engine_state.debug_systems.global_painter();
-        painter.draw(window, gres, batches, &Transform2D::default());
+        painter.draw(
+            &mut game_state.window,
+            gres,
+            &mut game_state.engine_state.global_batches,
+            &Transform2D::default(),
+        );
         painter.clear();
 
         // Draw debug UI
@@ -401,6 +411,7 @@ fn update_graphics(
                     &real_dt,
                     &mut game_state.window,
                     gres,
+                    &mut game_state.engine_state.global_batches,
                     &game_state.engine_state.debug_systems.log,
                     &mut game_state.engine_state.frame_alloc,
                 );
@@ -409,13 +420,30 @@ fn update_graphics(
         // Draw console
         {
             trace!("console::draw");
-            game_state
-                .engine_state
-                .debug_systems
-                .console
-                .draw(&mut game_state.window, gres);
+            game_state.engine_state.debug_systems.console.draw(
+                &mut game_state.window,
+                gres,
+                &mut game_state.engine_state.global_batches,
+            );
         }
     }
+
+    let lv_batches = &mut game_state.level_batches;
+    let window = &mut game_state.window;
+    game_state.gameplay_system.foreach_active_level(|level| {
+        gfx::render::batcher::draw_batches(
+            window,
+            &gres,
+            lv_batches.get_mut(&level.id).unwrap(),
+            &level.get_camera().transform,
+        );
+    });
+    gfx::render::batcher::draw_batches(
+        window,
+        &gres,
+        &mut game_state.engine_state.global_batches,
+        &Transform2D::default(),
+    );
 
     Ok(())
 }

@@ -6,6 +6,7 @@ use crate::common::vector::Vec2f;
 use crate::core;
 use crate::gfx;
 use crate::gfx::align::Align;
+use crate::gfx::render::batcher::Batches;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
@@ -61,6 +62,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         &self,
         window: &mut Window_Handle,
         gres: &mut Gfx_Resources,
+        batches: &mut Batches,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
         trace!("fadeout_overlay::draw");
@@ -107,6 +109,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         // Draw background
         gfx::render::fill_color_rect(
             window,
+            batches,
             self.config.background,
             Rect::new(
                 position.x + horiz_align.aligned_pos(0.0, 2.0 * pad_x + max_row_width),

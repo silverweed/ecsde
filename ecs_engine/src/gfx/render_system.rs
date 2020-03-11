@@ -19,6 +19,7 @@ pub struct Render_System_Config {
 pub struct Render_System_Update_Args<'a> {
     pub window: &'a mut window::Window_Handle,
     pub resources: &'a resources::gfx::Gfx_Resources<'a>,
+    pub batches: &'a mut render::batcher::Batches,
     pub camera: &'a C_Camera2D,
     pub ecs_world: &'a Ecs_World,
     pub cfg: Render_System_Config,
@@ -26,14 +27,12 @@ pub struct Render_System_Update_Args<'a> {
 
 pub struct Render_System {
     entities_buf: Vec<Entity>,
-    pub batches: render::batcher::Batches,
 }
 
 impl Render_System {
     pub fn new() -> Render_System {
         Render_System {
             entities_buf: vec![],
-            batches: render::batcher::Batches::default(),
         }
     }
 
@@ -41,6 +40,7 @@ impl Render_System {
         let Render_System_Update_Args {
             window,
             resources,
+            batches,
             camera,
             ecs_world,
             cfg,
@@ -50,8 +50,6 @@ impl Render_System {
 
         window::set_clear_color(window, cfg.clear_color);
         window::clear(window);
-
-        self.batches.clear();
 
         self.entities_buf.clear();
         new_entity_stream(ecs_world)
@@ -92,7 +90,7 @@ impl Render_System {
             {
                 render::render_texture_ws(
                     window,
-                    &mut self.batches,
+                    batches,
                     *tex_id,
                     src_rect,
                     *modulate,
@@ -101,7 +99,5 @@ impl Render_System {
                 );
             }
         }
-
-        render::batcher::draw_all_batches(window, resources, &mut self.batches, &camera.transform);
     }
 }

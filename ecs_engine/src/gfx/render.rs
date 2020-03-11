@@ -23,13 +23,18 @@ pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
 
 /// Draws a color-filled rectangle in screen space
-pub fn fill_color_rect<R, P>(window: &mut Window_Handle, paint_props: P, rect: R)
-where
+pub fn fill_color_rect<R, P>(
+    window: &mut Window_Handle,
+    batches: &mut batcher::Batches,
+    paint_props: P,
+    rect: R,
+) where
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
     P: Into<Paint_Properties>,
 {
     trace!("fill_color_rect");
-    backend::fill_color_rect(window, &paint_props.into(), rect);
+    //backend::fill_color_rect(window, &paint_props.into(), rect);
+    batcher::add_rect(batches, &rect.into(), &paint_props.into());
 }
 
 /// Draws a color-filled rectangle in world space
@@ -45,7 +50,8 @@ pub fn fill_color_rect_ws<R, P>(
     P: Into<Paint_Properties>,
 {
     trace!("fill_color_rect_ws");
-    backend::fill_color_rect_ws(window, &paint_props.into(), rect, transform, camera);
+    //backend::fill_color_rect_ws(window, &paint_props.into(), rect, transform, camera);
+    batcher::add_rect_ws(batches, &rect.into(), &paint_props.into(), transform);
 }
 
 /// Draws a color-filled circle in world space
@@ -71,7 +77,6 @@ pub fn render_texture_ws(
     camera: &Transform2D,
 ) {
     trace!("render_texture_ws");
-    //backend::render_texture_ws(window, texture, tex_rect, color, transform, camera);
     batcher::add_texture_ws(batches, texture, tex_rect, color, transform);
 }
 
@@ -156,11 +161,7 @@ pub fn render_vbuf_ws(
     backend::render_vbuf_ws(window, vbuf, transform, camera);
 }
 
-pub fn render_vbuf_texture(
-    window: &mut Window_Handle,
-    vbuf: &Vertex_Buffer,
-    texture: &Texture
-) {
+pub fn render_vbuf_texture(window: &mut Window_Handle, vbuf: &Vertex_Buffer, texture: &Texture) {
     trace!("render_vbuf_texture");
     backend::render_vbuf_texture(window, vbuf, texture);
 }

@@ -4,6 +4,7 @@ use crate::common::rect;
 use crate::common::vector::{Vec2f, Vec2i, Vec2u};
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
+use crate::gfx::render::batcher::Batches;
 use crate::gfx::window;
 use crate::input::input_system::Input_Raw_Event;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
@@ -195,14 +196,25 @@ impl Debug_Frame_Scroller {
         }
     }
 
-    pub fn draw(&self, window: &mut window::Window_Handle, gres: &mut Gfx_Resources) {
+    pub fn draw(
+        &self,
+        window: &mut window::Window_Handle,
+        gres: &mut Gfx_Resources,
+        batches: &mut Batches,
+    ) {
         trace!("frame_scroller::draw");
 
-        self.draw_row(window, gres, Row::Seconds);
-        self.draw_row(window, gres, Row::Frames);
+        self.draw_row(window, gres, batches, Row::Seconds);
+        self.draw_row(window, gres, batches, Row::Frames);
     }
 
-    fn draw_row(&self, window: &mut window::Window_Handle, gres: &mut Gfx_Resources, row: Row) {
+    fn draw_row(
+        &self,
+        window: &mut window::Window_Handle,
+        gres: &mut Gfx_Resources,
+        batches: &mut Batches,
+        row: Row,
+    ) {
         let Row_Props {
             y,
             height,
@@ -227,7 +239,7 @@ impl Debug_Frame_Scroller {
                 border_color: colors::rgba(200, 200, 200, if row_hovered { 250 } else { 0 }),
                 ..Default::default()
             };
-            render::fill_color_rect(window, paint_props, row_r);
+            render::fill_color_rect(window, batches, paint_props, row_r);
         }
 
         let (filled_col, outline_col) = if row_hovered || self.manually_selected {
@@ -274,7 +286,7 @@ impl Debug_Frame_Scroller {
                     border_color: colors::rgba(outline_col, outline_col, outline_col, color.a),
                     ..Default::default()
                 };
-                render::fill_color_rect(window, paint_props, subdiv_rect);
+                render::fill_color_rect(window, batches, paint_props, subdiv_rect);
             }
 
             if show_labels {

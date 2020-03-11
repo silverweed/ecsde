@@ -125,16 +125,16 @@ fn init_demo_entities(
             }
             level.scene_tree.add(entity, fst_entity, &t.local_transform);
         }
-        {
-            let c = level.world.add_component::<Collider>(entity);
-            let width = (sw / n_frames) as f32;
-            let height = sh as f32;
-            c.shape = Collider_Shape::Rect { width, height };
-            //c.shape = Collider_Shape::Circle {
-            //radius: width.max(height) * 0.5,
-            //};
-            c.offset = -Vec2f::new(width * 0.5, height * 0.5);
-        }
+        //{
+        //let c = level.world.add_component::<Collider>(entity);
+        //let width = (sw / n_frames) as f32;
+        //let height = sh as f32;
+        //c.shape = Collider_Shape::Rect { width, height };
+        ////c.shape = Collider_Shape::Circle {
+        ////radius: width.max(height) * 0.5,
+        ////};
+        //c.offset = -Vec2f::new(width * 0.5, height * 0.5);
+        //}
         {
             let s = level.world.add_component::<C_Animated_Sprite>(entity);
             s.n_frames = n_frames;

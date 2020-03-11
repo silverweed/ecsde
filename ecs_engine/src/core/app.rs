@@ -37,6 +37,8 @@ pub struct Engine_State<'r> {
 
     pub frame_alloc: Temp_Allocator,
 
+    pub global_batches: gfx::render::batcher::Batches,
+
     #[cfg(debug_assertions)]
     pub debug_systems: Debug_Systems,
 
@@ -64,6 +66,7 @@ pub fn create_engine_state<'r>(
         time,
         input_state,
         systems,
+        global_batches: gfx::render::batcher::Batches::default(),
         frame_alloc: Temp_Allocator::with_capacity(megabytes(1)),
         #[cfg(debug_assertions)]
         debug_systems,

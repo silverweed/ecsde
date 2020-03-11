@@ -6,6 +6,7 @@ use super::log::Debug_Log;
 use super::overlay;
 use crate::alloc::temp;
 use crate::common::stringid::String_Id;
+use crate::gfx::render::batcher::Batches;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::Gfx_Resources;
 use std::any::type_name;
@@ -181,26 +182,27 @@ impl Debug_Ui_System {
         dt: &Duration,
         window: &mut Window_Handle,
         gres: &mut Gfx_Resources,
+        batches: &mut Batches,
         log: &Debug_Log,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
         for elem in &mut self.graphs.actives {
             elem.update(dt);
-            elem.draw(window, gres, frame_alloc);
+            elem.draw(window, gres, batches, frame_alloc);
         }
 
         for elem in &mut self.overlays.actives {
             elem.update(dt);
-            elem.draw(window, gres, frame_alloc);
+            elem.draw(window, gres, batches, frame_alloc);
         }
 
         for elem in &mut self.fadeout_overlays.actives {
             elem.update(dt);
-            elem.draw(window, gres, frame_alloc);
+            elem.draw(window, gres, batches, frame_alloc);
         }
 
         self.frame_scroller.update(window, log);
-        self.frame_scroller.draw(window, gres);
+        self.frame_scroller.draw(window, gres, batches);
     }
 }
 

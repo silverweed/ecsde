@@ -87,11 +87,14 @@ impl Trace_Tree<'_> {
 impl Tracer {
     pub fn new() -> Tracer {
         Tracer {
-            saved_traces: vec![],
+            saved_traces: Vec::with_capacity(16_000),
             cur_active: None,
         }
     }
 
+    // NOTE: don't do any kind of hard work here, or the tracing will
+    // be too intrusive! Prefer delaying work until later, when processing
+    // the traces.
     fn push_scope_trace(&mut self, tag: &'static str) {
         let now = time::Instant::now();
         self.saved_traces.push(Tracer_Node {

@@ -272,19 +272,14 @@ pub fn render_vbuf_ws(
     render_vbuf_internal(window, vbuf, render_states);
 }
 
-pub fn render_vbuf_texture(
-    window: &mut Window_Handle,
-    vbuf: &Vertex_Buffer,
-    texture: &Texture
-) {
-        let render_states = RenderStates {
-            blend_mode: get_blend_mode(window),
-            texture: Some(texture),
-            ..Default::default()
-        };
-        render_vbuf_internal(window, vbuf, render_states);
+pub fn render_vbuf_texture(window: &mut Window_Handle, vbuf: &Vertex_Buffer, texture: &Texture) {
+    let render_states = RenderStates {
+        blend_mode: get_blend_mode(window),
+        texture: Some(texture),
+        ..Default::default()
+    };
+    render_vbuf_internal(window, vbuf, render_states);
 }
-
 
 fn render_vbuf_internal(
     window: &mut Window_Handle,

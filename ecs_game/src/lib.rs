@@ -27,6 +27,7 @@ use ecs_engine::core::{app, app_config};
 use ecs_engine::gfx::{self as ngfx, window};
 use ecs_engine::input;
 use ecs_engine::resources;
+use std::collections::HashMap;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::time::Duration;
@@ -55,6 +56,8 @@ pub struct Game_State<'a> {
     pub is_replaying: bool,
 
     pub sleep_granularity: Option<Duration>,
+
+    pub level_batches: HashMap<String_Id, ngfx::render::batcher::Batches>,
 
     //// Cfg vars
     pub cvars: CVars,
@@ -288,6 +291,7 @@ fn internal_game_init<'a>(
         game_state.gameplay_system.load_test_level(
             &mut game_state.engine_state,
             &mut *game_resources,
+            &mut game_state.level_batches,
             &mut game_state.rng,
         );
 
@@ -408,6 +412,8 @@ fn create_game_state<'a>(
             fps_debug: ngdebug::fps::Fps_Console_Printer::new(&Duration::from_secs(2), "game"),
 
             sleep_granularity: None,
+
+            level_batches: HashMap::new(),
 
             execution_time: Duration::default(),
             input_provider,

@@ -3,6 +3,7 @@ use crate::common::rect::Rect;
 use crate::common::vector::{Vec2f, Vec2u};
 use crate::core::env::Env_Info;
 use crate::gfx::render;
+use crate::gfx::render::batcher::Batches;
 use crate::gfx::window::Window_Handle;
 use crate::input::bindings::keyboard;
 use crate::input::input_system::Input_Raw_Event;
@@ -415,7 +416,12 @@ impl Console {
         }
     }
 
-    pub fn draw(&self, window: &mut Window_Handle, gres: &mut gfx::Gfx_Resources) {
+    pub fn draw(
+        &self,
+        window: &mut Window_Handle,
+        gres: &mut gfx::Gfx_Resources,
+        batches: &mut Batches,
+    ) {
         if self.status == Console_Status::Closed {
             return;
         }
@@ -429,11 +435,13 @@ impl Console {
         let Vec2u { x: w, y: h } = self.size;
         render::fill_color_rect(
             window,
+            batches,
             colors::rgba(0, 0, 0, 150),
             Rect::new(x, y, w, h - linesep as u32),
         );
         render::fill_color_rect(
             window,
+            batches,
             colors::rgba(30, 30, 30, 200),
             Rect::new(x, h - linesep as u32, w, linesep as u32),
         );
@@ -452,7 +460,7 @@ impl Console {
             self.font_size as f32 * 0.6,
             self.font_size as f32 * 0.1,
         );
-        render::fill_color_rect(window, colors::WHITE, cursor);
+        render::fill_color_rect(window, batches, colors::WHITE, cursor);
 
         // Draw output
         {
@@ -489,6 +497,7 @@ impl Console {
             let tot_height = linesep as f32 * texts.len() as f32;
             render::fill_color_rect(
                 window,
+                batches,
                 colors::rgb(20, 20, 20),
                 Rect::new(position.x, position.y, w as f32, tot_height),
             );

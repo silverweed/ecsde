@@ -5,6 +5,7 @@ use crate::common::rect::Rect;
 use crate::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
+use crate::gfx::render::batcher::Batches;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
@@ -40,6 +41,7 @@ impl Debug_Element for Debug_Overlay {
         &self,
         window: &mut Window_Handle,
         gres: &mut Gfx_Resources,
+        batches: &mut Batches,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
         trace!("overlay::draw");
@@ -82,6 +84,7 @@ impl Debug_Element for Debug_Overlay {
 
         gfx::render::fill_color_rect(
             window,
+            batches,
             self.config.background,
             Rect::new(
                 position.x + horiz_align.aligned_pos(0.0, 2.0 * pad_x + max_row_width),
@@ -105,7 +108,7 @@ impl Debug_Element for Debug_Overlay {
                         + (i as f32) * (max_row_height + row_spacing),
                 );
             let rect = Rect::new(pos.x, pos.y, bg_fill_ratio * max_row_width, max_row_height);
-            gfx::render::fill_color_rect(window, bg_col, rect);
+            gfx::render::fill_color_rect(window, batches, bg_col, rect);
         }
 
         // Draw texts

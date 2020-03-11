@@ -5,6 +5,7 @@ use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2u};
 use crate::gfx::render;
+use crate::gfx::render::batcher::Batches;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
@@ -53,6 +54,7 @@ impl Debug_Element for Debug_Graph_View {
         &self,
         window: &mut Window_Handle,
         gres: &mut Gfx_Resources,
+        batches: &mut Batches,
         _frame_alloc: &mut temp::Temp_Allocator,
     ) {
         trace!("graph::draw");
@@ -61,7 +63,12 @@ impl Debug_Element for Debug_Graph_View {
         {
             let Vec2u { x, y } = self.pos;
             let Vec2u { x: w, y: h } = self.size;
-            render::fill_color_rect(window, colors::rgba(0, 0, 0, 200), Rect::new(x, y, w, h));
+            render::fill_color_rect(
+                window,
+                batches,
+                colors::rgba(0, 0, 0, 200),
+                Rect::new(x, y, w, h),
+            );
         }
 
         let xr = &self.data.x_range;
