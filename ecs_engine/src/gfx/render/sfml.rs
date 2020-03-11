@@ -2,7 +2,7 @@ use crate::common::colors::Color;
 use crate::common::rect::{Rect, Rectf};
 use crate::common::shapes;
 use crate::common::transform::Transform2D;
-use crate::common::vector::Vec2f;
+use crate::common::vector::{Vec2f, Vec2u};
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::window::{get_blend_mode, Window_Handle};
 use sfml::graphics::Shape;
@@ -33,63 +33,61 @@ pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: &Rect<i32>) -> Sprite<'
 pub fn render_texture_ws(
     window: &mut Window_Handle,
     texture: &Texture,
-    tex_rect: &Rect<f32>,
+    tex_rect: &Rect<i32>,
     color: Color,
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
     // @Incomplete? Do we need this?
     //let origin = vector::from_framework_vec(sprite.origin());
-    let render_transform = camera.get_matrix_sfml().inverse();
+    let mut render_transform = camera.get_matrix_sfml().inverse();
     render_transform.combine(&transform.get_matrix_sfml());
 
-    //{
-    //    sprite.set_position(Vector2f::from(transform.position()));
-    //    let angle = transform.rotation().as_deg();
-    //    sprite.set_rotation(angle);
-    //    sprite.set_scale(Vector2f::from(transform.scale()));
-    //}
-    
-    let (tex_w, tex_h) = get_texture_size(texture);
-    let uv = Rect::new(
-        tex_rect.x / tex_w,
-        tex_rect.y / tex_h,
-        tex_rect.width / tex_w,
-        tex_rect.height / tex_h);
+    let uv: Rect<f32> = (*tex_rect).into();
 
     let render_states = RenderStates {
         transform: render_transform,
         blend_mode: get_blend_mode(window),
-        texture,
+        texture: Some(texture),
         ..Default::default()
     };
 
-    let mut vbuf = start_draw_quads(1);
+    let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _); //Vec2f::from(Vec2u::from(get_texture_size(texture)));
+    let mut vbuf = start_draw_triangles(2);
     let v1 = new_vertex(Vec2f::new(-0.5, -0.5), color, Vec2f::new(uv.x, uv.y));
-    let v2 = new_vertex(Vec2f::new( 0.5, -0.5), color, Vec2f::new(uv.x + uv.width, uv.y)); 
-    let v3 = new_vertex(Vec2f::new( 0.5,  0.5), color, Vec2f::new(uv.x + uv.width, uv.y + uv.height)); 
-    let v4 = new_vertex(Vec2f::new(-0.5,  0.5), color, Vec2f::new(uv.x, uv.y + uv.height)); 
-    add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
+    let v2 = new_vertex(
+        tex_size * Vec2f::new(0.5, -0.5),
+        color,
+        Vec2f::new(uv.x + uv.width, uv.y),
+    );
+    let v3 = new_vertex(
+        tex_size * Vec2f::new(0.5, 0.5),
+        color,
+        Vec2f::new(uv.x + uv.width, uv.y + uv.height),
+    );
+    let v4 = new_vertex(
+        tex_size * Vec2f::new(-0.5, 0.5),
+        color,
+        Vec2f::new(uv.x, uv.y + uv.height),
+    );
+    add_triangle(&mut vbuf, &v1, &v2, &v4);
+    add_triangle(&mut vbuf, &v3, &v2, &v4);
 
     render_vbuf_internal(window, &vbuf, render_states);
-}
-
-pub fn set_sprite_modulate(sprite: &mut Sprite, modulate: Color) {
-    sprite.set_color(modulate.into());
 }
 
 pub fn render_texture(window: &mut Window_Handle, texture: &Texture, rect: Rect<i32>) {
     let render_states = RenderStates {
         blend_mode: get_blend_mode(window),
-        texture,
+        texture: Some(texture),
         ..Default::default()
     };
 
     //let mut vbuf = start_draw_quads(1);
-    //let v1 = new_vertex(Vec2f::new(-0.5, -0.5), color, Vec2f::new(0., 0.)); 
-    //let v2 = new_vertex(Vec2f::new( 0.5, -0.5), color, Vec2f::new(1., 0.)); 
-    //let v3 = new_vertex(Vec2f::new( 0.5,  0.5), color, Vec2f::new(1., 1.)); 
-    //let v4 = new_vertex(Vec2f::new(-0.5,  0.5), color, Vec2f::new(0., 1.)); 
+    //let v1 = new_vertex(Vec2f::new(-0.5, -0.5), color, Vec2f::new(0., 0.));
+    //let v2 = new_vertex(Vec2f::new( 0.5, -0.5), color, Vec2f::new(1., 0.));
+    //let v3 = new_vertex(Vec2f::new( 0.5,  0.5), color, Vec2f::new(1., 1.));
+    //let v4 = new_vertex(Vec2f::new(-0.5,  0.5), color, Vec2f::new(0., 1.));
     //add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
 
     //render_vbuf_internal(window, &vbuf, render_states);
@@ -304,6 +302,10 @@ pub fn start_draw_quads(_n_quads: usize) -> Vertex_Buffer {
     sfml::graphics::VertexArray::new(PrimitiveType::Quads, 0)
 }
 
+pub fn start_draw_triangles(_n_tris: usize) -> Vertex_Buffer {
+    sfml::graphics::VertexArray::new(PrimitiveType::Triangles, 0)
+}
+
 pub fn start_draw_linestrip(_n_vertices: usize) -> Vertex_Buffer {
     sfml::graphics::VertexArray::new(PrimitiveType::LineStrip, 0)
 }
@@ -313,6 +315,12 @@ pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex,
     vbuf.append(v2);
     vbuf.append(v3);
     vbuf.append(v4);
+}
+
+pub fn add_triangle(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
+    vbuf.append(v1);
+    vbuf.append(v2);
+    vbuf.append(v3);
 }
 
 pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {

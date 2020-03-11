@@ -65,15 +65,14 @@ pub fn render_texture(window: &mut Window_Handle, texture: &Texture<'_>, rect: R
 pub fn render_texture_ws(
     window: &mut Window_Handle,
     texture: &Texture,
-    tex_rect: &Rect<f32>,
+    tex_rect: &Rect<i32>,
     color: Color,
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
     trace!("render_texture_ws");
-    backend::render_sprite(window, texture, tex_rect, color, transform, camera);
+    backend::render_texture_ws(window, texture, tex_rect, color, transform, camera);
 }
-
 
 pub fn get_texture_size(texture: &Texture<'_>) -> (u32, u32) {
     backend::get_texture_size(texture)
@@ -120,13 +119,20 @@ pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer {
     backend::start_draw_quads(n_quads)
 }
 
+pub fn start_draw_triangles(n_triangles: usize) -> Vertex_Buffer {
+    trace!("start_draw_triangles");
+    backend::start_draw_triangles(n_triangles)
+}
+
 pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
-    trace!("add_quad");
     backend::add_quad(vbuf, v1, v2, v3, v4);
 }
 
+pub fn add_triangle(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
+    backend::add_triangle(vbuf, v1, v2, v3);
+}
+
 pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {
-    trace!("add_vertex");
     backend::add_vertex(vbuf, v);
 }
 

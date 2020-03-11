@@ -76,6 +76,12 @@ impl From<Rect<i32>> for Rect<f32> {
     }
 }
 
+impl From<Rect<f32>> for Rect<i32> {
+    fn from(r: Rect<f32>) -> Self {
+        Rect::new(r.x as i32, r.y as i32, r.width as i32, r.height as i32)
+    }
+}
+
 impl From<Rect<u32>> for Rect<f32> {
     fn from(r: Rect<u32>) -> Self {
         Rect::new(r.x as f32, r.y as f32, r.width as f32, r.height as f32)

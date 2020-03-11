@@ -204,7 +204,95 @@ impl Gameplay_System {
         cfg: &cfg::Config,
     ) {
         trace!("gameplay_system::realtime_update");
-        //self.update_camera(real_dt, actions, axes, cfg);
+        self.update_camera(real_dt, actions, axes, cfg);
+    }
+
+    fn update_camera(
+        &mut self,
+        real_dt: &Duration,
+        actions: &[Game_Action],
+        axes: &Virtual_Axes,
+        cfg: &cfg::Config,
+    ) {
+        self.foreach_active_level(|level| {
+            let movement = get_movement_from_input(axes, self.input_cfg, cfg);
+            let v = {
+                let camera_ctrl = level
+                    .world
+                    .get_component_mut::<C_Controllable>(level.cameras[level.active_camera]);
+                if camera_ctrl.is_none() {
+                    return;
+                }
+
+                let real_dt_secs = real_dt.as_secs_f32();
+                let mut camera_ctrl = camera_ctrl.unwrap();
+                let speed = camera_ctrl.speed.read(cfg);
+                let velocity = movement * speed;
+                let v = velocity * real_dt_secs;
+                camera_ctrl.translation_this_frame = v;
+                v
+            };
+
+            let camera = level
+                .world
+                .get_component_mut::<C_Camera2D>(level.cameras[level.active_camera])
+                .unwrap();
+
+            let sx = camera.transform.scale().x;
+            let v = v * sx;
+
+            let mut add_scale = Vec2f::new(0., 0.);
+            const BASE_CAM_DELTA_ZOOM_PER_SCROLL: f32 = 0.2;
+
+            if keyboard::is_key_pressed(keyboard::Key::LControl) {
+                for action in actions {
+                    match action {
+                        (name, Action_Kind::Pressed)
+                            if *name == String_Id::from("camera_zoom_up") =>
+                        {
+                            add_scale.x -= BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
+                            add_scale.y = add_scale.x;
+                        }
+                        (name, Action_Kind::Pressed)
+                            if *name == String_Id::from("camera_zoom_down") =>
+                        {
+                            add_scale.x += BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
+                            add_scale.y = add_scale.x;
+                        }
+                        _ => (),
+                    }
+                }
+            }
+
+            camera.transform.translate_v(v);
+            camera.transform.add_scale_v(add_scale);
+
+            // DEBUG: center camera on player
+            {
+                let mut stream = new_entity_stream(&level.world)
+                    .require::<C_Controllable>()
+                    .exclude::<C_Camera2D>()
+                    .build();
+                let moved = stream.next(&level.world);
+                if let Some(moved) = moved {
+                    let pos = level
+                        .world
+                        .get_component::<C_Spatial2D>(moved)
+                        .unwrap()
+                        .global_transform
+                        .position();
+
+                    let camera = level
+                        .world
+                        .get_component_mut::<C_Camera2D>(level.cameras[level.active_camera])
+                        .unwrap();
+
+                    camera
+                        .transform
+                        .set_position_v(pos + Vec2f::new(-300., -300.));
+                }
+            }
+        });
     }
 
     /*
@@ -231,89 +319,6 @@ impl Gameplay_System {
         let mut axes = Virtual_Axes::default();
         std::mem::swap(&mut self.latest_frame_axes, &mut axes);
         self.update(&dt, time, &actions, &axes, cfg);
-    }
-
-    fn update_camera(
-        &mut self,
-        real_dt: &Duration,
-        actions: &[Game_Action],
-        axes: &Virtual_Axes,
-        cfg: &cfg::Config,
-    ) {
-        // @Incomplete
-        let movement = get_movement_from_input(axes, self.input_cfg, cfg);
-        let camera_ctrl = self
-            .ecs_world
-            .get_component_mut::<C_Controllable>(self.camera);
-        if camera_ctrl.is_none() {
-            return;
-        }
-
-        let v = {
-            let real_dt_secs = time::to_secs_frac(real_dt);
-            let mut camera_ctrl = camera_ctrl.unwrap();
-            let speed = camera_ctrl.speed.read(cfg);
-            let velocity = movement * speed;
-            let v = velocity * real_dt_secs;
-            camera_ctrl.translation_this_frame = v;
-            v
-        };
-
-        let camera = self
-            .ecs_world
-            .get_component_mut::<C_Camera2D>(self.camera)
-            .unwrap();
-
-        let sx = camera.transform.scale().x;
-        let v = v * sx;
-
-        let mut add_scale = Vec2f::new(0., 0.);
-        const BASE_CAM_DELTA_ZOOM_PER_SCROLL: f32 = 0.2;
-
-        if keyboard::is_key_pressed(keyboard::Key::LControl) {
-            for action in actions {
-                match action {
-                    (name, Action_Kind::Pressed) if *name == String_Id::from("camera_zoom_up") => {
-                        add_scale.x -= BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
-                        add_scale.y = add_scale.x;
-                    }
-                    (name, Action_Kind::Pressed)
-                        if *name == String_Id::from("camera_zoom_down") =>
-                    {
-                        add_scale.x += BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
-                        add_scale.y = add_scale.x;
-                    }
-                    _ => (),
-                }
-            }
-        }
-
-        camera.transform.translate_v(v);
-        camera.transform.add_scale_v(add_scale);
-
-        // DEBUG: center camera on player
-        {
-            let mut stream = new_entity_stream(&self.ecs_world)
-                .require::<C_Controllable>()
-                .exclude::<C_Camera2D>()
-                .build();
-            let moved = stream.next(&self.ecs_world);
-            if let Some(moved) = moved {
-                let pos = self
-                    .ecs_world
-                    .get_component::<C_Spatial2D>(moved)
-                    .unwrap()
-                    .global_transform
-                    .position();
-                let camera = self
-                    .ecs_world
-                    .get_component_mut::<C_Camera2D>(self.camera)
-                    .unwrap();
-                camera
-                    .transform
-                    .set_position_v(pos + Vec2f::new(-300., -300.));
-            }
-        }
     }
 
     fn init_demo_entities(

@@ -71,26 +71,28 @@ impl Render_System {
             let texture = resources.get_texture(*tex_id);
             let rend_transform = spatial.global_transform;
 
-            #[cfg(debug_assertions)]
-            {
-                if cfg.draw_sprites_bg {
-                    gfx::render::fill_color_rect_ws(
-                        window,
-                        cfg.draw_sprites_bg_color,
-                        gfx::render::sprite_global_bounds(&sprite),
-                        &rend_transform,
-                        &camera.transform,
-                    );
-                }
-            }
+            //#[cfg(debug_assertions)]
+            //{
+            //if cfg.draw_sprites_bg {
+            //gfx::render::fill_color_rect_ws(
+            //window,
+            //cfg.draw_sprites_bg_color,
+            //gfx::render::sprite_global_bounds(&sprite),
+            //&rend_transform,
+            //&camera.transform,
+            //);
+            //}
+            //}
 
             {
-                gfx::render::render_texture_ws(window, 
-                    texture, 
-                    &src_rect,
+                gfx::render::render_texture_ws(
+                    window,
+                    texture,
+                    src_rect,
                     *modulate,
                     &rend_transform,
-                    &camera.transform);
+                    &camera.transform,
+                );
             }
         }
     }
