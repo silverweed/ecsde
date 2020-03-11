@@ -494,7 +494,7 @@ fn update_debug(game_state: &mut Game_State) {
 
     let cvars = &game_state.debug_cvars;
     let draw_entities = cvars.draw_entities.read(&engine_state.config);
-    let draw_velocities = cvars.draw_entities_velocities.read(&engine_state.config);
+    let draw_velocities = cvars.draw_velocities.read(&engine_state.config);
     let draw_colliders = cvars.draw_colliders.read(&engine_state.config);
     let draw_collision_quadtree = cvars.draw_collision_quadtree.read(&engine_state.config);
     let draw_debug_grid = cvars.draw_debug_grid.read(&engine_state.config);

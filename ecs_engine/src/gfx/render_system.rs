@@ -51,6 +51,8 @@ impl Render_System {
         window::set_clear_color(window, cfg.clear_color);
         window::clear(window);
 
+        self.batches.clear();
+
         self.entities_buf.clear();
         new_entity_stream(ecs_world)
             .require::<C_Renderable>()

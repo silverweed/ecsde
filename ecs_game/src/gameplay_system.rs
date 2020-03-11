@@ -189,7 +189,7 @@ impl Gameplay_System {
             }
 
             // @Incomplete: level-specific gameplay update
-            //self.update_demo_entites(&dt, time);
+            update_demo_entites(world, &dt, time);
 
             movement_system::update(&dt, world);
         });
@@ -264,10 +264,12 @@ impl Gameplay_System {
                 }
             }
 
-            camera.transform.translate_v(v);
             camera.transform.add_scale_v(add_scale);
+            return;
+            camera.transform.translate_v(v);
 
             // DEBUG: center camera on player
+            return;
             {
                 let mut stream = new_entity_stream(&level.world)
                     .require::<C_Controllable>()
@@ -412,63 +414,64 @@ impl Gameplay_System {
         }
     }
 
-    fn update_demo_entites(&mut self, dt: &Duration, time: &time::Time) {
-        // #DEMO
-        let em = &mut self.ecs_world;
-        let dt_secs = time::to_secs_frac(dt);
+    */
+}
 
-        //let mut stream = new_entity_stream(em)
-        //.require::<C_Controllable>()
-        //.require::<C_Spatial2D>()
-        //.build();
-        //loop {
-        //let entity = stream.next(em);
-        //if entity.is_none() {
-        //break;
-        //}
-        //let entity = entity.unwrap();
-        //let ctrl = em.get_component::<C_Controllable>(entity).unwrap();
-        //let transl = ctrl.translation_this_frame;
-        //let spat = em.get_component_mut::<C_Spatial2D>(entity).unwrap();
-        //spat.local_transform.translate_v(transl);
-        //spat.velocity.x = transl.x;
-        //spat.velocity.y = transl.y;
-        //}
+// @Temporary
+fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration, time: &time::Time) {
+    let dt_secs = dt.as_secs_f32();
 
-        let mut stream = new_entity_stream(em)
-            .require::<C_Spatial2D>()
-            .exclude::<C_Controllable>()
-            .build();
-        let mut i = 0;
-        loop {
-            let entity = stream.next(em);
-            if entity.is_none() {
-                break;
-            }
-            let entity = entity.unwrap();
-            let t = em.get_component_mut::<C_Spatial2D>(entity).unwrap();
+    //let mut stream = new_entity_stream(ecs_world)
+    //.require::<C_Controllable>()
+    //.require::<C_Spatial2D>()
+    //.build();
+    //loop {
+    //let entity = stream.next(ecs_world);
+    //if entity.is_none() {
+    //break;
+    //}
+    //let entity = entity.unwrap();
+    //let ctrl = ecs_world.get_component::<C_Controllable>(entity).unwrap();
+    //let transl = ctrl.translation_this_frame;
+    //let spat = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
+    //spat.local_transform.translate_v(transl);
+    //spat.velocity.x = transl.x;
+    //spat.velocity.y = transl.y;
+    //}
 
-            if i == 1 {
-                t.velocity = Vec2f::new(-50.0, 0.);
-            }
-            {
-                //use ecs_engine::common::angle::deg;
-                //let speed = 90.0;
-                //if i % 10 == 0 {
-                //t.local_transform.rotate(deg(dt_secs * speed));
-                //}
-                //let prev_pos = t.local_transform.position();
-                //t.local_transform.set_position(
-                //(time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
-                //3.,
-                //);
-                //t.velocity = t.local_transform.position() - prev_pos;
-                //t.local_transform.set_rotation(deg(30.));
-            }
-
-            i += 1;
+    let mut stream = new_entity_stream(ecs_world)
+        .require::<C_Spatial2D>()
+        //.exclude::<C_Controllable>()
+        .build();
+    let mut i = 0;
+    loop {
+        let entity = stream.next(ecs_world);
+        if entity.is_none() {
+            break;
         }
-    }*/
+        let entity = entity.unwrap();
+        let t = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
+
+        //if i == 1 {
+        //t.velocity = Vec2f::new(-50.0, 0.);
+        //}
+        {
+            use ecs_engine::common::angle::deg;
+            let speed = 90.0;
+            if i == 1 {
+                t.local_transform.rotate(deg(dt_secs * speed));
+            }
+            //let prev_pos = t.local_transform.position();
+            //t.local_transform.set_position(
+            //(time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
+            //3.,
+            //);
+            //t.velocity = t.local_transform.position() - prev_pos;
+            //t.local_transform.set_rotation(deg(30.));
+        }
+
+        i += 1;
+    }
 }
 
 fn read_input_cfg(cfg: &cfg::Config) -> Input_Config {

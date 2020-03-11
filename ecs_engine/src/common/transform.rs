@@ -128,7 +128,7 @@ impl Transform2D {
 
         // R | T
         // 0 | 1
-        Matrix3::new(sxc, -sys, 0.0, sxs, syc, 0.0, tx, ty, 1.0)
+        Matrix3::new(sxc, -sxs, 0.0, sys, syc, 0.0, tx, ty, 1.0)
     }
 
     #[cfg(feature = "use-sfml")]
@@ -153,9 +153,6 @@ impl Transform2D {
 
     pub fn combine(&self, other: &Transform2D) -> Transform2D {
         trace!("matrix::combine");
-        println!("combine:");
-        matrix_pretty_print(&self.get_matrix());
-        matrix_pretty_print(&other.get_matrix());
         Transform2D::new_from_matrix(&(self.get_matrix() * other.get_matrix()))
     }
 
@@ -173,7 +170,6 @@ impl Transform2D {
 impl std::ops::Mul<Vec2f> for Transform2D {
     type Output = Vec2f;
 
-    // @Audit!
     fn mul(self, v: Vec2f) -> Self::Output {
         let m = self.get_matrix();
         Vec2f::new(

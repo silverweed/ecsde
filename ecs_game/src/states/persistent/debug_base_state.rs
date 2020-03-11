@@ -16,7 +16,7 @@ pub struct Debug_Base_State {
     sid_move_camera_to_origin: String_Id,
     // @Cleanup: this cfg_var is already in Game_State!
     // Should we perhaps move it into Engine_State and read it from handle_actions?
-    gameplay_update_tick_ms: Cfg_Var<i32>,
+    gameplay_update_tick_ms: Cfg_Var<f32>,
 }
 
 const CHANGE_SPEED_DELTA: f32 = 0.1;

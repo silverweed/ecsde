@@ -74,6 +74,9 @@ fn init_demo_entities(
     level: &mut Level,
     gs_cfg: Gameplay_System_Config,
 ) {
+    #![allow(warnings)]
+    use ecs_engine::common::angle;
+
     let camera = level.world.new_entity();
     {
         let cam = level.world.add_component::<C_Camera2D>(camera);
@@ -117,6 +120,8 @@ fn init_demo_entities(
             if i > 0 {
                 //t.local_transform.set_position(i as f32 * 242.0, 0.);
                 t.local_transform.set_position(x * 500., 1. * y * 1500.);
+                //t.local_transform.set_rotation(angle::deg(45. * i as f32));
+                t.local_transform.set_scale(2., 4.);
             }
             level.scene_tree.add(entity, fst_entity, &t.local_transform);
         }

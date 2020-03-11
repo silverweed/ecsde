@@ -1,16 +1,23 @@
 use crate::common::colors::Color;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
+use crate::common::vector::Vec2f;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Gfx_Resources, Texture_Handle};
-use crate::common::vector::Vec2f;
 use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct Batches {
     textures_ws: HashMap<Texture_Handle, Vec<Texture_Props>>,
     rects_ws: Vec<Rect_Props>,
+}
+
+impl Batches {
+    pub fn clear(&mut self) {
+        self.textures_ws.clear();
+        self.rects_ws.clear();
+    }
 }
 
 pub(super) struct Texture_Props {
@@ -62,9 +69,9 @@ pub fn draw_all_batches(
     batches: &Batches,
     camera: &Transform2D,
 ) {
-    use crate::gfx::render::{start_draw_quads, add_quad, new_vertex, render_vbuf_texture};
+    use crate::gfx::render::{add_quad, new_vertex, render_vbuf_texture, start_draw_quads};
 
-    let inv_cam_transf = camera.inverse(); //camera.get_matrix_sfml().inverse();
+    let inv_cam_transf = camera.inverse();
     for (tex_id, tex_props) in &batches.textures_ws {
         let mut vbuf = start_draw_quads(tex_props.len());
         let texture = gres.get_texture(*tex_id);
@@ -78,48 +85,34 @@ pub fn draw_all_batches(
 
             let mut render_transform = inv_cam_transf;
             render_transform = render_transform.combine(transform);
-            //render_transform.combine(&transform.get_matrix_sfml());
-            //
-            println!("result:");
-            crate::common::transform::matrix_pretty_print(&render_transform.get_matrix());
 
-            let color= *color;
+            let color = *color;
             let uv: Rect<f32> = (*tex_rect).into();
             let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
-            let p = tex_size * Vec2f::new(-0.5, -0.5);
-            println!("p = {:?}, t*p = {:?}", p, render_transform * p);
+
+            // Note: beware of the order of multiplications!
+            // Scaling the local positions must be done BEFORE multiplying the matrix!
             let v1 = new_vertex(
-                render_transform * tex_size * Vec2f::new(-0.5, -0.5),
-                //tex_size * Vec2f::new(-0.5, -0.5),
+                render_transform * (tex_size * Vec2f::new(-0.5, -0.5)),
                 color,
                 Vec2f::new(uv.x, uv.y),
             );
             let v2 = new_vertex(
-                render_transform * tex_size * Vec2f::new(0.5, -0.5),
-                //tex_size * Vec2f::new(0.5, -0.5),
+                render_transform * (tex_size * Vec2f::new(0.5, -0.5)),
                 color,
                 Vec2f::new(uv.x + uv.width, uv.y),
             );
             let v3 = new_vertex(
-                render_transform * tex_size * Vec2f::new(0.5, 0.5),
-                //tex_size * Vec2f::new(0.5, 0.5),
+                render_transform * (tex_size * Vec2f::new(0.5, 0.5)),
                 color,
                 Vec2f::new(uv.x + uv.width, uv.y + uv.height),
             );
             let v4 = new_vertex(
-                render_transform * tex_size * Vec2f::new(-0.5, 0.5),
-                //tex_size * Vec2f::new(-0.5, 0.5),
+                render_transform * (tex_size * Vec2f::new(-0.5, 0.5)),
                 color,
                 Vec2f::new(uv.x, uv.y + uv.height),
             );
-            println!("adding quad\n\t{:?}\n\t{:?}\n\t{:?}\n\t{:?}",
-                     v1.position,
-                     v2.position,
-                     v3.position,
-                     v4.position,
-                     );
             add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
-
         }
 
         render_vbuf_texture(window, &vbuf, texture);
