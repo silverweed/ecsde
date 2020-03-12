@@ -1,7 +1,7 @@
 use crate::common::colors::Color;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
-use crate::common::vector::Vec2f;
+use crate::common::vector::{Vec2u,Vec2f};
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::window::Window_Handle;
 use crate::gfx::render::Text;
@@ -132,6 +132,8 @@ pub fn draw_batches(
     };
 
     let inv_cam_transf = camera.inverse();
+    let win_size = Vec2f::from(Vec2u::from(crate::gfx::window::get_window_target_size(window)));
+
     for (tex_id, tex_props) in &batches.textures_ws {
         let mut vbuf = start_draw_quads(tex_props.len());
         let texture = gres.get_texture(*tex_id);
@@ -145,12 +147,10 @@ pub fn draw_batches(
                 transform,
             } = tex_prop;
 
-            let mut render_transform = inv_cam_transf;
-            render_transform = render_transform.combine(transform);
-
             let color = *color;
             let uv: Rect<f32> = (*tex_rect).into();
             let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
+            let render_transform = inv_cam_transf.combine(transform);
 
             // Note: beware of the order of multiplications!
             // Scaling the local positions must be done BEFORE multiplying the matrix!
@@ -180,13 +180,11 @@ pub fn draw_batches(
                 transform,
             } = rect_props;
 
-            let mut render_transform = inv_cam_transf;
-            render_transform = render_transform.combine(&transform);
-
             let color = paint_props.color;
             // @Incomplete: outline etc
 
             let rect_size = Vec2f::new(rect.width as _, rect.height as _);
+            let render_transform = inv_cam_transf.combine(&transform);
 
             // Note: beware of the order of multiplications!
             // Scaling the local positions must be done BEFORE multiplying the matrix!
@@ -235,7 +233,6 @@ pub fn draw_batches(
        let font = gres.get_font(*font);
        let mut text = render::create_text(string, font, *font_size);
        
-       // @Temporary
        render::backend::render_text_ws(window, &mut text, paint_props, transform, camera);
     }
 
@@ -246,7 +243,6 @@ pub fn draw_batches(
        let font = gres.get_font(*font);
        let mut text = render::create_text(string, font, *font_size);
        
-       // @Temporary
        render::backend::render_text(window, &mut text, paint_props, *screen_pos);
     }
 }

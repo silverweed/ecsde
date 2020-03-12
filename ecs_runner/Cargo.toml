@@ -7,6 +7,6 @@ authors = ["silverweed <silverweed1991@gmail.com>"]
 [dependencies]
 libloading = "0.5"
 
-[target.'cfg(debug_assertions)'.dependencies]
+# debug-only deps
 notify = "4.0"
 

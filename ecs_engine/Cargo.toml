@@ -15,7 +15,7 @@ byteorder = "1.3.2"
 num_cpus = "*"
 crossbeam-utils = "0.7"
 
-[target.'cfg(debug_assertions)'.dependencies]
+# debug-only deps
 notify = "4.0"
 lazy_static = "1.3.0"
 

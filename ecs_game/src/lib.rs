@@ -4,8 +4,6 @@
 
 #[macro_use]
 extern crate ecs_engine;
-#[cfg(test)]
-extern crate float_cmp;
 
 mod cmdline;
 mod controllable_system;
