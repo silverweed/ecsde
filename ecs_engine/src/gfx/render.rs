@@ -33,8 +33,13 @@ pub fn fill_color_rect<R, P>(
     P: Into<Paint_Properties>,
 {
     trace!("fill_color_rect");
-    //backend::fill_color_rect(window, &paint_props.into(), rect);
-    batcher::add_rect(batches, &rect.into(), &paint_props.into());
+    let paint_props = paint_props.into();
+    // @Temporary measure until the batcher supports outlines et al.
+    if paint_props.border_thick == 0. {
+        batcher::add_rect(batches, &rect.into(), &paint_props);
+    } else {
+        backend::fill_color_rect(window, &paint_props, rect);
+    }
 }
 
 /// Draws a color-filled rectangle in world space
@@ -50,8 +55,13 @@ pub fn fill_color_rect_ws<R, P>(
     P: Into<Paint_Properties>,
 {
     trace!("fill_color_rect_ws");
-    //backend::fill_color_rect_ws(window, &paint_props.into(), rect, transform, camera);
-    batcher::add_rect_ws(batches, &rect.into(), &paint_props.into(), transform);
+    let paint_props = paint_props.into();
+    // @Temporary measure until the batcher supports outlines et al.
+    if paint_props.border_thick == 0. {
+        batcher::add_rect_ws(batches, &rect.into(), &paint_props, transform);
+    } else {
+        backend::fill_color_rect_ws(window, &paint_props, rect, transform, camera);
+    }
 }
 
 /// Draws a color-filled circle in world space
@@ -74,7 +84,6 @@ pub fn render_texture_ws(
     tex_rect: &Rect<i32>,
     color: Color,
     transform: &Transform2D,
-    camera: &Transform2D,
 ) {
     trace!("render_texture_ws");
     batcher::add_texture_ws(batches, texture, tex_rect, color, transform);

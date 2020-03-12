@@ -95,7 +95,6 @@ impl Render_System {
                     src_rect,
                     *modulate,
                     &rend_transform,
-                    &camera.transform,
                 );
             }
         }
