@@ -116,7 +116,7 @@ impl Debug_Painter {
             trace!("painter::draw_text");
             let mut txt = render::create_text(text, gres.get_font(font), (*font_size).into());
             let transform = Transform2D::from_pos(*world_pos);
-            render::render_text_ws(window, &mut txt, *props, &transform, camera);
+            render::render_text_ws(window, batches, &mut txt, self.font, *props, &transform, camera);
         }
     }
 }

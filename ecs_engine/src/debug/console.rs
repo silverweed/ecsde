@@ -317,11 +317,11 @@ impl Console {
         if cur_line.is_empty() {
             return None;
         }
-        let mut split = cur_line.split(' ');
-        let cur_cmd = split.next().unwrap();
+        let mut split = cur_line.split_whitespace();
+        let cur_cmd = split.next().unwrap().trim();
         let rest = split.next();
         if let Some(rest) = rest {
-            Some((cur_cmd, rest))
+            Some((cur_cmd, rest.trim()))
         } else {
             Some(("", cur_cmd))
         }
@@ -450,7 +450,7 @@ impl Console {
         let font = gres.get_font(self.font);
         let mut text = render::create_text(&self.cur_line, font, self.font_size);
         let mut pos = Vec2f::from(self.pos) + Vec2f::new(pad_x, self.size.y as f32 - linesep);
-        render::render_text(window, &mut text, colors::WHITE, pos);
+        render::render_text(window, batches, &mut text, self.font, colors::WHITE, pos);
 
         // Draw cursor
         let Rect { width: line_w, .. } = render::get_text_local_bounds(&text);
@@ -467,7 +467,7 @@ impl Console {
             let mut pos = pos - Vec2f::new(0.0, linesep as f32);
             for (line, color) in self.output.iter().rev() {
                 let mut text = render::create_text(line, font, self.font_size);
-                render::render_text(window, &mut text, *color, pos);
+                render::render_text(window, batches, &mut text, self.font, *color, pos);
                 pos.y -= linesep;
                 if pos.y < -linesep {
                     break;
@@ -505,7 +505,7 @@ impl Console {
 
         for (mut text, color) in texts {
             pos.y -= linesep;
-            render::render_text(window, &mut text, color, pos);
+            render::render_text(window, batches, &mut text, self.font, color, pos);
         }
     }
 }

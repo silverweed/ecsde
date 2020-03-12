@@ -5,7 +5,7 @@ use crate::common::shapes::Circle;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::gfx::window::Window_Handle;
-use crate::resources::gfx::Texture_Handle;
+use crate::resources::gfx::{Texture_Handle, Font_Handle};
 use std::convert::Into;
 
 pub mod batcher;
@@ -89,23 +89,28 @@ pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
     backend::create_text(string, font, size)
 }
 
-// @Cleanup: ideally we'd want to pass a &Text, not a &mut Text.
+// @Refactoring: change this not to pass a Text, but Text_Props
 pub fn render_text<P>(
     window: &mut Window_Handle,
-    text: &mut Text,
+    batches: &mut batcher::Batches,
+    text: &Text,
+    font: Font_Handle,
     paint_props: P,
     screen_pos: Vec2f,
 ) where
     P: Into<Paint_Properties>,
 {
     trace!("render_text");
-    backend::render_text(window, text, &paint_props.into(), screen_pos);
+    //backend::render_text(window, text, &paint_props.into(), screen_pos);
+    batcher::add_text(batches, text, font, &paint_props.into(), screen_pos);
 }
 
-// @Cleanup: ideally we'd want to pass a &Text, not a &mut Text.
+// @Refactoring: change this not to pass a Text, but Text_Props
 pub fn render_text_ws<P>(
     window: &mut Window_Handle,
-    text: &mut Text,
+    batches: &mut batcher::Batches,
+    text: &Text,
+    font: Font_Handle,
     paint_props: P,
     world_transform: &Transform2D,
     camera: &Transform2D,
@@ -113,7 +118,8 @@ pub fn render_text_ws<P>(
     P: Into<Paint_Properties>,
 {
     trace!("render_text_ws");
-    backend::render_text_ws(window, text, &paint_props.into(), world_transform, camera);
+    //backend::render_text_ws(window, text, &paint_props.into(), world_transform, camera);
+    batcher::add_text_ws(batches, text, font, &paint_props.into(), world_transform);
 }
 
 pub fn get_text_local_bounds(text: &Text) -> Rectf {

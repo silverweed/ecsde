@@ -308,7 +308,7 @@ impl Debug_Frame_Scroller {
                         font,
                         self.cfg.font_size,
                     );
-                    render::render_text(window, &mut text, text_col, Vec2f::new(x, y));
+                    render::render_text(window, batches, &mut text, self.cfg.font, text_col, Vec2f::new(x, y));
                 }
             }
         }

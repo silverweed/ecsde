@@ -126,7 +126,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
                 vert_align.aligned_pos(pad_y, tot_height)
                     + (i as f32) * (max_row_height + row_spacing),
             );
-            gfx::render::render_text(window, text, *color, position + pos);
+            gfx::render::render_text(window, batches, text, self.config.font, *color, position + pos);
         }
     }
 }
