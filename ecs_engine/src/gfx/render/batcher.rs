@@ -79,6 +79,7 @@ pub(super) fn add_texture_ws(
         .textures_ws
         .entry(texture)
         .or_insert_with(|| {
+	    println!("creating buffer for texture {:?}", texture);
             (
                 Vertex_Buffer::new(PrimitiveType::Quads, 65536, VertexBufferUsage::Stream),
                 vec![],
@@ -159,7 +160,7 @@ pub(super) fn add_line(batches: &mut Batches, from: render::Vertex, to: render::
 
 pub fn clear_batches(batches: &mut Batches) {
     trace!("clear_batches");
-    batches.textures_ws.clear();
+    batches.textures_ws.values_mut().for_each(|(_, v)| v.clear());
     batches.rects_ws.clear();
     batches.rects.clear();
     batches.texts_ws.clear();
