@@ -117,7 +117,7 @@ pub fn start_recording(engine_state: &mut Engine_State) -> Maybe_Error {
 pub fn init_engine_debug(
     engine_state: &mut Engine_State<'_>,
     gfx_resources: &mut Gfx_Resources<'_>,
-    cfg: debug::debug_ui_system::Debug_Ui_System_Config,
+    cfg: debug::debug_ui::Debug_Ui_System_Config,
 ) -> Maybe_Error {
     use crate::common::colors;
     use crate::common::vector::{Vec2f, Vec2u};
@@ -135,12 +135,12 @@ pub fn init_engine_debug(
         engine_state.app_config.target_win_size.1 as f32,
     );
     let ui_scale = cfg.ui_scale;
-    let debug_ui_system = &mut engine_state.debug_systems.debug_ui_system;
-    debug_ui_system.cfg = cfg;
+    let debug_ui = &mut engine_state.debug_systems.debug_ui;
+    debug_ui.cfg = cfg;
 
     // Frame scroller
     {
-        let scroller = &mut debug_ui_system.frame_scroller;
+        let scroller = &mut debug_ui.frame_scroller;
         scroller.size.x = (win_w * 0.75) as _;
         scroller.pos.x = (win_w * 0.125) as _;
         scroller.size.y = 35;
@@ -163,7 +163,7 @@ pub fn init_engine_debug(
             ..Default::default()
         };
 
-        let mut joy_overlay = debug_ui_system
+        let mut joy_overlay = debug_ui
             .create_overlay(String_Id::from("joysticks"), debug_overlay_config)
             .unwrap();
         joy_overlay.config.horiz_align = Align::End;
@@ -171,21 +171,21 @@ pub fn init_engine_debug(
         joy_overlay.position = Vec2f::new(win_w, win_h * 0.5);
 
         debug_overlay_config.font_size = (13.0 * ui_scale) as _;
-        let time_overlay = debug_ui_system
+        let time_overlay = debug_ui
             .create_overlay(String_Id::from("time"), debug_overlay_config)
             .unwrap();
         time_overlay.config.horiz_align = Align::End;
         time_overlay.config.vert_align = Align::End;
         time_overlay.position = Vec2f::new(win_w, win_h);
 
-        let win_overlay = debug_ui_system
+        let win_overlay = debug_ui
             .create_overlay(String_Id::from("window"), debug_overlay_config)
             .unwrap();
         win_overlay.config.horiz_align = Align::End;
         win_overlay.config.vert_align = Align::End;
         win_overlay.position = Vec2f::new(win_w, win_h - 20. * ui_scale);
 
-        let fps_overlay = debug_ui_system
+        let fps_overlay = debug_ui
             .create_overlay(String_Id::from("fps"), debug_overlay_config)
             .unwrap();
         fps_overlay.config.vert_align = Align::End;
@@ -194,21 +194,21 @@ pub fn init_engine_debug(
         debug_overlay_config.pad_x = 0.;
         debug_overlay_config.pad_y = 0.;
         debug_overlay_config.background = colors::TRANSPARENT;
-        let mouse_overlay = debug_ui_system
+        let mouse_overlay = debug_ui
             .create_overlay(String_Id::from("mouse"), debug_overlay_config)
             .unwrap();
         mouse_overlay.config.horiz_align = Align::Begin;
         mouse_overlay.config.vert_align = Align::Begin;
 
         debug_overlay_config.background = colors::rgba(20, 20, 20, 220);
-        let trace_overlay = debug_ui_system
+        let trace_overlay = debug_ui
             .create_overlay(String_Id::from("trace"), debug_overlay_config)
             .unwrap();
         trace_overlay.config.vert_align = Align::Middle;
         trace_overlay.config.horiz_align = Align::Middle;
         trace_overlay.position = Vec2f::new(win_w * 0.5, win_h * 0.5);
         // Trace overlay starts disabled
-        debug_ui_system.set_overlay_enabled(String_Id::from("trace"), false);
+        debug_ui.set_overlay_enabled(String_Id::from("trace"), false);
     }
 
     // Debug fadeout overlays
@@ -225,7 +225,7 @@ pub fn init_engine_debug(
             ..Default::default()
         };
 
-        let fadeout_overlay = debug_ui_system
+        let fadeout_overlay = debug_ui
             .create_fadeout_overlay(String_Id::from("msg"), fadeout_overlay_config)
             .unwrap();
         fadeout_overlay.config.horiz_align = Align::Begin;
@@ -248,7 +248,7 @@ pub fn init_engine_debug(
         };
         let graph = engine_state
             .debug_systems
-            .debug_ui_system
+            .debug_ui
             .create_graph(String_Id::from("fps"), graph_config)
             .unwrap();
 
@@ -349,7 +349,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
     let mut traces = tracer.saved_traces.split_off(0);
     tracer::collate_traces(&mut traces);
 
-    let scroller = &engine_state.debug_systems.debug_ui_system.frame_scroller;
+    let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
     if !scroller.manually_selected {
         debug_log.push_trace(&traces);
     }
@@ -423,14 +423,14 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
         }
     };
 
-    let ui_scale = engine_state.debug_systems.debug_ui_system.cfg.ui_scale;
-    let scroller = &engine_state.debug_systems.debug_ui_system.frame_scroller;
+    let ui_scale = engine_state.debug_systems.debug_ui.cfg.ui_scale;
+    let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
     let debug_log = &mut engine_state.debug_systems.log;
     let frame = scroller.get_real_selected_frame();
     let traces = &debug_log.get_frame(frame).unwrap().traces;
     let overlay = engine_state
         .debug_systems
-        .debug_ui_system
+        .debug_ui
         .get_overlay(String_Id::from("trace"));
 
     overlay.clear();

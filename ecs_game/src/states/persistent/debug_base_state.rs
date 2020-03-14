@@ -43,7 +43,7 @@ impl Persistent_Game_State for Debug_Base_State {
         engine_state: &mut Engine_State,
         gs: &mut Gameplay_System,
     ) -> bool {
-        let debug_ui = &mut engine_state.debug_systems.debug_ui_system;
+        let debug_ui = &mut engine_state.debug_systems.debug_ui;
 
         // @Speed: eventually we want to replace all the *name == sid with a const sid function, to allow doing
         // (sid!("game_speed_up"), Action_Kind::Pressed) => { ... }

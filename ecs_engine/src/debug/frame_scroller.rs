@@ -199,22 +199,16 @@ impl Debug_Frame_Scroller {
     pub fn draw(
         &self,
         window: &mut window::Window_Handle,
-        gres: &mut Gfx_Resources,
+        _gres: &mut Gfx_Resources,
         batches: &mut Batches,
     ) {
         trace!("frame_scroller::draw");
 
-        self.draw_row(window, gres, batches, Row::Seconds);
-        self.draw_row(window, gres, batches, Row::Frames);
+        self.draw_row(window, batches, Row::Seconds);
+        self.draw_row(window, batches, Row::Frames);
     }
 
-    fn draw_row(
-        &self,
-        window: &mut window::Window_Handle,
-        gres: &mut Gfx_Resources,
-        batches: &mut Batches,
-        row: Row,
-    ) {
+    fn draw_row(&self, window: &mut window::Window_Handle, batches: &mut Batches, row: Row) {
         let Row_Props {
             y,
             height,
@@ -290,7 +284,7 @@ impl Debug_Frame_Scroller {
             }
 
             if show_labels {
-                let font = gres.get_font(self.cfg.font);
+                let font = self.cfg.font;
                 let text_col = if row_hovered || self.manually_selected {
                     colors::WHITE
                 } else {
@@ -303,12 +297,12 @@ impl Debug_Frame_Scroller {
                     // It can also change simply due to the scroller filling up.
                     let very_first_frame = self.real_cur_frame - self.tot_scroller_frames as u64;
                     let row_first_frame = (self.n_frames as u64 * i as u64) + very_first_frame;
-                    let mut text = render::create_text(
+                    let text = render::create_text(
                         &(row_first_frame + 1).to_string(),
                         font,
                         self.cfg.font_size,
                     );
-                    render::render_text(window, batches, &mut text, self.cfg.font, text_col, Vec2f::new(x, y));
+                    render::render_text(batches, text, text_col, Vec2f::new(x, y));
                 }
             }
         }

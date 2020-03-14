@@ -5,7 +5,7 @@ use crate::common::shapes::Circle;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::gfx::window::Window_Handle;
-use crate::resources::gfx::{Texture_Handle, Font_Handle};
+use crate::resources::gfx::{Font_Handle, Gfx_Resources, Texture_Handle};
 use std::convert::Into;
 
 pub mod batcher;
@@ -16,11 +16,36 @@ mod sfml;
 #[cfg(feature = "use-sfml")]
 use self::sfml as backend;
 
-pub type Texture<'a> = backend::Texture<'a>;
 pub type Text<'a> = backend::Text<'a>;
 pub type Font<'a> = backend::Font<'a>;
+pub type Texture<'a> = backend::Texture<'a>;
+
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
+
+// Note: this struct cannot be mutated after creation
+#[derive(Clone, Default)]
+pub struct Text_Props {
+    m_string: String,
+    m_font: Font_Handle,
+    m_font_size: u16,
+    m_bounds: std::cell::Cell<Option<Rectf>>,
+}
+
+impl Text_Props {
+    pub fn string(&self) -> &str {
+        &self.m_string
+    }
+    pub fn owned_string(self) -> String {
+        self.m_string
+    }
+    pub fn font(&self) -> Font_Handle {
+        self.m_font
+    }
+    pub fn font_size(&self) -> u16 {
+        self.m_font_size
+    }
+}
 
 /// Draws a color-filled rectangle in screen space
 pub fn fill_color_rect<R, P>(
@@ -78,7 +103,6 @@ pub fn fill_color_circle_ws<P>(
 }
 
 pub fn render_texture_ws(
-    window: &mut Window_Handle,
     batches: &mut batcher::Batches,
     texture: Texture_Handle,
     tex_rect: &Rect<i32>,
@@ -93,46 +117,52 @@ pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
     backend::get_texture_size(texture)
 }
 
-pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
+pub fn create_text(string: &str, font: Font_Handle, size: u16) -> Text_Props {
     trace!("create_text");
-    backend::create_text(string, font, size)
+    Text_Props {
+        m_string: String::from(string),
+        m_font: font,
+        m_font_size: size,
+        // We don't calculate this until we're asked to
+        m_bounds: std::cell::Cell::new(None),
+    }
 }
 
-// @Refactoring: change this not to pass a Text, but Text_Props
 pub fn render_text<P>(
-    window: &mut Window_Handle,
     batches: &mut batcher::Batches,
-    text: &Text,
-    font: Font_Handle,
+    text: Text_Props,
     paint_props: P,
     screen_pos: Vec2f,
 ) where
     P: Into<Paint_Properties>,
 {
     trace!("render_text");
-    //backend::render_text(window, text, &paint_props.into(), screen_pos);
-    batcher::add_text(batches, text, font, &paint_props.into(), screen_pos);
+    batcher::add_text(batches, text, &paint_props.into(), screen_pos);
 }
 
-// @Refactoring: change this not to pass a Text, but Text_Props
 pub fn render_text_ws<P>(
-    window: &mut Window_Handle,
     batches: &mut batcher::Batches,
-    text: &Text,
-    font: Font_Handle,
+    text: Text_Props,
     paint_props: P,
     world_transform: &Transform2D,
-    camera: &Transform2D,
 ) where
     P: Into<Paint_Properties>,
 {
     trace!("render_text_ws");
-    //backend::render_text_ws(window, text, &paint_props.into(), world_transform, camera);
-    batcher::add_text_ws(batches, text, font, &paint_props.into(), world_transform);
+    batcher::add_text_ws(batches, text, &paint_props.into(), world_transform);
 }
 
-pub fn get_text_local_bounds(text: &Text) -> Rectf {
-    backend::get_text_local_bounds(text)
+pub fn get_text_local_bounds(text: &Text_Props, gres: &Gfx_Resources) -> Rectf {
+    trace!("get_text_local_bounds");
+    if let Some(bounds) = text.m_bounds.get() {
+        bounds
+    } else {
+        let font = gres.get_font(text.font());
+        let txt = Text::new(text.string(), font, text.font_size() as _);
+        let bounds = backend::get_text_local_bounds(&txt);
+        text.m_bounds.set(Some(bounds));
+        bounds
+    }
 }
 
 pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer {

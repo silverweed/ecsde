@@ -92,10 +92,10 @@ impl Debug_Element for Fadeout_Debug_Overlay {
 
             let d = core::time::duration_ratio(&time, &fadeout_time);
             let alpha = 255 - (d * d * 255.0f32) as u8;
-            let text = gfx::render::create_text(text, gres.get_font(font), font_size.into());
+            let text = gfx::render::create_text(text, font, font_size.into());
             let color = Color { a: alpha, ..*color };
 
-            let txt_bounds = gfx::render::get_text_local_bounds(&text);
+            let txt_bounds = gfx::render::get_text_local_bounds(&text, gres);
             max_row_width = max_row_width.max(txt_bounds.width);
             max_row_height = max_row_height.max(txt_bounds.height);
 
@@ -126,7 +126,10 @@ impl Debug_Element for Fadeout_Debug_Overlay {
                 vert_align.aligned_pos(pad_y, tot_height)
                     + (i as f32) * (max_row_height + row_spacing),
             );
-            gfx::render::render_text(window, batches, text, self.config.font, *color, position + pos);
+            // Swap out the text_props to avoid a string copy
+            let mut empty_text = gfx::render::Text_Props::default();
+            std::mem::swap(text, &mut empty_text);
+            gfx::render::render_text(batches, empty_text, *color, position + pos);
         }
     }
 }

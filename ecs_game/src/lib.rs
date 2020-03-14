@@ -187,6 +187,12 @@ pub unsafe extern "C" fn game_update<'a>(
             if !game_state.engine_state.time.paused {
                 if game_state.engine_state.time.was_paused {
                     // Just resumed
+                    game_state
+                        .engine_state
+                        .debug_systems
+                        .debug_ui
+                        .frame_scroller
+                        .manually_selected = false;
                     log.reset_from_frame(game_state.engine_state.cur_frame);
                 }
                 log.start_frame();
@@ -254,7 +260,7 @@ pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mu
         game_state
             .engine_state
             .debug_systems
-            .debug_ui_system
+            .debug_ui
             .get_fadeout_overlay(String_Id::from("msg"))
             .add_line_color("+++ GAME RELOADED +++", colors::rgb(255, 128, 0));
     }
@@ -379,7 +385,7 @@ fn create_game_state<'a>(
 
         let ui_scale = Cfg_Var::<f32>::new("engine/debug/ui/ui_scale", &engine_state.config)
             .read(&engine_state.config);
-        let cfg = ngdebug::debug_ui_system::Debug_Ui_System_Config {
+        let cfg = ngdebug::debug_ui::Debug_Ui_System_Config {
             ui_scale,
             target_win_size: engine_state.app_config.target_win_size,
         };
@@ -515,7 +521,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
 
     const FONT: &str = "Hack-Regular.ttf";
 
-    let debug_ui = &mut game_state.engine_state.debug_systems.debug_ui_system;
+    let debug_ui = &mut game_state.engine_state.debug_systems.debug_ui;
     let font = game_resources.gfx.load_font(&resources::gfx::font_path(
         &game_state.engine_state.env,
         FONT,

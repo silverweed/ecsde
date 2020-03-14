@@ -1,13 +1,12 @@
 use crate::audio::audio_system;
 use crate::collisions::collision_system;
-use crate::gfx::render_system;
 
 #[cfg(debug_assertions)]
 use {
     crate::cfg,
     crate::common::stringid::String_Id,
     crate::core::env::Env_Info,
-    crate::debug::{console, debug_ui_system, log, painter::Debug_Painter},
+    crate::debug::{console, debug_ui, log, painter::Debug_Painter},
     crate::replay::recording_system,
     crate::resources::gfx::Gfx_Resources,
     std::collections::HashMap,
@@ -16,12 +15,11 @@ use {
 pub struct Core_Systems<'r> {
     pub audio_system: audio_system::Audio_System<'r>,
     pub collision_system: collision_system::Collision_System,
-    pub render_system: render_system::Render_System,
 }
 
 #[cfg(debug_assertions)]
 pub struct Debug_Systems {
-    pub debug_ui_system: debug_ui_system::Debug_Ui_System,
+    pub debug_ui: debug_ui::Debug_Ui_System,
 
     pub replay_recording_system: recording_system::Replay_Recording_System,
     // Note: we have one painter per level plus the "global" painter (with empty Id)
@@ -40,7 +38,6 @@ impl Core_Systems<'_> {
                 max_concurrent_sounds: 10,
             }),
             collision_system: collision_system::Collision_System::new(),
-            render_system: render_system::Render_System::new(),
         }
     }
 }
@@ -56,7 +53,7 @@ impl Debug_Systems {
         let fps = (1000. / ms_per_frame + 0.5) as i32;
         painters.insert(String_Id::from(""), Debug_Painter::new());
         Debug_Systems {
-            debug_ui_system: debug_ui_system::Debug_Ui_System::new(),
+            debug_ui: debug_ui::Debug_Ui_System::new(),
             replay_recording_system: recording_system::Replay_Recording_System::new(
                 recording_system::Replay_Recording_System_Config { ms_per_frame },
             ),

@@ -49,7 +49,7 @@ pub fn tick_game<'a>(
     if game_state.is_replaying && game_state.input_provider.is_realtime_player_input() {
         #[cfg(debug_assertions)]
         debug_systems
-            .debug_ui_system
+            .debug_ui
             .get_fadeout_overlay(sid_msg)
             .add_line("REPLAY HAS ENDED.");
         game_state.is_replaying = false;
@@ -124,7 +124,7 @@ pub fn tick_game<'a>(
     // Frame scroller events
     #[cfg(debug_assertions)]
     {
-        let scroller = &mut debug_systems.debug_ui_system.frame_scroller;
+        let scroller = &mut debug_systems.debug_ui.frame_scroller;
         let prev_selected_frame = scroller.cur_frame;
         let prev_selected_second = scroller.cur_second;
         let was_manually_selected = scroller.manually_selected;
@@ -174,7 +174,7 @@ pub fn tick_game<'a>(
         #[cfg(debug_assertions)]
         {
             update_joystick_debug_overlay(
-                debug_systems.debug_ui_system.get_overlay(sid_joysticks),
+                debug_systems.debug_ui.get_overlay(sid_joysticks),
                 real_axes,
                 joy_mask,
                 game_state.gameplay_system.input_cfg,
@@ -359,19 +359,17 @@ fn update_graphics(
 
     {
         let gameplay_system = &mut game_state.gameplay_system;
-        let render_system = &mut game_state.engine_state.systems.render_system;
         let batches = &mut game_state.level_batches;
+        let frame_alloc = &mut game_state.engine_state.frame_alloc;
         gameplay_system.foreach_active_level(|level| {
             let render_args = render_system::Render_System_Update_Args {
-                window,
-                resources: gres,
                 batches: batches.get_mut(&level.id).unwrap(),
-                camera: level.get_camera(),
                 ecs_world: &level.world,
+                frame_alloc,
                 cfg: render_cfg,
             };
 
-            render_system.update(render_args);
+            render_system::update(render_args);
         });
     }
 
@@ -402,11 +400,11 @@ fn update_graphics(
 
         // Draw debug UI
         {
-            trace!("debug_ui_system::update");
+            trace!("debug_ui::update");
             game_state
                 .engine_state
                 .debug_systems
-                .debug_ui_system
+                .debug_ui
                 .update_and_draw(
                     &real_dt,
                     &mut game_state.window,
@@ -467,12 +465,12 @@ fn update_debug(game_state: &mut Game_State) {
 
     // Overlays
     update_time_debug_overlay(
-        debug_systems.debug_ui_system.get_overlay(sid_time),
+        debug_systems.debug_ui.get_overlay(sid_time),
         &engine_state.time,
     );
 
     update_fps_debug_overlay(
-        debug_systems.debug_ui_system.get_overlay(sid_fps),
+        debug_systems.debug_ui.get_overlay(sid_fps),
         &game_state.fps_debug,
         (1000.
             / game_state
@@ -492,14 +490,14 @@ fn update_debug(game_state: &mut Game_State) {
             .get_mut(&String_Id::from(""))
             .unwrap();
         update_mouse_debug_overlay(
-            debug_systems.debug_ui_system.get_overlay(sid_mouse),
+            debug_systems.debug_ui.get_overlay(sid_mouse),
             painter,
             &game_state.window,
         );
     }
 
     update_win_debug_overlay(
-        debug_systems.debug_ui_system.get_overlay(sid_window),
+        debug_systems.debug_ui.get_overlay(sid_window),
         &game_state.window,
     );
 
@@ -508,14 +506,14 @@ fn update_debug(game_state: &mut Game_State) {
         .draw_fps_graph
         .read(&engine_state.config);
     debug_systems
-        .debug_ui_system
+        .debug_ui
         .set_graph_enabled(sid_fps, draw_fps_graph);
     if draw_fps_graph {
         debug_systems
-            .debug_ui_system
+            .debug_ui
             .set_graph_enabled(sid_fps, true);
         update_graph_fps(
-            debug_systems.debug_ui_system.get_graph(sid_fps),
+            debug_systems.debug_ui.get_graph(sid_fps),
             &engine_state.time,
             &game_state.fps_debug,
         );
@@ -524,7 +522,7 @@ fn update_debug(game_state: &mut Game_State) {
     ////// Per-Level debugs //////
     let painters = &mut debug_systems.painters;
     let collision_system = &engine_state.systems.collision_system;
-    let ui_system = &mut debug_systems.debug_ui_system;
+    let ui_system = &mut debug_systems.debug_ui;
     let target_win_size = engine_state.app_config.target_win_size;
 
     let cvars = &game_state.debug_cvars;

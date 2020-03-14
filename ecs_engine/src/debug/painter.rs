@@ -85,7 +85,7 @@ impl Debug_Painter {
     pub fn draw(
         &self,
         window: &mut Window_Handle,
-        gres: &mut gfx::Gfx_Resources,
+        _gres: &mut gfx::Gfx_Resources,
         batches: &mut Batches,
         camera: &Transform2D,
     ) {
@@ -114,9 +114,9 @@ impl Debug_Painter {
         let font = self.font;
         for (text, world_pos, font_size, props) in &self.texts {
             trace!("painter::draw_text");
-            let mut txt = render::create_text(text, gres.get_font(font), (*font_size).into());
+            let txt = render::create_text(text, font, (*font_size).into());
             let transform = Transform2D::from_pos(*world_pos);
-            render::render_text_ws(window, batches, &mut txt, self.font, *props, &transform, camera);
+            render::render_text_ws(batches, txt, *props, &transform);
         }
     }
 }

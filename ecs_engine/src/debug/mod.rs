@@ -1,5 +1,5 @@
 pub mod console;
-pub mod debug_ui_system;
+pub mod debug_ui;
 pub mod element;
 pub mod fadeout_overlay;
 pub mod fps;

@@ -447,13 +447,13 @@ impl Console {
         );
 
         // Draw cur line
-        let font = gres.get_font(self.font);
-        let mut text = render::create_text(&self.cur_line, font, self.font_size);
+        let font = self.font;
+        let text = render::create_text(&self.cur_line, font, self.font_size);
         let mut pos = Vec2f::from(self.pos) + Vec2f::new(pad_x, self.size.y as f32 - linesep);
-        render::render_text(window, batches, &mut text, self.font, colors::WHITE, pos);
+        let Rect { width: line_w, .. } = render::get_text_local_bounds(&text, gres);
+        render::render_text(batches, text, colors::WHITE, pos);
 
         // Draw cursor
-        let Rect { width: line_w, .. } = render::get_text_local_bounds(&text);
         let cursor = Rect::new(
             pad_x + (self.cur_pos as f32 / self.cur_line.len().max(1) as f32) * line_w as f32,
             pos.y + linesep,
@@ -466,8 +466,8 @@ impl Console {
         {
             let mut pos = pos - Vec2f::new(0.0, linesep as f32);
             for (line, color) in self.output.iter().rev() {
-                let mut text = render::create_text(line, font, self.font_size);
-                render::render_text(window, batches, &mut text, self.font, *color, pos);
+                let text = render::create_text(line, font, self.font_size);
+                render::render_text(batches, text, *color, pos);
                 pos.y -= linesep;
                 if pos.y < -linesep {
                     break;
@@ -503,9 +503,9 @@ impl Console {
             );
         }
 
-        for (mut text, color) in texts {
+        for (text, color) in texts {
             pos.y -= linesep;
-            render::render_text(window, batches, &mut text, self.font, color, pos);
+            render::render_text(batches, text, color, pos);
         }
     }
 }
