@@ -276,4 +276,36 @@ mod tests {
         assert_approx_eq!(t2.rotation().as_rad_0tau(), 1.4);
         assert_approx_eq!(t2.scale().y, 2.0);
     }
+
+    #[test]
+    fn matrix_from_pos() {
+        let t1 = Transform2D::from_pos(v2!(-100., 240.));
+        assert_approx_eq!(t1.position(), v2!(-100., 240.));
+    }
+
+    #[test]
+    fn matrix_from_pos_rot_scale() {
+        let t1 = Transform2D::from_pos_rot_scale(v2!(-100., 240.), rad(2.3), v2!(-0.3, 2.3));
+        assert_approx_eq!(t1.position(), v2!(-100., 240.));
+        assert_approx_eq!(t1.rotation(), rad(2.3));
+        assert_approx_eq!(t1.scale(), v2!(-0.3, 2.3));
+    }
+
+    #[test]
+    fn matrix_combine() {
+        let t1 = Transform2D::from_pos(v2!(2., 45.));
+        let t2 = Transform2D::default().combine(&t1);
+        assert_approx_eq!(t2.position(), v2!(2., 45.));
+
+        let t3 = t2.inverse().combine(&t2);
+        assert_approx_eq!(t3, Transform2D::default());
+
+        let t4 = Transform2D::from_pos_rot_scale(v2!(0., 30.), rad(1.), v2!(1., 1.2));
+        let mut t5 = t4.combine(&t3);
+        assert_approx_eq!(t5, t4);
+        assert_approx_eq!(t5.position(), v2!(0., 30.));
+
+        t5.translate(20., -100.);
+        assert_approx_eq!(t5.position(), v2!(20., -70.));
+    }
 }

@@ -92,6 +92,7 @@ pub fn fill_color_rect_ws<R, P>(
 /// Draws a color-filled circle in world space
 pub fn fill_color_circle_ws<P>(
     window: &mut Window_Handle,
+    batches: &mut batcher::Batches,
     paint_props: P,
     circle: Circle,
     camera: &Transform2D,
@@ -99,7 +100,13 @@ pub fn fill_color_circle_ws<P>(
     P: Into<Paint_Properties>,
 {
     trace!("fill_color_circle_ws");
-    backend::fill_color_circle_ws(window, &paint_props.into(), circle, camera);
+    let paint_props = paint_props.into();
+    // @Temporary measure until the batcher supports outlines et al.
+    if paint_props.border_thick == 0. {
+        batcher::add_circle_ws(batches, &circle, &paint_props);
+    } else {
+        backend::fill_color_circle_ws(window, &paint_props, circle, camera);
+    }
 }
 
 pub fn render_texture_ws(
@@ -183,6 +190,10 @@ pub fn add_triangle(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Ver
     backend::add_triangle(vbuf, v1, v2, v3);
 }
 
+pub fn add_line(vbuf: &mut Vertex_Buffer, from: &Vertex, to: &Vertex) {
+    backend::add_line(vbuf, from, to);
+}
+
 pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {
     backend::add_vertex(vbuf, v);
 }
@@ -216,7 +227,13 @@ pub fn start_draw_linestrip(n_vertices: usize) -> Vertex_Buffer {
     backend::start_draw_linestrip(n_vertices)
 }
 
-pub fn render_line(window: &mut Window_Handle, start: &Vertex, end: &Vertex) {
+pub fn start_draw_lines(n_vertices: usize) -> Vertex_Buffer {
+    trace!("start_draw_lines");
+    backend::start_draw_lines(n_vertices)
+}
+
+// Note: this always renders a line with thickness = 1px
+pub fn render_line(batcher: &mut batcher::Batches, start: &Vertex, end: &Vertex) {
     trace!("render_line");
-    backend::render_line(window, start, end);
+    batcher::add_line(batcher, *start, *end);
 }

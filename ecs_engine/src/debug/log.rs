@@ -1,4 +1,4 @@
-use super::tracer::Tracer_Node;
+use super::tracer::Tracer_Node_Final;
 use std::collections::VecDeque;
 
 #[derive(Default)]
@@ -7,11 +7,12 @@ pub struct Debug_Log {
     pub hist_len: u32,
     pub max_hist_len: u32,
     pub frames: VecDeque<Debug_Log_Frame>,
+    pub mem_used: usize,
 }
 
 #[derive(Default, Debug)]
 pub struct Debug_Log_Frame {
-    pub traces: Vec<Tracer_Node>,
+    pub traces: Vec<Tracer_Node_Final>,
 }
 
 impl Debug_Log {
@@ -31,6 +32,12 @@ impl Debug_Log {
             self.hist_len += 1;
         }
         self.frames.push_back(Debug_Log_Frame::default());
+        if self.frames.len() % 10 == 0 {
+            println!(
+                "mem used = {}",
+                crate::common::units::format_bytes_pretty(self.mem_used)
+            );
+        }
     }
 
     pub fn reset_from_frame(&mut self, new_cur_frame: u64) {
@@ -49,7 +56,8 @@ impl Debug_Log {
         }
     }
 
-    pub fn push_trace(&mut self, trace: &[Tracer_Node]) {
+    pub fn push_trace(&mut self, trace: &[Tracer_Node_Final]) {
+        self.mem_used += trace.len() * std::mem::size_of::<Tracer_Node_Final>();
         self.frames.back_mut().unwrap().traces = trace.to_vec();
     }
 }

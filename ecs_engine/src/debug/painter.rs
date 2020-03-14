@@ -98,7 +98,7 @@ impl Debug_Painter {
         }
 
         for (circle, props) in &self.circles {
-            render::fill_color_circle_ws(window, *props, *circle, camera);
+            render::fill_color_circle_ws(window, batches, *props, *circle, camera);
         }
 
         for (arrow, props) in &self.arrows {

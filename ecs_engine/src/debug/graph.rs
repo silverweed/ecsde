@@ -95,7 +95,7 @@ impl Debug_Element for Debug_Graph_View {
 
                 let text = render::create_text(&format!("{:.1}", x), font, font_size);
 
-                render::render_line(window, &v1, &v2);
+                render::render_line(batches, &v1, &v2);
                 render::render_text(batches, text, colors::WHITE, pos2 + Vec2f::new(2., 0.));
 
                 x += xstep;
@@ -119,7 +119,7 @@ impl Debug_Element for Debug_Graph_View {
 
                 let text = render::create_text(&format!("{:.1}", y), font, font_size);
 
-                render::render_line(window, &v1, &v2);
+                render::render_line(batches, &v1, &v2);
                 render::render_text(batches, text, colors::WHITE, pos1 + Vec2f::new(0., -2.));
 
                 y += ystep;

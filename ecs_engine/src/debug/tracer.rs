@@ -1,4 +1,5 @@
 use crate::prelude::Debug_Tracer;
+use std::convert::TryInto;
 use std::fmt::Debug;
 use std::time;
 
@@ -24,7 +25,7 @@ pub struct Scope_Trace_Info {
     pub tag: &'static str,
 
     // These are only meaningful for collated traces
-    pub n_calls: usize,
+    pub n_calls: u32,
     pub tot_duration: time::Duration,
 }
 
@@ -64,6 +65,50 @@ impl Drop for Scope_Trace {
     }
 }
 
+/// A trimmed-down version of Tracer_Node used to store data with lower memory footprint
+#[derive(Copy, Clone, Debug)]
+pub struct Tracer_Node_Final {
+    pub info: Scope_Trace_Info_Final,
+    pub parent_idx: Option<u16>,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct Scope_Trace_Info_Final {
+    pub tag: &'static str,
+
+    // High 24 bytes: n_calls
+    // Low 40 bytes: duration_nanos
+    pub n_calls_and_tot_duration: u64,
+}
+
+impl Scope_Trace_Info_Final {
+    fn new(tag: &'static str, n_calls: u32, tot_duration: time::Duration) -> Self {
+        let n_calls = n_calls.min(1 << 24);
+        let tot_duration_nanos = tot_duration.as_nanos().min(1 << 40) as u64;
+        if tot_duration_nanos as u128 != tot_duration.as_nanos() {
+            lwarn!(
+                "Truncating duration nanos from {} to {}",
+                tot_duration.as_nanos(),
+                tot_duration_nanos
+            );
+        }
+        Self {
+            tag,
+            n_calls_and_tot_duration: ((n_calls as u64) << 40)
+                | (tot_duration_nanos & 0xFF_FFFF_FFFF),
+        }
+    }
+
+    pub fn tot_duration(&self) -> time::Duration {
+        let duration_nanos = self.n_calls_and_tot_duration & 0xFF_FFFF_FFFF;
+        time::Duration::from_nanos(duration_nanos as _)
+    }
+
+    pub fn n_calls(&self) -> u32 {
+        (self.n_calls_and_tot_duration >> 40) as _
+    }
+}
+
 #[inline]
 pub fn debug_trace(tag: &'static str, tracer: Debug_Tracer) -> Option<Scope_Trace> {
     Some(Scope_Trace::new(tracer, tag))
@@ -71,12 +116,12 @@ pub fn debug_trace(tag: &'static str, tracer: Debug_Tracer) -> Option<Scope_Trac
 
 #[derive(Clone, Debug)]
 pub struct Trace_Tree<'a> {
-    pub node: &'a Tracer_Node,
+    pub node: &'a Tracer_Node_Final,
     pub children: Vec<Trace_Tree<'a>>,
 }
 
 impl Trace_Tree<'_> {
-    pub fn new(node: &Tracer_Node) -> Trace_Tree {
+    pub fn new(node: &Tracer_Node_Final) -> Trace_Tree {
         Trace_Tree {
             node,
             children: vec![],
@@ -135,12 +180,12 @@ impl Tracer {
     }
 }
 
-pub fn total_traced_time(traces: &[Tracer_Node]) -> time::Duration {
+pub fn total_traced_time(traces: &[Tracer_Node_Final]) -> time::Duration {
     traces
         .iter()
         .filter_map(|node| {
             if node.parent_idx.is_none() {
-                Some(node.info.end_t.duration_since(node.info.start_t))
+                Some(node.info.tot_duration())
             } else {
                 None
             }
@@ -151,7 +196,7 @@ pub fn total_traced_time(traces: &[Tracer_Node]) -> time::Duration {
 pub fn sort_trace_trees(trees: &mut [Trace_Tree]) {
     fn sort_tree_internal(tree: &mut Trace_Tree) {
         tree.children
-            .sort_by(|a, b| b.node.info.tot_duration.cmp(&a.node.info.tot_duration));
+            .sort_by(|a, b| b.node.info.tot_duration().cmp(&a.node.info.tot_duration()));
         for c in &mut tree.children {
             sort_tree_internal(c);
         }
@@ -166,18 +211,18 @@ pub fn sort_trace_trees(trees: &mut [Trace_Tree]) {
 // @Incomplete: handle multiple threads in a sane way (right now tot_duration
 // ends up being the sum of all threads, which may be ok, but should be made explicit
 // in the debug overlay).
-pub fn collate_traces(saved_traces: &mut Vec<Tracer_Node>) {
-    use std::collections::hash_map::Entry;
+#[must_use]
+pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
     use std::collections::HashMap;
 
-    #[derive(Copy, Clone)]
     struct Tag_Map_Info {
-        pub idx_into_saved_traces: usize,
-        pub tot_n_calls: usize,
+        pub tag: &'static str,
+        pub n_calls: u32,
         pub tot_duration: time::Duration,
+        pub parent_idx: Option<usize>,
     }
 
-    // where `hash` is computed from the entire call stack (we can't just use the tag,
+    // Note: `hash` is computed from the entire call stack (we can't just use the tag,
     // or the trace will only show the call under the first caller).
     let mut tag_map: HashMap<u32, Tag_Map_Info> = HashMap::new();
 
@@ -201,51 +246,52 @@ pub fn collate_traces(saved_traces: &mut Vec<Tracer_Node>) {
         result
     }
 
-    // Accumulate n_calls of all nodes with the same tag in the first one found,
-    // and leave all others with n_calls = 0.
+    // Accumulate n_calls of all nodes with the same tag.
     // @Speed: this could use the frame_allocator.
     let hashes = saved_traces
         .iter()
         .map(|node| hash_node(saved_traces, node))
         .collect::<Vec<_>>();
-    for (i, node) in saved_traces.iter_mut().enumerate() {
-        match tag_map.entry(hashes[i]) {
-            Entry::Vacant(v) => {
-                v.insert(Tag_Map_Info {
-                    idx_into_saved_traces: i,
-                    tot_n_calls: 1,
-                    tot_duration: node.info.duration(),
-                });
-            }
-            Entry::Occupied(mut o) => {
-                let tag_map_info = *o.get();
-                o.insert(Tag_Map_Info {
-                    tot_n_calls: tag_map_info.tot_n_calls + 1,
-                    tot_duration: tag_map_info.tot_duration + node.info.duration(),
-                    ..tag_map_info
-                });
-                node.info.n_calls = 0;
-            }
+    // Used to iterate the tag_map in insertion order
+    let mut tags_ordered = Vec::with_capacity(saved_traces.len());
+    let mut idx_map = HashMap::new();
+    for (i, node) in saved_traces.iter().enumerate() {
+        let hash = hashes[i];
+        let entry = tag_map.entry(hash).or_insert_with(|| Tag_Map_Info {
+            tag: node.info.tag,
+            n_calls: 0,
+            tot_duration: time::Duration::default(),
+            parent_idx: node.parent_idx.map(|i| {
+                let hash = hashes[i];
+                idx_map[&hash]
+            }),
+        });
+        entry.n_calls += 1;
+        entry.tot_duration += node.info.duration();
+        let is_new = entry.n_calls == 1;
+        if is_new {
+            idx_map.insert(hash, tags_ordered.len());
+            tags_ordered.push(hash);
         }
     }
 
-    for (
-        _,
-        Tag_Map_Info {
-            idx_into_saved_traces,
-            tot_n_calls,
-            tot_duration,
-        },
-    ) in tag_map
-    {
-        saved_traces[idx_into_saved_traces].info.n_calls = tot_n_calls;
-        saved_traces[idx_into_saved_traces].info.tot_duration = tot_duration;
-    }
+    tags_ordered
+        .iter()
+        .map(|hash| {
+            let info = &tag_map[&hash];
+            Tracer_Node_Final {
+                info: Scope_Trace_Info_Final::new(info.tag, info.n_calls, info.tot_duration),
+                parent_idx: info
+                    .parent_idx
+                    .map(|idx| idx.try_into().expect("parent_idx is too big to fit u16!")),
+            }
+        })
+        .collect()
 }
 
 /// Construct a forest of Trace_Trees from the saved_traces array.
 // @Audit @Soundness: verify this function is actually working, after the collate_traces change.
-pub fn build_trace_trees(traces: &[Tracer_Node]) -> Vec<Trace_Tree<'_>> {
+pub fn build_trace_trees(traces: &[Tracer_Node_Final]) -> Vec<Trace_Tree<'_>> {
     let mut forest = vec![];
 
     if traces.is_empty() {
@@ -275,11 +321,15 @@ pub fn build_trace_trees(traces: &[Tracer_Node]) -> Vec<Trace_Tree<'_>> {
     // remove children before their parent, so we never try to unwrap() an already-taken node.
     for (i, node) in traces.iter().enumerate().rev() {
         let trace_tree = trees[i].take().unwrap();
-        if node.info.n_calls == 0 {
+        if node.info.n_calls() == 0 {
             continue;
         }
         if let Some(p_idx) = node.parent_idx {
-            trees[p_idx].as_mut().unwrap().children.push(trace_tree);
+            trees[p_idx as usize]
+                .as_mut()
+                .unwrap()
+                .children
+                .push(trace_tree);
         } else {
             forest.push(trace_tree);
         }

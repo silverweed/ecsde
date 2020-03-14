@@ -213,6 +213,7 @@ pub fn get_texture_size(texture: &sfml::graphics::Texture) -> (u32, u32) {
     (s.x, s.y)
 }
 
+// @Robustness @Cleanup: we may want to refactor this code
 pub fn start_draw_quads(_n_quads: usize) -> Vertex_Buffer {
     sfml::graphics::VertexArray::new(PrimitiveType::Quads, 0)
 }
@@ -223,6 +224,10 @@ pub fn start_draw_triangles(_n_tris: usize) -> Vertex_Buffer {
 
 pub fn start_draw_linestrip(_n_vertices: usize) -> Vertex_Buffer {
     sfml::graphics::VertexArray::new(PrimitiveType::LineStrip, 0)
+}
+
+pub fn start_draw_lines(_n_lines: usize) -> Vertex_Buffer {
+    sfml::graphics::VertexArray::new(PrimitiveType::Lines, 0)
 }
 
 pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
@@ -240,6 +245,11 @@ pub fn add_triangle(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Ver
 
 pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {
     vbuf.append(v);
+}
+
+pub fn add_line(vbuf: &mut Vertex_Buffer, from: &Vertex, to: &Vertex) {
+    vbuf.append(from);
+    vbuf.append(to);
 }
 
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {

@@ -61,6 +61,7 @@ impl Debug_Frame_Scroller {
     }
 
     fn update_frame(&mut self, log: &Debug_Log) {
+        // @Fixme: make the frame bar continue to scroll even when log.hist_len is maxed
         if !self.manually_selected {
             self.cur_frame = ((log.hist_len - 1) % self.n_frames as u32) as u16;
             self.n_filled_frames = self.cur_frame + 1;

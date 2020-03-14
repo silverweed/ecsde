@@ -509,9 +509,7 @@ fn update_debug(game_state: &mut Game_State) {
         .debug_ui
         .set_graph_enabled(sid_fps, draw_fps_graph);
     if draw_fps_graph {
-        debug_systems
-            .debug_ui
-            .set_graph_enabled(sid_fps, true);
+        debug_systems.debug_ui.set_graph_enabled(sid_fps, true);
         update_graph_fps(
             debug_systems.debug_ui.get_graph(sid_fps),
             &engine_state.time,
@@ -894,8 +892,8 @@ fn debug_draw_grid(
     let col_gray = colors::rgba(200, 200, 200, grid_opacity);
     let col_white = colors::rgba(255, 255, 255, grid_opacity);
     let sq_coord = Vec2f::new(
-        (cx / square_size).floor() * square_size,
-        (cy / square_size).floor() * square_size,
+        ((cx * cam_sx) / square_size).floor() * square_size,
+        ((cy * cam_sy) / square_size).floor() * square_size,
     );
 
     for j in 0..n_vert {
@@ -912,8 +910,8 @@ fn debug_draw_grid(
             } else {
                 col_gray
             };
-            debug_painter.add_rect(Vec2f::new(square_size, square_size), &transf, color);
             let pos = transf.position();
+            debug_painter.add_rect(Vec2f::new(square_size, square_size), &transf, color);
             debug_painter.add_text(
                 &format!("{},{}", pos.x, pos.y),
                 pos + Vec2f::new(5., 5.),

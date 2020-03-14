@@ -346,12 +346,12 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
     let mut tracer = prelude::DEBUG_TRACER.lock().unwrap();
 
     let debug_log = &mut engine_state.debug_systems.log;
-    let mut traces = tracer.saved_traces.split_off(0);
-    tracer::collate_traces(&mut traces);
+    let traces = tracer.saved_traces.split_off(0);
+    let final_traces = tracer::collate_traces(&traces);
 
     let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
     if !scroller.manually_selected {
-        debug_log.push_trace(&traces);
+        debug_log.push_trace(&final_traces);
     }
 
     if engine_state.debug_systems.show_trace_overlay {
@@ -377,15 +377,16 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
 fn update_trace_overlay(engine_state: &mut Engine_State) {
     use crate::common::colors;
     use crate::debug::overlay::Debug_Overlay;
-    use crate::debug::tracer::{self, Trace_Tree, Tracer_Node};
+    use crate::debug::tracer::{self, Trace_Tree, Tracer_Node_Final};
 
     fn add_node_line(
-        node: &Tracer_Node,
+        node: &Tracer_Node_Final,
         total_traced_time: &Duration,
         indent: usize,
         overlay: &mut Debug_Overlay,
     ) {
-        let duration = node.info.tot_duration;
+        let duration = node.info.tot_duration();
+        let n_calls = node.info.n_calls();
         let ratio = time::duration_ratio(&duration, total_traced_time);
         let color = colors::lerp_col(colors::GREEN, colors::RED, ratio);
         let mut line = String::new();
@@ -398,8 +399,8 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
             node.info.tag,
             duration_ms,
             (ratio * 100.0) as u32,
-            node.info.n_calls,
-            duration_ms / node.info.n_calls as f32,
+            n_calls,
+            duration_ms / n_calls as f32,
             width = 40 - indent
         ));
         let bg_col = colors::Color { a: 50, ..color };
@@ -413,7 +414,7 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
         overlay: &mut Debug_Overlay,
         prune_duration: &Duration,
     ) {
-        if tree.node.info.tot_duration < *prune_duration {
+        if tree.node.info.tot_duration() < *prune_duration {
             return;
         }
 

@@ -1,7 +1,7 @@
 use crate::common::vector::Vector2;
 use std::cmp::{Eq, PartialEq};
 use std::fmt::Debug;
-use std::ops::{Add, Sub};
+use std::ops::{Add, Mul, Sub};
 
 #[cfg(feature = "use-sfml")]
 mod sfml;
@@ -85,6 +85,14 @@ impl From<Rect<f32>> for Rect<i32> {
 impl From<Rect<u32>> for Rect<f32> {
     fn from(r: Rect<u32>) -> Self {
         Rect::new(r.x as f32, r.y as f32, r.width as f32, r.height as f32)
+    }
+}
+
+impl Mul<f32> for Rect<f32> {
+    type Output = Self;
+
+    fn mul(self, x: f32) -> Self {
+        Rect::new(self.x * x, self.y * x, self.width * x, self.height * x)
     }
 }
 
