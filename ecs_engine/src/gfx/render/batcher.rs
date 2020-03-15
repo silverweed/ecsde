@@ -79,7 +79,7 @@ pub(super) fn add_texture_ws(
         .textures_ws
         .entry(texture)
         .or_insert_with(|| {
-	    println!("creating buffer for texture {:?}", texture);
+            println!("creating buffer for texture {:?}", texture);
             (
                 Vertex_Buffer::new(PrimitiveType::Quads, 65536, VertexBufferUsage::Stream),
                 vec![],
@@ -160,7 +160,10 @@ pub(super) fn add_line(batches: &mut Batches, from: render::Vertex, to: render::
 
 pub fn clear_batches(batches: &mut Batches) {
     trace!("clear_batches");
-    batches.textures_ws.values_mut().for_each(|(_, v)| v.clear());
+    batches
+        .textures_ws
+        .values_mut()
+        .for_each(|(_, v)| v.clear());
     batches.rects_ws.clear();
     batches.rects.clear();
     batches.texts_ws.clear();
@@ -205,18 +208,18 @@ fn draw_textures_ws(
         let texture = gres.get_texture(*tex_id);
 
         let n_texs = tex_props.len();
+        // @Speed: use temp allocator
         let mut vertices = Vec::with_capacity(n_texs * 4);
         vertices.resize(n_texs * 4, sfml::graphics::Vertex::default());
 
         thread::scope(|s| {
+            trace!("tex_batch");
             let n_threads = num_cpus::get();
             let mut vert_chunks = vertices.chunks_mut((n_texs / n_threads + 1) * 4);
             for chunk in tex_props.chunks(n_texs / n_threads + 1) {
                 let vertices = vert_chunks.next().unwrap();
                 s.spawn(move |_| {
                     for (i, tex_prop) in chunk.iter().enumerate() {
-                        trace!("tex_batch");
-
                         let Texture_Props {
                             tex_rect,
                             color,

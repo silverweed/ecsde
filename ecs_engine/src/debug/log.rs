@@ -27,23 +27,20 @@ impl Debug_Log {
     pub fn start_frame(&mut self) {
         self.cur_frame += 1;
         if self.hist_len == self.max_hist_len {
-            self.frames.pop_front();
+            if let Some(frame) = self.frames.pop_front() {
+                self.mem_used -= frame.traces.len() * std::mem::size_of::<Tracer_Node_Final>();
+            }
         } else {
             self.hist_len += 1;
         }
         self.frames.push_back(Debug_Log_Frame::default());
-        if self.frames.len() % 10 == 0 {
-            println!(
-                "mem used = {}",
-                crate::common::units::format_bytes_pretty(self.mem_used)
-            );
-        }
     }
 
     pub fn reset_from_frame(&mut self, new_cur_frame: u64) {
         self.cur_frame = new_cur_frame;
         self.hist_len = 0;
         self.frames.clear();
+        self.mem_used = 0;
     }
 
     pub fn get_frame(&self, frame_number: u64) -> Option<&Debug_Log_Frame> {

@@ -451,8 +451,9 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
 
     overlay.add_line_color(
         &format!(
-            "frame {:<30} temp_mem_max_usage {} / {}",
+            "frame {} | debug_log_mem {} | temp_mem_max_usage {} / {}",
             frame,
+            format_bytes_pretty(debug_log.mem_used),
             format_bytes_pretty(engine_state.frame_alloc.high_water_mark),
             format_bytes_pretty(engine_state.frame_alloc.cap)
         ),
