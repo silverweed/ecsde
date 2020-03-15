@@ -100,7 +100,7 @@ impl<T> Temp_Array<'_, T> {
         unsafe { std::slice::from_raw_parts(self.ptr, self.n_elems) }
     }
 
-    pub fn as_slice_mut(&self) -> &mut [T] {
+    pub fn as_slice_mut(&mut self) -> &mut [T] {
         unsafe { std::slice::from_raw_parts_mut(self.ptr, self.n_elems) }
     }
 }
