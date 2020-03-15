@@ -92,7 +92,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
 
             let d = core::time::duration_ratio(&time, &fadeout_time);
             let alpha = 255 - (d * d * 255.0f32) as u8;
-            let text = gfx::render::create_text(text, font, font_size.into());
+            let text = gfx::render::create_text(text, font, font_size);
             let color = Color { a: alpha, ..*color };
 
             let txt_bounds = gfx::render::get_text_local_bounds(&text, gres);

@@ -202,11 +202,13 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     backend::new_vertex(pos, col, tex_coords)
 }
 
+// @Refactoring: make this pass through the batcher
 pub fn render_vbuf(window: &mut Window_Handle, vbuf: &Vertex_Buffer, transform: &Transform2D) {
     trace!("render_vbuf");
     backend::render_vbuf(window, vbuf, transform);
 }
 
+// @Refactoring: make this pass through the batcher
 pub fn render_vbuf_ws(
     window: &mut Window_Handle,
     vbuf: &Vertex_Buffer,
@@ -215,11 +217,6 @@ pub fn render_vbuf_ws(
 ) {
     trace!("render_vbuf_ws");
     backend::render_vbuf_ws(window, vbuf, transform, camera);
-}
-
-pub fn render_vbuf_texture(window: &mut Window_Handle, vbuf: &Vertex_Buffer, texture: &Texture) {
-    trace!("render_vbuf_texture");
-    backend::render_vbuf_texture(window, vbuf, texture);
 }
 
 pub fn start_draw_linestrip(n_vertices: usize) -> Vertex_Buffer {

@@ -18,63 +18,6 @@ sf_wrap!(Texture, sfml::graphics::Texture);
 sf_wrap!(Font, sfml::graphics::Font);
 
 pub type Text<'a> = sfml::graphics::Text<'a>;
-pub type Sprite<'a> = sfml::graphics::Sprite<'a>;
-
-pub fn create_sprite<'a>(texture: &'a Texture<'a>, rect: &Rect<i32>) -> Sprite<'a> {
-    let mut sprite = Sprite::with_texture(texture);
-    sprite.set_texture_rect(rect.as_ref());
-    let origin: Vector2f = Vec2f::new(rect.width as f32 * 0.5, rect.height as f32 * 0.5).into();
-    sprite.set_origin(origin);
-    sprite
-}
-
-pub fn render_texture_ws(
-    window: &mut Window_Handle,
-    texture: &Texture,
-    tex_rect: &Rect<i32>,
-    color: Color,
-    transform: &Transform2D,
-    camera: &Transform2D,
-) {
-    // @Incomplete: add support for sprite pivot different from 0.5, 0.5
-
-    let mut render_transform = camera.get_matrix_sfml().inverse();
-    render_transform.combine(&transform.get_matrix_sfml());
-
-    let render_states = RenderStates {
-        transform: render_transform,
-        blend_mode: get_blend_mode(window),
-        texture: Some(texture),
-        ..Default::default()
-    };
-
-    let uv: Rect<f32> = (*tex_rect).into();
-    let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
-    let mut vbuf = start_draw_quads(1);
-    let v1 = new_vertex(
-        tex_size * Vec2f::new(-0.5, -0.5),
-        color,
-        Vec2f::new(uv.x, uv.y),
-    );
-    let v2 = new_vertex(
-        tex_size * Vec2f::new(0.5, -0.5),
-        color,
-        Vec2f::new(uv.x + uv.width, uv.y),
-    );
-    let v3 = new_vertex(
-        tex_size * Vec2f::new(0.5, 0.5),
-        color,
-        Vec2f::new(uv.x + uv.width, uv.y + uv.height),
-    );
-    let v4 = new_vertex(
-        tex_size * Vec2f::new(-0.5, 0.5),
-        color,
-        Vec2f::new(uv.x, uv.y + uv.height),
-    );
-    add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
-
-    render_vbuf_internal(window, &vbuf, render_states);
-}
 
 fn set_text_paint_props(text: &mut Text, paint_props: &Paint_Properties) {
     text.set_fill_color(paint_props.color.into());
@@ -208,6 +151,7 @@ fn fill_color_circle_internal(
         .draw_circle_shape(&circle_shape, render_states);
 }
 
+#[inline(always)]
 pub fn get_texture_size(texture: &sfml::graphics::Texture) -> (u32, u32) {
     let s = texture.size();
     (s.x, s.y)

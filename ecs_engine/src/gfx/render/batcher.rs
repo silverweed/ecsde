@@ -191,7 +191,8 @@ pub fn draw_batches(
     draw_textures_ws(window, gres, &inv_cam_transf, &mut batches.textures_ws);
 
     draw_circles_ws(window, gres, &inv_cam_transf, &batches.circles_ws);
-    draw_rects(window, gres, &inv_cam_transf, &batches.rects);
+    draw_rects(window, gres, &batches.rects);
+    draw_lines(window, gres, &batches.lines);
 
     draw_texts_ws(window, gres, &inv_cam_transf, &batches.texts_ws);
     draw_texts(window, gres, &batches.texts);
@@ -262,6 +263,7 @@ fn draw_textures_ws(
             vbuffer.update(&vertices, 0);
         }
 
+        // @Temporary
         use sfml::graphics::RenderTarget;
         window.raw_handle_mut().draw_vertex_buffer(
             vbuffer,
@@ -294,7 +296,6 @@ fn draw_rects_ws(
         // @Incomplete: outline etc
 
         let render_transform = inv_cam_transf.combine(&transform);
-        let rect_size = Vec2f::new(rect.width as _, rect.height as _);
 
         let p1 = render_transform * v2!(rect.x, rect.y);
         let p2 = render_transform * v2!(rect.x + rect.width, rect.y);
@@ -312,12 +313,7 @@ fn draw_rects_ws(
     render::render_vbuf(window, &vbuf, &Transform2D::default());
 }
 
-fn draw_rects(
-    window: &mut Window_Handle,
-    gres: &Gfx_Resources,
-    inv_cam_transf: &Transform2D,
-    rects: &[Rect_Props],
-) {
+fn draw_rects(window: &mut Window_Handle, gres: &Gfx_Resources, rects: &[Rect_Props]) {
     let mut vbuf = render::start_draw_quads(rects.len());
     for rect_props in rects {
         trace!("rect_batch");

@@ -341,7 +341,7 @@ fn update_graphics(
     {
         trace!("clear_batches");
         gfx::render::batcher::clear_batches(&mut game_state.engine_state.global_batches);
-        for (_, batches) in &mut game_state.level_batches {
+        for batches in game_state.level_batches.values_mut() {
             gfx::render::batcher::clear_batches(batches);
         }
     }

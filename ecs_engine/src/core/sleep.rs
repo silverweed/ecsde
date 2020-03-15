@@ -186,8 +186,8 @@ mod unix {
 
         let usecs = time.as_micros() as libc::time_t;
         let mut ti = libc::timespec {
-            tv_nsec: (usecs % 1000000) * 1000,
-            tv_sec: usecs / 1000000,
+            tv_nsec: (usecs % 1_000_000) * 1000,
+            tv_sec: usecs / 1_000_000,
         };
         unsafe {
             // (From SFML/System/Unix/SleepImpl)

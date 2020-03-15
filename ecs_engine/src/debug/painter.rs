@@ -114,7 +114,7 @@ impl Debug_Painter {
         let font = self.font;
         for (text, world_pos, font_size, props) in &self.texts {
             trace!("painter::draw_text");
-            let txt = render::create_text(text, font, (*font_size).into());
+            let txt = render::create_text(text, font, *font_size);
             let transform = Transform2D::from_pos(*world_pos);
             render::render_text_ws(batches, txt, *props, &transform);
         }
