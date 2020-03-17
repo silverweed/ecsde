@@ -655,7 +655,7 @@ fn update_mouse_debug_overlay(
 
     debug_overlay.clear();
     let pos = window::mouse_pos_in_window(window);
-    debug_overlay.position = pos.into();
+    debug_overlay.position = Vec2f::from(pos) + v2!(0., -15.);
     debug_overlay.add_line_color(
         &format!("{},{}", pos.x, pos.y),
         colors::rgba(220, 220, 220, 220),
