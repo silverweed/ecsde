@@ -71,7 +71,7 @@ impl Temp_Allocator {
     #[must_use]
     pub unsafe fn alloc_bytes_aligned(&mut self, n_bytes: usize, align: usize) -> *mut u8 {
         let ptr = self.ptr.add(self.used);
-        let offset = self.ptr.align_offset(align);
+        let offset = ptr.align_offset(align);
 
         // @Robustness: maybe reallocate rather than crashing
         assert!(self.used + offset <= self.cap - n_bytes, "Out of memory!");
