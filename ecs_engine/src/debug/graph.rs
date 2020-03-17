@@ -63,11 +63,11 @@ impl Debug_Element for Debug_Graph_View {
         {
             let Vec2u { x, y } = self.pos;
             let Vec2u { x: w, y: h } = self.size;
-            render::fill_color_rect(
+            render::render_rect(
                 window,
                 batches,
-                colors::rgba(0, 0, 0, 200),
                 Rect::new(x, y, w, h),
+                colors::rgba(0, 0, 0, 200),
             );
         }
 
@@ -130,9 +130,9 @@ impl Debug_Element for Debug_Graph_View {
         // Draw title
         if let Some(title) = self.config.title.as_ref() {
             let text = render::create_text(title, font, self.config.title_font_size);
-            let bounds = render::get_text_local_bounds(&text, gres);
+            let size = render::get_text_size(&text, gres);
             let pos =
-                Vec2f::from(self.pos) + Vec2f::new(self.size.x as f32 - bounds.width - 2., 0.0);
+                Vec2f::from(self.pos) + Vec2f::new(self.size.x as f32 - size.x - 2., 0.0);
             render::render_text(batches, text, colors::WHITE, pos);
         }
 
@@ -151,7 +151,7 @@ impl Debug_Element for Debug_Graph_View {
             render::add_vertex(&mut vbuf, &vertex);
         }
 
-        render::render_vbuf(window, &vbuf, &Transform2D::from_pos(self.pos.into()));
+        render::render_vbuf(batches, vbuf, &Transform2D::from_pos(self.pos.into()));
     }
 }
 

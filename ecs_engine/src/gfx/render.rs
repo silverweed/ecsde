@@ -29,7 +29,7 @@ pub struct Text_Props {
     m_string: String,
     m_font: Font_Handle,
     m_font_size: u16,
-    m_bounds: std::cell::Cell<Option<Rectf>>,
+    m_size: std::cell::Cell<Option<Vec2f>>,
 }
 
 impl Text_Props {
@@ -47,12 +47,14 @@ impl Text_Props {
     }
 }
 
+//////////////////////////// DRAWING //////////////////////////////////
+
 /// Draws a color-filled rectangle in screen space
-pub fn fill_color_rect<R, P>(
+pub fn render_rect<R, P>(
     window: &mut Window_Handle,
     batches: &mut batcher::Batches,
-    paint_props: P,
     rect: R,
+    paint_props: P,
 ) where
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
     P: Into<Paint_Properties>,
@@ -68,11 +70,11 @@ pub fn fill_color_rect<R, P>(
 }
 
 /// Draws a color-filled rectangle in world space
-pub fn fill_color_rect_ws<R, P>(
+pub fn render_rect_ws<R, P>(
     window: &mut Window_Handle,
     batches: &mut batcher::Batches,
-    paint_props: P,
     rect: R,
+    paint_props: P,
     transform: &Transform2D,
     camera: &Transform2D,
 ) where
@@ -90,11 +92,11 @@ pub fn fill_color_rect_ws<R, P>(
 }
 
 /// Draws a color-filled circle in world space
-pub fn fill_color_circle_ws<P>(
+pub fn render_circle_ws<P>(
     window: &mut Window_Handle,
     batches: &mut batcher::Batches,
-    paint_props: P,
     circle: Circle,
+    paint_props: P,
     camera: &Transform2D,
 ) where
     P: Into<Paint_Properties>,
@@ -118,21 +120,6 @@ pub fn render_texture_ws(
 ) {
     trace!("render_texture_ws");
     batcher::add_texture_ws(batches, texture, tex_rect, color, transform);
-}
-
-pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
-    backend::get_texture_size(texture)
-}
-
-pub fn create_text(string: &str, font: Font_Handle, size: u16) -> Text_Props {
-    trace!("create_text");
-    Text_Props {
-        m_string: String::from(string),
-        m_font: font,
-        m_font_size: size,
-        // We don't calculate this until we're asked to
-        m_bounds: std::cell::Cell::new(None),
-    }
 }
 
 pub fn render_text<P>(
@@ -159,19 +146,59 @@ pub fn render_text_ws<P>(
     batcher::add_text_ws(batches, text, &paint_props.into(), world_transform);
 }
 
-pub fn get_text_local_bounds(text: &Text_Props, gres: &Gfx_Resources) -> Rectf {
-    trace!("get_text_local_bounds");
-    if let Some(bounds) = text.m_bounds.get() {
-        bounds
+pub fn render_vbuf(batches: &mut batcher::Batches, vbuf: Vertex_Buffer, transform: &Transform2D) {
+    trace!("render_vbuf");
+    batcher::add_vbuf(batches, vbuf, *transform);
+}
+
+pub fn render_vbuf_ws(
+    batches: &mut batcher::Batches,
+    vbuf: Vertex_Buffer,
+    transform: &Transform2D,
+) {
+    trace!("render_vbuf_ws");
+    batcher::add_vbuf_ws(batches, vbuf, *transform);
+}
+
+// Note: this always renders a line with thickness = 1px
+pub fn render_line(batches: &mut batcher::Batches, start: &Vertex, end: &Vertex) {
+    trace!("render_line");
+    batcher::add_line(batches, *start, *end);
+}
+
+///////////////////////////////// QUERYING ///////////////////////////////////
+pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
+    backend::get_texture_size(texture)
+}
+
+pub fn get_text_size(text: &Text_Props, gres: &Gfx_Resources) -> Vec2f {
+    trace!("get_text_size");
+    if let Some(size) = text.m_size.get() {
+        size
     } else {
         let font = gres.get_font(text.font());
         let txt = Text::new(text.string(), font, text.font_size() as _);
         let bounds = backend::get_text_local_bounds(&txt);
-        text.m_bounds.set(Some(bounds));
-        bounds
+        let size = Vec2f::new(bounds.width, bounds.height);
+        text.m_size.set(Some(size));
+        size
     }
 }
 
+///////////////////////////////// CREATING ///////////////////////////////////
+
+pub fn create_text(string: &str, font: Font_Handle, font_size: u16) -> Text_Props {
+    trace!("create_text");
+    Text_Props {
+        m_string: String::from(string),
+        m_font: font,
+        m_font_size: font_size,
+        // We don't calculate this until we're asked to
+        m_size: std::cell::Cell::new(None),
+    }
+}
+
+// @Refactoring: simplify these and make it more robust via types
 pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer {
     trace!("start_draw_quads");
     backend::start_draw_quads(n_quads)
@@ -180,6 +207,16 @@ pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer {
 pub fn start_draw_triangles(n_triangles: usize) -> Vertex_Buffer {
     trace!("start_draw_triangles");
     backend::start_draw_triangles(n_triangles)
+}
+
+pub fn start_draw_linestrip(n_vertices: usize) -> Vertex_Buffer {
+    trace!("start_draw_linestrip");
+    backend::start_draw_linestrip(n_vertices)
+}
+
+pub fn start_draw_lines(n_vertices: usize) -> Vertex_Buffer {
+    trace!("start_draw_lines");
+    backend::start_draw_lines(n_vertices)
 }
 
 pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
@@ -200,37 +237,4 @@ pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {
 
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     backend::new_vertex(pos, col, tex_coords)
-}
-
-// @Refactoring: make this pass through the batcher
-pub fn render_vbuf(window: &mut Window_Handle, vbuf: &Vertex_Buffer, transform: &Transform2D) {
-    trace!("render_vbuf");
-    backend::render_vbuf(window, vbuf, transform);
-}
-
-// @Refactoring: make this pass through the batcher
-pub fn render_vbuf_ws(
-    window: &mut Window_Handle,
-    vbuf: &Vertex_Buffer,
-    transform: &Transform2D,
-    camera: &Transform2D,
-) {
-    trace!("render_vbuf_ws");
-    backend::render_vbuf_ws(window, vbuf, transform, camera);
-}
-
-pub fn start_draw_linestrip(n_vertices: usize) -> Vertex_Buffer {
-    trace!("start_draw_linestrip");
-    backend::start_draw_linestrip(n_vertices)
-}
-
-pub fn start_draw_lines(n_vertices: usize) -> Vertex_Buffer {
-    trace!("start_draw_lines");
-    backend::start_draw_lines(n_vertices)
-}
-
-// Note: this always renders a line with thickness = 1px
-pub fn render_line(batcher: &mut batcher::Batches, start: &Vertex, end: &Vertex) {
-    trace!("render_line");
-    batcher::add_line(batcher, *start, *end);
 }

@@ -94,21 +94,21 @@ impl Debug_Painter {
         for (size, transform, props) in &self.rects {
             let rect = Rect::new(0., 0., size.x, size.y);
             trace!("painter::fill_rect");
-            render::fill_color_rect_ws(window, batches, *props, rect, transform, camera);
+            render::render_rect_ws(window, batches, rect, *props, transform, camera);
         }
 
         for (circle, props) in &self.circles {
-            render::fill_color_circle_ws(window, batches, *props, *circle, camera);
+            render::render_circle_ws(window, batches, *circle, *props, camera);
         }
 
         for (arrow, props) in &self.arrows {
             trace!("painter::draw_arrow");
-            draw_arrow(window, arrow, props, camera);
+            draw_arrow(batches, arrow, props);
         }
 
         for (line, props) in &self.lines {
             trace!("painter::draw_lines");
-            draw_line(window, line, props, camera);
+            draw_line(batches, line, props);
         }
 
         let font = self.font;
@@ -122,10 +122,9 @@ impl Debug_Painter {
 }
 
 fn draw_line(
-    window: &mut Window_Handle,
+    batches: &mut Batches,
     line: &Line,
     props: &Paint_Properties,
-    camera: &Transform2D,
 ) {
     let mut vbuf = render::start_draw_quads(1);
     let direction = line.to - line.from;
@@ -133,14 +132,13 @@ fn draw_line(
 
     let rot = rad(direction.y.atan2(direction.x));
     let transform = Transform2D::from_pos_rot_scale(line.from, rot, Vec2f::new(1., 1.));
-    render::render_vbuf_ws(window, &vbuf, &transform, camera);
+    render::render_vbuf_ws(batches, vbuf, &transform);
 }
 
 fn draw_arrow(
-    window: &mut Window_Handle,
+    batches: &mut Batches,
     arrow: &Arrow,
     props: &Paint_Properties,
-    camera: &Transform2D,
 ) {
     let mut vbuf = render::start_draw_quads(2);
     let magnitude = arrow.direction.magnitude();
@@ -166,7 +164,7 @@ fn draw_arrow(
     let rot = rad(arrow.direction.y.atan2(arrow.direction.x));
     let transform = Transform2D::from_pos_rot_scale(arrow.center, rot, Vec2f::new(1., 1.));
 
-    render::render_vbuf_ws(window, &vbuf, &transform, camera);
+    render::render_vbuf_ws(batches, vbuf, &transform);
 }
 
 fn draw_line_internal(

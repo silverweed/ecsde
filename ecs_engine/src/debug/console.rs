@@ -433,24 +433,24 @@ impl Console {
         // Draw background
         let Vec2u { x, y } = self.pos;
         let Vec2u { x: w, y: h } = self.size;
-        render::fill_color_rect(
+        render::render_rect(
             window,
             batches,
-            colors::rgba(0, 0, 0, 150),
             Rect::new(x, y, w, h - linesep as u32),
+            colors::rgba(0, 0, 0, 150),
         );
-        render::fill_color_rect(
+        render::render_rect(
             window,
             batches,
-            colors::rgba(30, 30, 30, 200),
             Rect::new(x, h - linesep as u32, w, linesep as u32),
+            colors::rgba(30, 30, 30, 200),
         );
 
         // Draw cur line
         let font = self.font;
         let text = render::create_text(&self.cur_line, font, self.font_size);
         let mut pos = Vec2f::from(self.pos) + Vec2f::new(pad_x, self.size.y as f32 - linesep);
-        let Rect { width: line_w, .. } = render::get_text_local_bounds(&text, gres);
+        let Vec2f { x: line_w, .. } = render::get_text_size(&text, gres);
         render::render_text(batches, text, colors::WHITE, pos);
 
         // Draw cursor
@@ -460,7 +460,7 @@ impl Console {
             self.font_size as f32 * 0.6,
             self.font_size as f32 * 0.1,
         );
-        render::fill_color_rect(window, batches, colors::WHITE, cursor);
+        render::render_rect(window, batches, cursor, colors::WHITE);
 
         // Draw output
         {
@@ -495,11 +495,11 @@ impl Console {
         {
             let position = pos - Vec2f::new(0.0, linesep as f32 * texts.len() as f32);
             let tot_height = linesep as f32 * texts.len() as f32;
-            render::fill_color_rect(
+            render::render_rect(
                 window,
                 batches,
-                colors::rgb(20, 20, 20),
                 Rect::new(position.x, position.y, w as f32, tot_height),
+                colors::rgb(20, 20, 20),
             );
         }
 

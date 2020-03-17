@@ -234,7 +234,7 @@ impl Debug_Frame_Scroller {
                 border_color: colors::rgba(200, 200, 200, if row_hovered { 250 } else { 0 }),
                 ..Default::default()
             };
-            render::fill_color_rect(window, batches, paint_props, row_r);
+            render::render_rect(window, batches, row_r, paint_props);
         }
 
         let (filled_col, outline_col) = if row_hovered || self.manually_selected {
@@ -281,7 +281,7 @@ impl Debug_Frame_Scroller {
                     border_color: colors::rgba(outline_col, outline_col, outline_col, color.a),
                     ..Default::default()
                 };
-                render::fill_color_rect(window, batches, paint_props, subdiv_rect);
+                render::render_rect(window, batches, subdiv_rect, paint_props);
             }
 
             if show_labels {

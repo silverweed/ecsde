@@ -16,43 +16,45 @@ use sfml::graphics::VertexBufferUsage;
 
 #[derive(Default)]
 pub struct Batches {
-    textures_ws: HashMap<Texture_Handle, (Vertex_Buffer, Vec<Texture_Props>)>,
+    textures_ws: HashMap<Texture_Handle, (Vertex_Buffer, Vec<Texture_Props_Ws>)>,
     rects_ws: Vec<Rect_Props_Ws>,
     rects: Vec<Rect_Props>,
     texts_ws: Vec<Text_Props_Ws>,
     texts: Vec<Text_Props>,
     circles_ws: Vec<Circle_Props_Ws>,
     lines: Vec<Line_Props>,
+    vbufs_ws: Vec<Vertex_Buffer_Props_Ws>,
+    vbufs: Vec<Vertex_Buffer_Props>,
 }
 
-pub(super) struct Line_Props {
+struct Line_Props {
     pub from: render::Vertex,
     pub to: render::Vertex,
 }
 
-pub(super) struct Texture_Props {
+struct Texture_Props_Ws {
     pub tex_rect: Rect<i32>,
     pub color: Color,
     pub transform: Transform2D,
 }
 
-pub(super) struct Rect_Props_Ws {
+struct Rect_Props_Ws {
     pub rect: Rect<f32>,
     pub paint_props: Paint_Properties,
     pub transform: Transform2D,
 }
 
-pub(super) struct Rect_Props {
+struct Rect_Props {
     pub rect: Rect<f32>,
     pub paint_props: Paint_Properties,
 }
 
-pub(super) struct Circle_Props_Ws {
+struct Circle_Props_Ws {
     pub circle: Circle,
     pub paint_props: Paint_Properties,
 }
 
-pub(super) struct Text_Props_Ws {
+struct Text_Props_Ws {
     pub string: String,
     pub font: Font_Handle,
     pub font_size: u16,
@@ -60,12 +62,22 @@ pub(super) struct Text_Props_Ws {
     pub transform: Transform2D,
 }
 
-pub(super) struct Text_Props {
+struct Text_Props {
     pub string: String,
     pub font: Font_Handle,
     pub font_size: u16,
     pub paint_props: Paint_Properties,
     pub screen_pos: Vec2f,
+}
+
+struct Vertex_Buffer_Props_Ws {
+    pub vbuf: render::Vertex_Buffer,
+    pub transform: Transform2D
+}
+
+struct Vertex_Buffer_Props {
+    pub vbuf: render::Vertex_Buffer,
+    pub transform: Transform2D
 }
 
 pub(super) fn add_texture_ws(
@@ -81,12 +93,13 @@ pub(super) fn add_texture_ws(
         .or_insert_with(|| {
             println!("creating buffer for texture {:?}", texture);
             (
+                // @Incomplete: make a growable vertex buffer
                 Vertex_Buffer::new(PrimitiveType::Quads, 65536, VertexBufferUsage::Stream),
                 vec![],
             )
         })
         .1
-        .push(Texture_Props {
+        .push(Texture_Props_Ws {
             tex_rect: *tex_rect,
             color,
             transform: *transform,
@@ -158,6 +171,20 @@ pub(super) fn add_line(batches: &mut Batches, from: render::Vertex, to: render::
     batches.lines.push(Line_Props { from, to });
 }
 
+pub(super) fn add_vbuf_ws(batches: &mut Batches, vbuf: render::Vertex_Buffer, transform: Transform2D) {
+    batches.vbufs_ws.push(Vertex_Buffer_Props_Ws {
+        vbuf,
+        transform
+    });
+}
+
+pub(super) fn add_vbuf(batches: &mut Batches, vbuf: render::Vertex_Buffer, transform: Transform2D) {
+    batches.vbufs.push(Vertex_Buffer_Props {
+        vbuf,
+        transform
+    });
+}
+
 pub fn clear_batches(batches: &mut Batches) {
     trace!("clear_batches");
     batches
@@ -170,6 +197,8 @@ pub fn clear_batches(batches: &mut Batches) {
     batches.texts.clear();
     batches.lines.clear();
     batches.circles_ws.clear();
+    batches.vbufs_ws.clear();
+    batches.vbufs.clear();
 }
 
 pub fn draw_batches(
@@ -185,16 +214,17 @@ pub fn draw_batches(
     //window,
     //)));
 
-    // @Speed: parallelize draw_rects_ws and draw_rects, probably together
+    // @Incomplete: allow different Z indices
+    // @Speed: parallelize what can be parallelized
     draw_rects_ws(window, gres, &inv_cam_transf, &batches.rects_ws);
-
     draw_textures_ws(window, gres, &inv_cam_transf, &mut batches.textures_ws);
-
     draw_circles_ws(window, gres, &inv_cam_transf, &batches.circles_ws);
+    draw_vbufs_ws(window, &inv_cam_transf, &batches.vbufs_ws);
+    draw_texts_ws(window, gres, &inv_cam_transf, &batches.texts_ws);
+
     draw_rects(window, gres, &batches.rects);
     draw_lines(window, gres, &batches.lines);
-
-    draw_texts_ws(window, gres, &inv_cam_transf, &batches.texts_ws);
+    draw_vbufs(window, &batches.vbufs);
     draw_texts(window, gres, &batches.texts);
 }
 
@@ -202,7 +232,7 @@ fn draw_textures_ws(
     window: &mut Window_Handle,
     gres: &Gfx_Resources,
     inv_cam_transf: &Transform2D,
-    textures_ws: &mut HashMap<Texture_Handle, (Vertex_Buffer, Vec<Texture_Props>)>,
+    textures_ws: &mut HashMap<Texture_Handle, (Vertex_Buffer, Vec<Texture_Props_Ws>)>,
 ) {
     for (tex_id, (vbuffer, tex_props)) in textures_ws {
         //let mut vbuf = render::start_draw_quads(tex_props.len());
@@ -221,7 +251,7 @@ fn draw_textures_ws(
                 let vertices = vert_chunks.next().unwrap();
                 s.spawn(move |_| {
                     for (i, tex_prop) in chunk.iter().enumerate() {
-                        let Texture_Props {
+                        let Texture_Props_Ws {
                             tex_rect,
                             color,
                             transform,
@@ -310,7 +340,7 @@ fn draw_rects_ws(
         let v4 = render::new_vertex(p4, color, Vec2f::default());
         render::add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
     }
-    render::render_vbuf(window, &vbuf, &Transform2D::default());
+    render::backend::render_vbuf(window, &vbuf, &Transform2D::default());
 }
 
 fn draw_rects(window: &mut Window_Handle, gres: &Gfx_Resources, rects: &[Rect_Props]) {
@@ -336,7 +366,7 @@ fn draw_rects(window: &mut Window_Handle, gres: &Gfx_Resources, rects: &[Rect_Pr
         let v4 = render::new_vertex(p4, color, Vec2f::default());
         render::add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
     }
-    render::render_vbuf(window, &vbuf, &Transform2D::default());
+    render::backend::render_vbuf(window, &vbuf, &Transform2D::default());
 }
 
 fn draw_texts_ws(
@@ -395,7 +425,7 @@ fn draw_lines(window: &mut Window_Handle, gres: &Gfx_Resources, lines: &[Line_Pr
         let Line_Props { from, to } = line_props;
         render::add_line(&mut vbuf, from, to);
     }
-    render::render_vbuf(window, &vbuf, &Transform2D::default());
+    render::backend::render_vbuf(window, &vbuf, &Transform2D::default());
 }
 
 fn draw_circles_ws(
@@ -424,5 +454,35 @@ fn draw_circles_ws(
         // @Speed: use a vertex buffer
 
         render::backend::fill_color_circle_ws(window, paint_props, circle, &Transform2D::default());
+    }
+}
+
+fn draw_vbufs_ws(
+    window: &mut Window_Handle,
+    inv_cam_transform: &Transform2D,
+    vbufs_ws: &[Vertex_Buffer_Props_Ws],
+) {
+    for vbuf in vbufs_ws {
+        let Vertex_Buffer_Props_Ws {
+            vbuf,
+            transform 
+        } = vbuf;
+
+        let transform = inv_cam_transform.combine(transform);
+        render::backend::render_vbuf_ws(window, vbuf, &transform, &Transform2D::default());
+    }
+}
+
+fn draw_vbufs(
+    window: &mut Window_Handle,
+    vbufs: &[Vertex_Buffer_Props],
+) {
+    for vbuf in vbufs {
+        let Vertex_Buffer_Props {
+            vbuf,
+            transform
+        } = vbuf;
+
+        render::backend::render_vbuf(window, vbuf, transform); 
     }
 }

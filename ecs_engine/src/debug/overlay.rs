@@ -69,11 +69,11 @@ impl Debug_Element for Debug_Overlay {
             let Debug_Line { text, color, .. } = line;
             let text = gfx::render::create_text(text, font, font_size);
 
-            let txt_bounds = gfx::render::get_text_local_bounds(&text, gres);
-            max_row_width = max_row_width.max(txt_bounds.width);
-            max_row_height = max_row_height.max(txt_bounds.height);
+            let txt_size = gfx::render::get_text_size(&text, gres);
+            max_row_width = max_row_width.max(txt_size.x);
+            max_row_height = max_row_height.max(txt_size.y);
 
-            texts.push((text, *color, txt_bounds));
+            texts.push((text, *color, txt_size));
         }
 
         let position = self.position;
@@ -82,16 +82,16 @@ impl Debug_Element for Debug_Overlay {
 
         // Draw background
 
-        gfx::render::fill_color_rect(
+        gfx::render::render_rect(
             window,
             batches,
-            self.config.background,
             Rect::new(
                 position.x + horiz_align.aligned_pos(0.0, 2.0 * pad_x + max_row_width),
                 position.y + vert_align.aligned_pos(0.0, 2.0 * pad_y + tot_height),
                 2.0 * pad_x + max_row_width,
                 2.0 * pad_y + tot_height,
             ),
+            self.config.background,
         );
 
         // Draw bg rects
@@ -108,13 +108,13 @@ impl Debug_Element for Debug_Overlay {
                         + (i as f32) * (max_row_height + row_spacing),
                 );
             let rect = Rect::new(pos.x, pos.y, bg_fill_ratio * max_row_width, max_row_height);
-            gfx::render::fill_color_rect(window, batches, bg_col, rect);
+            gfx::render::render_rect(window, batches, rect, bg_col);
         }
 
         // Draw texts
-        for (i, (text, color, bounds)) in texts.iter_mut().enumerate() {
+        for (i, (text, color, text_size)) in texts.iter_mut().enumerate() {
             let pos = Vec2f::new(
-                horiz_align.aligned_pos(pad_x, bounds.width),
+                horiz_align.aligned_pos(pad_x, text_size.x),
                 vert_align.aligned_pos(pad_y, tot_height)
                     + (i as f32) * (max_row_height + row_spacing),
             );
