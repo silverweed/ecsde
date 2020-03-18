@@ -8,9 +8,14 @@ pub fn init_sleep() -> Sleep_Init_Result {
     {
         win32::init_sleep_internal()
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "linux")]
     {
         unix::init_sleep_internal()
+    }
+    #[cfg(target_os = "macos")]
+    {
+    	// @Incomplete
+	Ok(Duration::from_millis(1))
     }
 }
 
