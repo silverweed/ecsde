@@ -305,6 +305,10 @@ pub fn tick_game<'a>(
         }
     }
 
+    #[cfg(debug_assertions)]
+    {
+        game_state.engine_state.prev_frame_time_before_display = t_before_work.elapsed();
+    }
     {
         trace!("display");
         gfx::window::display(&mut game_state.window);
@@ -452,13 +456,14 @@ fn update_debug(game_state: &mut Game_State) {
     let debug_systems = &mut engine_state.debug_systems;
 
     // @Speed @WaitForStable: these should all be computed at compile time.
-    let (sid_time, sid_fps, sid_entities, sid_camera, sid_mouse, sid_window) = (
+    let (sid_time, sid_fps, sid_entities, sid_camera, sid_mouse, sid_window, sid_prev_frame_time_before_display) = (
         String_Id::from("time"),
         String_Id::from("fps"),
         String_Id::from("entities"),
         String_Id::from("camera"),
         String_Id::from("mouse"),
         String_Id::from("window"),
+        String_Id::from("prev_frame_time_before_display"),
     );
 
     // Frame scroller
@@ -509,13 +514,28 @@ fn update_debug(game_state: &mut Game_State) {
         .debug_ui
         .set_graph_enabled(sid_fps, draw_fps_graph);
     if draw_fps_graph {
-        debug_systems.debug_ui.set_graph_enabled(sid_fps, true);
         update_graph_fps(
             debug_systems.debug_ui.get_graph(sid_fps),
             &engine_state.time,
             &game_state.fps_debug,
         );
     }
+
+    let draw_prev_frame_t_graph = game_state
+        .debug_cvars
+        .draw_prev_frame_t_graph
+        .read(&engine_state.config);
+    debug_systems
+        .debug_ui
+        .set_graph_enabled(sid_prev_frame_time_before_display, draw_prev_frame_t_graph);
+    if draw_prev_frame_t_graph {
+        update_graph_prev_frame_t(
+            debug_systems.debug_ui.get_graph(sid_prev_frame_time_before_display),
+            &engine_state.time,
+            &engine_state.prev_frame_time_before_display,
+        );
+    }
+
 
     ////// Per-Level debugs //////
     let painters = &mut debug_systems.painters;
@@ -930,11 +950,27 @@ fn update_graph_fps(
 ) {
     const TIME_LIMIT: f32 = 60.0;
 
-    let fps = fps.get_fps();
+    let fps = fps.get_instant_fps();
     let now = time.get_real_time().as_secs_f32();
     graph.data.x_range.end = now;
     if graph.data.x_range.end - graph.data.x_range.start > TIME_LIMIT {
         graph.data.x_range.start = graph.data.x_range.end - TIME_LIMIT;
     }
     graph.data.add_point(now, fps);
+}
+
+#[cfg(debug_assertions)]
+fn update_graph_prev_frame_t(
+    graph: &mut debug::graph::Debug_Graph_View,
+    time: &time::Time,
+    prev_frame_t: &Duration,
+) {
+    const TIME_LIMIT: f32 = 10.0;
+
+    let now = time.get_real_time().as_secs_f32();
+    graph.data.x_range.end = now;
+    if graph.data.x_range.end - graph.data.x_range.start > TIME_LIMIT {
+        graph.data.x_range.start = graph.data.x_range.end - TIME_LIMIT;
+    }
+    graph.data.add_point(now, prev_frame_t.as_secs_f32() * 1000.);
 }

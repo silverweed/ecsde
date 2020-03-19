@@ -36,7 +36,7 @@ fn file_watch_listen(
     let (tx, rx) = channel();
     let mut watcher = watcher(tx, config.interval).unwrap();
     watcher.watch(path.to_str().unwrap(), config.recursive_mode)?;
-    eprintln!("Started watching {:?}", path);
+    linfo!("Started watching {:?}", path);
 
     loop {
         notify_handlers(&mut event_handlers, rx.recv()?);

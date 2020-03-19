@@ -43,6 +43,9 @@ pub struct Engine_State<'r> {
     pub debug_systems: Debug_Systems,
 
     #[cfg(debug_assertions)]
+    pub prev_frame_time_before_display: Duration,
+
+    #[cfg(debug_assertions)]
     pub replay_data: Option<replay_data::Replay_Data>,
 }
 
@@ -70,6 +73,8 @@ pub fn create_engine_state<'r>(
         frame_alloc: Temp_Allocator::with_capacity(megabytes(1)),
         #[cfg(debug_assertions)]
         debug_systems,
+        #[cfg(debug_assertions)]
+        prev_frame_time_before_display: Duration::default(),
         #[cfg(debug_assertions)]
         replay_data: None,
     }
@@ -234,7 +239,7 @@ pub fn init_engine_debug(
 
     // Graphs
     {
-        let graph_config = graph::Debug_Graph_View_Config {
+        let mut graph_config = graph::Debug_Graph_View_Config {
             grid_xstep: Some(graph::Grid_Step::Fixed_Step(5.)),
             grid_ystep: Some(graph::Grid_Step::Fixed_Step(30.)),
             label_font_size: (10.0 * ui_scale) as _,
@@ -246,13 +251,28 @@ pub fn init_engine_debug(
             fixed_y_range: Some(0. ..120.),
             font,
         };
+
+        // FPS
         let graph = engine_state
             .debug_systems
             .debug_ui
-            .create_graph(String_Id::from("fps"), graph_config)
+            .create_graph(String_Id::from("fps"), graph_config.clone())
             .unwrap();
 
-        graph.size = Vec2u::new(win_w as _, (0.2 * win_h) as _);
+        graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
+
+        // Prev frame time before display
+        graph_config.grid_ystep = Some(graph::Grid_Step::Fixed_Subdivs(4));
+        graph_config.title = Some(String::from("PrevFrameTime"));
+        graph_config.low_threshold = Some((17., colors::GREEN));
+        graph_config.high_threshold = Some((34., colors::RED));
+        let graph = engine_state
+            .debug_systems
+            .debug_ui
+            .create_graph(String_Id::from("prev_frame_time_before_display"), graph_config)
+            .unwrap();
+        graph.pos.y = (0.15 * win_h) as u32;
+        graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
     }
 
     {

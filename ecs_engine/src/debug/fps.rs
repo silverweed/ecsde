@@ -23,6 +23,10 @@ impl Fps_Console_Printer {
         self.latest_calc_fps
     }
 
+    pub fn get_instant_fps(&self) -> f32 {
+        self.frames_elapsed as f32 / self.time_elapsed.as_secs_f32()
+    }
+
     pub fn tick(&mut self, dt: &Duration) {
         self.frames_elapsed += 1;
         self.time_elapsed += *dt;
