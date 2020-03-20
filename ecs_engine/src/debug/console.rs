@@ -3,7 +3,6 @@ use crate::common::rect::Rect;
 use crate::common::vector::{Vec2f, Vec2u};
 use crate::core::env::Env_Info;
 use crate::gfx::render;
-use crate::gfx::render::batcher::Batches;
 use crate::gfx::window::Window_Handle;
 use crate::input::bindings::keyboard;
 use crate::input::input_system::Input_Raw_Event;
@@ -416,12 +415,7 @@ impl Console {
         }
     }
 
-    pub fn draw(
-        &self,
-        window: &mut Window_Handle,
-        gres: &mut gfx::Gfx_Resources,
-        batches: &mut Batches,
-    ) {
+    pub fn draw(&self, window: &mut Window_Handle, gres: &mut gfx::Gfx_Resources) {
         if self.status == Console_Status::Closed {
             return;
         }
@@ -435,23 +429,21 @@ impl Console {
         let Vec2u { x: w, y: h } = self.size;
         render::render_rect(
             window,
-            batches,
             Rect::new(x, y, w, h - linesep as u32),
             colors::rgba(0, 0, 0, 150),
         );
         render::render_rect(
             window,
-            batches,
             Rect::new(x, h - linesep as u32, w, linesep as u32),
             colors::rgba(30, 30, 30, 200),
         );
 
         // Draw cur line
-        let font = self.font;
-        let text = render::create_text(&self.cur_line, font, self.font_size);
+        let font = gres.get_font(self.font);
+        let mut text = render::create_text(&self.cur_line, font, self.font_size);
         let mut pos = Vec2f::from(self.pos) + Vec2f::new(pad_x, self.size.y as f32 - linesep);
-        let Vec2f { x: line_w, .. } = render::get_text_size(&text, gres);
-        render::render_text(batches, text, colors::WHITE, pos);
+        let Vec2f { x: line_w, .. } = render::get_text_size(&text);
+        render::render_text(window, &mut text, colors::WHITE, pos);
 
         // Draw cursor
         let cursor = Rect::new(
@@ -460,14 +452,14 @@ impl Console {
             self.font_size as f32 * 0.6,
             self.font_size as f32 * 0.1,
         );
-        render::render_rect(window, batches, cursor, colors::WHITE);
+        render::render_rect(window, cursor, colors::WHITE);
 
         // Draw output
         {
             let mut pos = pos - Vec2f::new(0.0, linesep as f32);
             for (line, color) in self.output.iter().rev() {
-                let text = render::create_text(line, font, self.font_size);
-                render::render_text(batches, text, *color, pos);
+                let mut text = render::create_text(line, font, self.font_size);
+                render::render_text(window, &mut text, *color, pos);
                 pos.y -= linesep;
                 if pos.y < -linesep {
                     break;
@@ -492,20 +484,20 @@ impl Console {
             }
         }
 
+        // Draw hints background
         {
             let position = pos - Vec2f::new(0.0, linesep as f32 * texts.len() as f32);
             let tot_height = linesep as f32 * texts.len() as f32;
             render::render_rect(
                 window,
-                batches,
                 Rect::new(position.x, position.y, w as f32, tot_height),
                 colors::rgb(20, 20, 20),
             );
         }
 
-        for (text, color) in texts {
+        for (mut text, color) in texts {
             pos.y -= linesep;
-            render::render_text(batches, text, color, pos);
+            render::render_text(window, &mut text, color, pos);
         }
     }
 }

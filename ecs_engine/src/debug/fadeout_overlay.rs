@@ -6,7 +6,6 @@ use crate::common::vector::Vec2f;
 use crate::core;
 use crate::gfx;
 use crate::gfx::align::Align;
-use crate::gfx::render::batcher::Batches;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
@@ -62,7 +61,6 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         &self,
         window: &mut Window_Handle,
         gres: &mut Gfx_Resources,
-        batches: &mut Batches,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
         trace!("fadeout_overlay::draw");
@@ -87,6 +85,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         let mut max_row_height = 0f32;
         let mut max_row_width = 0f32;
 
+        let font = gres.get_font(font);
         for line in self.fadeout_texts.iter() {
             let Fadeout_Text { text, color, time } = line;
 
@@ -95,7 +94,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
             let text = gfx::render::create_text(text, font, font_size);
             let color = Color { a: alpha, ..*color };
 
-            let txt_size = gfx::render::get_text_size(&text, gres);
+            let txt_size = gfx::render::get_text_size(&text);
             max_row_width = max_row_width.max(txt_size.x);
             max_row_height = max_row_height.max(txt_size.y);
 
@@ -109,7 +108,6 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         // Draw background
         gfx::render::render_rect(
             window,
-            batches,
             Rect::new(
                 position.x + horiz_align.aligned_pos(0.0, 2.0 * pad_x + max_row_width),
                 position.y + vert_align.aligned_pos(0.0, 2.0 * pad_y + tot_height),
@@ -126,10 +124,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
                 vert_align.aligned_pos(pad_y, tot_height)
                     + (i as f32) * (max_row_height + row_spacing),
             );
-            // Swap out the text_props to avoid a string copy
-            let mut empty_text = gfx::render::Text_Props::default();
-            std::mem::swap(text, &mut empty_text);
-            gfx::render::render_text(batches, empty_text, *color, position + pos);
+            gfx::render::render_text(window, text, *color, position + pos);
         }
     }
 }

@@ -6,7 +6,6 @@ use crate::common::vector::Vec2f;
 use crate::core::env::Env_Info;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
-use crate::gfx::render::batcher::Batches;
 use crate::gfx::render::Vertex_Buffer;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx;
@@ -85,8 +84,7 @@ impl Debug_Painter {
     pub fn draw(
         &self,
         window: &mut Window_Handle,
-        _gres: &mut gfx::Gfx_Resources,
-        batches: &mut Batches,
+        gres: &mut gfx::Gfx_Resources,
         camera: &Transform2D,
     ) {
         trace!("painter::draw");
@@ -94,37 +92,38 @@ impl Debug_Painter {
         for (size, transform, props) in &self.rects {
             let rect = Rect::new(0., 0., size.x, size.y);
             trace!("painter::fill_rect");
-            render::render_rect_ws(window, batches, rect, *props, transform, camera);
+            render::render_rect_ws(window, rect, *props, transform, camera);
         }
 
         for (circle, props) in &self.circles {
-            render::render_circle_ws(window, batches, *circle, *props, camera);
+            render::render_circle_ws(window, *circle, *props, camera);
         }
 
         for (arrow, props) in &self.arrows {
             trace!("painter::draw_arrow");
-            draw_arrow(batches, arrow, props);
+            draw_arrow(window, arrow, props, camera);
         }
 
         for (line, props) in &self.lines {
             trace!("painter::draw_lines");
-            draw_line(batches, line, props);
+            draw_line(window, line, props, camera);
         }
 
-        let font = self.font;
+        let font = gres.get_font(self.font);
         for (text, world_pos, font_size, props) in &self.texts {
             trace!("painter::draw_text");
-            let txt = render::create_text(text, font, *font_size);
+            let mut txt = render::create_text(text, font, *font_size);
             let transform = Transform2D::from_pos(*world_pos);
-            render::render_text_ws(batches, txt, *props, &transform);
+            render::render_text_ws(window, &mut txt, *props, &transform, camera);
         }
     }
 }
 
 fn draw_line(
-    batches: &mut Batches,
+    window: &mut Window_Handle,
     line: &Line,
     props: &Paint_Properties,
+    camera: &Transform2D,
 ) {
     let mut vbuf = render::start_draw_quads(1);
     let direction = line.to - line.from;
@@ -132,13 +131,14 @@ fn draw_line(
 
     let rot = rad(direction.y.atan2(direction.x));
     let transform = Transform2D::from_pos_rot_scale(line.from, rot, Vec2f::new(1., 1.));
-    render::render_vbuf_ws(batches, vbuf, &transform);
+    render::render_vbuf_ws(window, &vbuf, &transform, camera);
 }
 
 fn draw_arrow(
-    batches: &mut Batches,
+    window: &mut Window_Handle,
     arrow: &Arrow,
     props: &Paint_Properties,
+    camera: &Transform2D,
 ) {
     let mut vbuf = render::start_draw_quads(2);
     let magnitude = arrow.direction.magnitude();
@@ -164,7 +164,7 @@ fn draw_arrow(
     let rot = rad(arrow.direction.y.atan2(arrow.direction.x));
     let transform = Transform2D::from_pos_rot_scale(arrow.center, rot, Vec2f::new(1., 1.));
 
-    render::render_vbuf_ws(batches, vbuf, &transform);
+    render::render_vbuf_ws(window, &vbuf, &transform, camera);
 }
 
 fn draw_line_internal(

@@ -4,7 +4,6 @@ use crate::common::rect;
 use crate::common::vector::{Vec2f, Vec2i, Vec2u};
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
-use crate::gfx::render::batcher::Batches;
 use crate::gfx::window;
 use crate::input::input_system::Input_Raw_Event;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
@@ -197,19 +196,14 @@ impl Debug_Frame_Scroller {
         }
     }
 
-    pub fn draw(
-        &self,
-        window: &mut window::Window_Handle,
-        _gres: &mut Gfx_Resources,
-        batches: &mut Batches,
-    ) {
+    pub fn draw(&self, window: &mut window::Window_Handle, gres: &mut Gfx_Resources) {
         trace!("frame_scroller::draw");
 
-        self.draw_row(window, batches, Row::Seconds);
-        self.draw_row(window, batches, Row::Frames);
+        self.draw_row(window, gres, Row::Seconds);
+        self.draw_row(window, gres, Row::Frames);
     }
 
-    fn draw_row(&self, window: &mut window::Window_Handle, batches: &mut Batches, row: Row) {
+    fn draw_row(&self, window: &mut window::Window_Handle, gres: &Gfx_Resources, row: Row) {
         let Row_Props {
             y,
             height,
@@ -234,7 +228,7 @@ impl Debug_Frame_Scroller {
                 border_color: colors::rgba(200, 200, 200, if row_hovered { 250 } else { 0 }),
                 ..Default::default()
             };
-            render::render_rect(window, batches, row_r, paint_props);
+            render::render_rect(window, row_r, paint_props);
         }
 
         let (filled_col, outline_col) = if row_hovered || self.manually_selected {
@@ -281,11 +275,11 @@ impl Debug_Frame_Scroller {
                     border_color: colors::rgba(outline_col, outline_col, outline_col, color.a),
                     ..Default::default()
                 };
-                render::render_rect(window, batches, subdiv_rect, paint_props);
+                render::render_rect(window, subdiv_rect, paint_props);
             }
 
             if show_labels {
-                let font = self.cfg.font;
+                let font = gres.get_font(self.cfg.font);
                 let text_col = if row_hovered || self.manually_selected {
                     colors::WHITE
                 } else {
@@ -298,12 +292,12 @@ impl Debug_Frame_Scroller {
                     // It can also change simply due to the scroller filling up.
                     let very_first_frame = self.real_cur_frame - self.tot_scroller_frames as u64;
                     let row_first_frame = (self.n_frames as u64 * i as u64) + very_first_frame;
-                    let text = render::create_text(
+                    let mut text = render::create_text(
                         &(row_first_frame + 1).to_string(),
                         font,
                         self.cfg.font_size,
                     );
-                    render::render_text(batches, text, text_col, Vec2f::new(x, y));
+                    render::render_text(window, &mut text, text_col, Vec2f::new(x, y));
                 }
             }
         }

@@ -24,6 +24,8 @@ pub fn tick_game<'a>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     trace!("tick_game");
 
+    let t_before_work = Instant::now();
+
     game_state.engine_state.cur_frame += 1;
     game_state.engine_state.time.update();
     let real_dt = game_state.engine_state.time.real_dt();
@@ -43,7 +45,6 @@ pub fn tick_game<'a>(
             .read(&game_state.engine_state.config)
             * 1000.0) as u64,
     );
-    let t_before_work = Instant::now();
 
     // Check if the replay ended this frame
     if game_state.is_replaying && game_state.input_provider.is_realtime_player_input() {
@@ -278,6 +279,11 @@ pub fn tick_game<'a>(
     }
 
     {
+        trace!("display");
+        gfx::window::display(&mut game_state.window);
+    }
+
+    if false && !gfx::window::has_vsync(&game_state.window) {
         trace!("wait_end_frame");
 
         let mut t_elapsed_for_work = t_before_work.elapsed();
@@ -307,11 +313,7 @@ pub fn tick_game<'a>(
 
     #[cfg(debug_assertions)]
     {
-        game_state.engine_state.prev_frame_time_before_display = t_before_work.elapsed();
-    }
-    {
-        trace!("display");
-        gfx::window::display(&mut game_state.window);
+        game_state.engine_state.prev_frame_time = t_before_work.elapsed();
     }
 
     Ok(())
@@ -371,10 +373,32 @@ fn update_graphics(
                 ecs_world: &level.world,
                 frame_alloc,
                 cfg: render_cfg,
+                window,
+                camera: &level.get_camera().transform,
             };
 
             render_system::update(render_args);
         });
+    }
+
+    // Draw texture batches
+    {
+        let lv_batches = &mut game_state.level_batches;
+        let window = &mut game_state.window;
+        game_state.gameplay_system.foreach_active_level(|level| {
+            gfx::render::batcher::draw_batches(
+                window,
+                &gres,
+                lv_batches.get_mut(&level.id).unwrap(),
+                &level.get_camera().transform,
+            );
+        });
+        gfx::render::batcher::draw_batches(
+            window,
+            &gres,
+            &mut game_state.engine_state.global_batches,
+            &Transform2D::default(),
+        );
     }
 
     #[cfg(debug_assertions)]
@@ -382,24 +406,17 @@ fn update_graphics(
         // Draw debug painter (one per active level)
         let painters = &mut game_state.engine_state.debug_systems.painters;
         let window = &mut game_state.window;
-        let batches = &mut game_state.level_batches;
         game_state.gameplay_system.foreach_active_level(|level| {
             let painter = painters
                 .get_mut(&level.id)
                 .unwrap_or_else(|| panic!("Debug painter not found for level {:?}", level.id));
-            let batches = batches.get_mut(&level.id).unwrap();
-            painter.draw(window, gres, batches, &level.get_camera().transform);
+            painter.draw(window, gres, &level.get_camera().transform);
             painter.clear();
         });
 
         // Global painter
         let painter = game_state.engine_state.debug_systems.global_painter();
-        painter.draw(
-            &mut game_state.window,
-            gres,
-            &mut game_state.engine_state.global_batches,
-            &Transform2D::default(),
-        );
+        painter.draw(&mut game_state.window, gres, &Transform2D::default());
         painter.clear();
 
         // Draw debug UI
@@ -413,7 +430,6 @@ fn update_graphics(
                     &real_dt,
                     &mut game_state.window,
                     gres,
-                    &mut game_state.engine_state.global_batches,
                     &game_state.engine_state.debug_systems.log,
                     &mut game_state.engine_state.frame_alloc,
                 );
@@ -422,30 +438,13 @@ fn update_graphics(
         // Draw console
         {
             trace!("console::draw");
-            game_state.engine_state.debug_systems.console.draw(
-                &mut game_state.window,
-                gres,
-                &mut game_state.engine_state.global_batches,
-            );
+            game_state
+                .engine_state
+                .debug_systems
+                .console
+                .draw(&mut game_state.window, gres);
         }
     }
-
-    let lv_batches = &mut game_state.level_batches;
-    let window = &mut game_state.window;
-    game_state.gameplay_system.foreach_active_level(|level| {
-        gfx::render::batcher::draw_batches(
-            window,
-            &gres,
-            lv_batches.get_mut(&level.id).unwrap(),
-            &level.get_camera().transform,
-        );
-    });
-    gfx::render::batcher::draw_batches(
-        window,
-        &gres,
-        &mut game_state.engine_state.global_batches,
-        &Transform2D::default(),
-    );
 
     Ok(())
 }
@@ -456,14 +455,14 @@ fn update_debug(game_state: &mut Game_State) {
     let debug_systems = &mut engine_state.debug_systems;
 
     // @Speed @WaitForStable: these should all be computed at compile time.
-    let (sid_time, sid_fps, sid_entities, sid_camera, sid_mouse, sid_window, sid_prev_frame_time_before_display) = (
+    let (sid_time, sid_fps, sid_entities, sid_camera, sid_mouse, sid_window, sid_prev_frame_time) = (
         String_Id::from("time"),
         String_Id::from("fps"),
         String_Id::from("entities"),
         String_Id::from("camera"),
         String_Id::from("mouse"),
         String_Id::from("window"),
-        String_Id::from("prev_frame_time_before_display"),
+        String_Id::from("prev_frame_time"),
     );
 
     // Frame scroller
@@ -527,15 +526,14 @@ fn update_debug(game_state: &mut Game_State) {
         .read(&engine_state.config);
     debug_systems
         .debug_ui
-        .set_graph_enabled(sid_prev_frame_time_before_display, draw_prev_frame_t_graph);
+        .set_graph_enabled(sid_prev_frame_time, draw_prev_frame_t_graph);
     if draw_prev_frame_t_graph {
         update_graph_prev_frame_t(
-            debug_systems.debug_ui.get_graph(sid_prev_frame_time_before_display),
+            debug_systems.debug_ui.get_graph(sid_prev_frame_time),
             &engine_state.time,
-            &engine_state.prev_frame_time_before_display,
+            &engine_state.prev_frame_time,
         );
     }
-
 
     ////// Per-Level debugs //////
     let painters = &mut debug_systems.painters;
@@ -912,8 +910,8 @@ fn debug_draw_grid(
     let col_gray = colors::rgba(200, 200, 200, grid_opacity);
     let col_white = colors::rgba(255, 255, 255, grid_opacity);
     let sq_coord = Vec2f::new(
-        ((cx * cam_sx) / square_size).floor() * square_size,
-        ((cy * cam_sy) / square_size).floor() * square_size,
+        (cx / square_size).floor() * square_size,
+        (cy / square_size).floor() * square_size,
     );
 
     for j in 0..n_vert {
@@ -972,5 +970,7 @@ fn update_graph_prev_frame_t(
     if graph.data.x_range.end - graph.data.x_range.start > TIME_LIMIT {
         graph.data.x_range.start = graph.data.x_range.end - TIME_LIMIT;
     }
-    graph.data.add_point(now, prev_frame_t.as_secs_f32() * 1000.);
+    graph
+        .data
+        .add_point(now, prev_frame_t.as_secs_f32() * 1000.);
 }

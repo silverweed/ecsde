@@ -5,7 +5,6 @@ use crate::common::rect::Rect;
 use crate::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
-use crate::gfx::render::batcher::Batches;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
@@ -41,7 +40,6 @@ impl Debug_Element for Debug_Overlay {
         &self,
         window: &mut Window_Handle,
         gres: &mut Gfx_Resources,
-        batches: &mut Batches,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
         trace!("overlay::draw");
@@ -65,11 +63,12 @@ impl Debug_Element for Debug_Overlay {
         let mut max_row_width = 0f32;
         let mut max_row_height = 0f32;
 
+        let font = gres.get_font(font);
         for line in self.lines.iter() {
             let Debug_Line { text, color, .. } = line;
             let text = gfx::render::create_text(text, font, font_size);
 
-            let txt_size = gfx::render::get_text_size(&text, gres);
+            let txt_size = gfx::render::get_text_size(&text);
             max_row_width = max_row_width.max(txt_size.x);
             max_row_height = max_row_height.max(txt_size.y);
 
@@ -84,7 +83,6 @@ impl Debug_Element for Debug_Overlay {
 
         gfx::render::render_rect(
             window,
-            batches,
             Rect::new(
                 position.x + horiz_align.aligned_pos(0.0, 2.0 * pad_x + max_row_width),
                 position.y + vert_align.aligned_pos(0.0, 2.0 * pad_y + tot_height),
@@ -108,7 +106,7 @@ impl Debug_Element for Debug_Overlay {
                         + (i as f32) * (max_row_height + row_spacing),
                 );
             let rect = Rect::new(pos.x, pos.y, bg_fill_ratio * max_row_width, max_row_height);
-            gfx::render::render_rect(window, batches, rect, bg_col);
+            gfx::render::render_rect(window, rect, bg_col);
         }
 
         // Draw texts
@@ -118,10 +116,7 @@ impl Debug_Element for Debug_Overlay {
                 vert_align.aligned_pos(pad_y, tot_height)
                     + (i as f32) * (max_row_height + row_spacing),
             );
-            // Swap out the text_props to avoid a string copy
-            let mut empty_text = gfx::render::Text_Props::default();
-            std::mem::swap(text, &mut empty_text);
-            gfx::render::render_text(batches, empty_text, *color, position + pos);
+            gfx::render::render_text(window, text, *color, position + pos);
         }
     }
 }

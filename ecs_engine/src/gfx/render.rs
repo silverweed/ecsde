@@ -1,11 +1,11 @@
 use super::paint_props::Paint_Properties;
 use crate::common::colors::Color;
-use crate::common::rect::{Rect, Rectf};
+use crate::common::rect::Rect;
 use crate::common::shapes::Circle;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::gfx::window::Window_Handle;
-use crate::resources::gfx::{Font_Handle, Gfx_Resources, Texture_Handle};
+use crate::resources::gfx::Texture_Handle;
 use std::convert::Into;
 
 pub mod batcher;
@@ -23,56 +23,22 @@ pub type Texture<'a> = backend::Texture<'a>;
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
 
-// Note: this struct cannot be mutated after creation
-#[derive(Clone, Default)]
-pub struct Text_Props {
-    m_string: String,
-    m_font: Font_Handle,
-    m_font_size: u16,
-    m_size: std::cell::Cell<Option<Vec2f>>,
-}
-
-impl Text_Props {
-    pub fn string(&self) -> &str {
-        &self.m_string
-    }
-    pub fn owned_string(self) -> String {
-        self.m_string
-    }
-    pub fn font(&self) -> Font_Handle {
-        self.m_font
-    }
-    pub fn font_size(&self) -> u16 {
-        self.m_font_size
-    }
-}
-
 //////////////////////////// DRAWING //////////////////////////////////
 
 /// Draws a color-filled rectangle in screen space
-pub fn render_rect<R, P>(
-    window: &mut Window_Handle,
-    batches: &mut batcher::Batches,
-    rect: R,
-    paint_props: P,
-) where
+pub fn render_rect<R, P>(window: &mut Window_Handle, rect: R, paint_props: P)
+where
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
     P: Into<Paint_Properties>,
 {
-    trace!("fill_color_rect");
+    trace!("render_rect");
     let paint_props = paint_props.into();
-    // @Temporary measure until the batcher supports outlines et al.
-    if paint_props.border_thick == 0. {
-        batcher::add_rect(batches, &rect.into(), &paint_props);
-    } else {
-        backend::fill_color_rect(window, &paint_props, rect);
-    }
+    backend::fill_color_rect(window, &paint_props, rect);
 }
 
 /// Draws a color-filled rectangle in world space
 pub fn render_rect_ws<R, P>(
     window: &mut Window_Handle,
-    batches: &mut batcher::Batches,
     rect: R,
     paint_props: P,
     transform: &Transform2D,
@@ -81,34 +47,23 @@ pub fn render_rect_ws<R, P>(
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
     P: Into<Paint_Properties>,
 {
-    trace!("fill_color_rect_ws");
+    trace!("render_rect_ws");
     let paint_props = paint_props.into();
-    // @Temporary measure until the batcher supports outlines et al.
-    if paint_props.border_thick == 0. {
-        batcher::add_rect_ws(batches, &rect.into(), &paint_props, transform);
-    } else {
-        backend::fill_color_rect_ws(window, &paint_props, rect, transform, camera);
-    }
+    backend::fill_color_rect_ws(window, &paint_props, rect, transform, camera);
 }
 
 /// Draws a color-filled circle in world space
 pub fn render_circle_ws<P>(
     window: &mut Window_Handle,
-    batches: &mut batcher::Batches,
     circle: Circle,
     paint_props: P,
     camera: &Transform2D,
 ) where
     P: Into<Paint_Properties>,
 {
-    trace!("fill_color_circle_ws");
+    trace!("render_circle_ws");
     let paint_props = paint_props.into();
-    // @Temporary measure until the batcher supports outlines et al.
-    if paint_props.border_thick == 0. {
-        batcher::add_circle_ws(batches, &circle, &paint_props);
-    } else {
-        backend::fill_color_circle_ws(window, &paint_props, circle, camera);
-    }
+    backend::fill_color_circle_ws(window, &paint_props, circle, camera);
 }
 
 pub fn render_texture_ws(
@@ -123,47 +78,49 @@ pub fn render_texture_ws(
 }
 
 pub fn render_text<P>(
-    batches: &mut batcher::Batches,
-    text: Text_Props,
+    window: &mut Window_Handle,
+    text: &mut Text<'_>,
     paint_props: P,
     screen_pos: Vec2f,
 ) where
     P: Into<Paint_Properties>,
 {
     trace!("render_text");
-    batcher::add_text(batches, text, &paint_props.into(), screen_pos);
+    backend::render_text(window, text, &paint_props.into(), screen_pos);
 }
 
 pub fn render_text_ws<P>(
-    batches: &mut batcher::Batches,
-    text: Text_Props,
+    window: &mut Window_Handle,
+    text: &mut Text<'_>,
     paint_props: P,
     world_transform: &Transform2D,
+    camera: &Transform2D,
 ) where
     P: Into<Paint_Properties>,
 {
     trace!("render_text_ws");
-    batcher::add_text_ws(batches, text, &paint_props.into(), world_transform);
+    backend::render_text_ws(window, text, &paint_props.into(), world_transform, camera);
 }
 
-pub fn render_vbuf(batches: &mut batcher::Batches, vbuf: Vertex_Buffer, transform: &Transform2D) {
+pub fn render_vbuf(window: &mut Window_Handle, vbuf: &Vertex_Buffer, transform: &Transform2D) {
     trace!("render_vbuf");
-    batcher::add_vbuf(batches, vbuf, *transform);
+    backend::render_vbuf(window, vbuf, transform);
 }
 
 pub fn render_vbuf_ws(
-    batches: &mut batcher::Batches,
-    vbuf: Vertex_Buffer,
+    window: &mut Window_Handle,
+    vbuf: &Vertex_Buffer,
     transform: &Transform2D,
+    camera: &Transform2D,
 ) {
     trace!("render_vbuf_ws");
-    batcher::add_vbuf_ws(batches, vbuf, *transform);
+    backend::render_vbuf_ws(window, vbuf, transform, camera);
 }
 
 // Note: this always renders a line with thickness = 1px
-pub fn render_line(batches: &mut batcher::Batches, start: &Vertex, end: &Vertex) {
+pub fn render_line(window: &mut Window_Handle, start: &Vertex, end: &Vertex) {
     trace!("render_line");
-    batcher::add_line(batches, *start, *end);
+    backend::render_line(window, start, end);
 }
 
 ///////////////////////////////// QUERYING ///////////////////////////////////
@@ -171,31 +128,15 @@ pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
     backend::get_texture_size(texture)
 }
 
-pub fn get_text_size(text: &Text_Props, gres: &Gfx_Resources) -> Vec2f {
-    trace!("get_text_size");
-    if let Some(size) = text.m_size.get() {
-        size
-    } else {
-        let font = gres.get_font(text.font());
-        let txt = Text::new(text.string(), font, text.font_size() as _);
-        let bounds = backend::get_text_local_bounds(&txt);
-        let size = Vec2f::new(bounds.width, bounds.height);
-        text.m_size.set(Some(size));
-        size
-    }
+pub fn get_text_size(text: &Text<'_>) -> Vec2f {
+    backend::get_text_size(text)
 }
 
 ///////////////////////////////// CREATING ///////////////////////////////////
 
-pub fn create_text(string: &str, font: Font_Handle, font_size: u16) -> Text_Props {
+pub fn create_text<'a>(string: &str, font: &'a Font<'a>, font_size: u16) -> Text<'a> {
     trace!("create_text");
-    Text_Props {
-        m_string: String::from(string),
-        m_font: font,
-        m_font_size: font_size,
-        // We don't calculate this until we're asked to
-        m_size: std::cell::Cell::new(None),
-    }
+    backend::create_text(string, font, font_size)
 }
 
 // @Refactoring: simplify these and make it more robust via types

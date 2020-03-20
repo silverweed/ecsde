@@ -157,6 +157,12 @@ pub fn get_texture_size(texture: &sfml::graphics::Texture) -> (u32, u32) {
     (s.x, s.y)
 }
 
+#[inline(always)]
+pub fn get_text_size(text: &sfml::graphics::Text<'_>) -> Vec2f {
+    let Rect { width, height, .. } = text.local_bounds().into();
+    v2!(width, height)
+}
+
 // @Robustness @Cleanup: we may want to refactor this code
 pub fn start_draw_quads(_n_quads: usize) -> Vertex_Buffer {
     sfml::graphics::VertexArray::new(PrimitiveType::Quads, 0)

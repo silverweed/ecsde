@@ -43,7 +43,7 @@ pub struct Engine_State<'r> {
     pub debug_systems: Debug_Systems,
 
     #[cfg(debug_assertions)]
-    pub prev_frame_time_before_display: Duration,
+    pub prev_frame_time: Duration,
 
     #[cfg(debug_assertions)]
     pub replay_data: Option<replay_data::Replay_Data>,
@@ -74,7 +74,7 @@ pub fn create_engine_state<'r>(
         #[cfg(debug_assertions)]
         debug_systems,
         #[cfg(debug_assertions)]
-        prev_frame_time_before_display: Duration::default(),
+        prev_frame_time: Duration::default(),
         #[cfg(debug_assertions)]
         replay_data: None,
     }
@@ -132,6 +132,11 @@ pub fn init_engine_debug(
     const FONT: &str = "Hack-Regular.ttf";
 
     let font = gfx_resources.load_font(&resources::gfx::font_path(&engine_state.env, FONT));
+
+    engine_state
+        .debug_systems
+        .global_painter()
+        .init(gfx_resources, &engine_state.env);
 
     // @Robustness: add font validity check
 
@@ -269,7 +274,7 @@ pub fn init_engine_debug(
         let graph = engine_state
             .debug_systems
             .debug_ui
-            .create_graph(String_Id::from("prev_frame_time_before_display"), graph_config)
+            .create_graph(String_Id::from("prev_frame_time"), graph_config)
             .unwrap();
         graph.pos.y = (0.15 * win_h) as u32;
         graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);

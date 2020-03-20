@@ -5,7 +5,6 @@ use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2u};
 use crate::gfx::render;
-use crate::gfx::render::batcher::Batches;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
@@ -54,7 +53,6 @@ impl Debug_Element for Debug_Graph_View {
         &self,
         window: &mut Window_Handle,
         gres: &mut Gfx_Resources,
-        batches: &mut Batches,
         _frame_alloc: &mut temp::Temp_Allocator,
     ) {
         trace!("graph::draw");
@@ -63,19 +61,14 @@ impl Debug_Element for Debug_Graph_View {
         {
             let Vec2u { x, y } = self.pos;
             let Vec2u { x: w, y: h } = self.size;
-            render::render_rect(
-                window,
-                batches,
-                Rect::new(x, y, w, h),
-                colors::rgba(0, 0, 0, 200),
-            );
+            render::render_rect(window, Rect::new(x, y, w, h), colors::rgba(0, 0, 0, 200));
         }
 
         let xr = &self.data.x_range;
         let yr = self.y_range();
 
         // Draw grid
-        let font = self.config.font;
+        let font = gres.get_font(self.config.font);
         let font_size = self.config.label_font_size;
         let pos = Vec2f::from(self.pos);
         if let Some(xstep) = self.config.grid_xstep {
@@ -93,10 +86,10 @@ impl Debug_Element for Debug_Graph_View {
                 let v2 =
                     render::new_vertex(pos2, colors::rgba(180, 180, 180, 200), Vec2f::default());
 
-                let text = render::create_text(&format!("{:.1}", x), font, font_size);
+                let mut text = render::create_text(&format!("{:.1}", x), font, font_size);
 
-                render::render_line(batches, &v1, &v2);
-                render::render_text(batches, text, colors::WHITE, pos2 + Vec2f::new(2., 0.));
+                render::render_line(window, &v1, &v2);
+                render::render_text(window, &mut text, colors::WHITE, pos2 + Vec2f::new(2., 0.));
 
                 x += xstep;
                 iters += 1;
@@ -117,10 +110,10 @@ impl Debug_Element for Debug_Graph_View {
                 let v2 =
                     render::new_vertex(pos2, colors::rgba(180, 180, 180, 200), Vec2f::default());
 
-                let text = render::create_text(&format!("{:.1}", y), font, font_size);
+                let mut text = render::create_text(&format!("{:.1}", y), font, font_size);
 
-                render::render_line(batches, &v1, &v2);
-                render::render_text(batches, text, colors::WHITE, pos1 + Vec2f::new(0., -2.));
+                render::render_line(window, &v1, &v2);
+                render::render_text(window, &mut text, colors::WHITE, pos1 + Vec2f::new(0., -2.));
 
                 y += ystep;
                 iters += 1;
@@ -129,11 +122,10 @@ impl Debug_Element for Debug_Graph_View {
 
         // Draw title
         if let Some(title) = self.config.title.as_ref() {
-            let text = render::create_text(title, font, self.config.title_font_size);
-            let size = render::get_text_size(&text, gres);
-            let pos =
-                Vec2f::from(self.pos) + Vec2f::new(self.size.x as f32 - size.x - 2., 0.0);
-            render::render_text(batches, text, colors::WHITE, pos);
+            let mut text = render::create_text(title, font, self.config.title_font_size);
+            let size = render::get_text_size(&text);
+            let pos = Vec2f::from(self.pos) + Vec2f::new(self.size.x as f32 - size.x - 2., 0.0);
+            render::render_text(window, &mut text, colors::WHITE, pos);
         }
 
         // Draw line
@@ -151,7 +143,7 @@ impl Debug_Element for Debug_Graph_View {
             render::add_vertex(&mut vbuf, &vertex);
         }
 
-        render::render_vbuf(batches, vbuf, &Transform2D::from_pos(self.pos.into()));
+        render::render_vbuf(window, &vbuf, &Transform2D::from_pos(self.pos.into()));
     }
 }
 
