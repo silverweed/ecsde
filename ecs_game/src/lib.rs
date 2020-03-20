@@ -232,6 +232,13 @@ pub unsafe extern "C" fn game_shutdown(
         fatal!("game_shutdown: game state and/or resources are null!");
     }
 
+    #[cfg(debug_assertions)]
+    {
+        use ecs_engine::debug::console::save_console_hist;
+        save_console_hist(&(*game_state).engine_state.debug_systems.console)
+            .unwrap_or_else(|err| lwarn!("Failed to save console history: {}", err));
+    }
+
     std::ptr::drop_in_place(game_state);
     dealloc(game_state as *mut u8, Layout::new::<Game_State>());
 
@@ -316,7 +323,10 @@ fn internal_game_init<'a>(
         .ok()
         .map(|g| g.max(Duration::from_micros(1)));
 
-    lok!("Initialized sleep with granularity {:?}", game_state.sleep_granularity);
+    lok!(
+        "Initialized sleep with granularity {:?}",
+        game_state.sleep_granularity
+    );
 
     // This happens after all the initialization
     game_state.engine_state.time.start();
@@ -393,6 +403,11 @@ fn create_game_state<'a>(
             target_win_size: engine_state.app_config.target_win_size,
         };
         app::init_engine_debug(&mut engine_state, &mut game_resources.gfx, cfg)?;
+        if ecs_engine::debug::console::load_console_hist(&mut engine_state.debug_systems.console)
+            .is_ok()
+        {
+            lok!("Loaded console history");
+        }
 
         app::start_recording(&mut engine_state)?;
     }

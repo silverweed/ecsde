@@ -16,3 +16,4 @@ perf_data/
 *.ods
 *.data*
 rusty-tags.vi
+.console_hist.txt

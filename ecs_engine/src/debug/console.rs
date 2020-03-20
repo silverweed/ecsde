@@ -8,6 +8,8 @@ use crate::input::bindings::keyboard;
 use crate::input::input_system::Input_Raw_Event;
 use crate::resources::gfx;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io;
 
 mod history;
 
@@ -22,6 +24,7 @@ pub enum Console_Status {
 const OUTPUT_SIZE: usize = 250;
 const HIST_SIZE: usize = 50;
 const COLOR_HISTORY: colors::Color = colors::rgba(200, 200, 200, 200);
+const HIST_FILE: &str = ".console_hist.txt";
 
 pub struct Console {
     pub status: Console_Status,
@@ -46,6 +49,35 @@ pub struct Console {
     hints: HashMap<String, Vec<String>>,
     hints_displayed: Vec<usize>,
     selected_hint: usize,
+}
+
+pub fn save_console_hist(console: &Console) -> io::Result<()> {
+    use std::io::{prelude::*, BufWriter};
+
+    let mut file = BufWriter::new(File::create(HIST_FILE)?);
+    for line in &console.history {
+        writeln!(file, "{}", line)?;
+    }
+
+    Ok(())
+}
+
+pub fn load_console_hist(console: &mut Console) -> io::Result<()> {
+    use std::io::{prelude::*, BufReader};
+
+    let mut file = BufReader::new(File::open(HIST_FILE)?);
+    for i in 0..HIST_SIZE {
+        let mut line = String::new();
+        match file.read_line(&mut line) {
+            Ok(0) => break,
+            Ok(_) => console.history.push(line),
+            Err(err) => {
+                return Err(err);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 impl Console {
