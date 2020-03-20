@@ -235,7 +235,8 @@ pub unsafe extern "C" fn game_shutdown(
     #[cfg(debug_assertions)]
     {
         use ecs_engine::debug::console::save_console_hist;
-        save_console_hist(&(*game_state).engine_state.debug_systems.console)
+        let engine_state = &(*game_state).engine_state;
+        save_console_hist(&engine_state.debug_systems.console, &engine_state.env)
             .unwrap_or_else(|err| lwarn!("Failed to save console history: {}", err));
     }
 
@@ -403,8 +404,11 @@ fn create_game_state<'a>(
             target_win_size: engine_state.app_config.target_win_size,
         };
         app::init_engine_debug(&mut engine_state, &mut game_resources.gfx, cfg)?;
-        if ecs_engine::debug::console::load_console_hist(&mut engine_state.debug_systems.console)
-            .is_ok()
+        if ecs_engine::debug::console::load_console_hist(
+            &mut engine_state.debug_systems.console,
+            &engine_state.env,
+        )
+        .is_ok()
         {
             lok!("Loaded console history");
         }

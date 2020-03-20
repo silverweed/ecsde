@@ -51,10 +51,13 @@ pub struct Console {
     selected_hint: usize,
 }
 
-pub fn save_console_hist(console: &Console) -> io::Result<()> {
+pub fn save_console_hist(console: &Console, env: &Env_Info) -> io::Result<()> {
     use std::io::{prelude::*, BufWriter};
 
-    let mut file = BufWriter::new(File::create(HIST_FILE)?);
+    let mut path = env.working_dir.to_path_buf();
+    path.push(HIST_FILE);
+
+    let mut file = BufWriter::new(File::create(path)?);
     for line in &console.history {
         writeln!(file, "{}", line)?;
     }
@@ -62,10 +65,13 @@ pub fn save_console_hist(console: &Console) -> io::Result<()> {
     Ok(())
 }
 
-pub fn load_console_hist(console: &mut Console) -> io::Result<()> {
+pub fn load_console_hist(console: &mut Console, env: &Env_Info) -> io::Result<()> {
     use std::io::{prelude::*, BufReader};
 
-    let mut file = BufReader::new(File::open(HIST_FILE)?);
+    let mut path = env.working_dir.to_path_buf();
+    path.push(HIST_FILE);
+
+    let mut file = BufReader::new(File::open(path)?);
     for i in 0..HIST_SIZE {
         let mut line = String::new();
         match file.read_line(&mut line) {
