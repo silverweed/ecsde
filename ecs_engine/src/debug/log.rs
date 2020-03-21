@@ -71,14 +71,8 @@ mod tests {
 
         log.start_frame();
 
-        let info = Scope_Trace_Info {
-            start_t: Instant::now(),
-            end_t: Instant::now(),
-            tag: "Test",
-            n_calls: 1,
-            tot_duration: Duration::default(),
-        };
-        let node = Tracer_Node {
+        let info = Scope_Trace_Info_Final::new("Test", 1, Duration::default());
+        let node = Tracer_Node_Final {
             info: info.clone(),
             parent_idx: None,
         };
@@ -92,8 +86,8 @@ mod tests {
 
         log.start_frame();
 
-        let info2 = Scope_Trace_Info { n_calls: 2, ..info };
-        let node2 = Tracer_Node {
+        let info2 = Scope_Trace_Info_Final::new("Test", 2, Duration::default());
+        let node2 = Tracer_Node_Final {
             info: info2,
             ..node
         };

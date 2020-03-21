@@ -1,3 +1,7 @@
+pub const fn bytes(bytes: usize) -> usize {
+    bytes
+}
+
 pub const fn kilobytes(bytes: usize) -> usize {
     bytes * 1024
 }

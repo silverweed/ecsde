@@ -10,6 +10,7 @@ use crate::debug::painter::Debug_Painter;
 const MAX_OBJECTS: usize = 8;
 const MAX_DEPTH: u8 = 10;
 
+// @Speed: optimize this, or consider removing it in favor of spatial hashing
 pub struct Quad_Tree {
     bounds: Rectf,
     objects: Vec<Entity>,

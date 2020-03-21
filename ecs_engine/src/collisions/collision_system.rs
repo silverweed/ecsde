@@ -7,7 +7,7 @@ use crate::common::vector::Vec2f;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Components_Map_Safe, Ecs_World, Entity};
 use crate::ecs::entity_stream::new_entity_stream;
-use crossbeam_utils::thread;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
@@ -141,49 +141,47 @@ impl Collision_System {
             let n_entities = self.entities_buf.len();
             self.collided_entities.lock().unwrap().clear();
 
-            {
+            if n_entities > 0 {
                 trace!("collision_detection");
 
-                thread::scope(|s| {
-                    let n_threads = num_cpus::get();
-                    for ent_chunk in self.entities_buf.chunks(n_entities / n_threads + 1) {
-                        let quadtree = &self.quadtree;
-                        let n_collisions_total = n_collisions_total.clone();
-                        let collided_entities = self.collided_entities.clone();
-                        let ecs_world = ecs_world as &Ecs_World;
-                        s.spawn(move |_| {
-                            let map_collider = ecs_world.get_components_map::<Collider>();
-                            let map_spatial = ecs_world.get_components_map::<C_Spatial2D>();
-                            let mut neighbours = vec![];
-                            for &entity in ent_chunk {
-                                let collider = map_collider.get_component(entity).unwrap();
-                                let spatial = map_spatial.get_component(entity).unwrap();
-                                let transform = &spatial.global_transform;
-                                let velocity = spatial.velocity;
-                                if velocity.magnitude2() <= 0.0001 {
-                                    continue;
-                                }
+                let n_threads = rayon::current_num_threads();
+                let n_entities_per_chunk = std::cmp::min(n_entities, n_entities / n_threads + 1);
 
-                                neighbours.clear();
-                                quadtree.get_neighbours(collider, transform, &mut neighbours);
-                                if !neighbours.is_empty() {
-                                    check_collision_with_neighbours(
-                                        entity,
-                                        collider,
-                                        transform,
-                                        velocity,
-                                        &neighbours,
-                                        &map_collider,
-                                        &map_spatial,
-                                        collided_entities.clone(),
-                                        n_collisions_total.clone(),
-                                    );
-                                }
+                let map_collider = ecs_world.get_components_map::<Collider>();
+                let map_spatial = ecs_world.get_components_map::<C_Spatial2D>();
+
+                self.entities_buf
+                    .par_iter()
+                    .chunks(n_entities_per_chunk)
+                    .for_each(|ent_chunk| {
+                        let mut neighbours = vec![];
+                        for &entity in ent_chunk {
+                            let collider = map_collider.get_component(entity).unwrap();
+                            let spatial = map_spatial.get_component(entity).unwrap();
+                            let transform = &spatial.global_transform;
+                            let velocity = spatial.velocity;
+                            if velocity.magnitude2() <= 0.0001 {
+                                continue;
                             }
-                        });
-                    }
-                })
-                .unwrap();
+
+                            neighbours.clear();
+                            self.quadtree
+                                .get_neighbours(collider, transform, &mut neighbours);
+                            if !neighbours.is_empty() {
+                                check_collision_with_neighbours(
+                                    entity,
+                                    collider,
+                                    transform,
+                                    velocity,
+                                    &neighbours,
+                                    &map_collider,
+                                    &map_spatial,
+                                    self.collided_entities.clone(),
+                                    n_collisions_total.clone(),
+                                );
+                            }
+                        }
+                    });
             }
 
             {
@@ -239,7 +237,6 @@ impl Collision_System {
             //n_collisions_total.load(std::sync::atomic::Ordering::SeqCst),
             //n_collisions_total.load(std::sync::atomic::Ordering::SeqCst) / n_entities
             //);
-            ()
         }
     }
 }

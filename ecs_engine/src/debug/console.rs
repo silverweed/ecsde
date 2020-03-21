@@ -72,7 +72,7 @@ pub fn load_console_hist(console: &mut Console, env: &Env_Info) -> io::Result<()
     path.push(HIST_FILE);
 
     let mut file = BufReader::new(File::open(path)?);
-    for i in 0..HIST_SIZE {
+    for _ in 0..HIST_SIZE {
         let mut line = String::new();
         match file.read_line(&mut line) {
             Ok(0) => break,

@@ -1,2 +1,5 @@
 [workspace]
 members = ["ecs_runner", "ecs_game", "ecs_engine"]
+
+#[profile.dev]
+#opt-level = 3

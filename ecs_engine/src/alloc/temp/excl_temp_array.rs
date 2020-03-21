@@ -1,4 +1,5 @@
 use super::temp_alloc::Temp_Allocator;
+use std::mem::{align_of, size_of};
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 
 #[cfg(debug_assertions)]
@@ -81,6 +82,18 @@ impl<T> Exclusive_Temp_Array<'_, T> {
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    /// Expands this array by `new_elems` elements (not bytes), allocating them
+    /// from the temp allocator and not initializing them.
+    ///
+    /// # Safety
+    /// It's UB to read any uninitialized element added this way.
+    pub unsafe fn alloc_additional_uninit(&mut self, new_elems: usize) {
+        let _ = self
+            .parent_allocator
+            .alloc_bytes_aligned(new_elems * size_of::<T>(), align_of::<T>());
+        self.n_elems += new_elems;
     }
 
     pub fn push(&mut self, elem: T) {

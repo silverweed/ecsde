@@ -283,7 +283,8 @@ pub fn tick_game<'a>(
         gfx::window::display(&mut game_state.window);
     }
 
-    if false && !gfx::window::has_vsync(&game_state.window) {
+    // @Fixme: this waits too long! Investigate!
+    if !gfx::window::has_vsync(&game_state.window) {
         trace!("wait_end_frame");
 
         let mut t_elapsed_for_work = t_before_work.elapsed();
@@ -383,6 +384,7 @@ fn update_graphics(
 
     // Draw texture batches
     {
+        let frame_alloc = &mut game_state.engine_state.frame_alloc;
         let lv_batches = &mut game_state.level_batches;
         let window = &mut game_state.window;
         game_state.gameplay_system.foreach_active_level(|level| {
@@ -391,6 +393,7 @@ fn update_graphics(
                 &gres,
                 lv_batches.get_mut(&level.id).unwrap(),
                 &level.get_camera().transform,
+                frame_alloc,
             );
         });
         gfx::render::batcher::draw_batches(
@@ -398,6 +401,7 @@ fn update_graphics(
             &gres,
             &mut game_state.engine_state.global_batches,
             &Transform2D::default(),
+            frame_alloc,
         );
     }
 
