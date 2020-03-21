@@ -91,14 +91,29 @@ fn init_demo_entities(
     }
 
     let mut prev_entity: Option<Entity> = None;
-    let mut fst_entity: Option<Entity> = None;
-    let n_frames = 4;
+    let ground = level.world.new_entity();
+
+    {
+        let mut rend = level.world.add_component::<C_Renderable>(ground);
+        rend.texture = rsrc.load_texture(&tex_path(&env, "ground.png"));
+        rend.z_index = -1;
+        assert!(rend.texture.is_some(), "Could not load texture!");
+        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
+        rsrc.get_texture_mut(rend.texture).set_repeated(true);
+        rend.rect = Rect::new(0, 0, sw as i32 * 10, sh as i32 * 10);
+
+        let t = level.world.add_component::<C_Spatial2D>(ground);
+        level.scene_tree.add(ground, None, &t.local_transform);
+    }
+
+    let n_frames = 3;
     for i in 0..gs_cfg.n_entities_to_spawn {
         let entity = level.world.new_entity();
         let (sw, sh) = {
             let mut rend = level.world.add_component::<C_Renderable>(entity);
             //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
-            rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
+            //rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
+            rend.texture = rsrc.load_texture(&tex_path(&env, "jelly.png"));
             assert!(rend.texture.is_some(), "Could not load texture!");
             rend.modulate = if i == 1 {
                 colors::rgb(0, 255, 0)
@@ -123,7 +138,9 @@ fn init_demo_entities(
                 //t.local_transform.set_rotation(angle::deg(45. * i as f32));
                 //t.local_transform.set_scale(2., 4.);
             }
-            level.scene_tree.add(entity, fst_entity, &t.local_transform);
+            level
+                .scene_tree
+                .add(entity, Some(ground), &t.local_transform);
         }
         {
             let c = level.world.add_component::<Collider>(entity);
@@ -138,12 +155,9 @@ fn init_demo_entities(
         {
             let s = level.world.add_component::<C_Animated_Sprite>(entity);
             s.n_frames = n_frames;
-            s.frame_time = 0.16;
+            s.frame_time = 0.12;
         }
         prev_entity = Some(entity);
-        if fst_entity.is_none() {
-            fst_entity = Some(entity);
-        }
         //{
         //    let mut t = level.world.add_component::<C_Spatial2D>(entity);
         //    t.transform.set_origin(sw as f32 * 0.5, sh as f32 * 0.5);

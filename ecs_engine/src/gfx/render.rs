@@ -16,6 +16,8 @@ mod sfml;
 #[cfg(feature = "use-sfml")]
 use self::sfml as backend;
 
+pub type Z_Index = i8;
+
 pub type Text<'a> = backend::Text<'a>;
 pub type Font<'a> = backend::Font<'a>;
 pub type Texture<'a> = backend::Texture<'a>;
@@ -72,9 +74,10 @@ pub fn render_texture_ws(
     tex_rect: &Rect<i32>,
     color: Color,
     transform: &Transform2D,
+    z_index: Z_Index,
 ) {
     trace!("render_texture_ws");
-    batcher::add_texture_ws(batches, texture, tex_rect, color, transform);
+    batcher::add_texture_ws(batches, texture, tex_rect, color, transform, z_index);
 }
 
 pub fn render_text<P>(

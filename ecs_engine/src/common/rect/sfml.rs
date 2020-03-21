@@ -15,6 +15,7 @@ where
     T: Copy,
 {
     fn as_ref(&self) -> &Rect<T> {
+        // Safe because we have the same repr as sfml Rect
         unsafe { &*(self as *const _ as *const Rect<T>) }
     }
 }
@@ -33,6 +34,7 @@ where
     T: Copy,
 {
     fn as_ref(&self) -> &sfml::graphics::Rect<T> {
+        // Safe because we have the same repr as sfml Rect
         unsafe { &*(self as *const _ as *const sfml::graphics::Rect<T>) }
     }
 }

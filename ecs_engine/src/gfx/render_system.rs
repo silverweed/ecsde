@@ -56,6 +56,7 @@ pub fn update(args: Render_System_Update_Args) {
             texture: tex_id,
             rect: src_rect,
             modulate,
+            z_index,
         } = rend;
 
         #[cfg(debug_assertions)]
@@ -77,6 +78,7 @@ pub fn update(args: Render_System_Update_Args) {
             src_rect,
             *modulate,
             &spatial.global_transform,
+            *z_index,
         );
     }
 }

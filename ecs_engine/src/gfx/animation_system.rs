@@ -34,7 +34,7 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, mut entity_stream: Entit
             let renderable = ecs_world.get_component_mut::<C_Renderable>(entity).unwrap();
             let rect = renderable.rect;
             let width = rect.width;
-            let x = (rect.x + width) % (width * (n_frames - 1) as i32) as i32;
+            let x = (rect.x + width) % (width * (n_frames) as i32) as i32;
 
             renderable.rect.x = x;
         }

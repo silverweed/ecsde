@@ -296,7 +296,7 @@ fn internal_game_init<'a>(
             &mut game_state.rng,
             cfg,
             gameplay_system::Gameplay_System_Config {
-                n_entities_to_spawn: parsed_cmdline_args.n_entities_to_spawn.unwrap_or(2),
+                n_entities_to_spawn: parsed_cmdline_args.n_entities_to_spawn.unwrap_or(1),
             },
         )?;
 

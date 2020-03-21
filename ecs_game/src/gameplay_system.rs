@@ -270,7 +270,7 @@ impl Gameplay_System {
             }
 
             camera.transform.add_scale_v(add_scale);
-            return;
+            //return;
             camera.transform.translate_v(v);
 
             // DEBUG: center camera on player
@@ -461,11 +461,11 @@ fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration, time: &time::Ti
         //t.velocity = Vec2f::new(-50.0, 0.);
         //}
         {
-            use ecs_engine::common::angle::deg;
-            let speed = 90.0;
-            if i == 1 {
-                t.local_transform.rotate(deg(dt_secs * speed));
-            }
+            //use ecs_engine::common::angle::deg;
+            //let speed = 90.0;
+            //if i == 1 {
+            //t.local_transform.rotate(deg(dt_secs * speed));
+            //}
             //let prev_pos = t.local_transform.position();
             //t.local_transform.set_position(
             //(time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
