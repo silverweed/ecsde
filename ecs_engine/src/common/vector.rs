@@ -1,3 +1,4 @@
+use super::angle::Angle;
 use super::math;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
@@ -116,7 +117,7 @@ where
     }
 
     /// Like 'normalized_or_zero' but panics if length is 0.
-    pub fn normalized(self) -> Vector2<T> {
+    pub fn normalized(self) -> Self {
         let mag = self.magnitude2().into();
         let den = math::fast_invsqrt(mag);
         Self {
@@ -125,7 +126,7 @@ where
         }
     }
 
-    pub fn normalized_or_zero(self) -> Vector2<T> {
+    pub fn normalized_or_zero(self) -> Self {
         let mag = self.magnitude2().into();
         if mag == 0. {
             return Self::default();
@@ -135,6 +136,18 @@ where
         Self {
             x: T::from(self.x.into() * den),
             y: T::from(self.y.into() * den),
+        }
+    }
+
+    pub fn rotated(self, angle: Angle) -> Self {
+        let rads = angle.as_rad();
+        let x = self.x.into();
+        let y = self.y.into();
+        let s = rads.sin();
+        let c = rads.cos();
+        Self {
+            x: T::from(c * x - s * y),
+            y: T::from(s * x + c * y),
         }
     }
 }

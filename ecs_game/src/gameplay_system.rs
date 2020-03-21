@@ -1,7 +1,7 @@
 #![allow(warnings)] // @Temporary
 
-use super::controllable_system::C_Controllable;
-use crate::controllable_system;
+use super::systems::controllable_system::{self, C_Controllable};
+use super::systems::dumb_movement_system;
 use crate::input_utils::{get_movement_from_input, Input_Config};
 use crate::load::load_system;
 use crate::movement_system;
@@ -149,6 +149,7 @@ impl Gameplay_System {
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
+        rng: &mut rand::Default_Rng,
     ) {
         trace!("gameplay_system::update");
 
@@ -197,6 +198,7 @@ impl Gameplay_System {
             update_demo_entites(world, &dt, time);
 
             movement_system::update(&dt, world);
+            dumb_movement_system::update(&dt, world, rng);
         });
     }
 

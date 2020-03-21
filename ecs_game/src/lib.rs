@@ -6,13 +6,13 @@
 extern crate ecs_engine;
 
 mod cmdline;
-mod controllable_system;
 mod game_loop;
 mod gameplay_system;
 mod input_utils;
 mod load;
 mod movement_system;
 mod states;
+mod systems;
 
 #[cfg(debug_assertions)]
 mod debug;

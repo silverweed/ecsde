@@ -1,6 +1,7 @@
-use crate::controllable_system::C_Controllable;
 use crate::gameplay_system::Gameplay_System_Config;
 use crate::gameplay_system::Level;
+use crate::systems::controllable_system::C_Controllable;
+use crate::systems::dumb_movement_system::C_Dumb_Movement;
 use crate::Game_Resources;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider::{Collider, Collider_Shape};
@@ -63,6 +64,7 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Animated_Sprite>();
     world.register_component::<C_Controllable>();
     world.register_component::<Collider>();
+    world.register_component::<C_Dumb_Movement>();
 }
 
 // @Temporary
@@ -119,6 +121,7 @@ fn init_demo_entities(
             let (sw, sh) = {
                 let rend = level.world.add_component::<C_Renderable>(rock);
                 rend.texture = rsrc.load_texture(&tex_path(&env, "rock.png"));
+                rend.z_index = 1;
                 assert!(rend.texture.is_some(), "Could not load texture!");
                 let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
                 let (sw, sh) = (sw as i32, sh as i32);
@@ -174,7 +177,7 @@ fn init_demo_entities(
             let y = rand::rand_01(rng);
             if i > 0 {
                 //t.local_transform.set_position(i as f32 * 242.0, 0.);
-                t.local_transform.set_position(x * 500., 1. * y * 1500.);
+                t.local_transform.set_position(x * 50., 1. * y * 50.);
                 //t.local_transform.set_rotation(angle::deg(45. * i as f32));
                 //t.local_transform.set_scale(2., 4.);
             }
@@ -197,6 +200,7 @@ fn init_demo_entities(
             s.n_frames = n_frames;
             s.frame_time = 0.12;
         }
+        level.world.add_component::<C_Dumb_Movement>(entity);
         prev_entity = Some(entity);
         //{
         //    let mut t = level.world.add_component::<C_Spatial2D>(entity);

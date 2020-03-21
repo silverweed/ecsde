@@ -246,6 +246,7 @@ pub fn tick_game<'a>(
                 &actions,
                 axes,
                 &game_state.engine_state.config,
+                &mut game_state.rng,
             );
         }
     }
@@ -592,7 +593,7 @@ fn update_debug(game_state: &mut Game_State) {
             );
         }
 
-        collision_system.debug_draw_applied_impulses(debug_painter);
+        //collision_system.debug_draw_applied_impulses(debug_painter);
     });
 }
 
