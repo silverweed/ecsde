@@ -94,23 +94,63 @@ fn init_demo_entities(
     let ground = level.world.new_entity();
 
     {
-        let mut rend = level.world.add_component::<C_Renderable>(ground);
+        let rend = level.world.add_component::<C_Renderable>(ground);
         rend.texture = rsrc.load_texture(&tex_path(&env, "ground.png"));
         rend.z_index = -1;
         assert!(rend.texture.is_some(), "Could not load texture!");
         let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
         rsrc.get_texture_mut(rend.texture).set_repeated(true);
-        rend.rect = Rect::new(0, 0, sw as i32 * 10, sh as i32 * 10);
+        rend.rect = Rect::new(0, 0, sw as i32 * 100, sh as i32 * 100);
 
         let t = level.world.add_component::<C_Spatial2D>(ground);
         level.scene_tree.add(ground, None, &t.local_transform);
+    }
+
+    let ext = 4;
+    let int = 2;
+    for x in -ext..=ext {
+        for y in -ext..=ext {
+            if (-int..=int).contains(&x) && (-int..=int).contains(&y) {
+                continue;
+            }
+
+            let rock = level.world.new_entity();
+
+            let (sw, sh) = {
+                let rend = level.world.add_component::<C_Renderable>(rock);
+                rend.texture = rsrc.load_texture(&tex_path(&env, "rock.png"));
+                assert!(rend.texture.is_some(), "Could not load texture!");
+                let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
+                let (sw, sh) = (sw as i32, sh as i32);
+                rend.rect = Rect::new(0, 0, sw, sh);
+                (sw, sh)
+            };
+
+            {
+                let t = level.world.add_component::<C_Spatial2D>(rock);
+                t.local_transform
+                    .set_position((x * sw) as f32, (y * sh) as f32);
+                level.scene_tree.add(rock, Some(ground), &t.local_transform);
+            }
+
+            {
+                let c = level.world.add_component::<Collider>(rock);
+                c.shape = Collider_Shape::Rect {
+                    width: sw as f32,
+                    height: sh as f32,
+                };
+                c.offset = -Vec2f::new(sw as f32 * 0.5, sh as f32 * 0.5);
+            }
+
+            level.entities.push(rock);
+        }
     }
 
     let n_frames = 3;
     for i in 0..gs_cfg.n_entities_to_spawn {
         let entity = level.world.new_entity();
         let (sw, sh) = {
-            let mut rend = level.world.add_component::<C_Renderable>(entity);
+            let rend = level.world.add_component::<C_Renderable>(entity);
             //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
             //rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
             rend.texture = rsrc.load_texture(&tex_path(&env, "jelly.png"));

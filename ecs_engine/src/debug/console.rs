@@ -59,7 +59,9 @@ pub fn save_console_hist(console: &Console, env: &Env_Info) -> io::Result<()> {
 
     let mut file = BufWriter::new(File::create(path)?);
     for line in &console.history {
-        writeln!(file, "{}", line)?;
+        if !line.trim().is_empty() {
+            writeln!(file, "{}", line)?;
+        }
     }
 
     Ok(())
@@ -76,10 +78,11 @@ pub fn load_console_hist(console: &mut Console, env: &Env_Info) -> io::Result<()
         let mut line = String::new();
         match file.read_line(&mut line) {
             Ok(0) => break,
-            Ok(_) => console.history.push(line),
+            Ok(_) if !line.trim().is_empty() => console.history.push(line),
             Err(err) => {
                 return Err(err);
             }
+            _ => {}
         }
     }
 
@@ -313,6 +316,9 @@ impl Console {
 
     fn commit_line(&mut self) {
         let cmdline = self.cur_line.trim().to_string();
+        if cmdline.is_empty() {
+            return;
+        }
         self.history.push(cmdline.clone());
         self.output_line(cmdline.clone(), COLOR_HISTORY);
         self.enqueued_cmd = Some(cmdline);

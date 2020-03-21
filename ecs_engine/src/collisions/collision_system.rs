@@ -43,7 +43,7 @@ pub struct Collision_System {
 impl Collision_System {
     pub fn new() -> Self {
         // @Incomplete
-        let world_rect = Rect::new(-100_000., -100_000., 200_000., 200_000.);
+        let world_rect = Rect::new(-10_000., -10_000., 20_000., 20_000.);
         Collision_System {
             quadtree: quadtree::Quad_Tree::new(world_rect),
             entities_buf: vec![],
