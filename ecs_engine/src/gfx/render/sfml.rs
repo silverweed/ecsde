@@ -253,10 +253,6 @@ pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
     Text::new(string, font, size as u32)
 }
 
-pub fn get_text_local_bounds(text: &Text) -> Rectf {
-    text.local_bounds().into()
-}
-
 pub fn render_line(window: &mut Window_Handle, start: &Vertex, end: &Vertex) {
     let vertices: [sfml::graphics::Vertex; 2] = [*start, *end];
     window.draw_primitives(&vertices, PrimitiveType::Lines, RenderStates::default());
