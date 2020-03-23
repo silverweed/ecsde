@@ -10,17 +10,36 @@ pub type Component_Handle = u32;
 
 #[derive(Default, Clone)]
 struct Component_Storage {
-    pub individual_size: usize,
+    // Upper 8 bytes: size, lower 8 bytes: align
+    pub individual_size_and_align: u16,
+    // FIXME FIXME
+    // @Soundness @Audit: ensure this Vec is properly aligned! Currently there are no guarantees
+    // about that, and we may be accessing unaligned data when reinterpret casting, which is UB!
+    // FIXME FIXME
     pub data: Vec<u8>,
     // { entity => index into `data` }
     pub comp_idx: HashMap<Index_Type, usize>,
 }
 
 impl Component_Storage {
+    pub fn individual_size(&self) -> usize {
+        (self.individual_size_and_align >> 8) as _
+    }
+
+    pub fn individual_align(&self) -> usize {
+        (self.individual_size_and_align & 0xFF) as _
+    }
+
+    pub fn set_individual_size_and_align(&mut self, size: usize, align: usize) {
+        debug_assert!(size < u8::max_value() as usize);
+        debug_assert!(align < u8::max_value() as usize);
+        self.individual_size_and_align = ((size as u16) << 8) | (align as u16);
+    }
+
     pub fn get_component(&self, entity: Entity) -> Option<*const u8> {
         if let Some(index) = self.comp_idx.get(&entity.index) {
-            debug_assert!(*index * self.individual_size < isize::max_value() as usize);
-            Some(unsafe { self.data.as_ptr().add(*index * self.individual_size) })
+            debug_assert!(*index * self.individual_size() < isize::max_value() as usize);
+            Some(unsafe { self.data.as_ptr().add(*index * self.individual_size()) })
         } else {
             None
         }
@@ -28,8 +47,8 @@ impl Component_Storage {
 
     pub fn get_component_mut(&mut self, entity: Entity) -> Option<*mut u8> {
         if let Some(index) = self.comp_idx.get(&entity.index) {
-            debug_assert!(*index * self.individual_size < isize::max_value() as usize);
-            Some(unsafe { self.data.as_mut_ptr().add(*index * self.individual_size) })
+            debug_assert!(*index * self.individual_size() < isize::max_value() as usize);
+            Some(unsafe { self.data.as_mut_ptr().add(*index * self.individual_size()) })
         } else {
             None
         }
@@ -121,7 +140,7 @@ impl Component_Manager {
 
         self.components
             .resize(handle as usize + 1, Component_Storage::default());
-        self.components[handle as usize].individual_size = std::mem::size_of::<T>();
+        self.components[handle as usize].set_individual_size_and_align(std::mem::size_of::<T>(), std::mem::align_of::<T>());
 
         self.last_comp_handle += 1;
 
@@ -134,7 +153,7 @@ impl Component_Manager {
             .get_mut(comp_handle as usize)
             .unwrap_or_else(|| fatal!("Invalid component handle {:?}", comp_handle));
 
-        let individual_size = storage.individual_size;
+        let individual_size = storage.individual_size();
         let index = if let Some(index) = storage.comp_idx.get(&entity.index) {
             *index
         } else {
@@ -154,13 +173,17 @@ impl Component_Manager {
         };
 
         debug_assert!(index * individual_size < isize::max_value() as usize);
-        unsafe { storage.data.as_mut_ptr().add(index * individual_size) }
+        let ptr = unsafe { storage.data.as_mut_ptr().add(index * individual_size) };
+
+        // @Robustness @Audit: why is this not currently asserting? No idea: bulletproof this.
+        debug_assert!(ptr.align_offset(storage.individual_align()) == 0);
+        ptr
     }
 
     fn get_component(&self, entity: Entity, comp_handle: Component_Handle) -> Option<*const u8> {
         let storage = &self.components[comp_handle as usize];
 
-        if storage.individual_size == 0 {
+        if storage.individual_size() == 0 {
             // ZST component (basically a tag): just check if the component is in the bitset.
             if (entity.index as usize) < self.entity_comp_set.len()
                 && self.entity_comp_set[entity.index as usize].get(comp_handle as usize)
@@ -184,7 +207,7 @@ impl Component_Manager {
             .components
             .get_mut(comp_handle as usize)
             .unwrap_or_else(|| fatal!("Invalid component handle {:?}", comp_handle));
-        if storage.individual_size == 0 {
+        if storage.individual_size() == 0 {
             // ZST component (basically a tag): just check if the component is in the bitset.
             if self.entity_comp_set[entity.index as usize].get(comp_handle as usize) {
                 // return Some(null) to distinguish from the None case.
@@ -505,7 +528,7 @@ impl Ecs_World {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(miri)))]
 mod tests {
     use super::*;
 
