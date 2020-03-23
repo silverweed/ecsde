@@ -65,6 +65,7 @@ pub struct Debug_CVars {
 
     pub draw_colliders: Cfg_Var<bool>,
     pub draw_collision_quadtree: Cfg_Var<bool>,
+    pub draw_collision_applied_impulses: Cfg_Var<bool>,
 
     pub draw_entities: Cfg_Var<bool>,
     pub draw_velocities: Cfg_Var<bool>,
@@ -298,7 +299,9 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     let draw_velocities = Cfg_Var::new("engine/debug/entities/draw_velocities", cfg);
     let draw_colliders = Cfg_Var::new("engine/debug/collisions/draw_colliders", cfg);
     let draw_collision_quadtree =
-        Cfg_Var::new("engine/debug/collisions/draw_collision_quadtree", cfg);
+        Cfg_Var::new("engine/debug/collisions/draw_quadtree", cfg);
+    let draw_collision_applied_impulses =
+        Cfg_Var::new("engine/debug/collisions/draw_applied_impulses", cfg);
     let draw_debug_grid = Cfg_Var::new("engine/debug/rendering/grid/draw_grid", cfg);
     let debug_grid_square_size = Cfg_Var::new("engine/debug/rendering/grid/square_size", cfg);
     let debug_grid_opacity = Cfg_Var::new("engine/debug/rendering/grid/opacity", cfg);
@@ -315,6 +318,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
         draw_velocities,
         draw_colliders,
         draw_collision_quadtree,
+        draw_collision_applied_impulses,
         draw_debug_grid,
         debug_grid_square_size,
         debug_grid_opacity,

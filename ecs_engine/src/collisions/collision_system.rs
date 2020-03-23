@@ -226,7 +226,7 @@ impl Collision_System {
                         #[cfg(debug_assertions)]
                         self.debug_applied_impulses.push(Debug_Applied_Impulse {
                             center: spatial.global_transform.position(),
-                            impulse: -info.penetration * 1.001,
+                            impulse: -info.penetration * 1.001 * 100.,
                         });
                     }
                 }

@@ -551,6 +551,7 @@ fn update_debug(game_state: &mut Game_State) {
     let draw_velocities = cvars.draw_velocities.read(&engine_state.config);
     let draw_colliders = cvars.draw_colliders.read(&engine_state.config);
     let draw_collision_quadtree = cvars.draw_collision_quadtree.read(&engine_state.config);
+    let draw_collision_applied_impulses = cvars.draw_collision_applied_impulses.read(&engine_state.config);
     let draw_debug_grid = cvars.draw_debug_grid.read(&engine_state.config);
     let square_size = cvars.debug_grid_square_size.read(&engine_state.config);
     let opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
@@ -593,7 +594,9 @@ fn update_debug(game_state: &mut Game_State) {
             );
         }
 
-        //collision_system.debug_draw_applied_impulses(debug_painter);
+        if draw_collision_applied_impulses {
+            collision_system.debug_draw_applied_impulses(debug_painter);
+        }
     });
 }
 
