@@ -46,6 +46,7 @@ impl Temp_Allocator {
 
     /// # Safety
     /// The caller must ensure that the returned reference is not accessed after `dealloc_all` is called.
+    /// If T is not Copy, it must be manually dropped before going out of scope.
     // @Audit: can T be not Copy? Is this UB?
     pub unsafe fn alloc<T>(&mut self, value: T) -> Temp_Ref<T> {
         let size = size_of::<T>();

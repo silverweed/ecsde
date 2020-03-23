@@ -14,8 +14,8 @@ pub fn init_sleep() -> Sleep_Init_Result {
     }
     #[cfg(target_os = "macos")]
     {
-    	// @Incomplete
-	Ok(Duration::from_millis(1))
+        // @Incomplete
+        Ok(Duration::from_millis(1))
     }
 }
 

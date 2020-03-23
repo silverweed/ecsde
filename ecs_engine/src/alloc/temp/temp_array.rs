@@ -37,6 +37,26 @@ pub fn temp_array<T>(allocator: &mut Temp_Allocator, capacity: usize) -> Temp_Ar
     }
 }
 
+impl<T> Drop for Temp_Array<'_, T> {
+    fn drop(&mut self) {
+        #[cfg(debug_assertions)]
+        {
+            assert_eq!(
+                self.parent_allocator.gen, self.gen,
+                "Temp_Array accessed after free!"
+            );
+        }
+
+        if std::mem::needs_drop::<T>() {
+            for i in 0..self.n_elems {
+                unsafe {
+                    self.ptr.add(i).drop_in_place();
+                }
+            }
+        }
+    }
+}
+
 impl<T> Temp_Array<'_, T> {
     pub fn len(&self) -> usize {
         #[cfg(debug_assertions)]

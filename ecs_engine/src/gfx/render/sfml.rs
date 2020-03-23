@@ -1,5 +1,5 @@
 use crate::common::colors::Color;
-use crate::common::rect::{Rect, Rectf};
+use crate::common::rect::Rect;
 use crate::common::shapes;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
