@@ -5,7 +5,6 @@ use ecs_engine::cfg;
 use ecs_engine::cfg::Cfg_Var;
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::core::env::Env_Info;
-use ecs_engine::core::rand;
 use ecs_engine::core::{app, app_config};
 use ecs_engine::gfx::{self as ngfx, window};
 use ecs_engine::input;
@@ -44,8 +43,6 @@ pub struct Game_State<'a> {
 
     #[cfg(debug_assertions)]
     pub debug_cvars: Debug_CVars,
-
-    pub rng: rand::Default_Rng,
 }
 
 pub struct CVars {
@@ -106,7 +103,7 @@ pub(super) fn internal_game_init<'a>(
         game_state.gameplay_system.init(
             gres,
             env,
-            &mut game_state.rng,
+            &mut game_state.engine_state.rng,
             cfg,
             gameplay_system::Gameplay_System_Config {
                 n_entities_to_spawn: parsed_cmdline_args.n_entities_to_spawn.unwrap_or(1),
@@ -118,7 +115,6 @@ pub(super) fn internal_game_init<'a>(
             &mut game_state.engine_state,
             &mut *game_resources,
             &mut game_state.level_batches,
-            &mut game_state.rng,
         );
 
         init_states(
@@ -178,7 +174,7 @@ fn create_game_state<'a>(
         }
     }
 
-    let mut engine_state = app::create_engine_state(env, config, app_config);
+    let mut engine_state = app::create_engine_state(env, config, app_config)?;
 
     let appcfg = &engine_state.app_config;
     let cfg = &engine_state.config;
@@ -259,14 +255,6 @@ fn create_game_state<'a>(
             is_replaying,
             gameplay_system: gameplay_system::Gameplay_System::new(),
             state_mgr: states::state_manager::State_Manager::new(),
-            #[cfg(debug_assertions)]
-            rng: rand::new_rng_with_seed([
-                0x12, 0x23, 0x33, 0x44, 0x44, 0xab, 0xbc, 0xcc, 0x45, 0x21, 0x72, 0x21, 0xfe, 0x31,
-                0xdf, 0x46, 0xfe, 0xb4, 0x2a, 0xa9, 0x47, 0xdd, 0xd1, 0x37, 0x80, 0xfc, 0x22, 0xa1,
-                0xa2, 0xb3, 0xc0, 0xfe,
-            ])?,
-            #[cfg(not(debug_assertions))]
-            rng: rand::new_rng_with_random_seed()?,
 
             // Cfg_Vars
             cvars,
@@ -298,8 +286,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     let draw_entities = Cfg_Var::new("engine/debug/entities/draw_entities", cfg);
     let draw_velocities = Cfg_Var::new("engine/debug/entities/draw_velocities", cfg);
     let draw_colliders = Cfg_Var::new("engine/debug/collisions/draw_colliders", cfg);
-    let draw_collision_quadtree =
-        Cfg_Var::new("engine/debug/collisions/draw_quadtree", cfg);
+    let draw_collision_quadtree = Cfg_Var::new("engine/debug/collisions/draw_quadtree", cfg);
     let draw_collision_applied_impulses =
         Cfg_Var::new("engine/debug/collisions/draw_applied_impulses", cfg);
     let draw_debug_grid = Cfg_Var::new("engine/debug/rendering/grid/draw_grid", cfg);

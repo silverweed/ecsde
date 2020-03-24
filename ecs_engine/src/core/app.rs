@@ -5,6 +5,7 @@ use crate::alloc::temp::Temp_Allocator;
 use crate::cfg;
 use crate::common::units::*;
 use crate::common::Maybe_Error;
+use crate::core::rand;
 use crate::core::systems::Core_Systems;
 use crate::gfx;
 use crate::input;
@@ -32,6 +33,8 @@ pub struct Engine_State<'r> {
 
     pub time: time::Time,
 
+    pub rng: rand::Default_Rng,
+
     pub input_state: input::input_system::Input_State,
     pub systems: Core_Systems<'r>,
 
@@ -53,20 +56,34 @@ pub fn create_engine_state<'r>(
     env: Env_Info,
     config: cfg::Config,
     app_config: App_Config,
-) -> Engine_State<'r> {
+) -> Result<Engine_State<'r>, Box<dyn std::error::Error>> {
     let systems = Core_Systems::new();
     let input_state = input::input_system::create_input_state(&env);
     let time = time::Time::default();
     #[cfg(debug_assertions)]
     let debug_systems = Debug_Systems::new(&config);
+    let rng;
+    #[cfg(debug_assertions)]
+    {
+        rng = rand::new_rng_with_seed([
+            0x12, 0x23, 0x33, 0x44, 0x44, 0xab, 0xbc, 0xcc, 0x45, 0x21, 0x72, 0x21, 0xfe, 0x31,
+            0xdf, 0x46, 0xfe, 0xb4, 0x2a, 0xa9, 0x47, 0xdd, 0xd1, 0x37, 0x80, 0xfc, 0x22, 0xa1,
+            0xa2, 0xb3, 0xc0, 0xfe,
+        ])?;
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        rng = rand::new_rng_with_random_seed()?;
+    }
 
-    Engine_State {
+    Ok(Engine_State {
         should_close: false,
         cur_frame: 0,
         env,
         config,
         app_config,
         time,
+        rng,
         input_state,
         systems,
         global_batches: gfx::render::batcher::Batches::default(),
@@ -77,7 +94,7 @@ pub fn create_engine_state<'r>(
         prev_frame_time: Duration::default(),
         #[cfg(debug_assertions)]
         replay_data: None,
-    }
+    })
 }
 
 #[cfg(debug_assertions)]

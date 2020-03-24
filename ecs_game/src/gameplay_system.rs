@@ -122,10 +122,9 @@ impl Gameplay_System {
         engine_state: &mut Engine_State,
         game_res: &mut Game_Resources,
         level_batches: &mut HashMap<String_Id, Batches>,
-        rng: &mut rand::Default_Rng,
     ) {
         let level_id = String_Id::from("test");
-        let level = load_system::level_load_sync(level_id, engine_state, game_res, rng, self.cfg);
+        let level = load_system::level_load_sync(level_id, engine_state, game_res, self.cfg);
 
         self.loaded_levels.push(Arc::new(Mutex::new(level)));
         self.active_levels.push(self.loaded_levels.len() - 1);
@@ -145,7 +144,6 @@ impl Gameplay_System {
     pub fn update(
         &mut self,
         dt: &Duration,
-        time: &time::Time,
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
@@ -195,7 +193,7 @@ impl Gameplay_System {
             }
 
             // @Incomplete: level-specific gameplay update
-            update_demo_entites(world, &dt, time);
+            update_demo_entites(world, &dt);
 
             movement_system::update(&dt, world);
             dumb_movement_system::update(&dt, world, rng);
@@ -205,7 +203,6 @@ impl Gameplay_System {
     pub fn realtime_update(
         &mut self,
         real_dt: &Duration,
-        _time: &time::Time,
         actions: &[Game_Action],
         axes: &Virtual_Axes,
         cfg: &cfg::Config,
@@ -304,18 +301,13 @@ impl Gameplay_System {
         });
     }
 
-    /*
     #[cfg(debug_assertions)]
-    pub fn step(
-        &mut self,
-        dt: &Duration,
-        time: &time::Time,
-        cfg: &cfg::Config,
-        _tracer: Debug_Tracer,
-    ) {
-        self.update_with_latest_frame_actions(dt, time, cfg);
+    pub fn step(&mut self, dt: &Duration, cfg: &cfg::Config, rng: &mut rand::Default_Rng) {
+        self.update(dt, &[], &Virtual_Axes::default(), cfg, rng);
+        //self.update_with_latest_frame_actions(dt, time, cfg);
     }
 
+    /*
     fn update_with_latest_frame_actions(
         &mut self,
         dt: &Duration,
@@ -425,7 +417,7 @@ impl Gameplay_System {
 }
 
 // @Temporary
-fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration, time: &time::Time) {
+fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration) {
     let dt_secs = dt.as_secs_f32();
 
     //let mut stream = new_entity_stream(ecs_world)

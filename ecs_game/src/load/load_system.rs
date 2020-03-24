@@ -24,7 +24,6 @@ pub fn level_load_sync(
     level_id: String_Id,
     engine_state: &mut Engine_State,
     game_resources: &mut Game_Resources,
-    rng: &mut rand::Default_Rng,
     gs_cfg: Gameplay_System_Config,
 ) -> Level {
     let mut level = Level {
@@ -41,7 +40,7 @@ pub fn level_load_sync(
     init_demo_entities(
         &mut game_resources.gfx,
         &engine_state.env,
-        rng,
+        &mut engine_state.rng,
         &engine_state.config,
         &mut level,
         gs_cfg,

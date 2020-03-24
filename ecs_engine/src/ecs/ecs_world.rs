@@ -140,7 +140,8 @@ impl Component_Manager {
 
         self.components
             .resize(handle as usize + 1, Component_Storage::default());
-        self.components[handle as usize].set_individual_size_and_align(std::mem::size_of::<T>(), std::mem::align_of::<T>());
+        self.components[handle as usize]
+            .set_individual_size_and_align(std::mem::size_of::<T>(), std::mem::align_of::<T>());
 
         self.last_comp_handle += 1;
 

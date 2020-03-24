@@ -229,7 +229,6 @@ pub fn tick_game<'a>(
 
             game_state.gameplay_system.realtime_update(
                 &real_dt,
-                &game_state.engine_state.time,
                 &actions,
                 axes,
                 &game_state.engine_state.config,
@@ -242,11 +241,10 @@ pub fn tick_game<'a>(
             );
             game_state.gameplay_system.update(
                 &update_dt,
-                &game_state.engine_state.time,
                 &actions,
                 axes,
                 &game_state.engine_state.config,
-                &mut game_state.rng,
+                &mut game_state.engine_state.rng,
             );
         }
     }
@@ -551,7 +549,9 @@ fn update_debug(game_state: &mut Game_State) {
     let draw_velocities = cvars.draw_velocities.read(&engine_state.config);
     let draw_colliders = cvars.draw_colliders.read(&engine_state.config);
     let draw_collision_quadtree = cvars.draw_collision_quadtree.read(&engine_state.config);
-    let draw_collision_applied_impulses = cvars.draw_collision_applied_impulses.read(&engine_state.config);
+    let draw_collision_applied_impulses = cvars
+        .draw_collision_applied_impulses
+        .read(&engine_state.config);
     let draw_debug_grid = cvars.draw_debug_grid.read(&engine_state.config);
     let square_size = cvars.debug_grid_square_size.read(&engine_state.config);
     let opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
