@@ -323,9 +323,8 @@ pub fn build_trace_trees(traces: &[Tracer_Node_Final]) -> Vec<Trace_Tree<'_>> {
     // remove children before their parent, so we never try to unwrap() an already-taken node.
     for (i, node) in traces.iter().enumerate().rev() {
         let trace_tree = trees[i].take().unwrap();
-        if node.info.n_calls() == 0 {
-            continue;
-        }
+        debug_assert!(node.info.n_calls() > 0);
+
         if let Some(p_idx) = node.parent_idx {
             trees[p_idx as usize]
                 .as_mut()

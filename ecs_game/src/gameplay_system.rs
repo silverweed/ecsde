@@ -303,8 +303,8 @@ impl Gameplay_System {
 
     #[cfg(debug_assertions)]
     pub fn step(&mut self, dt: &Duration, cfg: &cfg::Config, rng: &mut rand::Default_Rng) {
+        // @Incomplete: probably should use previous frame actions
         self.update(dt, &[], &Virtual_Axes::default(), cfg, rng);
-        //self.update_with_latest_frame_actions(dt, time, cfg);
     }
 
     /*
