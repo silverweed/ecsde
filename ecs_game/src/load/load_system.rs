@@ -4,7 +4,7 @@ use crate::systems::controllable_system::C_Controllable;
 use crate::systems::dumb_movement_system::C_Dumb_Movement;
 use crate::Game_Resources;
 use ecs_engine::cfg::{self, Cfg_Var};
-use ecs_engine::collisions::collider::{Collider, Collider_Shape};
+use ecs_engine::collisions::collider::{Collider, Collision_Shape};
 use ecs_engine::common::colors;
 use ecs_engine::common::rect::Rect;
 use ecs_engine::common::stringid::String_Id;
@@ -137,7 +137,7 @@ fn init_demo_entities(
 
             {
                 let c = level.world.add_component::<Collider>(rock);
-                c.shape = Collider_Shape::Rect {
+                c.shape = Collision_Shape::Rect {
                     width: sw as f32,
                     height: sh as f32,
                 };
@@ -188,8 +188,8 @@ fn init_demo_entities(
             let c = level.world.add_component::<Collider>(entity);
             let width = (sw / n_frames) as f32;
             let height = sh as f32;
-            c.shape = Collider_Shape::Rect { width, height };
-            //c.shape = Collider_Shape::Circle {
+            c.shape = Collision_Shape::Rect { width, height };
+            //c.shape = Collision_Shape::Circle {
             //radius: width.max(height) * 0.5,
             //};
             c.offset = -Vec2f::new(width * 0.5, height * 0.5);

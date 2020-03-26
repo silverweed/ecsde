@@ -10,6 +10,11 @@ pub fn fast_invsqrt(n: f32) -> f32 {
     y * (1.5 - (x2 * y * y))
 }
 
+pub fn clamp(x: f32, min: f32, max: f32) -> f32 {
+    debug_assert!(min <= max);
+    x.min(max).max(min)
+}
+
 // @WaitForStable: make this const when trait bounds are stable
 pub fn lerp<T: Lerpable>(a: T, b: T, t: T) -> T {
     a * (T::ONE - t) + b * t

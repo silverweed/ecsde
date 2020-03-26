@@ -1,4 +1,4 @@
-use super::collider::{Collider, Collider_Shape};
+use super::collider::{Collider, Collision_Shape};
 use crate::common::rect::{Rect, Rectf};
 use crate::common::transform::Transform2D;
 use crate::ecs::components::base::C_Spatial2D;
@@ -215,7 +215,7 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
     let fits_right;
     // @Incomplete: we're not using the rotation!
     match collider.shape {
-        Collider_Shape::Rect { width, height } => {
+        Collision_Shape::Rect { width, height } => {
             let width = width * obj_scale_x;
             let height = height * obj_scale_y;
             fits_top = obj_y > bounds.y && obj_y + height < vert_mid;
@@ -223,7 +223,7 @@ fn get_index(collider: &Collider, transform: &Transform2D, bounds: &Rectf) -> i8
             fits_left = obj_x > bounds.x && obj_x + width < horiz_mid;
             fits_right = obj_x > horiz_mid && obj_x + width < bounds.x + bounds.width;
         }
-        Collider_Shape::Circle { radius } => {
+        Collision_Shape::Circle { radius } => {
             #[cfg(debug_assertions)]
             {
                 if (obj_scale_x - obj_scale_y).abs() > 0.0001 {
@@ -372,7 +372,7 @@ mod tests {
             let entity = ecs_world.new_entity();
             let cld = ecs_world.add_component::<Collider>(entity);
             let collider = Collider {
-                shape: Collider_Shape::Rect {
+                shape: Collision_Shape::Rect {
                     width: w,
                     height: h,
                 },
