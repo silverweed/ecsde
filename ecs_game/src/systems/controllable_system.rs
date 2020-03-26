@@ -3,7 +3,6 @@ use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::common::vector::Vec2f;
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::ecs_world::Ecs_World;
-use ecs_engine::ecs::entity_stream::new_entity_stream;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::input_system::Game_Action;
 use std::time::Duration;
@@ -34,16 +33,7 @@ pub fn update(
     let movement = get_movement_from_input(axes, input_cfg, cfg);
     let dt_secs = dt.as_secs_f32();
 
-    let mut entity_stream = new_entity_stream(ecs_world)
-        .require::<C_Controllable>()
-        .require::<C_Spatial2D>()
-        .build();
-    loop {
-        let entity = entity_stream.next(ecs_world);
-        if entity.is_none() {
-            break;
-        }
-        let entity = entity.unwrap();
+    foreach_entity!(ecs_world, +C_Controllable, +C_Spatial2D, |entity| {
         let ctrl = ecs_world
             .get_component_mut::<C_Controllable>(entity)
             .unwrap();
@@ -54,5 +44,5 @@ pub fn update(
 
         let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
         spatial.velocity = velocity;
-    }
+    });
 }
