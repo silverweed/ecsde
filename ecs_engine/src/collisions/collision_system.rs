@@ -1,4 +1,4 @@
-use super::collider::{Collider, Collider_Shape};
+use super::collider::{Collider, Collision_Shape};
 use super::quadtree;
 use crate::common::rect::{self, Rect};
 use crate::common::shapes;
@@ -272,8 +272,8 @@ fn check_collision_with_neighbours(
         let oth_scale = oth_transf.scale();
 
         match collider.shape {
-            Collider_Shape::Rect { width, height } => match oth_cld.shape {
-                Collider_Shape::Rect {
+            Collision_Shape::Rect { width, height } => match oth_cld.shape {
+                Collision_Shape::Rect {
                     width: oth_width,
                     height: oth_height,
                 } => {
@@ -308,13 +308,13 @@ fn check_collision_with_neighbours(
                             .fetch_add(neighbours.len(), std::sync::atomic::Ordering::Relaxed);
                     }
                 }
-                Collider_Shape::Circle { .. } => {
+                Collision_Shape::Circle { .. } => {
                     // @Incomplete
                     eprintln!("[ TODO ] rect-circle collisions are not implemented yet.");
                 }
             },
-            Collider_Shape::Circle { radius } => match oth_cld.shape {
-                Collider_Shape::Circle { radius: oth_radius } => {
+            Collision_Shape::Circle { radius } => match oth_cld.shape {
+                Collision_Shape::Circle { radius: oth_radius } => {
                     let me = shapes::Circle {
                         center: Vec2f::new(pos.x, pos.y),
                         // Note: we assume uniform scale
@@ -344,7 +344,7 @@ fn check_collision_with_neighbours(
                             .fetch_add(neighbours.len(), std::sync::atomic::Ordering::Relaxed);
                     }
                 }
-                Collider_Shape::Rect { .. } => {
+                Collision_Shape::Rect { .. } => {
                     // @Incomplete
                     eprintln!("[ TODO ] rect-circle collisions are not implemented yet.");
                 }

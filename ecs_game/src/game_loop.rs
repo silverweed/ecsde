@@ -256,7 +256,8 @@ pub fn tick_game<'a>(
         let gameplay_system = &mut game_state.gameplay_system;
         let collision_system = &mut game_state.engine_state.systems.collision_system;
         gameplay_system.foreach_active_level(|level| {
-            collision_system.update(&mut level.world);
+            //collision_system.update(&mut level.world);
+            ecs_engine::collisions::physics::update_collisions(&mut level.world);
         });
     }
 
@@ -762,7 +763,7 @@ fn debug_draw_colliders(
     debug_painter: &mut Debug_Painter,
     ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
 ) {
-    use ecs_engine::collisions::collider::{Collider, Collider_Shape};
+    use ecs_engine::collisions::collider::{Collider, Collision_Shape};
     use ecs_engine::common::shapes;
     use ecs_engine::ecs::components::base::C_Spatial2D;
 
@@ -793,10 +794,10 @@ fn debug_draw_colliders(
         };
 
         match collider.shape {
-            Collider_Shape::Rect { width, height } => {
+            Collision_Shape::Rect { width, height } => {
                 debug_painter.add_rect(Vec2f::new(width, height), &transform, color);
             }
-            Collider_Shape::Circle { radius } => {
+            Collision_Shape::Circle { radius } => {
                 debug_painter.add_circle(
                     shapes::Circle {
                         center: transform.position(),
@@ -805,6 +806,7 @@ fn debug_draw_colliders(
                     color,
                 );
             }
+            _ => {}
         }
     }
 }

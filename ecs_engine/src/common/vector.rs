@@ -150,6 +150,11 @@ where
             y: T::from(s * x + c * y),
         }
     }
+
+    #[inline]
+    pub fn dot(self, b: Self) -> T {
+        self.x * b.x + self.y * b.y
+    }
 }
 
 impl<T: Default> Default for Vector2<T> {
@@ -226,6 +231,19 @@ impl<T: Copy + Mul<Output = T>> Mul<T> for Vector2<T> {
         Self {
             x: self.x * other,
             y: self.y * other,
+        }
+    }
+}
+
+// @Incomplete @WaitForStable: we should really implement Mul<Vector2<T>> for T, but that's not
+// currently allowed, as far as I understand.
+impl Mul<Vector2<f32>> for f32 {
+    type Output = Vector2<f32>;
+
+    fn mul(self, other: Vector2<f32>) -> Self::Output {
+        Self::Output {
+            x: self * other.x,
+            y: self * other.y,
         }
     }
 }
