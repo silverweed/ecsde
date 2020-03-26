@@ -1,23 +1,16 @@
 use crate::ecs::components::gfx::{C_Animated_Sprite, C_Renderable};
 use crate::ecs::ecs_world::Ecs_World;
-use crate::ecs::entity_stream::Entity_Stream;
 use std::time::Duration;
 
-pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, mut entity_stream: Entity_Stream) {
+pub fn update(dt: &Duration, ecs_world: &mut Ecs_World) {
     let dt_secs = dt.as_secs_f32();
 
-    loop {
-        let entity = entity_stream.next(ecs_world);
-        if entity.is_none() {
-            break;
-        }
-        let entity = entity.unwrap();
-
+    foreach_entity!(ecs_world, +C_Renderable, +C_Animated_Sprite, |entity| {
         let sprite = ecs_world
             .get_component_mut::<C_Animated_Sprite>(entity)
             .unwrap();
         if sprite.frame_time <= 0.0 || sprite.n_frames <= 1 {
-            continue;
+            return;
         }
         sprite.frame_time_elapsed += dt_secs;
 
@@ -38,14 +31,13 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, mut entity_stream: Entit
 
             renderable.rect.x = x;
         }
-    }
+    });
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::common::rect::Rect;
-    use crate::ecs::entity_stream::new_entity_stream;
     use crate::resources::gfx::tex_path;
     use crate::test_common;
 
@@ -70,11 +62,7 @@ mod tests {
 
         let mut dt = Duration::from_millis(16);
         for i in 0..1000 {
-            let stream = new_entity_stream(&ecs_world)
-                .require::<C_Renderable>()
-                .require::<C_Animated_Sprite>()
-                .build();
-            update(&dt, &mut ecs_world, stream);
+            update(&dt, &mut ecs_world);
             let r = ecs_world.get_component::<C_Renderable>(e).unwrap();
             assert!(
                 r.rect.x % r.rect.width as i32 == 0,

@@ -15,7 +15,8 @@ use std::time::{Duration, Instant};
 #[cfg(debug_assertions)]
 use ecs_engine::{
     common::angle::rad, common::stringid::String_Id, common::vector::Vec2f, debug,
-    debug::painter::Debug_Painter, gfx::paint_props::Paint_Properties, gfx::window,
+    debug::painter::Debug_Painter, ecs::ecs_world::Ecs_World, gfx::paint_props::Paint_Properties,
+    gfx::window,
 };
 
 pub fn tick_game<'a>(
@@ -732,7 +733,7 @@ fn update_win_debug_overlay(
 #[cfg(debug_assertions)]
 fn update_entities_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
-    ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
+    ecs_world: &Ecs_World,
 ) {
     debug_overlay.clear();
     debug_overlay.add_line_color(
@@ -759,24 +760,12 @@ fn update_camera_debug_overlay(
 }
 
 #[cfg(debug_assertions)]
-fn debug_draw_colliders(
-    debug_painter: &mut Debug_Painter,
-    ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
-) {
+fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
     use ecs_engine::collisions::collider::{Collider, Collision_Shape};
     use ecs_engine::common::shapes;
     use ecs_engine::ecs::components::base::C_Spatial2D;
 
-    let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
-        .require::<Collider>()
-        .require::<C_Spatial2D>()
-        .build();
-    loop {
-        let entity = stream.next(ecs_world);
-        if entity.is_none() {
-            break;
-        }
-        let entity = entity.unwrap();
+    foreach_entity!(ecs_world, +Collider, +C_Spatial2D, |entity| {
         let collider = ecs_world.get_component::<Collider>(entity).unwrap();
         let transform = &ecs_world
             .get_component::<C_Spatial2D>(entity)
@@ -808,26 +797,15 @@ fn debug_draw_colliders(
             }
             _ => {}
         }
-    }
+    });
 }
 
 #[cfg(debug_assertions)]
-fn debug_draw_transforms(
-    debug_painter: &mut Debug_Painter,
-    ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
-) {
+fn debug_draw_transforms(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
     use ecs_engine::common::shapes::Circle;
     use ecs_engine::ecs::components::base::C_Spatial2D;
 
-    let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
-        .require::<C_Spatial2D>()
-        .build();
-    loop {
-        let entity = stream.next(ecs_world);
-        if entity.is_none() {
-            break;
-        }
-        let entity = entity.unwrap();
+    foreach_entity!(ecs_world, +C_Spatial2D, |entity| {
         let spatial = ecs_world.get_component::<C_Spatial2D>(entity).unwrap();
         let transform = &spatial.global_transform;
         debug_painter.add_circle(
@@ -853,28 +831,17 @@ fn debug_draw_transforms(
                 ..Default::default()
             },
         );
-    }
+    });
 }
 
 #[cfg(debug_assertions)]
-fn debug_draw_velocities(
-    debug_painter: &mut Debug_Painter,
-    ecs_world: &ecs_engine::ecs::ecs_world::Ecs_World,
-) {
+fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
     use ecs_engine::common::shapes::Arrow;
     use ecs_engine::ecs::components::base::C_Spatial2D;
 
     const COLOR: colors::Color = colors::rgb(100, 0, 120);
 
-    let mut stream = ecs_engine::ecs::entity_stream::new_entity_stream(ecs_world)
-        .require::<C_Spatial2D>()
-        .build();
-    loop {
-        let entity = stream.next(ecs_world);
-        if entity.is_none() {
-            break;
-        }
-        let entity = entity.unwrap();
+    foreach_entity!(ecs_world, +C_Spatial2D, |entity| {
         let spatial = ecs_world.get_component::<C_Spatial2D>(entity).unwrap();
         let transform = &spatial.global_transform;
         debug_painter.add_arrow(
@@ -898,7 +865,7 @@ fn debug_draw_velocities(
             12,
             COLOR,
         );
-    }
+    });
 }
 
 /// Draws a grid made of squares, each of size `square_size`.

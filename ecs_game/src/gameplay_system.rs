@@ -161,12 +161,7 @@ impl Gameplay_System {
         self.foreach_active_level(|level| {
             let world = &mut level.world;
 
-            let stream = new_entity_stream(world)
-                .require::<C_Renderable>()
-                .require::<C_Animated_Sprite>()
-                .build();
-
-            gfx::animation_system::update(&dt, world, stream);
+            gfx::animation_system::update(&dt, world);
             controllable_system::update(&dt, actions, axes, world, input_cfg, cfg);
 
             {
@@ -274,30 +269,24 @@ impl Gameplay_System {
 
             // DEBUG: center camera on player
             return;
-            {
-                let mut stream = new_entity_stream(&level.world)
-                    .require::<C_Controllable>()
-                    .exclude::<C_Camera2D>()
-                    .build();
-                let moved = stream.next(&level.world);
-                if let Some(moved) = moved {
-                    let pos = level
-                        .world
-                        .get_component::<C_Spatial2D>(moved)
-                        .unwrap()
-                        .global_transform
-                        .position();
 
-                    let camera = level
-                        .world
-                        .get_component_mut::<C_Camera2D>(level.cameras[level.active_camera])
-                        .unwrap();
+            foreach_entity!(&level.world, +C_Controllable, ~C_Camera2D, |moved| {
+                let pos = level
+                    .world
+                    .get_component::<C_Spatial2D>(moved)
+                    .unwrap()
+                    .global_transform
+                    .position();
 
-                    camera
-                        .transform
-                        .set_position_v(pos + Vec2f::new(-300., -300.));
-                }
-            }
+                let camera = level
+                    .world
+                    .get_component_mut::<C_Camera2D>(level.cameras[level.active_camera])
+                    .unwrap();
+
+                camera
+                    .transform
+                    .set_position_v(pos + Vec2f::new(-300., -300.));
+            });
         });
     }
 
@@ -438,17 +427,7 @@ fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration) {
     //spat.velocity.y = transl.y;
     //}
 
-    let mut stream = new_entity_stream(ecs_world)
-        .require::<C_Spatial2D>()
-        //.exclude::<C_Controllable>()
-        .build();
-    let mut i = 0;
-    loop {
-        let entity = stream.next(ecs_world);
-        if entity.is_none() {
-            break;
-        }
-        let entity = entity.unwrap();
+    foreach_entity_enumerate!(ecs_world, +C_Spatial2D, |entity, i| {
         let t = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
 
         //if i == 1 {
@@ -468,9 +447,7 @@ fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration) {
             //t.velocity = t.local_transform.position() - prev_pos;
             //t.local_transform.set_rotation(deg(30.));
         }
-
-        i += 1;
-    }
+    });
 }
 
 fn read_input_cfg(cfg: &cfg::Config) -> Input_Config {
