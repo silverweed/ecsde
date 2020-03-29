@@ -1,6 +1,7 @@
 use std::ops::{Add, Mul, Sub};
 
 pub fn fast_invsqrt(n: f32) -> f32 {
+    debug_assert!(!n.is_nan());
     assert!(n != 0., "fast_invsqrt: argument cannot be 0!");
     let x2: f32 = n * 0.5;
     let mut i: u32 = n.to_bits();

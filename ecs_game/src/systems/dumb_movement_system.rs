@@ -28,15 +28,16 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, rng: &mut Default_Rng) {
 
         let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
         if spatial.velocity.magnitude2() < 0.1 {
-            spatial.velocity = v2!(0., -200.);
+            spatial.velocity = v2!(0., 200.);
         }
         if !colliding {
             return;
         }
 
         let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
-        let r = rand::rand_range(rng, -50., 50.);
-        spatial.velocity = -spatial.velocity.rotated(deg(r));
+        //let r = rand::rand_range(rng, -50., 50.);
+        let r = rand::rand_range(rng, 0., 360.);
+        spatial.velocity = - 200. * v2!(1., 0.).rotated(deg(r));
 
         let dumb_movement = ecs_world
             .get_component_mut::<C_Dumb_Movement>(entity)

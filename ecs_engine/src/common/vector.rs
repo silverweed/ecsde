@@ -157,6 +157,12 @@ where
     }
 }
 
+#[cfg(debug_assertions)]
+pub fn sanity_check_v(v: Vec2f) {
+    debug_assert!(!v.x.is_nan());
+    debug_assert!(!v.y.is_nan());
+}
+
 impl<T: Default> Default for Vector2<T> {
     fn default() -> Self {
         Self {

@@ -4,7 +4,7 @@ use crate::systems::controllable_system::C_Controllable;
 use crate::systems::dumb_movement_system::C_Dumb_Movement;
 use crate::Game_Resources;
 use ecs_engine::cfg::{self, Cfg_Var};
-use ecs_engine::collisions::collider::{Collider, Collision_Shape};
+use ecs_engine::collisions::collider::{C_Phys_Data, Collider, Collision_Shape};
 use ecs_engine::common::colors;
 use ecs_engine::common::rect::Rect;
 use ecs_engine::common::stringid::String_Id;
@@ -64,6 +64,7 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Controllable>();
     world.register_component::<Collider>();
     world.register_component::<C_Dumb_Movement>();
+    world.register_component::<C_Phys_Data>();
 }
 
 // @Temporary
@@ -107,44 +108,22 @@ fn init_demo_entities(
         level.scene_tree.add(ground, None, &t.local_transform);
     }
 
-    let ext = 4;
+    let ext = 0;
     let int = 2;
+    let sw = 32;
+    let sh = 32;
     for x in -ext..=ext {
         for y in -ext..=ext {
             if (-int..=int).contains(&x) && (-int..=int).contains(&y) {
                 continue;
             }
-
-            let rock = level.world.new_entity();
-
-            let (sw, sh) = {
-                let rend = level.world.add_component::<C_Renderable>(rock);
-                rend.texture = rsrc.load_texture(&tex_path(&env, "rock.png"));
-                rend.z_index = 1;
-                assert!(rend.texture.is_some(), "Could not load texture!");
-                let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
-                let (sw, sh) = (sw as i32, sh as i32);
-                rend.rect = Rect::new(0, 0, sw, sh);
-                (sw, sh)
-            };
-
-            {
-                let t = level.world.add_component::<C_Spatial2D>(rock);
-                t.local_transform
-                    .set_position((x * sw) as f32, (y * sh) as f32);
-                level.scene_tree.add(rock, Some(ground), &t.local_transform);
-            }
-
-            {
-                let c = level.world.add_component::<Collider>(rock);
-                c.shape = Collision_Shape::Rect {
-                    width: sw as f32,
-                    height: sh as f32,
-                };
-                c.offset = -Vec2f::new(sw as f32 * 0.5, sh as f32 * 0.5);
-            }
-
-            level.entities.push(rock);
+            spawn_rock_at(
+                level,
+                env,
+                rsrc,
+                v2!((x * sw) as f32, (y * sh) as f32),
+                ground,
+            );
         }
     }
 
@@ -195,6 +174,13 @@ fn init_demo_entities(
             c.offset = -Vec2f::new(width * 0.5, height * 0.5);
         }
         {
+            let p = level.world.add_component::<C_Phys_Data>(entity);
+            p.inv_mass = 1.;
+            p.restitution = 0.4;
+            p.static_friction = 0.5;
+            p.dyn_friction = 0.3;
+        }
+        {
             let s = level.world.add_component::<C_Animated_Sprite>(entity);
             s.n_frames = n_frames;
             s.frame_time = 0.12;
@@ -213,4 +199,50 @@ fn init_demo_entities(
         //}
         level.entities.push(entity);
     }
+
+    spawn_rock_at(level, env, rsrc, v2!(0., 100.), ground);
+}
+
+fn spawn_rock_at(
+    level: &mut Level,
+    env: &Env_Info,
+    rsrc: &mut Gfx_Resources,
+    pos: Vec2f,
+    ground: Entity,
+) {
+    let rock = level.world.new_entity();
+
+    let (sw, sh) = {
+        let rend = level.world.add_component::<C_Renderable>(rock);
+        rend.texture = rsrc.load_texture(&tex_path(&env, "rock.png"));
+        rend.z_index = 1;
+        assert!(rend.texture.is_some(), "Could not load texture!");
+        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
+        let (sw, sh) = (sw as i32, sh as i32);
+        rend.rect = Rect::new(0, 0, sw, sh);
+        (sw, sh)
+    };
+
+    {
+        let t = level.world.add_component::<C_Spatial2D>(rock);
+        t.local_transform.set_position_v(pos);
+        level.scene_tree.add(rock, Some(ground), &t.local_transform);
+    }
+
+    {
+        let c = level.world.add_component::<Collider>(rock);
+        c.shape = Collision_Shape::Rect {
+            width: sw as f32,
+            height: sh as f32,
+        };
+        c.offset = -Vec2f::new(sw as f32 * 0.5, sh as f32 * 0.5);
+    }
+    {
+        let p = level.world.add_component::<C_Phys_Data>(rock);
+        p.inv_mass = 0.; // infinite mass
+        p.restitution = 0.4;
+        p.static_friction = 0.5;
+        p.dyn_friction = 0.3;
+    }
+    level.entities.push(rock);
 }
