@@ -1,24 +1,31 @@
 // reference: https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331
 
-use crate::collisions::collider::Collider;
-use crate::collisions::collider::Collision_Shape;
+use crate::collisions::collider::{C_Phys_Data, Collider, Collision_Shape};
 use crate::common::math::clamp;
 use crate::common::vector::Vec2f;
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Ecs_World, Entity};
+use rayon::prelude::*;
+
+#[cfg(debug_assertions)]
+use crate::common::vector::sanity_check_v;
 
 type Body_Id = u32;
 
 #[derive(Debug, Clone)]
-pub struct Rigidbody {
-    pub entity: Entity,
-    pub velocity: Vec2f,
-    pub position: Vec2f,
+struct Rigidbody {
+    // Used in detect_collisions
     pub shape: Collision_Shape,
-    pub inv_mass: f32,
-    pub restitution: f32,
-    pub static_friction: f32,
-    pub dyn_friction: f32,
+
+    // Used to copy back results
+    pub entity: Entity,
+
+    // Used in positional_correction
+    pub position: Vec2f, // and copy back // and detect collision
+
+    // Used in solve_collisions_roughly
+    pub velocity: Vec2f, // and copy back
+    pub phys_data: C_Phys_Data,
 }
 
 #[derive(Debug, Clone)]
@@ -32,8 +39,8 @@ struct Collision_Info {
 fn detect_circle_circle(
     a_id: Body_Id,
     b_id: Body_Id,
-    a: &Rigidbody,
-    b: &Rigidbody,
+    a: &Collider,
+    b: &Collider,
 ) -> Option<Collision_Info> {
     let a_radius = if let Collision_Shape::Circle { radius } = a.shape {
         radius
@@ -76,8 +83,8 @@ fn detect_circle_circle(
 fn detect_rect_rect(
     a_id: Body_Id,
     b_id: Body_Id,
-    a: &Rigidbody,
-    b: &Rigidbody,
+    a: &Collider,
+    b: &Collider,
 ) -> Option<Collision_Info> {
     let (a_width, a_height) = if let Collision_Shape::Rect { width, height } = a.shape {
         (width, height)
@@ -103,11 +110,17 @@ fn detect_rect_rect(
     let a_half_ext_y = a_height * 0.5;
     let b_half_ext_y = b_height * 0.5;
 
+    println!(
+        "diff = {:?}, ahx = {}, bhx = {}",
+        diff, a_half_ext_y, b_half_ext_y
+    );
+
     // Apply SAT on Y axis
     let y_overlap = a_half_ext_y + b_half_ext_y - diff.y.abs();
     if y_overlap <= 0. {
         return None;
     }
+    println!("y overlap");
 
     // Find least penetration axis
     if x_overlap > y_overlap {
@@ -140,8 +153,8 @@ fn detect_rect_rect(
 fn detect_circle_rect(
     circle_id: Body_Id,
     rect_id: Body_Id,
-    circle: &Rigidbody,
-    rect: &Rigidbody,
+    circle: &Collider,
+    rect: &Collider,
 ) -> Option<Collision_Info> {
     let (r_width, r_height) = if let Collision_Shape::Rect { width, height } = rect.shape {
         (width, height)
@@ -204,13 +217,11 @@ fn detect_circle_rect(
 fn detect_rect_circle(
     rect_id: Body_Id,
     circle_id: Body_Id,
-    rect: &Rigidbody,
-    circle: &Rigidbody,
+    rect: &Collider,
+    circle: &Collider,
 ) -> Option<Collision_Info> {
     detect_circle_rect(circle_id, rect_id, circle, rect)
 }
-
-type Collision_Cb = fn(Body_Id, Body_Id, &Rigidbody, &Rigidbody) -> Option<Collision_Info>;
 
 fn collision_shape_type_index(shape: &Collision_Shape) -> usize {
     match shape {
@@ -219,12 +230,14 @@ fn collision_shape_type_index(shape: &Collision_Shape) -> usize {
     }
 }
 
+type Collision_Cb = fn(Body_Id, Body_Id, &Collider, &Collider) -> Option<Collision_Info>;
+
 const COLLISION_CB_TABLE: [[Collision_Cb; 2]; 2] = [
     [detect_circle_circle, detect_circle_rect],
     [detect_rect_circle, detect_rect_rect],
 ];
 
-fn detect_collisions(objects: &mut [Rigidbody]) -> Vec<Collision_Info> {
+fn detect_collisions(objects: &[Collider]) -> Vec<Collision_Info> {
     // TODO Broad phase
 
     // Narrow phase
@@ -262,6 +275,11 @@ fn solve_collision_roughly(objects: &mut [Rigidbody], a_id: Body_Id, b_id: Body_
     let a = objects[a_id as usize].clone();
     let b = objects[b_id as usize].clone();
 
+    if a.phys_data.inv_mass + b.phys_data.inv_mass == 0. {
+        // Both infinite-mass objects
+        return;
+    }
+
     let rel_vel = b.velocity - a.velocity;
     let vel_along_normal = rel_vel.dot(normal);
 
@@ -269,14 +287,23 @@ fn solve_collision_roughly(objects: &mut [Rigidbody], a_id: Body_Id, b_id: Body_
         return;
     }
 
-    let e = a.restitution.min(b.restitution);
+    #[cfg(debug_assertions)]
+    {
+        sanity_check_v(a.velocity);
+        sanity_check_v(b.velocity);
+        sanity_check_v(rel_vel);
+        debug_assert!(!vel_along_normal.is_nan());
+    }
+
+    let e = a.phys_data.restitution.min(b.phys_data.restitution);
 
     // Impulse scalar
-    let j = -(1. + e) * vel_along_normal / (a.inv_mass + b.inv_mass);
+    let j = -(1. + e) * vel_along_normal / (a.phys_data.inv_mass + b.phys_data.inv_mass);
+    debug_assert!(!j.is_nan());
 
     let impulse = j * normal;
-    objects[a_id as usize].velocity -= 1. * a.inv_mass * impulse;
-    objects[b_id as usize].velocity += 1. * b.inv_mass * impulse;
+    objects[a_id as usize].velocity -= 1. * a.phys_data.inv_mass * impulse;
+    objects[b_id as usize].velocity += 1. * b.phys_data.inv_mass * impulse;
 
     // @Speed!
     let a = objects[a_id as usize].clone();
@@ -284,26 +311,32 @@ fn solve_collision_roughly(objects: &mut [Rigidbody], a_id: Body_Id, b_id: Body_
 
     // apply friction
     let new_rel_vel = b.velocity - a.velocity;
+    #[cfg(debug_assertions)]
+    {
+        sanity_check_v(a.velocity);
+        sanity_check_v(b.velocity);
+        sanity_check_v(new_rel_vel);
+    }
     let tangent = (new_rel_vel - new_rel_vel.dot(normal) * normal).normalized_or_zero();
 
-    let jt = -new_rel_vel.dot(tangent) / (a.inv_mass * b.inv_mass);
+    let jt = -new_rel_vel.dot(tangent) / (a.phys_data.inv_mass * b.phys_data.inv_mass);
 
-    fn pytag(a: f32, b: f32) -> f32 {
+    fn pythag(a: f32, b: f32) -> f32 {
         (a * a + b * b).sqrt()
     }
 
     // @Speed: try to use another method here (e.g. average)
-    let mu = pytag(a.static_friction, b.static_friction);
+    let mu = pythag(a.phys_data.static_friction, b.phys_data.static_friction);
 
     let friction_impulse = if jt.abs() < j * mu {
         jt * tangent
     } else {
-        let dyn_friction = pytag(a.dyn_friction, b.dyn_friction);
+        let dyn_friction = pythag(a.phys_data.dyn_friction, b.phys_data.dyn_friction);
         -j * tangent * dyn_friction
     };
 
-    objects[a_id as usize].velocity -= 1. * a.inv_mass * friction_impulse;
-    objects[b_id as usize].velocity += 1. * b.inv_mass * friction_impulse;
+    objects[a_id as usize].velocity -= 1. * a.phys_data.inv_mass * friction_impulse;
+    objects[b_id as usize].velocity += 1. * b.phys_data.inv_mass * friction_impulse;
 }
 
 fn positional_correction(
@@ -313,8 +346,8 @@ fn positional_correction(
     normal: Vec2f,
     penetration: f32,
 ) {
-    let a_inv_mass = objects[a_id as usize].inv_mass;
-    let b_inv_mass = objects[b_id as usize].inv_mass;
+    let a_inv_mass = objects[a_id as usize].phys_data.inv_mass;
+    let b_inv_mass = objects[b_id as usize].phys_data.inv_mass;
 
     let correction_perc = 0.2;
     let slop = 0.01;
@@ -333,32 +366,50 @@ fn solve_collisions(objects: &mut [Rigidbody], infos: &[Collision_Info]) {
             body2,
             normal,
             penetration,
-        } = info;
+        } = *info;
 
-        solve_collision_roughly(objects, *body1, *body2, *normal);
-        positional_correction(objects, *body1, *body2, *normal, *penetration);
+        solve_collision_roughly(objects, body1, body2, normal);
+        positional_correction(objects, body1, body2, normal, penetration);
     }
 }
 
 pub fn update_collisions(ecs_world: &mut Ecs_World) {
-    // @Temporary @Speed
-    for collider in ecs_world.get_components_mut::<Collider>() {
-        collider.colliding = false;
-    }
+    let (mut objects, id_map) = prepare_colliders_and_gather_rigidbodies(ecs_world);
 
-    let mut objects = gather_rigidbodies(ecs_world);
+    let colliders = ecs_world.get_components_mut::<Collider>();
+    let infos = detect_collisions(colliders);
 
-    let infos = detect_collisions(&mut objects);
+    infos.iter().for_each(|info| {
+        colliders[info.body1 as usize].colliding = true;
+    });
 
-    solve_collisions(&mut objects, &infos);
+    let rb_infos = infos
+        .par_iter()
+        .filter_map(|info| {
+            let id1 = id_map[info.body1 as usize];
+            let id2 = id_map[info.body2 as usize];
+            if id1 >= 0 && id2 >= 0 {
+                Some(Collision_Info {
+                    body1: id1 as _,
+                    body2: id2 as _,
+                    ..*info
+                })
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    solve_collisions(&mut objects, &rb_infos);
 
     // Copy back positions and velocities
     let mut processed = std::collections::HashSet::new();
-    for info in &infos {
+    for info in &rb_infos {
         let Collision_Info { body1, body2, .. } = info;
 
         for body in &[*body1, *body2] {
             if !processed.contains(body) {
+                processed.insert(*body);
+
                 let Rigidbody {
                     position,
                     velocity,
@@ -370,36 +421,43 @@ pub fn update_collisions(ecs_world: &mut Ecs_World) {
                 // @Incomplete should be global_transform
                 spatial.local_transform.set_position_v(position);
                 spatial.velocity = velocity;
-
-                ecs_world
-                    .get_component_mut::<Collider>(entity)
-                    .unwrap()
-                    .colliding = true;
-
-                processed.insert(*body);
             }
         }
     }
 }
 
-fn gather_rigidbodies(world: &Ecs_World) -> Vec<Rigidbody> {
+fn prepare_colliders_and_gather_rigidbodies(world: &mut Ecs_World) -> (Vec<Rigidbody>, Vec<isize>) {
     let mut objects = vec![];
+    // Maps collider_idx => rigidbody_idx (-1 if no rb associated)
+    let mut id_map = vec![];
 
     foreach_entity!(world, +Collider, +C_Spatial2D, |entity| {
-        let collider = world.get_component::<Collider>(entity).unwrap();
         let spatial = world.get_component::<C_Spatial2D>(entity).unwrap();
+        let pos = spatial.global_transform.position();
+        let velocity = spatial.velocity;
+        #[cfg(debug_assertions)]
+        {
+            sanity_check_v(velocity);
+        }
+        let collider = world.get_component_mut::<Collider>(entity).unwrap();
+        collider.position = pos;// + collider.offset;
+        collider.colliding = false;
+        let position = collider.position;
+        let shape = collider.shape;
 
-        objects.push(Rigidbody {
-            entity,
-            position: spatial.global_transform.position(),
-            velocity: spatial.velocity,
-            shape: collider.shape,
-            inv_mass: 1.,
-            restitution: 0.1,
-            static_friction: 0.5,
-            dyn_friction: 0.3
-        });
+        if let Some(phys_data) = world.get_component::<C_Phys_Data>(entity) {
+            objects.push(Rigidbody {
+                entity,
+                position,
+                velocity,
+                shape,
+                phys_data: *phys_data,
+            });
+            id_map.push(objects.len() as isize - 1);
+        } else {
+            id_map.push(-1);
+        }
     });
 
-    objects
+    (objects, id_map)
 }

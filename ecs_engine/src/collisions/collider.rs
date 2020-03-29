@@ -16,6 +16,16 @@ impl Default for Collision_Shape {
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Collider {
     pub shape: Collision_Shape,
+    pub position: Vec2f, // This should not be set directly: it's computed by collision system
     pub offset: Vec2f,
     pub colliding: bool,
+}
+
+// Attach this component alongside Collider to have a rigidbody
+#[derive(Copy, Clone, Debug, Default)]
+pub struct C_Phys_Data {
+    pub inv_mass: f32,
+    pub restitution: f32,
+    pub static_friction: f32,
+    pub dyn_friction: f32,
 }

@@ -256,9 +256,15 @@ pub fn tick_game<'a>(
 
         let gameplay_system = &mut game_state.gameplay_system;
         let collision_system = &mut game_state.engine_state.systems.collision_system;
+        let time = &game_state.engine_state.time;
+        let update_dt = time::mul_duration(
+            &target_time_per_frame,
+            time.time_scale * (!time.paused as u32 as f32),
+        );
         gameplay_system.foreach_active_level(|level| {
             //collision_system.update(&mut level.world);
             ecs_engine::collisions::physics::update_collisions(&mut level.world);
+            crate::movement_system::update(&update_dt, &mut level.world);
         });
     }
 
@@ -767,14 +773,9 @@ fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World
 
     foreach_entity!(ecs_world, +Collider, +C_Spatial2D, |entity| {
         let collider = ecs_world.get_component::<Collider>(entity).unwrap();
-        let transform = &ecs_world
-            .get_component::<C_Spatial2D>(entity)
-            .unwrap()
-            .global_transform;
         // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
-        let mut transform = *transform;
-        transform.set_rotation(rad(0.));
-        transform.translate_v(collider.offset);
+        // @Incomplete: scale?
+        let mut transform = Transform2D::from_pos_rot_scale(collider.position, rad(0.), v2!(1., 1.));
 
         let color = if collider.colliding {
             colors::rgba(255, 0, 0, 100)
