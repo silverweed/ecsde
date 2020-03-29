@@ -6,7 +6,7 @@ use {
     crate::cfg,
     crate::common::stringid::String_Id,
     crate::core::env::Env_Info,
-    crate::debug::{console, debug_ui, log, painter::Debug_Painter},
+    crate::debug::{calipers, console, debug_ui, log, painter::Debug_Painter},
     crate::replay::recording_system,
     crate::resources::gfx::Gfx_Resources,
     std::collections::HashMap,
@@ -26,6 +26,7 @@ pub struct Debug_Systems {
     pub painters: HashMap<String_Id, Debug_Painter>,
     pub console: console::Console,
     pub log: log::Debug_Log,
+    pub calipers: calipers::Debug_Calipers,
 
     pub show_trace_overlay: bool,
     pub trace_overlay_update_t: f32,
@@ -62,6 +63,7 @@ impl Debug_Systems {
             trace_overlay_update_t: 0.0,
             console: console::Console::new(),
             log: log::Debug_Log::with_hist_len((debug_log_size * fps) as _),
+            calipers: calipers::Debug_Calipers::default(),
         }
     }
 

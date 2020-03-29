@@ -1,3 +1,4 @@
+pub mod calipers;
 pub mod console;
 pub mod debug_ui;
 pub mod element;

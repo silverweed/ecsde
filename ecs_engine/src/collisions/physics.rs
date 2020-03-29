@@ -96,7 +96,7 @@ fn detect_rect_rect(
     } else {
         panic!("Failed to unwrap Rect!")
     };
-    let diff = b.position - a.position;
+    let diff = (b.position + b.offset) - (a.position + a.offset);
 
     let a_half_ext_x = a_width * 0.5;
     let b_half_ext_x = b_width * 0.5;

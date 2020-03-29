@@ -1,5 +1,6 @@
 use crate::common::colors::Color;
 use crate::common::rect::Rect;
+use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2i, Vec2u};
 
 #[cfg(feature = "use-sfml")]
@@ -89,6 +90,10 @@ pub fn get_window_real_size(window: &Window_Handle) -> (u32, u32) {
     backend::get_window_real_size(window)
 }
 
+// Returns the mouse position relative to the actual window,
+// without taking the target size into account (so if the window aspect ratio
+// does not match with the target ratio, the result does not take "black bands" into account).
+// Use this when you want to unproject mouse coordinates!
 pub fn raw_mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
     backend::raw_mouse_pos_in_window(window)
 }
@@ -117,4 +122,16 @@ pub fn mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
     }
 
     Vec2i::new(x as _, y as _)
+}
+
+pub fn unproject_screen_pos(
+    screen_pos: Vec2i,
+    window: &Window_Handle,
+    camera: &Transform2D,
+) -> Vec2f {
+    backend::raw_unproject_screen_pos(screen_pos, window, camera)
+}
+
+pub fn project_world_pos(world_pos: Vec2f, window: &Window_Handle, camera: &Transform2D) -> Vec2i {
+    backend::raw_project_world_pos(world_pos, window, camera)
 }
