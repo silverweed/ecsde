@@ -44,7 +44,7 @@ pub(super) fn add_texture_ws(
     batches
         .textures_ws
         .entry(z_index)
-        .or_insert_with(|| HashMap::new())
+        .or_insert_with(HashMap::new)
         .entry(texture)
         .or_insert_with(|| {
             println!("creating buffer for texture {:?}", texture);
@@ -87,7 +87,7 @@ pub fn draw_batches(
     trace!("draw_all_batches");
 
     // for each Z-index...
-    for (_, tex_map) in &mut batches.textures_ws {
+    for tex_map in batches.textures_ws.values_mut() {
         // for each texture...
         for (tex_id, (vbuffer, tex_props)) in tex_map {
             let texture = gres.get_texture(*tex_id);

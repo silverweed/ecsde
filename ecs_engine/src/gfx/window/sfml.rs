@@ -155,5 +155,5 @@ pub fn raw_project_world_pos(
     let screen_pos = window
         .handle
         .map_coords_to_pixel_current_view(pos_cam_space);
-    world_pos.into()
+    screen_pos.into()
 }

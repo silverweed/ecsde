@@ -16,7 +16,7 @@ impl Debug_Calipers {
     pub fn start_measuring_dist(&mut self, window: &Window_Handle, camera: &Transform2D) {
         let pos = window::raw_mouse_pos_in_window(window);
         let pos = window::unproject_screen_pos(pos, window, camera);
-        self.start_world_pos = pos.into();
+        self.start_world_pos = pos;
         self.dragging = true;
     }
 
@@ -40,17 +40,18 @@ impl Debug_Calipers {
         };
         painter.add_arrow(arrow, colors::FUCHSIA);
 
-        let text_pos = arrow.center + arrow.direction + v2!(15., 15.);
-        let font_size = (15. * camera.scale().x).max(12.) as u16;
+        let d = (15. * camera.scale().x).max(5.);
+        let text_pos = arrow.center + arrow.direction + v2!(d, d);
+        let font_size = (15. * camera.scale().x).max(8.) as u16;
         let shadow = v2!(1., 1.) * camera.scale();
         painter.add_text(
-            &format!("world dist {}", delta.magnitude()),
+            &format!("{}", delta.magnitude()),
             text_pos + shadow,
             font_size,
             colors::WHITE,
         );
         painter.add_text(
-            &format!("world dist {}", delta.magnitude()),
+            &format!("{}", delta.magnitude()),
             text_pos,
             font_size,
             colors::rgb(143, 0, 50),
