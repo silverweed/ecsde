@@ -1,8 +1,19 @@
 use std::ops::{Add, Mul, Sub};
 
+#[inline(always)]
+pub fn fast_sqrt(n: f32) -> f32 {
+    n * fast_invsqrt_unchecked(n)
+}
+
+#[inline(always)]
 pub fn fast_invsqrt(n: f32) -> f32 {
-    debug_assert!(!n.is_nan());
     assert!(n != 0., "fast_invsqrt: argument cannot be 0!");
+    fast_invsqrt_unchecked(n)
+}
+
+/// Like fast_invsqrt() but does not check that n is non-zero
+#[inline(always)]
+pub fn fast_invsqrt_unchecked(n: f32) -> f32 {
     let x2: f32 = n * 0.5;
     let mut i: u32 = n.to_bits();
     i = 0x5f37_5a86 - (i >> 1);
@@ -55,5 +66,14 @@ mod tests {
     #[should_panic]
     fn fast_invsqrt_zero() {
         let _ = fast_invsqrt(0.);
+    }
+
+    #[test]
+    fn test_fast_sqrt() {
+        // @Robustness: these tests use pretty senseless numbers as epsilon values.
+        assert_approx_eq!(fast_sqrt(2.), 1.414_213, eps = 0.000_1);
+        assert_approx_eq!(fast_sqrt(10000.), 100., eps = 0.001);
+        assert_approx_eq!(fast_sqrt(32.345), 32.345f32.sqrt(), eps = 0.000_1);
+        assert_approx_eq!(fast_sqrt(0.), 0., eps = 0.0);
     }
 }

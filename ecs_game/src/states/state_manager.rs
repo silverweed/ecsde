@@ -192,7 +192,8 @@ mod tests {
                 target_win_size: (0, 0),
                 in_replay_file: None,
             },
-        );
+        )
+        .unwrap();
         let mut gs = Gameplay_System::new();
         let mut smgr = State_Manager::new();
         smgr.push_state(state, &mut engine_state, &mut gs);
