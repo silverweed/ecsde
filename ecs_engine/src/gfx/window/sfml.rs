@@ -2,7 +2,8 @@
 
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rectf;
-use crate::common::vector::Vec2i;
+use crate::common::transform::Transform2D;
+use crate::common::vector::{Vec2f, Vec2i};
 use sfml::graphics::blend_mode::BlendMode;
 use sfml::graphics::{RenderTarget, RenderWindow};
 use sfml::window;
@@ -128,4 +129,31 @@ pub fn raw_mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
 pub fn get_window_real_size(window: &Window_Handle) -> (u32, u32) {
     let v = window.handle.size();
     (v.x, v.y)
+}
+
+pub fn raw_unproject_screen_pos(
+    screen_pos: Vec2i,
+    window: &Window_Handle,
+    camera: &Transform2D,
+) -> Vec2f {
+    let pos_cam_space = window
+        .handle
+        .map_pixel_to_coords_current_view(screen_pos.into());
+    let world_pos = camera.get_matrix_sfml().transform_point(pos_cam_space);
+    world_pos.into()
+}
+
+pub fn raw_project_world_pos(
+    world_pos: Vec2f,
+    window: &Window_Handle,
+    camera: &Transform2D,
+) -> Vec2i {
+    let pos_cam_space = camera
+        .get_matrix_sfml()
+        .inverse()
+        .transform_point(world_pos.into());
+    let screen_pos = window
+        .handle
+        .map_coords_to_pixel_current_view(pos_cam_space);
+    world_pos.into()
 }

@@ -30,7 +30,7 @@ use ecs_engine::input::bindings::keyboard;
 use ecs_engine::input::input_system::{Action_Kind, Game_Action};
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
 #[derive(Default, Copy, Clone)]
@@ -92,6 +92,12 @@ impl Gameplay_System {
             #[cfg(debug_assertions)]
             debug_data: Debug_Data::default(),
         }
+    }
+
+    pub fn first_active_level(&self) -> Option<MutexGuard<Level>> {
+        self.active_levels
+            .get(0)
+            .map(|idx| self.loaded_levels[*idx].lock().unwrap())
     }
 
     #[inline]

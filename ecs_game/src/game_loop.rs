@@ -214,11 +214,25 @@ pub fn tick_game<'a>(
 
         #[cfg(debug_assertions)]
         {
-            if actions.contains(&(
-                String_Id::from("toggle_console"),
-                ecs_engine::input::input_system::Action_Kind::Pressed,
-            )) {
+            use ecs_engine::input::input_system::Action_Kind;
+            if actions.contains(&(String_Id::from("toggle_console"), Action_Kind::Pressed)) {
                 game_state.engine_state.debug_systems.console.toggle();
+            }
+
+            if actions.contains(&(String_Id::from("calipers"), Action_Kind::Pressed)) {
+                // @Robustness
+                let level = game_state.gameplay_system.first_active_level().unwrap();
+                game_state
+                    .engine_state
+                    .debug_systems
+                    .calipers
+                    .start_measuring_dist(&game_state.window, &level.get_camera().transform);
+            } else if actions.contains(&(String_Id::from("calipers"), Action_Kind::Released)) {
+                game_state
+                    .engine_state
+                    .debug_systems
+                    .calipers
+                    .end_measuring();
             }
         }
 
@@ -409,6 +423,18 @@ fn update_graphics(
             &mut game_state.engine_state.global_batches,
             &Transform2D::default(),
             frame_alloc,
+        );
+    }
+
+    // @Incomplete @Robustness: first_active_level()?
+    {
+        let calipers = &game_state.engine_state.debug_systems.calipers;
+        let painters = &mut game_state.engine_state.debug_systems.painters;
+        let level = game_state.gameplay_system.first_active_level().unwrap();
+        calipers.draw(
+            &game_state.window,
+            painters.get_mut(&level.id).unwrap(),
+            &level.get_camera().transform,
         );
     }
 
@@ -775,7 +801,7 @@ fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World
         let collider = ecs_world.get_component::<Collider>(entity).unwrap();
         // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
         // @Incomplete: scale?
-        let mut transform = Transform2D::from_pos_rot_scale(collider.position, rad(0.), v2!(1., 1.));
+        let mut transform = Transform2D::from_pos_rot_scale(collider.position + collider.offset, rad(0.), v2!(1., 1.));
 
         let color = if collider.colliding {
             colors::rgba(255, 0, 0, 100)

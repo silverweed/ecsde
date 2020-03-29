@@ -6,7 +6,7 @@ pub struct Circle {
     pub center: Vec2f,
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct Arrow {
     pub center: Vec2f,
     pub direction: Vec2f, // also includes magnitude
