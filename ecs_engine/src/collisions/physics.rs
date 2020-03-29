@@ -96,7 +96,7 @@ fn detect_rect_rect(
     } else {
         panic!("Failed to unwrap Rect!")
     };
-    let diff = (b.position + b.offset) - (a.position + a.offset);
+    let diff = b.position - a.position;
 
     let a_half_ext_x = a_width * 0.5;
     let b_half_ext_x = b_width * 0.5;
@@ -110,20 +110,14 @@ fn detect_rect_rect(
     let a_half_ext_y = a_height * 0.5;
     let b_half_ext_y = b_height * 0.5;
 
-    println!(
-        "diff = {:?}, ahx = {}, bhx = {}",
-        diff, a_half_ext_y, b_half_ext_y
-    );
-
     // Apply SAT on Y axis
     let y_overlap = a_half_ext_y + b_half_ext_y - diff.y.abs();
     if y_overlap <= 0. {
         return None;
     }
-    println!("y overlap");
 
     // Find least penetration axis
-    if x_overlap > y_overlap {
+    if x_overlap < y_overlap {
         let normal = if diff.x < 0. {
             v2!(-1., 0.)
         } else {
@@ -150,6 +144,7 @@ fn detect_rect_rect(
     }
 }
 
+#[allow(clippy::collapsible_if)]
 fn detect_circle_rect(
     circle_id: Body_Id,
     rect_id: Body_Id,
@@ -349,6 +344,10 @@ fn positional_correction(
     let a_inv_mass = objects[a_id as usize].phys_data.inv_mass;
     let b_inv_mass = objects[b_id as usize].phys_data.inv_mass;
 
+    if a_inv_mass + b_inv_mass == 0. {
+        return;
+    }
+
     let correction_perc = 0.2;
     let slop = 0.01;
 
@@ -440,7 +439,7 @@ fn prepare_colliders_and_gather_rigidbodies(world: &mut Ecs_World) -> (Vec<Rigid
             sanity_check_v(velocity);
         }
         let collider = world.get_component_mut::<Collider>(entity).unwrap();
-        collider.position = pos;// + collider.offset;
+        collider.position = pos;
         collider.colliding = false;
         let position = collider.position;
         let shape = collider.shape;

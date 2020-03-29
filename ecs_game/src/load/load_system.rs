@@ -108,7 +108,7 @@ fn init_demo_entities(
         level.scene_tree.add(ground, None, &t.local_transform);
     }
 
-    let ext = 0;
+    let ext = 4;
     let int = 2;
     let sw = 32;
     let sh = 32;
@@ -171,12 +171,11 @@ fn init_demo_entities(
             //c.shape = Collision_Shape::Circle {
             //radius: width.max(height) * 0.5,
             //};
-            c.offset = -Vec2f::new(width * 0.5, height * 0.5);
         }
         {
             let p = level.world.add_component::<C_Phys_Data>(entity);
             p.inv_mass = 1.;
-            p.restitution = 0.4;
+            p.restitution = 1.0;
             p.static_friction = 0.5;
             p.dyn_friction = 0.3;
         }
@@ -235,12 +234,11 @@ fn spawn_rock_at(
             width: sw as f32,
             height: sh as f32,
         };
-        c.offset = -Vec2f::new(sw as f32 * 0.5, sh as f32 * 0.5);
     }
     {
         let p = level.world.add_component::<C_Phys_Data>(rock);
         p.inv_mass = 0.; // infinite mass
-        p.restitution = 0.4;
+        p.restitution = 1.0;
         p.static_friction = 0.5;
         p.dyn_friction = 0.3;
     }

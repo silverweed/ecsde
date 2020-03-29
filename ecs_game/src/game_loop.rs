@@ -811,9 +811,11 @@ fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World
 
         match collider.shape {
             Collision_Shape::Rect { width, height } => {
+                transform.translate(-width * 0.5, -height * 0.5);
                 debug_painter.add_rect(Vec2f::new(width, height), &transform, color);
             }
             Collision_Shape::Circle { radius } => {
+                transform.translate(-radius * 0.5, -radius * 0.5);
                 debug_painter.add_circle(
                     shapes::Circle {
                         center: transform.position(),
