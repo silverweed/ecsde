@@ -42,6 +42,8 @@ fn detect_circle_circle(
     a: &Collider,
     b: &Collider,
 ) -> Option<Collision_Info> {
+    trace!("physics::detect_circle_circle");
+
     let a_radius = if let Collision_Shape::Circle { radius } = a.shape {
         radius
     } else {
@@ -86,6 +88,8 @@ fn detect_rect_rect(
     a: &Collider,
     b: &Collider,
 ) -> Option<Collision_Info> {
+    trace!("physics::detect_rect_rect");
+
     let (a_width, a_height) = if let Collision_Shape::Rect { width, height } = a.shape {
         (width, height)
     } else {
@@ -151,6 +155,8 @@ fn detect_circle_rect(
     circle: &Collider,
     rect: &Collider,
 ) -> Option<Collision_Info> {
+    trace!("physics::detect_circle_rect");
+
     let (r_width, r_height) = if let Collision_Shape::Rect { width, height } = rect.shape {
         (width, height)
     } else {
@@ -233,6 +239,8 @@ const COLLISION_CB_TABLE: [[Collision_Cb; 2]; 2] = [
 ];
 
 fn detect_collisions(objects: &[Collider]) -> Vec<Collision_Info> {
+    trace!("physics::detect_collisions");
+
     // TODO Broad phase
 
     // Narrow phase
@@ -267,6 +275,8 @@ fn detect_collisions(objects: &[Collider]) -> Vec<Collision_Info> {
 
 // "roughly" because it doesn't do the positional correction
 fn solve_collision_roughly(objects: &mut [Rigidbody], a_id: Body_Id, b_id: Body_Id, normal: Vec2f) {
+    trace!("physics::solve_collisions_roughly");
+
     let a = objects[a_id as usize].clone();
     let b = objects[b_id as usize].clone();
 
@@ -341,6 +351,8 @@ fn positional_correction(
     normal: Vec2f,
     penetration: f32,
 ) {
+    trace!("physics::positional_correction");
+
     let a_inv_mass = objects[a_id as usize].phys_data.inv_mass;
     let b_inv_mass = objects[b_id as usize].phys_data.inv_mass;
 
@@ -359,6 +371,8 @@ fn positional_correction(
 }
 
 fn solve_collisions(objects: &mut [Rigidbody], infos: &[Collision_Info]) {
+    trace!("physics::solve_collisions");
+
     for info in infos {
         let Collision_Info {
             body1,
@@ -380,6 +394,7 @@ pub fn update_collisions(ecs_world: &mut Ecs_World) {
 
     infos.iter().for_each(|info| {
         colliders[info.body1 as usize].colliding = true;
+        colliders[info.body2 as usize].colliding = true;
     });
 
     let rb_infos = infos
