@@ -19,6 +19,9 @@ use {
     crate::fs,
     crate::replay::{replay_data, replay_input_provider},
     crate::resources::{self, gfx::Gfx_Resources},
+    crate::common::colors,
+    crate::debug::overlay::Debug_Overlay,
+    crate::debug::tracer::{self, Trace_Tree, Tracer_Node_Final},
     std::time::Duration,
 };
 
@@ -143,7 +146,6 @@ pub fn init_engine_debug(
     gfx_resources: &mut Gfx_Resources<'_>,
     cfg: debug::debug_ui::Debug_Ui_System_Config,
 ) -> Maybe_Error {
-    use crate::common::colors;
     use crate::common::vector::{Vec2f, Vec2u};
     use crate::gfx::align::Align;
     use debug::{fadeout_overlay, graph, overlay};
@@ -230,6 +232,7 @@ pub fn init_engine_debug(
         mouse_overlay.config.vert_align = Align::Begin;
 
         debug_overlay_config.background = colors::rgba(20, 20, 20, 220);
+        debug_overlay_config.pad_y = 8. * ui_scale;
         let trace_overlay = debug_ui
             .create_overlay(String_Id::from("trace"), debug_overlay_config)
             .unwrap();
@@ -384,13 +387,15 @@ pub fn try_create_replay_data(replay_file: &std::path::Path) -> Option<replay_da
 
 #[cfg(debug_assertions)]
 pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
-    use crate::debug::tracer;
     use crate::prelude;
 
-    let mut tracer = prelude::DEBUG_TRACER.lock().unwrap();
-
     let debug_log = &mut engine_state.debug_systems.log;
-    let traces = tracer.saved_traces.split_off(0);
+    let traces = {
+        // Note: we unlock the tracer asap to prevent deadlocks. 
+        // We're not keeping any reference to it anyway.
+        let mut tracer = prelude::DEBUG_TRACER.lock().unwrap();
+        tracer.saved_traces.split_off(0)
+    };
     let final_traces = tracer::collate_traces(&traces);
 
     let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
@@ -405,7 +410,12 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
         }
 
         if *t <= 0. {
-            update_trace_overlay(engine_state);
+            let trace_view_flat = Cfg_Var::<bool>::new("engine/debug/trace/view_flat", &engine_state.config).read(&engine_state.config);
+            if trace_view_flat {
+                update_trace_flat_overlay(engine_state);
+            } else {
+                update_trace_tree_overlay(engine_state);
+            }
             engine_state.debug_systems.trace_overlay_update_t =
                 refresh_rate.read(&engine_state.config);
 
@@ -418,39 +428,36 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
 }
 
 #[cfg(debug_assertions)]
-fn update_trace_overlay(engine_state: &mut Engine_State) {
-    use crate::common::colors;
-    use crate::debug::overlay::Debug_Overlay;
-    use crate::debug::tracer::{self, Trace_Tree, Tracer_Node_Final};
-
-    fn add_node_line(
-        node: &Tracer_Node_Final,
-        total_traced_time: &Duration,
-        indent: usize,
-        overlay: &mut Debug_Overlay,
-    ) {
-        let duration = node.info.tot_duration();
-        let n_calls = node.info.n_calls();
-        let ratio = time::duration_ratio(&duration, total_traced_time);
-        let color = colors::lerp_col(colors::GREEN, colors::RED, ratio);
-        let mut line = String::new();
-        for _ in 0..indent {
-            line.push(' ');
-        }
-        let duration_ms = time::to_ms_frac(&duration);
-        line.push_str(&format!(
-            "{:width$}: {:>6.3}ms ({:3}%): {:>7}: {:6.3}ms",
-            node.info.tag,
-            duration_ms,
-            (ratio * 100.0) as u32,
-            n_calls,
-            duration_ms / n_calls as f32,
-            width = 40 - indent
-        ));
-        let bg_col = colors::Color { a: 50, ..color };
-        overlay.add_line_color_with_bg_fill(&line, color, (bg_col, ratio));
+fn add_tracer_node_line(
+    node: &Tracer_Node_Final,
+    total_traced_time: &Duration,
+    indent: usize,
+    overlay: &mut Debug_Overlay,
+) {
+    let duration = node.info.tot_duration();
+    let n_calls = node.info.n_calls();
+    let ratio = time::duration_ratio(&duration, total_traced_time);
+    let color = colors::lerp_col(colors::GREEN, colors::RED, ratio);
+    let mut line = String::new();
+    for _ in 0..indent {
+        line.push(' ');
     }
+    let duration_ms = time::to_ms_frac(&duration);
+    line.push_str(&format!(
+        "{:width$}: {:>6.3}ms ({:3}%): {:>7}: {:6.3}ms",
+        node.info.tag,
+        duration_ms,
+        (ratio * 100.0) as u32,
+        n_calls,
+        duration_ms / n_calls as f32,
+        width = 40 - indent
+    ));
+    let bg_col = colors::Color { a: 50, ..color };
+    overlay.add_line_color_with_bg_fill(&line, color, (bg_col, ratio));
+}
 
+#[cfg(debug_assertions)]
+fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
     fn add_tree_lines(
         tree: &Trace_Tree,
         total_traced_time: &Duration,
@@ -462,7 +469,7 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
             return;
         }
 
-        add_node_line(&tree.node, total_traced_time, indent, overlay);
+        add_tracer_node_line(&tree.node, total_traced_time, indent, overlay);
         for t in &tree.children {
             add_tree_lines(t, total_traced_time, indent + 1, overlay, prune_duration);
         }
@@ -513,5 +520,55 @@ fn update_trace_overlay(engine_state: &mut Engine_State) {
     overlay.add_line_color(&format!("{:─^80}", ""), colors::rgba(60, 60, 60, 180));
     for tree in &trace_trees {
         add_tree_lines(tree, &total_traced_time, 0, overlay, &prune_duration);
+    }
+}
+
+#[cfg(debug_assertions)]
+fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
+    let ui_scale = engine_state.debug_systems.debug_ui.cfg.ui_scale;
+    let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
+    let debug_log = &mut engine_state.debug_systems.log;
+    let frame = scroller.get_real_selected_frame();
+    let overlay = engine_state
+        .debug_systems
+        .debug_ui
+        .get_overlay(String_Id::from("trace"));
+
+    overlay.clear();
+
+    let font_size = cfg::Cfg_Var::<i32>::new("engine/debug/trace/font_size", &engine_state.config)
+        .read(&engine_state.config);
+    overlay.config.font_size = (font_size as f32 * ui_scale) as _;
+
+    let prune_duration_ms =
+        cfg::Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config)
+            .read(&engine_state.config);
+    let prune_duration = Duration::from_secs_f32(prune_duration_ms * 0.001);
+
+    overlay.add_line_color(
+        &format!(
+            "frame {} | debug_log_mem {} | temp_mem_max_usage {} / {}",
+            frame,
+            format_bytes_pretty(debug_log.mem_used),
+            format_bytes_pretty(engine_state.frame_alloc.high_water_mark),
+            format_bytes_pretty(engine_state.frame_alloc.cap)
+        ),
+        colors::rgb(144, 144, 144),
+    );
+    overlay.add_line_color(
+        &format!(
+            "{:<39}: {:<15}: {:7}: {:>7}",
+            "procedure_name", "tot_time", "n_calls", "t/call"
+        ),
+        colors::rgb(204, 0, 102),
+    );
+    overlay.add_line_color(&format!("{:─^80}", ""), colors::rgba(60, 60, 60, 180));
+
+    let mut traces = tracer::flatten_traces(&debug_log.get_frame(frame).unwrap().traces);
+    let total_traced_time = tracer::total_traced_time(&traces);
+    traces.sort_by(|a, b| b.info.tot_duration().cmp(&a.info.tot_duration()));
+
+    for node in traces.iter().filter(|n| n.info.tot_duration() > prune_duration) {
+        add_tracer_node_line(node, &total_traced_time, 0, overlay);
     }
 }
