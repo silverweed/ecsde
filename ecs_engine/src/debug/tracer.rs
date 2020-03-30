@@ -1,6 +1,7 @@
 use crate::prelude::Debug_Tracer;
 use std::convert::TryInto;
 use std::fmt::Debug;
+use rayon::prelude::*;
 use std::time;
 
 pub struct Tracer {
@@ -184,7 +185,7 @@ impl Tracer {
 
 pub fn total_traced_time(traces: &[Tracer_Node_Final]) -> time::Duration {
     traces
-        .iter()
+        .par_iter()
         .filter_map(|node| {
             if node.parent_idx.is_none() {
                 Some(node.info.tot_duration())
@@ -192,7 +193,7 @@ pub fn total_traced_time(traces: &[Tracer_Node_Final]) -> time::Duration {
                 None
             }
         })
-        .fold(time::Duration::default(), |acc, x| acc + x)
+        .reduce(time::Duration::default, |acc, x| acc + x)
 }
 
 pub fn sort_trace_trees(trees: &mut [Trace_Tree]) {
@@ -251,9 +252,10 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
     // Accumulate n_calls of all nodes with the same tag.
     // @Speed: this could use the frame_allocator.
     let hashes = saved_traces
-        .iter()
+        .par_iter()
         .map(|node| hash_node(saved_traces, node))
         .collect::<Vec<_>>();
+
     // Used to iterate the tag_map in insertion order
     let mut tags_ordered = Vec::with_capacity(saved_traces.len());
     let mut idx_map = HashMap::new();
@@ -278,7 +280,7 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
     }
 
     tags_ordered
-        .iter()
+        .par_iter()
         .map(|hash| {
             let info = &tag_map[&hash];
             Tracer_Node_Final {
