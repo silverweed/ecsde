@@ -47,7 +47,7 @@ pub(super) fn add_texture_ws(
         .or_insert_with(HashMap::new)
         .entry(texture)
         .or_insert_with(|| {
-            println!("creating buffer for texture {:?}", texture);
+            ldebug!("creating buffer for texture {:?}", texture);
             (
                 // @Incomplete: make a growable vertex buffer
                 Vertex_Buffer_Holder {
