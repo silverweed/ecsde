@@ -58,9 +58,12 @@ pub fn save_console_hist(console: &Console, env: &Env_Info) -> io::Result<()> {
     path.push(HIST_FILE);
 
     let mut file = BufWriter::new(File::create(path)?);
+    let mut latest_line = None;
     for line in &console.history {
-        if !line.trim().is_empty() {
+        let line = line.trim();
+        if !line.is_empty() && Some(line) != latest_line {
             writeln!(file, "{}", line)?;
+            latest_line = Some(line);
         }
     }
 
