@@ -32,18 +32,19 @@ impl Debug_Calipers {
         let end_screen_pos = window::raw_mouse_pos_in_window(window);
         let end_world_pos = window::unproject_screen_pos(end_screen_pos, window, camera);
         let delta = end_world_pos - self.start_world_pos;
+        let scale = camera.scale().x;
         let arrow = Arrow {
             center: self.start_world_pos,
             direction: delta,
-            thickness: 1.5,
-            arrow_size: 20.,
+            thickness: (1.5 * scale),
+            arrow_size: (20. * scale),
         };
         painter.add_arrow(arrow, colors::FUCHSIA);
 
-        let d = (15. * camera.scale().x).max(5.);
+        let d = (15. * scale).max(5.);
         let text_pos = arrow.center + arrow.direction + v2!(d, d);
-        let font_size = (15. * camera.scale().x).max(8.) as u16;
-        let shadow = v2!(1., 1.) * camera.scale();
+        let font_size = (15. * scale).max(8.) as u16;
+        let shadow = v2!(1., 1.) * scale;
         painter.add_text(
             &format!("{}", delta.magnitude()),
             text_pos + shadow,
