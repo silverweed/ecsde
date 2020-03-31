@@ -562,8 +562,9 @@ fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
     );
     overlay.add_line_color(&format!("{:─^80}", ""), colors::rgba(60, 60, 60, 180));
 
-    let mut traces = tracer::flatten_traces(&debug_log.get_frame(frame).unwrap().traces);
+    let traces = &debug_log.get_frame(frame).unwrap().traces;
     let total_traced_time = tracer::total_traced_time(&traces);
+    let mut traces = tracer::flatten_traces(traces);
     traces.sort_by(|a, b| b.info.tot_duration().cmp(&a.info.tot_duration()));
 
     for node in traces.iter().filter(|n| n.info.tot_duration() > prune_duration) {
