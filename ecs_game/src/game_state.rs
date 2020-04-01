@@ -208,9 +208,11 @@ fn create_game_state<'a>(
 
         let ui_scale = Cfg_Var::<f32>::new("engine/debug/ui/ui_scale", &engine_state.config)
             .read(&engine_state.config);
+        let font = Cfg_Var::<String>::new("engine/debug/ui/font", &engine_state.config);
         let cfg = ngdebug::debug_ui::Debug_Ui_System_Config {
             ui_scale,
             target_win_size: engine_state.app_config.target_win_size,
+            font: font.read(&engine_state.config).to_string()
         };
         app::init_engine_debug(&mut engine_state, &mut game_resources.gfx, cfg)?;
         if ecs_engine::debug::console::load_console_hist(

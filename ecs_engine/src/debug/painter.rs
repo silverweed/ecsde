@@ -6,7 +6,7 @@ use crate::common::vector::Vec2f;
 use crate::core::env::Env_Info;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
-use crate::gfx::render::Vertex_Buffer;
+use crate::gfx::render::Vertex_Buffer_Quads;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx;
 
@@ -168,7 +168,7 @@ fn draw_arrow(
 }
 
 fn draw_line_internal(
-    vbuf: &mut Vertex_Buffer,
+    vbuf: &mut Vertex_Buffer_Quads,
     length: f32,
     thickness: f32,
     props: &Paint_Properties,

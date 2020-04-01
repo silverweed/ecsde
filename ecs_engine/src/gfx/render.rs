@@ -142,40 +142,64 @@ pub fn create_text<'a>(string: &str, font: &'a Font<'a>, font_size: u16) -> Text
     backend::create_text(string, font, font_size)
 }
 
-// @Refactoring: simplify these and make it more robust via types
-pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer {
+macro_rules! simple_wrap {
+    ($newtype: ident, $wrapped: ty) => {
+        pub struct $newtype($wrapped);
+
+        impl std::ops::Deref for $newtype {
+            type Target = $wrapped;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl std::ops::DerefMut for $newtype {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
+    }
+}
+
+simple_wrap!(Vertex_Buffer_Quads, Vertex_Buffer);
+simple_wrap!(Vertex_Buffer_Triangles, Vertex_Buffer);
+simple_wrap!(Vertex_Buffer_Linestrip, Vertex_Buffer);
+simple_wrap!(Vertex_Buffer_Lines, Vertex_Buffer);
+
+pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer_Quads {
     trace!("start_draw_quads");
-    backend::start_draw_quads(n_quads)
+    Vertex_Buffer_Quads(backend::start_draw_quads(n_quads))
 }
 
-pub fn start_draw_triangles(n_triangles: usize) -> Vertex_Buffer {
+pub fn start_draw_triangles(n_triangles: usize) -> Vertex_Buffer_Triangles {
     trace!("start_draw_triangles");
-    backend::start_draw_triangles(n_triangles)
+    Vertex_Buffer_Triangles(backend::start_draw_triangles(n_triangles))
 }
 
-pub fn start_draw_linestrip(n_vertices: usize) -> Vertex_Buffer {
+pub fn start_draw_linestrip(n_vertices: usize) -> Vertex_Buffer_Linestrip {
     trace!("start_draw_linestrip");
-    backend::start_draw_linestrip(n_vertices)
+    Vertex_Buffer_Linestrip(backend::start_draw_linestrip(n_vertices))
 }
 
-pub fn start_draw_lines(n_vertices: usize) -> Vertex_Buffer {
+pub fn start_draw_lines(n_vertices: usize) -> Vertex_Buffer_Lines {
     trace!("start_draw_lines");
-    backend::start_draw_lines(n_vertices)
+    Vertex_Buffer_Lines(backend::start_draw_lines(n_vertices))
 }
 
-pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
+pub fn add_quad(vbuf: &mut Vertex_Buffer_Quads, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
     backend::add_quad(vbuf, v1, v2, v3, v4);
 }
 
-pub fn add_triangle(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
+pub fn add_triangle(vbuf: &mut Vertex_Buffer_Triangles, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
     backend::add_triangle(vbuf, v1, v2, v3);
 }
 
-pub fn add_line(vbuf: &mut Vertex_Buffer, from: &Vertex, to: &Vertex) {
+pub fn add_line(vbuf: &mut Vertex_Buffer_Lines, from: &Vertex, to: &Vertex) {
     backend::add_line(vbuf, from, to);
 }
 
-pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {
+pub fn add_vertex(vbuf: &mut Vertex_Buffer_Linestrip, v: &Vertex) {
     backend::add_vertex(vbuf, v);
 }
 
