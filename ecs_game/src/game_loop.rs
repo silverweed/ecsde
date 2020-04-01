@@ -426,20 +426,21 @@ fn update_graphics(
         );
     }
 
-    // @Incomplete @Robustness: first_active_level()?
-    {
-        let calipers = &game_state.engine_state.debug_systems.calipers;
-        let painters = &mut game_state.engine_state.debug_systems.painters;
-        let level = game_state.gameplay_system.first_active_level().unwrap();
-        calipers.draw(
-            &game_state.window,
-            painters.get_mut(&level.id).unwrap(),
-            &level.get_camera().transform,
-        );
-    }
-
     #[cfg(debug_assertions)]
     {
+        // Draw debug calipers
+        {
+            // @Incomplete @Robustness: first_active_level()?
+            let calipers = &game_state.engine_state.debug_systems.calipers;
+            let painters = &mut game_state.engine_state.debug_systems.painters;
+            let level = game_state.gameplay_system.first_active_level().unwrap();
+            calipers.draw(
+                &game_state.window,
+                painters.get_mut(&level.id).unwrap(),
+                &level.get_camera().transform,
+            );
+        }
+        
         // Draw debug painter (one per active level)
         let painters = &mut game_state.engine_state.debug_systems.painters;
         let window = &mut game_state.window;
