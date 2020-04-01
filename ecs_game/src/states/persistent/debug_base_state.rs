@@ -87,6 +87,10 @@ impl Persistent_Game_State for Debug_Base_State {
                     engine_state.time.paused = true;
                     engine_state.time.step(&step_delta);
                     gs.step(&step_delta, &engine_state.config, &mut engine_state.rng);
+                    gs.foreach_active_level(|level| {
+                        ecs_engine::collisions::physics::update_collisions(&mut level.world);
+                        crate::movement_system::update(&step_delta, &mut level.world);
+                    });
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_print_em_debug_info => {
                     //gs.print_debug_info();
