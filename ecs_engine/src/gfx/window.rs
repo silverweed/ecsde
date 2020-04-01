@@ -57,13 +57,15 @@ pub fn display(window: &mut Window_Handle) {
 pub fn resize_keep_ratio(window: &mut Window_Handle, new_width: u32, new_height: u32) {
     use std::cmp::Ordering;
 
+    if new_width == 0 || new_height == 0 {
+        return;
+    }
+
     let (target_width, target_height) = get_window_target_size(window);
+    assert!(target_width != 0 && target_height != 0);
+
     let screen_width = new_width as f32 / target_width as f32;
     let screen_height = new_height as f32 / target_height as f32;
-
-    // @Robustness: what do we do if width or height are zero?
-    debug_assert!(screen_width.is_normal());
-    debug_assert!(screen_height.is_normal());
 
     let mut viewport = Rect::new(0.0, 0.0, 1.0, 1.0);
     match screen_width.partial_cmp(&screen_height) {

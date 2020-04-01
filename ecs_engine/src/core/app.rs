@@ -150,16 +150,12 @@ pub fn init_engine_debug(
     use crate::gfx::align::Align;
     use debug::{fadeout_overlay, graph, overlay};
 
-    const FONT: &str = "Hack-Regular.ttf";
-
-    let font = gfx_resources.load_font(&resources::gfx::font_path(&engine_state.env, FONT));
+    let font = gfx_resources.load_font(&resources::gfx::font_path(&engine_state.env, &cfg.font));
 
     engine_state
         .debug_systems
         .global_painter()
         .init(gfx_resources, &engine_state.env);
-
-    // @Robustness: add font validity check
 
     let (win_w, win_h) = (
         engine_state.app_config.target_win_size.0 as f32,

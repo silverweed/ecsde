@@ -17,6 +17,7 @@ use std::time::Duration;
 pub struct Debug_Ui_System_Config {
     pub ui_scale: f32,
     pub target_win_size: (u32, u32),
+    pub font: String,
 }
 
 impl Default for Debug_Ui_System_Config {
@@ -24,6 +25,7 @@ impl Default for Debug_Ui_System_Config {
         Self {
             ui_scale: 1.0,
             target_win_size: (800, 600),
+            font: String::default()
         }
     }
 }

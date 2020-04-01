@@ -70,7 +70,7 @@ macro_rules! define_file_loader {
                 $loaded_res::from_file(fname).ok_or_else(|| {
                     format!(
                         concat!(
-                            "[ WARNING ] Failed to load ",
+                            "[ WARNING ] Railed to load ",
                             stringify!($loaded_res),
                             " from {}"
                         ),
