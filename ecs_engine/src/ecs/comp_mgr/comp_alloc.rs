@@ -172,6 +172,8 @@ impl Component_Allocator {
         if self.filled_head == 0 {
             self.filled_head = self.free_head;
         }
+        // @Fixme: handle case where we remove the tail! This creates a self-reference!
+        debug_assert_ne!(self.tail, self.free_head);
         self.tail = self.free_head;
         self.free_head = if next_free == 0 {
             //println!("[2] free_head = {}", new_elem_idx + 1);
@@ -427,6 +429,11 @@ mod tests {
     #[test]
     fn deallocate() {
         let mut alloc = Component_Allocator::new::<C_Test>();
+
+        let (i, _) = alloc.add(C_Test { foo: 1, bar: 1. });
+        unsafe {
+            alloc.remove::<C_Test>(i);
+        }
         /*
                 let (idx, a) = alloc.add(C_Test { foo: 42, bar: 64. });
 
