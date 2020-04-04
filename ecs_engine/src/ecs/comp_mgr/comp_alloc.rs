@@ -408,7 +408,7 @@ mod tests {
             alloc.add(C_Test { foo: 0, bar: 1. });
         }
 
-        let (idxc, c) = alloc.add(C_Test {
+        let (_, c) = alloc.add(C_Test {
             foo: 12345,
             bar: 54321.,
         });
