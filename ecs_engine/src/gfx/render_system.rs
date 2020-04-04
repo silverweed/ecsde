@@ -45,12 +45,12 @@ pub fn update(args: Render_System_Update_Args) {
         .build()
         .collect(ecs_world, &mut entities);
 
-    let map_renderable = ecs_world.get_components_map::<C_Renderable>();
-    let map_spatial = ecs_world.get_components_map::<C_Spatial2D>();
+    let renderables = ecs_world.get_component_storage::<C_Renderable>();
+    let spatials = ecs_world.get_component_storage::<C_Spatial2D>();
 
     for &entity in entities.as_slice() {
-        let rend = map_renderable.get_component(entity).unwrap();
-        let spatial = map_spatial.get_component(entity).unwrap();
+        let rend = renderables.get_component(entity).unwrap();
+        let spatial = spatials.get_component(entity).unwrap();
 
         let C_Renderable {
             texture: tex_id,

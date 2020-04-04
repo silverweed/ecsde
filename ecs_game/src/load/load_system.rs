@@ -29,7 +29,6 @@ pub fn level_load_sync(
     let mut level = Level {
         id: level_id,
         world: Ecs_World::new(),
-        entities: vec![],
         cameras: vec![],
         active_camera: 0,
         scene_tree: Scene_Tree::new(),
@@ -48,7 +47,7 @@ pub fn level_load_sync(
     lok!(
         "Loaded level {}. N. entities = {}, n. cameras = {}",
         level_id,
-        level.entities.len(),
+        level.world.entities().len(),
         level.cameras.len()
     );
 
@@ -81,30 +80,40 @@ fn init_demo_entities(
 
     let camera = level.world.new_entity();
     {
-        let cam = level.world.add_component::<C_Camera2D>(camera);
+        let cam = level.world.add_component(camera, C_Camera2D::default());
         //cam.transform.set_scale(2.5, 2.5);
         cam.transform.set_position(-300., -300.);
     }
     level.cameras.push(camera);
 
     {
-        let mut ctrl = level.world.add_component::<C_Controllable>(camera);
-        ctrl.speed = Cfg_Var::new("game/gameplay/player/player_speed", cfg);
+        let mut ctrl = level.world.add_component(
+            camera,
+            C_Controllable {
+                speed: Cfg_Var::new("game/gameplay/player/player_speed", cfg),
+                ..Default::default()
+            },
+        );
     }
 
     let mut prev_entity: Option<Entity> = None;
     let ground = level.world.new_entity();
 
     {
-        let rend = level.world.add_component::<C_Renderable>(ground);
-        rend.texture = rsrc.load_texture(&tex_path(&env, "ground.png"));
-        rend.z_index = -1;
+        let rend = level.world.add_component(
+            ground,
+            C_Renderable {
+                texture: rsrc.load_texture(&tex_path(&env, "ground.png")),
+                z_index: -1,
+                ..Default::default()
+            },
+        );
         assert!(rend.texture.is_some(), "Could not load texture!");
         let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
-        rsrc.get_texture_mut(rend.texture).set_repeated(true);
         rend.rect = Rect::new(0, 0, sw as i32 * 100, sh as i32 * 100);
+        rsrc.get_texture_mut(rend.texture).set_repeated(true);
 
-        let t = level.world.add_component::<C_Spatial2D>(ground);
+        let t = level.world.add_component(ground, C_Spatial2D::default());
         level.scene_tree.add(ground, None, &t.local_transform);
     }
 
@@ -131,26 +140,36 @@ fn init_demo_entities(
     for i in 0..gs_cfg.n_entities_to_spawn {
         let entity = level.world.new_entity();
         let (sw, sh) = {
-            let rend = level.world.add_component::<C_Renderable>(entity);
-            //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
-            //rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
-            rend.texture = rsrc.load_texture(&tex_path(&env, "jelly.png"));
+            let rend = level.world.add_component(
+                entity,
+                C_Renderable {
+                    //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
+                    //rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
+                    texture: rsrc.load_texture(&tex_path(&env, "jelly.png")),
+                    modulate: if i == 1 {
+                        colors::rgb(0, 255, 0)
+                    } else {
+                        colors::WHITE
+                    },
+                    ..Default::default()
+                },
+            );
             assert!(rend.texture.is_some(), "Could not load texture!");
-            rend.modulate = if i == 1 {
-                colors::rgb(0, 255, 0)
-            } else {
-                colors::WHITE
-            };
             let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
             rend.rect = Rect::new(0, 0, sw as i32 / (n_frames as i32), sh as i32);
             (sw, sh)
         };
         if i == 1 {
-            let ctr = level.world.add_component::<C_Controllable>(entity);
-            ctr.speed = Cfg_Var::new("game/gameplay/player/player_speed", cfg);
+            let ctr = level.world.add_component(
+                entity,
+                C_Controllable {
+                    speed: Cfg_Var::new("game/gameplay/player/player_speed", cfg),
+                    ..Default::default()
+                },
+            );
         }
         {
-            let t = level.world.add_component::<C_Spatial2D>(entity);
+            let t = level.world.add_component(entity, C_Spatial2D::default());
             let x = rand::rand_01(rng);
             let y = rand::rand_01(rng);
             if i > 0 {
@@ -164,27 +183,45 @@ fn init_demo_entities(
                 .add(entity, Some(ground), &t.local_transform);
         }
         {
-            let c = level.world.add_component::<Collider>(entity);
-            let width = (sw / n_frames) as f32;
-            let height = sh as f32;
-            c.shape = Collision_Shape::Rect { width, height };
+            let c = level.world.add_component(
+                entity,
+                Collider {
+                    shape: {
+                        let width = (sw / n_frames) as f32;
+                        let height = sh as f32;
+                        Collision_Shape::Rect { width, height }
+                    },
+                    ..Default::default()
+                },
+            );
             //c.shape = Collision_Shape::Circle {
             //radius: width.max(height) * 0.5,
             //};
         }
         {
-            let p = level.world.add_component::<C_Phys_Data>(entity);
-            p.inv_mass = 1.;
-            p.restitution = 1.0;
-            p.static_friction = 0.5;
-            p.dyn_friction = 0.3;
+            let p = level.world.add_component(
+                entity,
+                C_Phys_Data {
+                    inv_mass: 1.,
+                    restitution: 1.0,
+                    static_friction: 0.5,
+                    dyn_friction: 0.3,
+                },
+            );
         }
         {
-            let s = level.world.add_component::<C_Animated_Sprite>(entity);
-            s.n_frames = n_frames;
-            s.frame_time = 0.12;
+            let s = level.world.add_component(
+                entity,
+                C_Animated_Sprite {
+                    n_frames,
+                    frame_time: 0.12,
+                    ..Default::default()
+                },
+            );
         }
-        level.world.add_component::<C_Dumb_Movement>(entity);
+        level
+            .world
+            .add_component(entity, C_Dumb_Movement::default());
         prev_entity = Some(entity);
         //{
         //    let mut t = level.world.add_component::<C_Spatial2D>(entity);
@@ -196,7 +233,6 @@ fn init_demo_entities(
         //let mut ctrl = level.world.add_component::<C_Controllable>(entity);
         //ctrl.speed = cfg.get_var_float_or("gameplay/player/player_speed", 300.0);
         //}
-        level.entities.push(entity);
     }
 
     spawn_rock_at(level, env, rsrc, v2!(0., 100.), ground);
@@ -212,7 +248,7 @@ fn spawn_rock_at(
     let rock = level.world.new_entity();
 
     let (sw, sh) = {
-        let rend = level.world.add_component::<C_Renderable>(rock);
+        let rend = level.world.add_component(rock, C_Renderable::default());
         rend.texture = rsrc.load_texture(&tex_path(&env, "rock.png"));
         rend.z_index = 1;
         assert!(rend.texture.is_some(), "Could not load texture!");
@@ -223,24 +259,27 @@ fn spawn_rock_at(
     };
 
     {
-        let t = level.world.add_component::<C_Spatial2D>(rock);
+        let t = level.world.add_component(rock, C_Spatial2D::default());
         t.local_transform.set_position_v(pos);
         level.scene_tree.add(rock, Some(ground), &t.local_transform);
     }
 
     {
-        let c = level.world.add_component::<Collider>(rock);
+        let c = level.world.add_component(rock, Collider::default());
         c.shape = Collision_Shape::Rect {
             width: sw as f32,
             height: sh as f32,
         };
     }
     {
-        let p = level.world.add_component::<C_Phys_Data>(rock);
-        p.inv_mass = 0.; // infinite mass
-        p.restitution = 1.0;
-        p.static_friction = 0.5;
-        p.dyn_friction = 0.3;
+        level.world.add_component(
+            rock,
+            C_Phys_Data {
+                inv_mass: 0., // infinite mass
+                restitution: 1.0,
+                static_friction: 0.5,
+                dyn_friction: 0.3,
+            },
+        );
     }
-    level.entities.push(rock);
 }

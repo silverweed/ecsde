@@ -157,7 +157,6 @@ mod tests {
     use super::*;
     use crate::common::angle::deg;
     use crate::ecs::ecs_world::Ecs_World;
-    use float_cmp::ApproxEq;
 
     #[test]
     fn simple_tree() {
@@ -168,12 +167,12 @@ mod tests {
 
         let root_e = em.new_entity();
         {
-            let root_t = em.add_component::<Transform2D>(root_e);
+            let root_t = em.add_component(root_e, Transform2D::default());
             tree.add(root_e, None, &root_t);
         }
         let child_e = em.new_entity();
         {
-            let child_t = em.add_component::<Transform2D>(child_e);
+            let child_t = em.add_component(child_e, Transform2D::default());
             child_t.set_position(100.0, 0.0);
             tree.add(child_e, Some(root_e), &child_t);
         }
@@ -181,7 +180,7 @@ mod tests {
         tree.compute_global_transforms();
 
         let new_child_t = tree.get_global_transform(child_e).unwrap();
-        assert!(new_child_t.position().x.approx_eq(100.0, (0.0, 2)));
+        assert_approx_eq!(new_child_t.position().x, 100.);
 
         let root_t = em.get_component_mut::<Transform2D>(root_e).unwrap();
         root_t.rotate(deg(90.0));
@@ -190,6 +189,6 @@ mod tests {
         tree.compute_global_transforms();
 
         let new_child_t = tree.get_global_transform(child_e).unwrap();
-        assert!(new_child_t.position().y.approx_eq(100.0, (0.0, 2)));
+        assert_approx_eq!(new_child_t.position().y, 100.);
     }
 }

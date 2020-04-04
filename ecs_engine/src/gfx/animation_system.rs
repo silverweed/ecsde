@@ -50,14 +50,19 @@ mod tests {
 
         let e = ecs_world.new_entity();
         {
-            let mut r = ecs_world.add_component::<C_Renderable>(e);
+            let mut r = ecs_world.add_component(e, C_Renderable::default());
             r.texture = gres.load_texture(&tex_path(&env, "plant.png"));
             r.rect = Rect::new(0, 0, 96, 96);
         }
         {
-            let mut a = ecs_world.add_component::<C_Animated_Sprite>(e);
-            a.n_frames = 4;
-            a.frame_time = 0.1;
+            let mut a = ecs_world.add_component(
+                e,
+                C_Animated_Sprite {
+                    n_frames: 4,
+                    frame_time: 0.1,
+                    ..Default::default()
+                },
+            );
         }
 
         let mut dt = Duration::from_millis(16);
