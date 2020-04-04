@@ -42,7 +42,6 @@ pub struct Gameplay_System_Config {
 pub struct Level {
     pub id: String_Id,
     pub world: Ecs_World,
-    pub entities: Vec<Entity>, // @Cleanup: maybe this should be in world
     pub cameras: Vec<Entity>,
     pub active_camera: usize, // index inside 'cameras'
     pub scene_tree: scene_tree::Scene_Tree,
@@ -172,7 +171,7 @@ impl Gameplay_System {
 
             {
                 trace!("scene_tree::copy_transforms");
-                for e in level.entities.iter().copied() {
+                for e in world.entities().iter().copied() {
                     if let Some(t) = world.get_component::<C_Spatial2D>(e) {
                         level.scene_tree.set_local_transform(e, &t.local_transform);
                     }
@@ -186,7 +185,9 @@ impl Gameplay_System {
 
             {
                 trace!("scene_tree::backcopy_transforms");
-                for e in level.entities.iter().copied() {
+                // @Speed
+                let entities: Vec<Entity> = world.entities().iter().copied().collect();
+                for e in entities {
                     if let Some(t) = world.get_component_mut::<C_Spatial2D>(e) {
                         t.global_transform = *level.scene_tree.get_global_transform(e).unwrap();
                     }

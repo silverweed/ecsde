@@ -5,9 +5,9 @@ use crate::common::shapes;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::ecs::components::base::C_Spatial2D;
-use crate::ecs::ecs_world::{Components_Map_Safe, Ecs_World, Entity};
-use crate::ecs::entity_stream::new_entity_stream;
-use rayon::prelude::*;
+use crate::ecs::ecs_world::{Component_Storage, Ecs_World, Entity};
+//use crate::ecs::entity_stream::new_entity_stream;
+//use rayon::prelude::*;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
@@ -92,152 +92,152 @@ impl Collision_System {
         }
     }
 
-    pub fn update(&mut self, ecs_world: &mut Ecs_World) {
+    pub fn update(&mut self, _ecs_world: &mut Ecs_World) {
         // Step 1: fill quadtree
-        {
-            trace!("collision_system::clear_quadtree");
-            self.quadtree.clear();
-        }
+        //{
+        //    trace!("collision_system::clear_quadtree");
+        //    self.quadtree.clear();
+        //}
 
-        #[cfg(debug_assertions)]
-        self.debug_applied_impulses.clear();
+        //#[cfg(debug_assertions)]
+        //self.debug_applied_impulses.clear();
 
-        {
-            trace!("collision_system::collect_entities");
-            self.entities_buf.clear();
-            new_entity_stream(ecs_world)
-                .require::<Collider>()
-                .require::<C_Spatial2D>()
-                .build()
-                .collect(ecs_world, &mut self.entities_buf);
-        }
+        //{
+        //    trace!("collision_system::collect_entities");
+        //    self.entities_buf.clear();
+        //    new_entity_stream(ecs_world)
+        //        .require::<Collider>()
+        //        .require::<C_Spatial2D>()
+        //        .build()
+        //        .collect(ecs_world, &mut self.entities_buf);
+        //}
 
-        {
-            trace!("collision_system::fill_quadtree");
-            let mut map_collider = unsafe { ecs_world.get_components_map_unsafe::<Collider>() };
-            let map_spatial = unsafe { ecs_world.get_components_map_unsafe::<C_Spatial2D>() };
+        //{
+        //    trace!("collision_system::fill_quadtree");
+        //    let mut map_collider = unsafe { ecs_world.get_components_map_unsafe::<Collider>() };
+        //    let map_spatial = unsafe { ecs_world.get_components_map_unsafe::<C_Spatial2D>() };
 
-            for &entity in &self.entities_buf {
-                let collider = {
-                    let collider = unsafe { map_collider.get_component_mut(entity) }.unwrap();
-                    collider.colliding = false;
-                    *collider
-                };
+        //    for &entity in &self.entities_buf {
+        //        let collider = {
+        //            let collider = unsafe { map_collider.get_component_mut(entity) }.unwrap();
+        //            collider.colliding = false;
+        //            *collider
+        //        };
 
-                let transform = &unsafe { map_spatial.get_component(entity) }
-                    .unwrap()
-                    .global_transform;
+        //        let transform = &unsafe { map_spatial.get_component(entity) }
+        //            .unwrap()
+        //            .global_transform;
 
-                self.quadtree.add(entity, &collider, transform, ecs_world);
-            }
-        }
+        //        self.quadtree.add(entity, &collider, transform, ecs_world);
+        //    }
+        //}
 
-        // Step 2: do collision detection
+        //// Step 2: do collision detection
 
-        {
-            trace!("collision_detection_and_solving");
+        //{
+        //    trace!("collision_detection_and_solving");
 
-            let n_collisions_total = Arc::new(AtomicUsize::new(0));
-            let n_entities = self.entities_buf.len();
-            self.collided_entities.lock().unwrap().clear();
+        //    let n_collisions_total = Arc::new(AtomicUsize::new(0));
+        //    let n_entities = self.entities_buf.len();
+        //    self.collided_entities.lock().unwrap().clear();
 
-            if n_entities > 0 {
-                trace!("collision_detection");
+        //    if n_entities > 0 {
+        //        trace!("collision_detection");
 
-                let n_threads = rayon::current_num_threads();
-                let n_entities_per_chunk = std::cmp::min(n_entities, n_entities / n_threads + 1);
+        //        let n_threads = rayon::current_num_threads();
+        //        let n_entities_per_chunk = std::cmp::min(n_entities, n_entities / n_threads + 1);
 
-                let map_collider = ecs_world.get_components_map::<Collider>();
-                let map_spatial = ecs_world.get_components_map::<C_Spatial2D>();
+        //        let map_collider = ecs_world.get_components_map::<Collider>();
+        //        let map_spatial = ecs_world.get_components_map::<C_Spatial2D>();
 
-                self.entities_buf
-                    .par_iter()
-                    .chunks(n_entities_per_chunk)
-                    .for_each(|ent_chunk| {
-                        let mut neighbours = vec![];
-                        for &entity in ent_chunk {
-                            let collider = map_collider.get_component(entity).unwrap();
-                            let spatial = map_spatial.get_component(entity).unwrap();
-                            let transform = &spatial.global_transform;
-                            let velocity = spatial.velocity;
-                            if velocity.magnitude2() <= 0.0001 {
-                                continue;
-                            }
+        //        self.entities_buf
+        //            .par_iter()
+        //            .chunks(n_entities_per_chunk)
+        //            .for_each(|ent_chunk| {
+        //                let mut neighbours = vec![];
+        //                for &entity in ent_chunk {
+        //                    let collider = map_collider.get_component(entity).unwrap();
+        //                    let spatial = map_spatial.get_component(entity).unwrap();
+        //                    let transform = &spatial.global_transform;
+        //                    let velocity = spatial.velocity;
+        //                    if velocity.magnitude2() <= 0.0001 {
+        //                        continue;
+        //                    }
 
-                            neighbours.clear();
-                            self.quadtree
-                                .get_neighbours(collider, transform, &mut neighbours);
-                            if !neighbours.is_empty() {
-                                check_collision_with_neighbours(
-                                    entity,
-                                    collider,
-                                    transform,
-                                    velocity,
-                                    &neighbours,
-                                    &map_collider,
-                                    &map_spatial,
-                                    self.collided_entities.clone(),
-                                    n_collisions_total.clone(),
-                                );
-                            }
-                        }
-                    });
-            }
+        //                    neighbours.clear();
+        //                    self.quadtree
+        //                        .get_neighbours(collider, transform, &mut neighbours);
+        //                    if !neighbours.is_empty() {
+        //                        check_collision_with_neighbours(
+        //                            entity,
+        //                            collider,
+        //                            transform,
+        //                            velocity,
+        //                            &neighbours,
+        //                            &map_collider,
+        //                            &map_spatial,
+        //                            self.collided_entities.clone(),
+        //                            n_collisions_total.clone(),
+        //                        );
+        //                    }
+        //                }
+        //            });
+        //    }
 
-            {
-                trace!("collision_solving");
+        //    {
+        //        trace!("collision_solving");
 
-                // @Audit: is this safe to do?
-                let mut map_collider = unsafe { ecs_world.get_components_map_unsafe::<Collider>() };
-                let mut map_spatial =
-                    unsafe { ecs_world.get_components_map_unsafe::<C_Spatial2D>() };
+        //        // @Audit: is this safe to do?
+        //        let mut map_collider = unsafe { ecs_world.get_components_map_unsafe::<Collider>() };
+        //        let mut map_spatial =
+        //            unsafe { ecs_world.get_components_map_unsafe::<C_Spatial2D>() };
 
-                if let Ok(cld) = self.collided_entities.lock() {
-                    for (&entity, info) in cld
-                        .iter()
-                        .filter(|(_, info)| info.my_velocity.magnitude2() > 0.0001)
-                    {
-                        {
-                            let collider =
-                                unsafe { map_collider.get_component_mut(entity) }.unwrap();
-                            if collider.colliding {
-                                continue; // already processed
-                            }
-                            collider.colliding = true;
-                        }
-                        {
-                            let oth_collider =
-                                unsafe { map_collider.get_component_mut(info.other) }.unwrap();
-                            oth_collider.colliding = true;
-                        }
+        //        if let Ok(cld) = self.collided_entities.lock() {
+        //            for (&entity, info) in cld
+        //                .iter()
+        //                .filter(|(_, info)| info.my_velocity.magnitude2() > 0.0001)
+        //            {
+        //                {
+        //                    let collider =
+        //                        unsafe { map_collider.get_component_mut(entity) }.unwrap();
+        //                    if collider.colliding {
+        //                        continue; // already processed
+        //                    }
+        //                    collider.colliding = true;
+        //                }
+        //                {
+        //                    let oth_collider =
+        //                        unsafe { map_collider.get_component_mut(info.other) }.unwrap();
+        //                    oth_collider.colliding = true;
+        //                }
 
-                        // @Incomplete: solve the collision
-                        let spatial = unsafe { map_spatial.get_component_mut(entity) }.unwrap();
+        //                // @Incomplete: solve the collision
+        //                let spatial = unsafe { map_spatial.get_component_mut(entity) }.unwrap();
 
-                        // Reset velocity
-                        spatial.velocity -= info.penetration;
-                        // Move out of the collision
-                        // @Incomplete: we should actually set the global_transform, but doing so
-                        // does not update the local one yet!
-                        spatial
-                            .local_transform
-                            .translate_v(-info.penetration * 1.001);
+        //                // Reset velocity
+        //                spatial.velocity -= info.penetration;
+        //                // Move out of the collision
+        //                // @Incomplete: we should actually set the global_transform, but doing so
+        //                // does not update the local one yet!
+        //                spatial
+        //                    .local_transform
+        //                    .translate_v(-info.penetration * 1.001);
 
-                        #[cfg(debug_assertions)]
-                        self.debug_applied_impulses.push(Debug_Applied_Impulse {
-                            center: spatial.global_transform.position(),
-                            impulse: -info.penetration * 1.001 * 100.,
-                        });
-                    }
-                }
-            }
+        //                #[cfg(debug_assertions)]
+        //                self.debug_applied_impulses.push(Debug_Applied_Impulse {
+        //                    center: spatial.global_transform.position(),
+        //                    impulse: -info.penetration * 1.001 * 100.,
+        //                });
+        //            }
+        //        }
+        //    }
 
-            //println!(
-            //"tot collisions: {}, average: {}",
-            //n_collisions_total.load(std::sync::atomic::Ordering::SeqCst),
-            //n_collisions_total.load(std::sync::atomic::Ordering::SeqCst) / n_entities
-            //);
-        }
+        //    //println!(
+        //    //"tot collisions: {}, average: {}",
+        //    //n_collisions_total.load(std::sync::atomic::Ordering::SeqCst),
+        //    //n_collisions_total.load(std::sync::atomic::Ordering::SeqCst) / n_entities
+        //    //);
+        //}
     }
 }
 
@@ -251,8 +251,8 @@ fn check_collision_with_neighbours(
     transform: &Transform2D,
     velocity: Vec2f,
     neighbours: &[Entity],
-    map_collider: &Components_Map_Safe<Collider>,
-    map_spatial: &Components_Map_Safe<C_Spatial2D>,
+    map_collider: &Component_Storage<Collider>,
+    map_spatial: &Component_Storage<C_Spatial2D>,
     collided_entities: Arc<Mutex<HashMap<Entity, Collision_Info>>>,
     n_collisions_total: Arc<AtomicUsize>,
 ) {

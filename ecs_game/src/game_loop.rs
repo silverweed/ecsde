@@ -269,7 +269,7 @@ pub fn tick_game<'a>(
         trace!("collision_system::update");
 
         let gameplay_system = &mut game_state.gameplay_system;
-        let collision_system = &mut game_state.engine_state.systems.collision_system;
+        //let collision_system = &mut game_state.engine_state.systems.collision_system;
         let time = &game_state.engine_state.time;
         let update_dt = time::mul_duration(
             &target_time_per_frame,
@@ -440,7 +440,7 @@ fn update_graphics(
                 &level.get_camera().transform,
             );
         }
-        
+
         // Draw debug painter (one per active level)
         let painters = &mut game_state.engine_state.debug_systems.painters;
         let window = &mut game_state.window;
@@ -770,7 +770,7 @@ fn update_entities_debug_overlay(
 ) {
     debug_overlay.clear();
     debug_overlay.add_line_color(
-        &format!("Entities: {}", ecs_world.entity_manager.n_live_entities()),
+        &format!("Entities: {}", ecs_world.entities().len()),
         colors::rgba(220, 100, 180, 220),
     );
 }

@@ -370,7 +370,7 @@ mod tests {
             (w, h): (f32, f32),
         ) -> (Entity, Collider, Transform2D) {
             let entity = ecs_world.new_entity();
-            let cld = ecs_world.add_component::<Collider>(entity);
+            let cld = ecs_world.add_component(entity, Collider::default());
             let collider = Collider {
                 shape: Collision_Shape::Rect {
                     width: w,
@@ -380,7 +380,7 @@ mod tests {
             };
             *cld = collider;
 
-            let spat = ecs_world.add_component::<C_Spatial2D>(entity);
+            let spat = ecs_world.add_component(entity, C_Spatial2D::default());
             let trans =
                 Transform2D::from_pos_rot_scale(Vec2f::new(x, y), rad(0.), Vec2f::new(sx, sy));
             spat.global_transform = trans;

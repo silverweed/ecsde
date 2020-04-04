@@ -1,274 +1,34 @@
+use super::comp_mgr::{self, Component_Manager};
 use crate::alloc::gen_alloc::{Gen_Type, Generational_Allocator, Generational_Index, Index_Type};
 use crate::common::bitset::Bit_Set;
-use std::any::{type_name, TypeId};
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::any::type_name;
 use std::vec::Vec;
 
 pub type Entity = Generational_Index;
-pub type Component_Handle = u32;
-
-#[derive(Default, Clone)]
-struct Component_Storage {
-    // Upper 8 bytes: size, lower 8 bytes: align
-    pub individual_size_and_align: u16,
-    // FIXME FIXME
-    // @Soundness @Audit: ensure this Vec is properly aligned! Currently there are no guarantees
-    // about that, and we may be accessing unaligned data when reinterpret casting, which is UB!
-    // FIXME FIXME
-    pub data: Vec<u8>,
-    // { entity => index into `data` }
-    pub comp_idx: HashMap<Index_Type, usize>,
-}
-
-impl Component_Storage {
-    pub fn individual_size(&self) -> usize {
-        (self.individual_size_and_align >> 8) as _
-    }
-
-    pub fn individual_align(&self) -> usize {
-        (self.individual_size_and_align & 0xFF) as _
-    }
-
-    pub fn set_individual_size_and_align(&mut self, size: usize, align: usize) {
-        debug_assert!(size < u8::max_value() as usize);
-        debug_assert!(align < u8::max_value() as usize);
-        self.individual_size_and_align = ((size as u16) << 8) | (align as u16);
-    }
-
-    pub fn get_component(&self, entity: Entity) -> Option<*const u8> {
-        if let Some(index) = self.comp_idx.get(&entity.index) {
-            debug_assert!(*index * self.individual_size() < isize::max_value() as usize);
-            Some(unsafe { self.data.as_ptr().add(*index * self.individual_size()) })
-        } else {
-            None
-        }
-    }
-
-    pub fn get_component_mut(&mut self, entity: Entity) -> Option<*mut u8> {
-        if let Some(index) = self.comp_idx.get(&entity.index) {
-            debug_assert!(*index * self.individual_size() < isize::max_value() as usize);
-            Some(unsafe { self.data.as_mut_ptr().add(*index * self.individual_size()) })
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct Components_Map_Safe<'a, T> {
-    comp_storage: &'a Component_Storage,
-    _marker: std::marker::PhantomData<T>,
-}
-
-impl<'a, T> Components_Map_Safe<'a, T> {
-    fn new(comp_storage: &'a Component_Storage) -> Self {
-        Self {
-            comp_storage,
-            _marker: std::marker::PhantomData,
-        }
-    }
-
-    pub fn get_component<'b>(&'b self, entity: Entity) -> Option<&'b T>
-    where
-        'a: 'b,
-    {
-        trace!("comp_map_safe::get_component");
-        self.comp_storage
-            .get_component(entity)
-            .map(|comp| unsafe { &*(comp as *const T) })
-    }
-}
-
-#[derive(Clone)]
-pub struct Components_Map_Unsafe<T> {
-    comp_storage: *mut Component_Storage,
-    _marker: std::marker::PhantomData<T>,
-}
-
-impl<T> Components_Map_Unsafe<T> {
-    fn new(comp_storage: &mut Component_Storage) -> Self {
-        Self {
-            comp_storage: comp_storage as *mut _,
-            _marker: std::marker::PhantomData,
-        }
-    }
-
-    /// # Safety
-    /// The Components_Map_Unsafe must never outlive the Ecs_World, and at most one Components_Map_Unsafe
-    /// per type is allowed to exist at the same time.
-    /// The suggested usage of a Components_Map_Unsafe is to limit its existence to a single function.
-    // @Audit: it looks like this method returns an unbounded reference: do we need to add some bound here?
-    pub unsafe fn get_component(&self, entity: Entity) -> Option<&T> {
-        trace!("comp_map_unsafe::get_component");
-        (*self.comp_storage)
-            .get_component(entity)
-            .map(|comp| &*(comp as *const T))
-    }
-
-    /// # Safety
-    /// The Components_Map_Unsafe must never outlive the Ecs_World, and at most one Components_Map_Unsafe
-    /// per type is allowed to exist at the same time.
-    /// The suggested usage of a Components_Map_Unsafe is to limit its existence to a single function.
-    // @Audit: it looks like this method returns an unbounded reference: do we need to add some bound here?
-    pub unsafe fn get_component_mut(&mut self, entity: Entity) -> Option<&mut T> {
-        trace!("comp_map_unsafe::get_component_mut");
-        (*self.comp_storage)
-            .get_component_mut(entity)
-            .map(|comp| &mut *(comp as *mut T))
-    }
-}
-
-pub(super) struct Component_Manager {
-    components: Vec<Component_Storage>,
-    last_comp_handle: Component_Handle,
-    // Indexed by entity index
-    pub(super) entity_comp_set: Vec<Bit_Set>,
-}
-
-impl Component_Manager {
-    fn new() -> Component_Manager {
-        Component_Manager {
-            components: vec![],
-            last_comp_handle: 0,
-            entity_comp_set: vec![],
-        }
-    }
-
-    fn register_component<T>(&mut self) -> Component_Handle {
-        let handle = self.last_comp_handle;
-
-        self.components
-            .resize(handle as usize + 1, Component_Storage::default());
-        self.components[handle as usize]
-            .set_individual_size_and_align(std::mem::size_of::<T>(), std::mem::align_of::<T>());
-
-        self.last_comp_handle += 1;
-
-        handle
-    }
-
-    fn add_component(&mut self, entity: Entity, comp_handle: Component_Handle) -> *mut u8 {
-        let storage = self
-            .components
-            .get_mut(comp_handle as usize)
-            .unwrap_or_else(|| fatal!("Invalid component handle {:?}", comp_handle));
-
-        let individual_size = storage.individual_size();
-        let index = if let Some(index) = storage.comp_idx.get(&entity.index) {
-            *index
-        } else {
-            self.entity_comp_set
-                .resize(entity.index as usize + 1, Bit_Set::default());
-            self.entity_comp_set[entity.index as usize].set(comp_handle as usize, true);
-
-            if individual_size != 0 {
-                let n_comps = storage.data.len() / individual_size;
-                storage.data.resize(storage.data.len() + individual_size, 0);
-                storage.comp_idx.insert(entity.index, n_comps);
-                n_comps
-            } else {
-                // Component is a Zero-Sized Type and doesn't carry any data.
-                0
-            }
-        };
-
-        debug_assert!(index * individual_size < isize::max_value() as usize);
-        let ptr = unsafe { storage.data.as_mut_ptr().add(index * individual_size) };
-
-        // @Robustness @Audit: why is this not currently asserting? No idea: bulletproof this.
-        debug_assert!(ptr.align_offset(storage.individual_align()) == 0);
-        ptr
-    }
-
-    fn get_component(&self, entity: Entity, comp_handle: Component_Handle) -> Option<*const u8> {
-        let storage = &self.components[comp_handle as usize];
-
-        if storage.individual_size() == 0 {
-            // ZST component (basically a tag): just check if the component is in the bitset.
-            if (entity.index as usize) < self.entity_comp_set.len()
-                && self.entity_comp_set[entity.index as usize].get(comp_handle as usize)
-            {
-                // return Some(null) to distinguish from the None case.
-                Some(std::ptr::null())
-            } else {
-                None
-            }
-        } else {
-            storage.get_component(entity)
-        }
-    }
-
-    fn get_component_mut(
-        &mut self,
-        entity: Entity,
-        comp_handle: Component_Handle,
-    ) -> Option<*mut u8> {
-        let storage = self
-            .components
-            .get_mut(comp_handle as usize)
-            .unwrap_or_else(|| fatal!("Invalid component handle {:?}", comp_handle));
-        if storage.individual_size() == 0 {
-            // ZST component (basically a tag): just check if the component is in the bitset.
-            if self.entity_comp_set[entity.index as usize].get(comp_handle as usize) {
-                // return Some(null) to distinguish from the None case.
-                Some(std::ptr::null_mut())
-            } else {
-                None
-            }
-        } else {
-            storage.get_component_mut(entity)
-        }
-    }
-
-    fn remove_component(&mut self, entity: Entity, comp_handle: Component_Handle) {
-        self.entity_comp_set[entity.index as usize].set(comp_handle as usize, false);
-        self.components[comp_handle as usize]
-            .comp_idx
-            .remove(&entity.index);
-    }
-
-    fn has_component(&self, entity: Entity, comp_handle: Component_Handle) -> bool {
-        self.entity_comp_set[entity.index as usize].get(comp_handle as usize)
-    }
-
-    fn get_components(&self, comp_handle: Component_Handle) -> &[u8] {
-        &self.components[comp_handle as usize].data
-    }
-
-    fn get_components_mut(&mut self, comp_handle: Component_Handle) -> &mut [u8] {
-        &mut self.components[comp_handle as usize].data
-    }
-
-    fn get_components_storage(&self, comp_handle: Component_Handle) -> &Component_Storage {
-        &self.components[comp_handle as usize]
-    }
-
-    fn get_components_storage_mut(
-        &mut self,
-        comp_handle: Component_Handle,
-    ) -> &mut Component_Storage {
-        &mut self.components[comp_handle as usize]
-    }
-}
 
 pub struct Entity_Manager {
     alloc: Generational_Allocator,
+    entities: Vec<Entity>,
 }
 
 impl Entity_Manager {
     pub fn new() -> Entity_Manager {
         Entity_Manager {
             alloc: Generational_Allocator::new(64),
+            entities: vec![],
         }
     }
 
     pub fn new_entity(&mut self) -> Entity {
-        self.alloc.allocate()
+        let e = self.alloc.allocate();
+        self.entities.push(e);
+        e
     }
 
     pub fn destroy_entity(&mut self, entity: Entity) {
         self.alloc.deallocate(entity);
+        let idx = self.entities.iter().position(|e| *e == entity).unwrap();
+        self.entities.remove(idx);
     }
 
     pub fn is_valid_entity(&self, entity: Entity) -> bool {
@@ -280,35 +40,39 @@ impl Entity_Manager {
     }
 
     pub fn n_live_entities(&self) -> usize {
-        self.alloc.live_size()
+        self.entities.len()
     }
 }
 
 pub struct Ecs_World {
-    pub component_handles: HashMap<TypeId, Component_Handle>,
-    pub entity_manager: Entity_Manager,
+    entity_manager: Entity_Manager,
+    // Note: must be visible to entity_stream
     pub(super) component_manager: Component_Manager,
-}
-
-macro_rules! get_comp_handle {
-    ($handles: expr, $T: ty, $err: expr) => {
-        $handles
-            .get(&TypeId::of::<$T>())
-            .unwrap_or_else(|| panic!($err, type_name::<$T>()))
-    };
 }
 
 impl Ecs_World {
     pub fn new() -> Ecs_World {
         Ecs_World {
-            component_handles: HashMap::new(),
             entity_manager: Entity_Manager::new(),
             component_manager: Component_Manager::new(),
         }
     }
 
+    pub fn get_entity_comp_set(&self, entity: Entity) -> std::borrow::Cow<'_, Bit_Set> {
+        assert!(
+            self.entity_manager.is_valid_entity(entity),
+            "Invalid entity {:?}",
+            entity
+        );
+        self.component_manager.get_entity_comp_set(entity)
+    }
+
     pub fn new_entity(&mut self) -> Entity {
         self.entity_manager.new_entity()
+    }
+
+    pub fn entities(&self) -> &[Entity] {
+        &self.entity_manager.entities
     }
 
     pub fn destroy_entity(&mut self, entity: Entity) {
@@ -320,37 +84,12 @@ impl Ecs_World {
     }
 
     pub fn register_component<T: 'static + Copy>(&mut self) {
-        let type_id = TypeId::of::<T>();
-        match self.component_handles.entry(type_id) {
-            Entry::Occupied(_) => {
-                fatal!(
-                    "register_component: same component '{}' registered twice!",
-                    type_name::<T>()
-                );
-            }
-            Entry::Vacant(v) => {
-                let handle = self.component_manager.register_component::<T>();
-                v.insert(handle);
-            }
-        }
+        self.component_manager.register_component::<T>();
     }
 
-    pub fn add_component<T: 'static + Copy + Default>(&mut self, entity: Entity) -> &mut T {
-        if !self.entity_manager.is_valid_entity(entity) {
-            fatal!(
-                "add_component::<{}?>: invalid entity {:?}",
-                type_name::<T>(),
-                entity
-            );
-        }
-        let handle = get_comp_handle!(
-            self.component_handles,
-            T,
-            "Tried to add inexisting component {:?}!"
-        );
-        let t = unsafe { &mut *(self.component_manager.add_component(entity, *handle) as *mut T) };
-        *t = T::default();
-        t
+    pub fn add_component<T: 'static + Copy>(&mut self, entity: Entity, data: T) -> &mut T {
+        // @Temporary
+        self.component_manager.add_component::<T>(entity, data)
     }
 
     pub fn get_component<T: 'static + Copy>(&self, entity: Entity) -> Option<&T> {
@@ -363,17 +102,8 @@ impl Ecs_World {
                 entity
             );
         }
-        let handle = get_comp_handle!(
-            self.component_handles,
-            T,
-            "Tried to get unregistered component {:?}!"
-        );
-        let maybe_comp = self.component_manager.get_component(entity, *handle);
-        if std::mem::size_of::<T>() != 0 {
-            maybe_comp.map(|ptr| unsafe { &*(ptr as *const T) })
-        } else {
-            maybe_comp.map(|_| unsafe { &*(&() as *const () as *const T) })
-        }
+
+        self.component_manager.get_component::<T>(entity)
     }
 
     pub fn get_component_mut<T: 'static + Copy>(&mut self, entity: Entity) -> Option<&mut T> {
@@ -386,17 +116,8 @@ impl Ecs_World {
                 entity
             );
         }
-        let handle = get_comp_handle!(
-            self.component_handles,
-            T,
-            "Tried to get_mut unregistered component {:?}!"
-        );
-        let maybe_comp = self.component_manager.get_component_mut(entity, *handle);
-        if std::mem::size_of::<T>() != 0 {
-            maybe_comp.map(|ptr| unsafe { &mut *(ptr as *mut T) })
-        } else {
-            maybe_comp.map(|_| unsafe { &mut *(&mut () as *mut () as *mut T) })
-        }
+
+        self.component_manager.get_component_mut::<T>(entity)
     }
 
     pub fn remove_component<T: 'static + Copy>(&mut self, entity: Entity) {
@@ -409,12 +130,8 @@ impl Ecs_World {
                 entity
             );
         }
-        let handle = get_comp_handle!(
-            self.component_handles,
-            T,
-            "Tried to remove unregistered component {:?}!"
-        );
-        self.component_manager.remove_component(entity, *handle);
+
+        self.component_manager.remove_component::<T>(entity);
     }
 
     pub fn has_component<T: 'static + Copy>(&self, entity: Entity) -> bool {
@@ -427,31 +144,19 @@ impl Ecs_World {
                 entity
             );
         }
-        let handle = get_comp_handle!(
-            self.component_handles,
-            T,
-            "Tried to test 'has' on unregistered component {:?}!"
-        );
-        self.component_manager.has_component(entity, *handle)
+
+        self.component_manager.has_component::<T>(entity)
     }
 
     pub fn get_components<T: 'static + Copy>(&self) -> &[T] {
         trace!("get_components");
 
-        // @Cleanup: this should be able to be const, but a pesky compiler error
-        // prevents it. Investigate on this later.
         let comp_size = std::mem::size_of::<T>();
         if comp_size == 0 {
             return &[];
         }
-        let handle = get_comp_handle!(
-            self.component_handles,
-            T,
-            "Tried to get_all unregistered components {:?}!"
-        );
-        let data = self.component_manager.get_components(*handle);
-        let n_elems = data.len() / comp_size;
-        unsafe { std::slice::from_raw_parts(data.as_ptr() as *const T, n_elems) }
+
+        self.component_manager.get_components::<T>()
     }
 
     pub fn get_components_mut<T: 'static + Copy>(&mut self) -> &mut [T] {
@@ -461,542 +166,59 @@ impl Ecs_World {
         if comp_size == 0 {
             return &mut [];
         }
-        let handle = get_comp_handle!(
-            self.component_handles,
-            T,
-            "Tried to get_all_mut unregistered components {:?}!"
-        );
-        let data = self.component_manager.get_components_mut(*handle);
-        let n_elems = data.len() / comp_size;
-        unsafe { std::slice::from_raw_parts_mut(data.as_ptr() as *mut T, n_elems) }
+
+        self.component_manager.get_components_mut::<T>()
     }
 
-    /// This is an utility function used when `get_component` is used repeatedly on many entities.
-    /// Rather than calling `ecs_world.get_component(entity)` directly, it is more efficient to
-    /// first retrieve the components map and then query it (this avoids one map lookup per entity):
-    /// ```
-    /// # use ecs_engine::ecs::ecs_world::*;
-    /// # let mut ecs_world = Ecs_World::new();
-    /// # #[derive(Copy, Clone, Default)]
-    /// # #[allow(non_camel_case_types)]
-    /// # struct My_Comp { _foo: u32 }
-    /// # ecs_world.register_component::<My_Comp>();
-    /// let comp_map = ecs_world.get_components_map::<My_Comp>();
-    /// # let entities: Vec<Entity> = vec![];
-    /// for entity in entities {
-    ///     let my_comp = comp_map.get_component(entity);
-    ///     // ...
-    /// }
-    /// ```
-    pub fn get_components_map<T: 'static + Copy>(&self) -> Components_Map_Safe<T> {
-        let comp_size = std::mem::size_of::<T>();
-        if comp_size == 0 {
-            fatal!("get_components_map_mut cannot be used on Zero Sized Types components!");
+    pub fn get_component_storage<T: Copy + 'static>(&self) -> Component_Storage<T> {
+        Component_Storage {
+            storage: self.component_manager.get_component_storage::<T>(),
+            _marker: std::marker::PhantomData,
         }
-        let handle = get_comp_handle!(
-            self.component_handles,
-            T,
-            "Tried to get_components_map_mut for unregistered components {:?}!"
-        );
-        let storage = self.component_manager.get_components_storage(*handle);
-
-        Components_Map_Safe::new(storage)
     }
 
-    /// Like `get_components_map`, but allows mutating components. This is more unsafe to use
-    /// as it allows the coexistence of maps that allow mutable access to components.
-    /// Note that while a `Components_Map_Unsafe` exists, all other Maps simultaneously
-    /// existing must be created via this method, even if they don't need mutable access.
-    ///
-    /// # Safety
-    /// Only at most one map per type must exist at the same time: it is UB to call
-    /// `get_components_map_mut::<T>()` multiple times with the same `T`.
-    pub unsafe fn get_components_map_unsafe<T: 'static + Copy>(
-        &mut self,
-    ) -> Components_Map_Unsafe<T> {
-        let comp_size = std::mem::size_of::<T>();
-        if comp_size == 0 {
-            fatal!("get_components_map_mut cannot be used on Zero Sized Types components!");
+    pub fn get_component_storage_mut<T: Copy + 'static>(&mut self) -> Component_Storage_Mut<T> {
+        Component_Storage_Mut {
+            storage: self.component_manager.get_component_storage_mut::<T>(),
+            _marker: std::marker::PhantomData,
         }
-        let handle = get_comp_handle!(
-            self.component_handles,
-            T,
-            "Tried to get_components_map_mut for unregistered components {:?}!"
-        );
-        let storage = self.component_manager.get_components_storage_mut(*handle);
-
-        Components_Map_Unsafe::new(storage)
     }
 }
 
-#[cfg(all(test, not(miri)))]
-mod tests {
-    use super::*;
+// Conveniency wrapper for the untyped Component_Storage
+pub struct Component_Storage<'a, T> {
+    storage: &'a comp_mgr::Component_Storage,
+    _marker: std::marker::PhantomData<T>,
+}
 
-    #[derive(Copy, Clone, Debug, Default)]
-    struct C_Test {
-        pub foo: i32,
+pub struct Component_Storage_Mut<'a, T> {
+    storage: &'a mut comp_mgr::Component_Storage,
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T: Copy> Component_Storage<'_, T> {
+    pub fn has_component(&self, entity: Entity) -> bool {
+        self.storage.has_component::<T>(entity)
     }
 
-    #[derive(Copy, Clone, Debug, Default)]
-    struct C_Test2 {
-        foo: i32,
-    }
-
-    #[derive(Copy, Clone, Debug, Default)]
-    struct C_Test3 {
-        foo: i32,
-    }
-
-    #[derive(Copy, Clone, Debug, PartialEq)]
-    struct C_Test_NonZeroDefault {
-        pub foo: i32,
-    }
-
-    impl Default for C_Test_NonZeroDefault {
-        fn default() -> Self {
-            C_Test_NonZeroDefault { foo: 42 }
-        }
-    }
-
-    #[derive(Copy, Clone, Default)]
-    struct C_ZST {}
-
-    #[test]
-    #[should_panic]
-    fn register_same_component_twice() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        em.register_component::<C_Test>();
-    }
-
-    #[test]
-    fn add_component_default_value() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test_NonZeroDefault>();
-
-        let e = em.new_entity();
-        let test = em.add_component::<C_Test_NonZeroDefault>(e);
-        assert_eq!(*test, C_Test_NonZeroDefault::default());
-    }
-
-    #[test]
-    fn add_component_modify() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-
-        let e = em.new_entity();
-        let foo = em.add_component::<C_Test>(e);
-        assert_eq!(foo.foo, 0);
-
-        foo.foo = 42;
-        let foo = em.get_component::<C_Test>(e).unwrap();
-        assert_eq!(foo.foo, 42);
-    }
-
-    #[test]
-    fn get_component() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-
-        let e = em.new_entity();
-        assert!(em.get_component::<C_Test>(e).is_none());
-
-        em.add_component::<C_Test>(e);
-        assert!(em.get_component::<C_Test>(e).is_some());
-    }
-
-    #[test]
-    fn get_component_zero_sized() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_ZST>();
-
-        let e = em.new_entity();
-        assert!(em.get_component::<C_ZST>(e).is_none());
-
-        let e2 = em.new_entity();
-
-        em.add_component::<C_ZST>(e);
-        em.add_component::<C_ZST>(e2);
-        assert!(em.get_component::<C_ZST>(e).is_some());
-        assert!(em.get_component::<C_ZST>(e2).is_some());
-
-        em.remove_component::<C_ZST>(e);
-        assert!(em.get_component::<C_ZST>(e).is_none());
-        assert!(em.get_component::<C_ZST>(e2).is_some());
-
-        em.remove_component::<C_ZST>(e2);
-        assert!(em.get_component::<C_ZST>(e2).is_none());
-    }
-
-    #[test]
-    fn get_component_mut() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-
-        let e = em.new_entity();
-        assert!(em.get_component_mut::<C_Test>(e).is_none());
-
-        em.add_component::<C_Test>(e);
-        assert!(em.get_component_mut::<C_Test>(e).is_some());
-    }
-
-    #[test]
-    fn mutate_component() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-
-        let e = em.new_entity();
-        {
-            let mut c = em.add_component::<C_Test>(e);
-            c.foo = 4242;
-        }
-
-        assert!(em.get_component::<C_Test>(e).unwrap().foo == 4242);
-    }
-
-    #[test]
-    #[should_panic]
-    fn add_component_inexisting_entity() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        em.add_component::<C_Test>(Entity { index: 0, gen: 1 });
-    }
-
-    #[test]
-    #[should_panic]
-    fn get_component_inexisting_entity() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        em.get_component::<C_Test>(Entity { index: 0, gen: 1 });
-    }
-
-    #[test]
-    #[should_panic]
-    fn get_component_mut_inexisting_entity() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        em.get_component_mut::<C_Test>(Entity { index: 0, gen: 1 });
-    }
-
-    #[test]
-    fn destroy_entity() {
-        let mut em = Ecs_World::new();
-        let e = em.new_entity();
-        em.destroy_entity(e);
-        assert!(!em.is_valid_entity(e));
-    }
-
-    #[test]
-    #[should_panic]
-    fn double_free_entity() {
-        let mut em = Ecs_World::new();
-        let e = em.new_entity();
-        em.destroy_entity(e);
-        em.destroy_entity(e);
-    }
-
-    #[test]
-    #[should_panic]
-    fn destroy_inexisting_entity() {
-        let mut em = Ecs_World::new();
-        em.destroy_entity(Entity { index: 0, gen: 1 });
-    }
-
-    #[test]
-    #[should_panic]
-    fn add_component_destroyed_entity() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        let e = em.new_entity();
-        em.destroy_entity(e);
-        em.add_component::<C_Test>(e);
-    }
-
-    #[test]
-    #[should_panic]
-    fn get_component_destroyed_entity() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        let e = em.new_entity();
-        em.add_component::<C_Test>(e);
-        em.destroy_entity(e);
-        em.get_component::<C_Test>(e);
-    }
-
-    #[test]
-    #[should_panic]
-    fn get_component_destroyed_and_recreated_entity() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        let e = em.new_entity();
-        em.add_component::<C_Test>(e);
-        em.destroy_entity(e);
-        em.new_entity();
-        em.get_component::<C_Test>(e);
-    }
-
-    #[test]
-    fn get_component_destroyed_and_recreated_entity_good() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-
-        let e1 = em.new_entity();
-        em.add_component::<C_Test>(e1);
-        em.destroy_entity(e1);
-
-        let e2 = em.new_entity();
-        em.get_component::<C_Test>(e2);
-    }
-
-    #[test]
-    fn remove_component() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        let e = em.new_entity();
-        em.add_component::<C_Test>(e);
-        em.remove_component::<C_Test>(e);
-    }
-
-    #[test]
-    fn double_remove_component() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        let e = em.new_entity();
-        em.add_component::<C_Test>(e);
-        em.remove_component::<C_Test>(e);
-        em.remove_component::<C_Test>(e);
-    }
-
-    #[test]
-    fn get_removed_component() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        let e = em.new_entity();
-        em.add_component::<C_Test>(e);
-        em.remove_component::<C_Test>(e);
-        assert!(em.get_component::<C_Test>(e).is_none());
-    }
-
-    #[test]
-    fn remove_and_readd_component() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        let e = em.new_entity();
-        em.add_component::<C_Test>(e);
-        em.remove_component::<C_Test>(e);
-        em.add_component::<C_Test>(e);
-        em.get_component::<C_Test>(e);
-    }
-
-    #[test]
-    #[should_panic]
-    fn remove_component_destroyed_and_recreated_entity() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        let e = em.new_entity();
-        em.add_component::<C_Test>(e);
-        em.destroy_entity(e);
-        em.new_entity();
-        em.remove_component::<C_Test>(e);
-    }
-
-    #[test]
-    fn get_components_size() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        for _i in 0..10 {
-            let e = em.new_entity();
-            em.add_component::<C_Test>(e);
-        }
-        assert_eq!(em.get_components::<C_Test>().len(), 10);
-    }
-
-    #[test]
-    fn get_components_size_zst() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_ZST>();
-        for _i in 0..10 {
-            let e = em.new_entity();
-            em.add_component::<C_ZST>(e);
-        }
-        // get_components on a ZST component should always be zero-length
-        assert_eq!(em.get_components::<C_ZST>().len(), 0);
-    }
-
-    #[test]
-    fn get_components_size_empty() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        assert_eq!(em.get_components::<C_Test>().len(), 0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn get_unregistered_components() {
-        let em = Ecs_World::new();
-        em.get_components::<C_Test>();
-    }
-
-    #[test]
-    fn get_components_mut_mutability() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        for _i in 0..10 {
-            let e = em.new_entity();
-            em.add_component::<C_Test>(e);
-        }
-        for (i, test) in em.get_components_mut::<C_Test>().iter_mut().enumerate() {
-            test.foo = i as i32;
-        }
-        for (i, test) in em.get_components::<C_Test>().iter().enumerate() {
-            assert_eq!(test.foo, i as i32);
-        }
-    }
-
-    #[test]
-    fn get_components_mut_size() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        for _i in 0..10 {
-            let e = em.new_entity();
-            em.add_component::<C_Test>(e);
-        }
-        assert_eq!(em.get_components_mut::<C_Test>().len(), 10);
-    }
-
-    #[test]
-    fn get_components_mut_size_zst() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_ZST>();
-        for _i in 0..10 {
-            let e = em.new_entity();
-            em.add_component::<C_ZST>(e);
-        }
-        // get_components on a ZST component should always be zero-length
-        assert_eq!(em.get_components_mut::<C_ZST>().len(), 0);
-    }
-
-    #[test]
-    fn get_components_mut_size_empty() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_Test>();
-        assert_eq!(em.get_components_mut::<C_Test>().len(), 0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn get_unregistered_components_mut() {
-        let mut em = Ecs_World::new();
-        em.get_components_mut::<C_Test>();
-    }
-
-    #[test]
-    fn has_get_consistency() {
-        let mut em = Ecs_World::new();
-        let mut entities: Vec<Entity> = vec![];
-        em.register_component::<C_Test>();
-        em.register_component::<C_Test2>();
-        for i in 0..100 {
-            let e = em.new_entity();
-            entities.push(e);
-            em.add_component::<C_Test>(e);
-            if i % 2 == 0 {
-                em.add_component::<C_Test2>(e);
-            }
-        }
-
-        {
-            let filtered: Vec<Entity> = entities
-                .iter()
-                .filter(|&&e| em.has_component::<C_Test>(e) && em.has_component::<C_Test2>(e))
-                .cloned()
-                .collect();
-            for e in filtered {
-                assert!(em.get_component::<C_Test>(e).is_some());
-                assert!(em.get_component::<C_Test2>(e).is_some());
-            }
-        }
-        {
-            let filtered: Vec<Entity> = entities
-                .iter()
-                .filter(|&&e| em.has_component::<C_Test>(e))
-                .cloned()
-                .collect();
-            for e in filtered {
-                assert!(em.get_component::<C_Test>(e).is_some());
-            }
-        }
-        {
-            let filtered: Vec<Entity> = entities
-                .iter()
-                .filter(|&&e| em.has_component::<C_Test>(e) && !em.has_component::<C_Test2>(e))
-                .cloned()
-                .collect();
-            for e in filtered {
-                assert!(em.get_component::<C_Test>(e).is_some());
-                assert!(em.get_component::<C_Test2>(e).is_none());
-            }
-        }
-    }
-
-    #[test]
-    fn components_map() {
-        let mut em = Ecs_World::new();
-        let mut entities: Vec<Entity> = vec![];
-        em.register_component::<C_Test>();
-
-        for _ in 0..10 {
-            let e = em.new_entity();
-            em.add_component::<C_Test>(e);
-            entities.push(e);
-        }
-
-        let map = em.get_components_map::<C_Test>();
-
-        for e in entities {
-            assert!(map.get_component(e).is_some());
-            assert_eq!(map.get_component(e).unwrap().foo, 0);
-        }
-    }
-
-    #[test]
-    fn components_map_unsafe() {
-        let mut em = Ecs_World::new();
-        let mut entities: Vec<Entity> = vec![];
-        em.register_component::<C_Test>();
-
-        for _ in 0..10 {
-            let e = em.new_entity();
-            em.add_component::<C_Test>(e);
-            entities.push(e);
-        }
-
-        let mut map = unsafe { em.get_components_map_unsafe::<C_Test>() };
-
-        for (i, e) in entities.iter().enumerate() {
-            let e = *e;
-            unsafe {
-                assert!(map.get_component(e).is_some());
-                assert!(map.get_component_mut(e).is_some());
-                assert_eq!(map.get_component(e).unwrap().foo, 0);
-
-                map.get_component_mut(e).unwrap().foo = i as i32;
-            }
-        }
-
-        for (i, e) in entities.iter().enumerate() {
-            assert_eq!(unsafe { map.get_component(*e) }.unwrap().foo, i as i32);
-        }
-    }
-
-    #[test]
-    #[should_panic(
-        expected = "[ FATAL ] get_components_map_mut cannot be used on Zero Sized Types components!"
-    )]
-    fn components_map_zst() {
-        let mut em = Ecs_World::new();
-        em.register_component::<C_ZST>();
-        let _map = em.get_components_map::<C_ZST>();
+    pub fn get_component(&self, entity: Entity) -> Option<&T> {
+        self.storage.get_component::<T>(entity)
     }
 }
+
+impl<T: Copy> Component_Storage_Mut<'_, T> {
+    pub fn has_component(&self, entity: Entity) -> bool {
+        self.storage.has_component::<T>(entity)
+    }
+
+    pub fn get_component(&self, entity: Entity) -> Option<&T> {
+        self.storage.get_component::<T>(entity)
+    }
+
+    pub fn get_component_mut(&mut self, entity: Entity) -> Option<&mut T> {
+        self.storage.get_component_mut::<T>(entity)
+    }
+}
+
+#[cfg(tests)]
+include!("./ecs_world_tests.rs");

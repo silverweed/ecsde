@@ -1,8 +1,7 @@
 use super::ecs_world::{Ecs_World, Entity};
 use crate::alloc::temp::{Exclusive_Temp_Array, Temp_Array};
 use crate::common::bitset::Bit_Set;
-use std::any::type_name;
-use std::convert::TryFrom;
+use std::borrow::Borrow;
 
 pub struct Entity_Stream {
     required_components: Bit_Set,
@@ -15,8 +14,11 @@ impl Entity_Stream {
         let i = self.cur_idx;
         let req_comps = &self.required_components;
         let exc_comps = &self.excluded_components;
-        let entity_comp_set = &world.component_manager.entity_comp_set;
-        for (i, comp_set) in entity_comp_set.iter().enumerate().skip(self.cur_idx) {
+        let entities = world.entities();
+        for (i, &entity) in entities.iter().enumerate().skip(self.cur_idx) {
+            let comp_set = world.get_entity_comp_set(entity);
+            let comp_set = comp_set.borrow();
+
             if (comp_set & req_comps) != *req_comps {
                 continue;
             }
@@ -26,13 +28,7 @@ impl Entity_Stream {
             }
 
             self.cur_idx = i + 1;
-            let index = u32::try_from(i).unwrap_or_else(|_| {
-                fatal!("Entity_Stream::next(): index overflowed u32! ({})", i);
-            });
-            return Some(Entity {
-                index,
-                gen: world.entity_manager.cur_gen(index),
-            });
+            return Some(entity);
         }
 
         self.cur_idx = i;
@@ -57,23 +53,15 @@ pub struct Entity_Stream_Builder<'a> {
 impl Entity_Stream_Builder<'_> {
     /// Adds component 'T' to the required components
     pub fn require<T: 'static + Copy>(mut self) -> Self {
-        let handle = self
-            .world
-            .component_handles
-            .get(&std::any::TypeId::of::<T>())
-            .unwrap_or_else(|| fatal!("Requiring inexisting component {}!", type_name::<T>()));
-        self.required_components.set(*handle as usize, true);
+        let handle = self.world.component_manager.get_handle::<T>();
+        self.required_components.set(handle as usize, true);
         self
     }
 
     /// Adds component 'T' to the excluded components
     pub fn exclude<T: 'static + Copy>(mut self) -> Self {
-        let handle = self
-            .world
-            .component_handles
-            .get(&std::any::TypeId::of::<T>())
-            .unwrap_or_else(|| fatal!("Requiring inexisting component {}!", type_name::<T>()));
-        self.excluded_components.set(*handle as usize, true);
+        let handle = self.world.component_manager.get_handle::<T>();
+        self.excluded_components.set(handle as usize, true);
         self
     }
 
@@ -135,17 +123,17 @@ mod tests {
         world.register_component::<C_Test2>();
 
         let e = world.new_entity();
-        world.add_component::<C_Test>(e);
-        world.add_component::<C_Test2>(e);
+        world.add_component(e, C_Test::default());
+        world.add_component(e, C_Test2::default());
 
         let _e2 = world.new_entity();
         let e3 = world.new_entity();
-        world.add_component::<C_Test>(e3);
+        world.add_component(e3, C_Test::default());
         let e4 = world.new_entity();
-        world.add_component::<C_Test>(e4);
-        world.add_component::<C_Test2>(e4);
+        world.add_component(e4, C_Test::default());
+        world.add_component(e4, C_Test2::default());
         let e5 = world.new_entity();
-        world.add_component::<C_Test2>(e5);
+        world.add_component(e5, C_Test2::default());
 
         let mut stream = new_entity_stream(&world)
             .require::<C_Test>()
@@ -164,17 +152,17 @@ mod tests {
         world.register_component::<C_Test2>();
 
         let e = world.new_entity();
-        world.add_component::<C_Test>(e);
-        world.add_component::<C_Test2>(e);
+        world.add_component(e, C_Test::default());
+        world.add_component(e, C_Test2::default());
 
         let e2 = world.new_entity();
         let e3 = world.new_entity();
-        world.add_component::<C_Test>(e3);
+        world.add_component(e3, C_Test::default());
         let e4 = world.new_entity();
-        world.add_component::<C_Test>(e4);
-        world.add_component::<C_Test2>(e4);
+        world.add_component(e4, C_Test::default());
+        world.add_component(e4, C_Test2::default());
         let e5 = world.new_entity();
-        world.add_component::<C_Test2>(e5);
+        world.add_component(e5, C_Test2::default());
 
         let mut stream = new_entity_stream(&world).exclude::<C_Test2>().build();
 
@@ -190,17 +178,17 @@ mod tests {
         world.register_component::<C_Test2>();
 
         let e = world.new_entity();
-        world.add_component::<C_Test>(e);
-        world.add_component::<C_Test2>(e);
+        world.add_component(e, C_Test::default());
+        world.add_component(e, C_Test2::default());
 
         let _e2 = world.new_entity();
         let e3 = world.new_entity();
-        world.add_component::<C_Test>(e3);
+        world.add_component(e3, C_Test::default());
         let e4 = world.new_entity();
-        world.add_component::<C_Test>(e4);
-        world.add_component::<C_Test2>(e4);
+        world.add_component(e4, C_Test::default());
+        world.add_component(e4, C_Test2::default());
         let e5 = world.new_entity();
-        world.add_component::<C_Test2>(e5);
+        world.add_component(e5, C_Test2::default());
 
         let mut stream = new_entity_stream(&world)
             .require::<C_Test>()

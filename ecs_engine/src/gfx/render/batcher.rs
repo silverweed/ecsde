@@ -2,7 +2,7 @@ use crate::alloc::temp;
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
-use crate::common::vector::{Vec2f, Vec2u};
+use crate::common::vector::Vec2f;
 use crate::gfx::render;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Gfx_Resources, Texture_Handle};
