@@ -55,7 +55,7 @@ mod tests {
             r.rect = Rect::new(0, 0, 96, 96);
         }
         {
-            let mut a = ecs_world.add_component(
+            ecs_world.add_component(
                 e,
                 C_Animated_Sprite {
                     n_frames: 4,
