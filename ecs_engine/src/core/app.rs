@@ -13,15 +13,15 @@ use crate::input;
 #[cfg(debug_assertions)]
 use {
     crate::cfg::Cfg_Var,
+    crate::common::colors,
     crate::common::stringid::String_Id,
     crate::core::systems::Debug_Systems,
     crate::debug,
+    crate::debug::overlay::Debug_Overlay,
+    crate::debug::tracer::{self, Trace_Tree, Tracer_Node_Final},
     crate::fs,
     crate::replay::{replay_data, replay_input_provider},
     crate::resources::{self, gfx::Gfx_Resources},
-    crate::common::colors,
-    crate::debug::overlay::Debug_Overlay,
-    crate::debug::tracer::{self, Trace_Tree, Tracer_Node_Final},
     std::time::Duration,
 };
 
@@ -385,7 +385,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
 
     let debug_log = &mut engine_state.debug_systems.log;
     let traces = {
-        // Note: we unlock the tracer asap to prevent deadlocks. 
+        // Note: we unlock the tracer asap to prevent deadlocks.
         // We're not keeping any reference to it anyway.
         let mut tracer = prelude::DEBUG_TRACER.lock().unwrap();
         tracer.saved_traces.split_off(0)
@@ -404,7 +404,9 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
         }
 
         if *t <= 0. {
-            let trace_view_flat = Cfg_Var::<bool>::new("engine/debug/trace/view_flat", &engine_state.config).read(&engine_state.config);
+            let trace_view_flat =
+                Cfg_Var::<bool>::new("engine/debug/trace/view_flat", &engine_state.config)
+                    .read(&engine_state.config);
             if trace_view_flat {
                 update_trace_flat_overlay(engine_state);
             } else {
@@ -563,7 +565,10 @@ fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
     let mut traces = tracer::flatten_traces(traces);
     traces.sort_by(|a, b| b.info.tot_duration().cmp(&a.info.tot_duration()));
 
-    for node in traces.iter().filter(|n| n.info.tot_duration() > prune_duration) {
+    for node in traces
+        .iter()
+        .filter(|n| n.info.tot_duration() > prune_duration)
+    {
         add_tracer_node_line(node, &total_traced_time, 0, overlay);
     }
 }
