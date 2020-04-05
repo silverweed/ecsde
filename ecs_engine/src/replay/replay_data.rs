@@ -290,7 +290,7 @@ mod tests {
         let mut deser_points = vec![];
 
         while (byte_stream.pos() as usize) < byte_stream.len() {
-            println!("pos: {}/{}", byte_stream.pos(), byte_stream.len());
+            //println!("pos: {}/{}", byte_stream.pos(), byte_stream.len());
             deser_points.push(
                 Replay_Data_Point::deserialize(&mut byte_stream).unwrap_or_else(|err| {
                     panic!("Failed to deserialize replay data point: {}", err)
