@@ -20,11 +20,9 @@ pub struct Component_Allocator {
     // They are in units of Comp_Wrapper<T>, so e.g. data.offset(free_head - 1) is the address of the free head.
     // Note that 0 represents NULL, and the actual offset is (x - 1)
     /// Points to the head of the free slots linked list.
-    free_head: usize,
+    free_head: Relative_Ptr,
     /// Points to the head of the filled slots linked list.
-    filled_head: usize,
-    /// Points to the latest allocated slot, or null if no slot has been allocated.
-    tail: usize,
+    filled_head: Relative_Ptr,
 
     layout: Layout,
 }
@@ -48,9 +46,9 @@ impl Component_Allocator {
 
         Self {
             data,
-            free_head: 1,
-            filled_head: 0,
-            tail: 0,
+            free_head: Relative_Ptr::with_offset(0),
+            filled_head: Relative_Ptr::null(),
+            tail: Relative_Ptr::null(),
             layout,
         }
     }
@@ -71,7 +69,7 @@ impl Component_Allocator {
     /// - This function does NOT check that the memory at index `idx` is actually initialized:
     /// it is the caller's responsibility to never call this function with an invalid index.
     /// - Also, T must be the same T as the one used to construct this allocator.
-    pub unsafe fn get<T: Copy>(&self, idx: usize) -> &T {
+    pub unsafe fn get<T: Copy>(&self, idx: u32) -> &T {
         debug_assert_eq!(mem::align_of::<Comp_Wrapper<T>>(), self.layout.align());
 
         //println!(
@@ -84,7 +82,7 @@ impl Component_Allocator {
 
     /// # Safety
     /// See get.
-    pub unsafe fn get_mut<T: Copy>(&mut self, idx: usize) -> &mut T {
+    pub unsafe fn get_mut<T: Copy>(&mut self, idx: u32) -> &mut T {
         debug_assert_eq!(mem::align_of::<Comp_Wrapper<T>>(), self.layout.align());
 
         //println!(
@@ -95,35 +93,12 @@ impl Component_Allocator {
         &mut (*self.data_at_idx::<T>(idx)).comp
     }
 
-    fn free_head_ptr<T: Copy>(&self) -> *mut Comp_Wrapper<T> {
-        debug_assert!(self.free_head > 0);
-        unsafe { (self.data as *mut Comp_Wrapper<T>).add(self.free_head - 1) }
-    }
-
-    fn tail_ptr<T: Copy>(&self) -> *mut Comp_Wrapper<T> {
-        if self.tail > 0 {
-            unsafe { (self.data as *mut Comp_Wrapper<T>).add(self.tail - 1) }
-        } else {
-            ptr::null_mut()
-        }
-    }
-
-    fn filled_head_ptr<T: Copy>(&self) -> *mut Comp_Wrapper<T> {
-        if self.filled_head > 0 {
-            unsafe { (self.data as *mut Comp_Wrapper<T>).add(self.filled_head - 1) }
-        } else {
-            ptr::null_mut()
-        }
-    }
-
     /// Returns the index where the component was added and the component itself
     pub fn add<T: Copy>(&mut self, data: T) -> (usize, &mut T) {
         debug_assert_eq!(mem::align_of::<Comp_Wrapper<T>>(), self.layout.align());
+
         let wrapper_size = mem::size_of::<Comp_Wrapper<T>>();
-
-        debug_assert!(wrapper_size >= mem::size_of::<T>() + mem::size_of::<usize>());
-
-        let free_head_off_in_bytes = (self.free_head - 1) * wrapper_size;
+        let free_head_off_in_bytes = self.free_head.offset() * wrapper_size;
         //println!(
         //"free_head_bytes: {}, remain: {} ({} / {})",
         //free_head_off_in_bytes,
@@ -135,21 +110,21 @@ impl Component_Allocator {
             self.grow::<T>();
         }
 
-        let ptr_to_add = self.free_head_ptr::<T>();
+        let ptr_to_add = unsafe { self.free_head.to_abs::<Comp_Wrapper<T>>(self.data) };
 
-        // The free slot pointed at by self.free_head contains the pointer to the next free slot
-        // (actually it contains the index in units of Comp_Wrapper<T> from the base).
+        // The free slot pointed at by self.free_head contains the relative pointer to the next free slot.
         // It may be null (i.e. 0) if self.free_head is the last free slot.
-        let next_free = unsafe {
-            let next = ptr_to_add as *const usize;
-            *next
+        let this_free_slot = unsafe {
+            let free = ptr_to_add as *const Free_Slot;
+            *free
         };
 
         // Fill this slot
         unsafe {
             ptr_to_add.write(Comp_Wrapper {
                 comp: data,
-                next: 0, // 0 = "null"
+                next: Relative_Ptr::null(),
+                prev: self.filled_head,
             });
         }
         //println!(
@@ -158,29 +133,17 @@ impl Component_Allocator {
         //ptr_to_add
         //);
 
-        let new_elem_idx = unsafe { offset_from(ptr_to_add, self.data as _) };
-        debug_assert!(new_elem_idx >= 0);
-        let new_elem_idx = new_elem_idx as usize;
+        let new_elem_idx = self.free_head.offset();
 
-        let tail = self.tail_ptr::<T>();
-        if !tail.is_null() {
-            unsafe {
-                (*tail).next = new_elem_idx + 1; // +1 because tail is 1-based
-            }
-        }
-
-        if self.filled_head == 0 {
+        if self.filled_head.is_null() {
             self.filled_head = self.free_head;
         }
-        // @Fixme: handle case where we remove the tail! This creates a self-reference!
-        debug_assert_ne!(self.tail, self.free_head);
-        self.tail = self.free_head;
-        self.free_head = if next_free == 0 {
-            //println!("[2] free_head = {}", new_elem_idx + 1);
-            new_elem_idx + 2 // + 2 because free_head starts from 1 but new_elem_idx is 0-based.
+
+        self.free_head = if this_free_slot.next.is_null() {
+            // We appended at the end of the list: just advance by one.
+            self.free_head.incr()
         } else {
-            //println!("[2] free_head = {}", next_free);
-            next_free
+            this_free_slot.next
         };
 
         unsafe { (new_elem_idx, &mut (*ptr_to_add).comp) }
@@ -188,59 +151,39 @@ impl Component_Allocator {
 
     /// # Safety
     /// The idx-th slot must be actually occupied.
-    pub unsafe fn remove<T: Copy>(&mut self, idx: usize) {
+    pub unsafe fn remove<T: Copy>(&mut self, idx: u32) {
         debug_assert_eq!(mem::align_of::<Comp_Wrapper<T>>(), self.layout.align());
 
-        let base_ptr = self.data as *mut Comp_Wrapper<T>;
-        let ptr_to_removed = base_ptr.add(idx);
+        let ptr_to_removed =
+            Relative_Ptr::with_offset(idx as u32).to_abs::<Comp_Wrapper<T>>(self.data);
 
         // Find the node that precedes the one we're removing - if any
-        let mut prev: *mut Comp_Wrapper<T> = ptr::null_mut();
-        let filled_head_ptr = self.filled_head_ptr::<T>();
-        debug_assert!(!filled_head_ptr.is_null());
-        if ptr_to_removed != filled_head_ptr {
-            println!(
-                "ptr_to_removed != filled_head_ptr ({:p} vs {:p})",
-                ptr_to_removed, filled_head_ptr
-            );
-            prev = filled_head_ptr;
-            while !prev.is_null() {
-                println!(
-                    "prev = {:p}, prev.next = {} / {:p}",
-                    prev,
-                    (*prev).next,
-                    base_ptr.add((*prev).next - 1)
-                );
-                let prev_next = base_ptr.add((*prev).next - 1);
-                if prev_next == ptr_to_removed {
-                    break;
-                }
-                prev = prev_next;
-            }
-        }
+        let prev = (*ptr_to_removed).prev;
 
         // Patch the previous node's `next` pointer (or set the filled_head as the removed node's next pointer)
         let ptr_next = (*ptr_to_removed).next;
         if !prev.is_null() {
+            let prev = prev.to_abs::<Comp_Wrapper<T>>(self.data);
             (*prev).next = ptr_next;
         } else {
             // We're removing the head
-            self.filled_head = ptr_next; // these are both 1-based
+            self.filled_head = ptr_next;
         }
 
         // Use the freed node as the new head of the free list
-        let free_slot = ptr_to_removed as *mut usize;
-        *free_slot = self.free_head;
+        let free_slot = ptr_to_removed as *mut Free_Slot;
+        free_slot.write(Free_Slot {
+            next: self.free_head,
+        });
         // Assert no self-reference
         debug_assert_ne!(self.free_head, idx + 1);
-        self.free_head = idx + 1;
+        self.free_head = Relative_Ptr::with_offset(idx);
     }
 
     /// # Safety
     /// The idx-th slot must be filled.
-    unsafe fn data_at_idx<T: Copy>(&self, idx: usize) -> *mut Comp_Wrapper<T> {
-        let ptr = self.data as *mut Comp_Wrapper<T>;
-        let ptr = ptr.add(idx);
+    unsafe fn data_at_idx<T: Copy>(&self, idx: u32) -> *mut Comp_Wrapper<T> {
+        let ptr = Relative_Ptr::with_offset(idx).to_abs::<Comp_Wrapper<T>>(self.data);
         debug_assert_eq!(ptr.align_offset(mem::align_of::<Comp_Wrapper<T>>()), 0);
 
         ptr
@@ -307,12 +250,53 @@ impl Component_Allocator {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+struct Relative_Ptr {
+    val: u32,
+}
+
+impl Relative_Ptr {
+    pub fn null() -> Self {
+        Self { val: 0 }
+    }
+
+    pub fn with_offset(off: u32) -> Self {
+        Self { val: off - 1 }
+    }
+
+    pub fn is_null(self) -> bool {
+        self.val == 0
+    }
+
+    pub fn offset(self) -> usize {
+        debug_assert_ne!(self.val, 0);
+        (self.val - 1) as _
+    }
+
+    #[must_use]
+    pub fn incr(self) -> Self {
+        Self { val: self.val + 1 }
+    }
+
+    /// # Safety
+    /// If the pointer has an invalid offset from base, it's UB.
+    pub unsafe fn to_abs<T>(self, base: *mut u8) -> *mut T {
+        debug_assert!(self.val > 0, "Tried to dereference a null Relative_Ptr!");
+        (base as *mut T).add(self.val as usize - 1)
+    }
+}
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 struct Comp_Wrapper<T: Copy> {
     pub comp: T,
-    // Offset from the data pointer + 1 (0 = null)
-    pub next: usize,
+    pub next: Relative_Ptr,
+    pub prev: Relative_Ptr,
+}
+
+#[derive(Copy, Clone)]
+struct Free_Slot {
+    pub next: Relative_Ptr,
 }
 
 impl<T> Debug for Comp_Wrapper<T>
