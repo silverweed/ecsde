@@ -530,7 +530,7 @@ mod tests {
         };
 
         let (i, _) = alloc.add(C_Test { foo: 0, bar: -4. });
-        let (j, _) = alloc.add(C_Test { foo: 55, bar: -6.5 });
+        let (_, _) = alloc.add(C_Test { foo: 55, bar: -6.5 });
 
         let hd = get_head(&alloc);
         assert_eq!(hd.foo, 0);
@@ -552,7 +552,7 @@ mod tests {
         assert_eq!(tl.foo, 55);
         assert_eq!(tl.bar, -6.5);
 
-        let (i, _) = alloc.add(C_Test { foo: 8, bar: -8. });
+        let (_, _) = alloc.add(C_Test { foo: 8, bar: -8. });
 
         let hd = get_head(&alloc);
         assert_eq!(hd.foo, 55);
@@ -571,13 +571,13 @@ mod tests {
         unsafe {
             alloc.remove::<C_Test>(i);
         }
-        let (idx, a) = alloc.add(C_Test { foo: 42, bar: 64. });
+        let (idx, _) = alloc.add(C_Test { foo: 42, bar: 64. });
 
         unsafe {
             alloc.remove::<C_Test>(idx);
         }
 
-        let (idx, b) = alloc.add(C_Test {
+        let (_, b) = alloc.add(C_Test {
             foo: 122,
             bar: 233.,
         });
