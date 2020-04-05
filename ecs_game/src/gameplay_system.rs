@@ -50,14 +50,14 @@ pub struct Level {
 impl Level {
     // @Temporary: we need to better decide how to handle cameras
     pub fn get_camera(&self) -> &C_Camera2D {
-        self.world.get_components::<C_Camera2D>().first().unwrap()
+        self.world.get_components::<C_Camera2D>().next().unwrap()
     }
 
     // @Temporary
     pub fn move_camera_to(&mut self, pos: Vec2f) {
         self.world
             .get_components_mut::<C_Camera2D>()
-            .first_mut()
+            .next()
             .unwrap()
             .transform
             .set_position_v(pos);

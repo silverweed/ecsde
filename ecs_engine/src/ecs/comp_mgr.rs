@@ -25,7 +25,7 @@ pub struct Component_Manager {
 
 pub struct Component_Storage {
     alloc: Component_Allocator,
-    ent_comp_map: HashMap<Entity, usize>,
+    ent_comp_map: HashMap<Entity, u32>,
 }
 
 impl Component_Storage {
@@ -186,12 +186,22 @@ impl Component_Manager {
         self.storages[handle as usize].remove_component::<T>(entity);
     }
 
-    pub fn get_components<T: Copy + 'static>(&self) -> &[T] {
-        &[] // @Incomplete
+    pub fn get_components<T: Copy + 'static>(&self) -> impl Iterator<Item = &T> {
+        if size_of::<T>() == 0 {
+            comp_alloc::Component_Allocator_Iter::empty()
+        } else {
+            let handle = self.get_handle::<T>();
+            self.storages[handle as usize].alloc.iter::<T>()
+        }
     }
 
-    pub fn get_components_mut<T: Copy + 'static>(&mut self) -> &mut [T] {
-        &mut [] // @Incomplete
+    pub fn get_components_mut<T: Copy + 'static>(&mut self) -> impl Iterator<Item = &mut T> {
+        if size_of::<T>() == 0 {
+            comp_alloc::Component_Allocator_Iter_Mut::empty()
+        } else {
+            let handle = self.get_handle::<T>();
+            self.storages[handle as usize].alloc.iter_mut::<T>()
+        }
     }
 
     pub fn get_component_storage<T: Copy + 'static>(&self) -> &Component_Storage {

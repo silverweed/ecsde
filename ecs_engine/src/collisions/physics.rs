@@ -238,7 +238,7 @@ const COLLISION_CB_TABLE: [[Collision_Cb; 2]; 2] = [
     [detect_rect_circle, detect_rect_rect],
 ];
 
-fn detect_collisions(objects: &[Collider]) -> Vec<Collision_Info> {
+fn detect_collisions(objects: &[&Collider]) -> Vec<Collision_Info> {
     trace!("physics::detect_collisions");
 
     // TODO Broad phase
@@ -254,8 +254,8 @@ fn detect_collisions(objects: &[Collider]) -> Vec<Collision_Info> {
                 continue;
             }
 
-            let a = &objects[i];
-            let b = &objects[j];
+            let a = objects[i];
+            let b = objects[j];
             let a_shape = collision_shape_type_index(&a.shape);
             let b_shape = collision_shape_type_index(&b.shape);
 
@@ -389,8 +389,11 @@ fn solve_collisions(objects: &mut [Rigidbody], infos: &[Collision_Info]) {
 pub fn update_collisions(ecs_world: &mut Ecs_World) {
     let (mut objects, id_map) = prepare_colliders_and_gather_rigidbodies(ecs_world);
 
-    let colliders = ecs_world.get_components_mut::<Collider>();
-    let infos = detect_collisions(colliders);
+    let colliders: Vec<&Collider> = ecs_world.get_components::<Collider>().collect();
+    let infos = detect_collisions(&colliders);
+
+    // @Speed
+    let mut colliders: Vec<&mut Collider> = ecs_world.get_components_mut::<Collider>().collect();
 
     infos.iter().for_each(|info| {
         colliders[info.body1 as usize].colliding = true;

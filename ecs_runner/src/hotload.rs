@@ -105,7 +105,9 @@ pub unsafe fn game_load(game_lib: &ll::Library) -> ll::Result<Game_Api<'_>> {
         init: game_lib.get(b"game_init\0")?,
         update: game_lib.get(b"game_update\0")?,
         shutdown: game_lib.get(b"game_shutdown\0")?,
+        #[cfg(debug_assertions)]
         unload: game_lib.get(b"game_unload\0")?,
+        #[cfg(debug_assertions)]
         reload: game_lib.get(b"game_reload\0")?,
     })
 }

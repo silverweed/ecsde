@@ -1,5 +1,5 @@
 use super::comp_mgr::{self, Component_Manager};
-use crate::alloc::gen_alloc::{Gen_Type, Generational_Allocator, Generational_Index, Index_Type};
+use crate::alloc::gen_alloc::{Generational_Allocator, Generational_Index};
 use crate::common::bitset::Bit_Set;
 use std::any::type_name;
 use std::vec::Vec;
@@ -33,10 +33,6 @@ impl Entity_Manager {
 
     pub fn is_valid_entity(&self, entity: Entity) -> bool {
         self.alloc.is_valid(entity)
-    }
-
-    pub(super) fn cur_gen(&self, idx: Index_Type) -> Gen_Type {
-        self.alloc.cur_gen(idx)
     }
 
     pub fn n_live_entities(&self) -> usize {
@@ -148,24 +144,14 @@ impl Ecs_World {
         self.component_manager.has_component::<T>(entity)
     }
 
-    pub fn get_components<T: 'static + Copy>(&self) -> &[T] {
+    pub fn get_components<T: 'static + Copy>(&self) -> impl Iterator<Item = &T> {
         trace!("get_components");
-
-        let comp_size = std::mem::size_of::<T>();
-        if comp_size == 0 {
-            return &[];
-        }
 
         self.component_manager.get_components::<T>()
     }
 
-    pub fn get_components_mut<T: 'static + Copy>(&mut self) -> &mut [T] {
+    pub fn get_components_mut<T: 'static + Copy>(&mut self) -> impl Iterator<Item = &mut T> {
         trace!("get_components_mut");
-
-        let comp_size = std::mem::size_of::<T>();
-        if comp_size == 0 {
-            return &mut [];
-        }
 
         self.component_manager.get_components_mut::<T>()
     }
