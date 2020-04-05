@@ -159,7 +159,7 @@ macro_rules! simple_wrap {
                 &mut self.0
             }
         }
-    }
+    };
 }
 
 simple_wrap!(Vertex_Buffer_Quads, Vertex_Buffer);
@@ -187,7 +187,13 @@ pub fn start_draw_lines(n_vertices: usize) -> Vertex_Buffer_Lines {
     Vertex_Buffer_Lines(backend::start_draw_lines(n_vertices))
 }
 
-pub fn add_quad(vbuf: &mut Vertex_Buffer_Quads, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
+pub fn add_quad(
+    vbuf: &mut Vertex_Buffer_Quads,
+    v1: &Vertex,
+    v2: &Vertex,
+    v3: &Vertex,
+    v4: &Vertex,
+) {
     backend::add_quad(vbuf, v1, v2, v3, v4);
 }
 

@@ -168,25 +168,24 @@ pub unsafe extern "C" fn game_shutdown(
 /// # Safety
 /// Neither pointer is allowed to be null.
 #[no_mangle]
+#[cfg(debug_assertions)]
 pub unsafe extern "C" fn game_unload(_game_state: *mut Game_State, _game_res: *mut Game_Resources) {
 }
 
 /// # Safety
 /// Neither pointer is allowed to be null.
 #[no_mangle]
+#[cfg(debug_assertions)]
 pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mut Game_Resources) {
-    #[cfg(debug_assertions)]
-    {
-        if game_state.is_null() {
-            fatal!("game_reload: game state is null!");
-        }
-
-        let game_state = &mut *game_state;
-        game_state
-            .engine_state
-            .debug_systems
-            .debug_ui
-            .get_fadeout_overlay(String_Id::from("msg"))
-            .add_line_color("+++ GAME RELOADED +++", colors::rgb(255, 128, 0));
+    if game_state.is_null() {
+        fatal!("game_reload: game state is null!");
     }
+
+    let game_state = &mut *game_state;
+    game_state
+        .engine_state
+        .debug_systems
+        .debug_ui
+        .get_fadeout_overlay(String_Id::from("msg"))
+        .add_line_color("+++ GAME RELOADED +++", colors::rgb(255, 128, 0));
 }

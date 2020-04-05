@@ -25,7 +25,7 @@ impl Default for Debug_Ui_System_Config {
         Self {
             ui_scale: 1.0,
             target_win_size: (800, 600),
-            font: String::default()
+            font: String::default(),
         }
     }
 }

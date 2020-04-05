@@ -1,8 +1,8 @@
 use crate::prelude::Debug_Tracer;
 use rayon::prelude::*;
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fmt::Debug;
-use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 pub struct Tracer {
@@ -297,8 +297,17 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
 pub fn flatten_traces(traces: &[Tracer_Node_Final]) -> Vec<Tracer_Node_Final> {
     let mut flat_traces = HashMap::new();
     for trace in traces {
-        let accum = flat_traces.entry(&trace.info.tag).or_insert_with(|| Tracer_Node_Final{ info: Scope_Trace_Info_Final::new(trace.info.tag, 0, Duration::default()), parent_idx: None });
-        accum.info = Scope_Trace_Info_Final::new(accum.info.tag, accum.info.n_calls() + trace.info.n_calls(), accum.info.tot_duration() + trace.info.tot_duration());
+        let accum = flat_traces
+            .entry(&trace.info.tag)
+            .or_insert_with(|| Tracer_Node_Final {
+                info: Scope_Trace_Info_Final::new(trace.info.tag, 0, Duration::default()),
+                parent_idx: None,
+            });
+        accum.info = Scope_Trace_Info_Final::new(
+            accum.info.tag,
+            accum.info.n_calls() + trace.info.n_calls(),
+            accum.info.tot_duration() + trace.info.tot_duration(),
+        );
     }
     flat_traces.into_iter().map(|(_, v)| v).collect()
 }
