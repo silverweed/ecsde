@@ -186,6 +186,10 @@ impl Component_Manager {
         self.storages[handle as usize].remove_component::<T>(entity);
     }
 
+    pub fn remove_all_components(&mut self, entity: Entity) {
+    
+    }
+
     pub fn get_components<T: Copy + 'static>(&self) -> impl Iterator<Item = &T> {
         if size_of::<T>() == 0 {
             comp_alloc::Component_Allocator_Iter::empty()

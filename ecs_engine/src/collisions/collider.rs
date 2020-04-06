@@ -1,4 +1,5 @@
 use crate::common::vector::Vec2f;
+use crate::ecs::ecs_world::Entity;
 
 #[derive(Copy, Clone, Debug)]
 #[non_exhaustive]
@@ -18,7 +19,8 @@ pub struct Collider {
     pub shape: Collision_Shape,
     pub position: Vec2f, // This should not be set directly: it's computed by collision system
     pub offset: Vec2f,
-    pub colliding: bool,
+    pub colliding_with: Option<Entity>,
+    pub is_static: bool,
 }
 
 // Attach this component alongside Collider to have a rigidbody

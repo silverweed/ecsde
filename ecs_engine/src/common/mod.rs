@@ -12,3 +12,4 @@ pub mod units;
 pub mod vector;
 
 pub type Maybe_Error = Result<(), Box<dyn std::error::Error>>;
+pub const WORD_SIZE: usize = std::mem::size_of::<usize>();

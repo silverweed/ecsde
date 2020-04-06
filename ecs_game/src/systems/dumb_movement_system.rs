@@ -24,13 +24,13 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, rng: &mut Default_Rng) {
         }
 
         let collider = ecs_world.get_component::<Collider>(entity).unwrap();
-        let colliding = collider.colliding;
+        let colliding_with = collider.colliding_with;
 
         let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
         if spatial.velocity.magnitude2() < 0.1 {
             spatial.velocity = v2!(0., 200.);
         }
-        if !colliding {
+        if colliding_with.is_none() {
             return;
         }
 
@@ -43,5 +43,7 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, rng: &mut Default_Rng) {
             .get_component_mut::<C_Dumb_Movement>(entity)
             .unwrap();
         dumb_movement.time_since_change = Duration::default();
+
+        ecs_world.destroy_entity(colliding_with.unwrap());
     });
 }

@@ -202,6 +202,15 @@ impl Gameplay_System {
         });
     }
 
+    pub fn late_update(&mut self) {
+        trace!("gameplay_system::late_update");
+
+        self.foreach_active_level(|level| {
+            let destroyed = level.world.destroy_pending();
+            // @Incomplete: scene_tree
+        });
+    }
+
     pub fn realtime_update(
         &mut self,
         real_dt: &Duration,
