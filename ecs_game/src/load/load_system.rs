@@ -117,7 +117,7 @@ fn init_demo_entities(
         level.scene_tree.add(ground, None, &t.local_transform);
     }
 
-    let ext = 4;
+    let ext = 7;
     let int = 2;
     let sw = 32;
     let sh = 32;
@@ -270,6 +270,7 @@ fn spawn_rock_at(
             width: sw as f32,
             height: sh as f32,
         };
+        c.is_static = true;
     }
     {
         level.world.add_component(

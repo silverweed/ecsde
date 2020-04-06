@@ -7,6 +7,7 @@ pub struct Bit_Set {
     slow_bits: Vec<u64>,
 }
 
+#[allow(clippy::len_without_is_empty)] // is_empty() wouldn't make sense, as len() is always >= 8.
 impl Bit_Set {
     pub fn set(&mut self, index: usize, value: bool) {
         let element_idx = index / 64;
@@ -48,6 +49,17 @@ impl Bit_Set {
             (self.slow_bits[element_idx - 1] & (1 << (index % 64))) != 0
         }
     }
+
+    pub fn reset(&mut self) {
+        self.fast_bits = 0;
+        self.slow_bits.clear();
+    }
+
+    // Returns the maximum bit index that may be set (i.e. 8 + #slow_bits * 8)
+    pub fn len(&self) -> usize {
+        use crate::common::WORD_SIZE;
+        WORD_SIZE * (1 + self.slow_bits.len())
+    }
 }
 
 impl BitAnd for &Bit_Set {
@@ -69,6 +81,40 @@ impl BitAnd for &Bit_Set {
         }
 
         res
+    }
+}
+
+pub struct Bit_Set_Iter<'a> {
+    bitset: &'a Bit_Set,
+    idx: usize
+}
+
+impl Iterator for Bit_Set_Iter<'_> {
+     type Item = usize;
+
+     fn next(&mut self) -> Option<Self::Item> {
+         let mut idx = self.idx;
+         self.idx += 1;
+        while idx < self.bitset.len() {
+            if self.bitset.get(idx) {
+                return Some(idx);
+            }
+            idx = self.idx;
+            self.idx += 1;
+        }
+        None
+     }
+}
+
+impl<'a> IntoIterator for &'a Bit_Set {
+    type Item = usize;
+    type IntoIter = Bit_Set_Iter<'a> ;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter {
+            bitset: self,
+            idx: 0
+        }
     }
 }
 

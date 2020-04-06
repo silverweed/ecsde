@@ -299,6 +299,8 @@ pub fn tick_game<'a>(
         game_state.fps_debug.tick(&real_dt);
     }
 
+    game_state.gameplay_system.late_update();
+
     {
         trace!("display");
         gfx::window::display(&mut game_state.window);
@@ -804,7 +806,7 @@ fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World
         // @Incomplete: scale?
         let mut transform = Transform2D::from_pos_rot_scale(collider.position + collider.offset, rad(0.), v2!(1., 1.));
 
-        let color = if collider.colliding {
+        let color = if collider.colliding_with.is_some() {
             colors::rgba(255, 0, 0, 100)
         } else {
             colors::rgba(255, 255, 0, 100)

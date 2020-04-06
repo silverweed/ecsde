@@ -249,17 +249,21 @@ fn detect_collisions(objects: &[&Collider]) -> Vec<Collision_Info> {
     let mut stored = std::collections::HashSet::new();
     let n_objects = objects.len();
     for i in 0..n_objects {
+        let a = objects[i];
+        if a.is_static {
+            continue;
+        }
+        let a_shape = collision_shape_type_index(&a.shape);
+        let a_part_cb = COLLISION_CB_TABLE[a_shape];
+
         for j in 0..n_objects {
             if i == j {
                 continue;
             }
-
-            let a = objects[i];
             let b = objects[j];
-            let a_shape = collision_shape_type_index(&a.shape);
             let b_shape = collision_shape_type_index(&b.shape);
 
-            let info = COLLISION_CB_TABLE[a_shape][b_shape](i as _, j as _, a, b);
+            let info = a_part_cb[b_shape](i as _, j as _, a, b);
 
             if let Some(info) = info {
                 if !stored.contains(&(j, i)) {
@@ -387,17 +391,21 @@ fn solve_collisions(objects: &mut [Rigidbody], infos: &[Collision_Info]) {
 }
 
 pub fn update_collisions(ecs_world: &mut Ecs_World) {
-    let (mut objects, id_map) = prepare_colliders_and_gather_rigidbodies(ecs_world);
+    let (mut objects, id_map, cld_ent_map) = prepare_colliders_and_gather_rigidbodies(ecs_world);
 
+    // @Soundness @Fixme: this list is not the same as the one in prepare_colliders_and_blabla!
+    // The indices may be wrong!!
     let colliders: Vec<&Collider> = ecs_world.get_components::<Collider>().collect();
+    debug_assert_eq!(colliders.len(), cld_ent_map.len());
+
     let infos = detect_collisions(&colliders);
 
     // @Speed
     let mut colliders: Vec<&mut Collider> = ecs_world.get_components_mut::<Collider>().collect();
 
     infos.iter().for_each(|info| {
-        colliders[info.body1 as usize].colliding = true;
-        colliders[info.body2 as usize].colliding = true;
+        colliders[info.body1 as usize].colliding_with = Some(cld_ent_map[info.body2 as usize]);
+        colliders[info.body2 as usize].colliding_with = Some(cld_ent_map[info.body1 as usize]);
     });
 
     let rb_infos = infos
@@ -443,10 +451,11 @@ pub fn update_collisions(ecs_world: &mut Ecs_World) {
     }
 }
 
-fn prepare_colliders_and_gather_rigidbodies(world: &mut Ecs_World) -> (Vec<Rigidbody>, Vec<isize>) {
+fn prepare_colliders_and_gather_rigidbodies(world: &mut Ecs_World) -> (Vec<Rigidbody>, Vec<isize>, Vec<Entity>) {
     let mut objects = vec![];
     // Maps collider_idx => rigidbody_idx (-1 if no rb associated)
     let mut id_map = vec![];
+    let mut collider_entity_map = vec![];
 
     foreach_entity!(world, +Collider, +C_Spatial2D, |entity| {
         let spatial = world.get_component::<C_Spatial2D>(entity).unwrap();
@@ -458,9 +467,11 @@ fn prepare_colliders_and_gather_rigidbodies(world: &mut Ecs_World) -> (Vec<Rigid
         }
         let collider = world.get_component_mut::<Collider>(entity).unwrap();
         collider.position = pos;
-        collider.colliding = false;
+        collider.colliding_with = None;
         let position = collider.position;
         let shape = collider.shape;
+
+        collider_entity_map.push(entity);
 
         if let Some(phys_data) = world.get_component::<C_Phys_Data>(entity) {
             objects.push(Rigidbody {
@@ -476,5 +487,7 @@ fn prepare_colliders_and_gather_rigidbodies(world: &mut Ecs_World) -> (Vec<Rigid
         }
     });
 
-    (objects, id_map)
+    debug_assert_eq!(id_map.len(), collider_entity_map.len());
+
+    (objects, id_map, collider_entity_map)
 }
