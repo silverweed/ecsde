@@ -60,7 +60,12 @@ impl Component_Allocator {
     }
 
     pub fn get_comp_layout<T: Copy>() -> Layout {
-        unsafe { Layout::from_size_align_unchecked(mem::size_of::<Comp_Wrapper<T>>(), mem::align_of::<Comp_Wrapper<T>>()) }
+        unsafe {
+            Layout::from_size_align_unchecked(
+                mem::size_of::<Comp_Wrapper<T>>(),
+                mem::align_of::<Comp_Wrapper<T>>(),
+            )
+        }
     }
 }
 
@@ -158,7 +163,10 @@ impl Component_Allocator {
     /// # Safety
     /// The idx-th slot must be actually occupied.
     pub unsafe fn remove<T: Copy>(&mut self, idx: u32) {
-        self.remove_dyn(idx, &Layout::from_size_align_unchecked(mem::size_of::<T>(), mem::align_of::<T>()));
+        self.remove_dyn(
+            idx,
+            &Layout::from_size_align_unchecked(mem::size_of::<T>(), mem::align_of::<T>()),
+        );
     }
 
     /// # Safety
@@ -168,7 +176,8 @@ impl Component_Allocator {
     pub unsafe fn remove_dyn(&mut self, idx: u32, wrapper_layout: &Layout) {
         debug_assert_eq!(wrapper_layout.align(), self.layout.align());
 
-        let ptr_to_removed = Relative_Ptr::with_offset(idx as u32).to_abs_dyn(self.data, wrapper_layout.size());
+        let ptr_to_removed =
+            Relative_Ptr::with_offset(idx as u32).to_abs_dyn(self.data, wrapper_layout.size());
 
         // Risky beesness! But we don't have much choice...
         // @Robustness: ensure that the prev and next offsets are always the ones we're
@@ -177,6 +186,11 @@ impl Component_Allocator {
         let next_off = prev_off + mem::size_of::<Relative_Ptr>();
         debug_assert_eq!(prev_off % mem::align_of::<Relative_Ptr>(), 0);
         debug_assert_eq!(next_off % mem::align_of::<Relative_Ptr>(), 0);
+        debug_assert_eq!(
+            ptr_to_removed.align_offset(mem::align_of::<Relative_Ptr>()),
+            0
+        );
+
         let ptr_prev = *(ptr_to_removed.add(prev_off) as *const Relative_Ptr);
         let ptr_next = *(ptr_to_removed.add(next_off) as *const Relative_Ptr);
 
@@ -194,6 +208,7 @@ impl Component_Allocator {
         if !ptr_next.is_null() {
             let next = ptr_next.to_abs_dyn(self.data, wrapper_layout.size());
             let next_prev = next.add(prev_off) as *mut Relative_Ptr;
+            debug_assert_eq!(next_prev.align_offset(mem::align_of::<Free_Slot>()), 0);
             *next_prev = ptr_prev;
         } else {
             // We're removing the tail
@@ -202,6 +217,7 @@ impl Component_Allocator {
 
         // Use the freed node as the new head of the free list
         let free_slot = ptr_to_removed as *mut Free_Slot;
+        debug_assert_eq!(free_slot.align_offset(mem::align_of::<Free_Slot>()), 0);
         free_slot.write(Free_Slot {
             next: self.free_head,
         });
@@ -382,7 +398,7 @@ impl Relative_Ptr {
             (base as *mut Comp_Wrapper<T>).add(self.0 as usize - 1)
         }
     }
-    
+
     /// A fully-dynamic version of to_abs, used when we can't know the type statically.
     /// Always prefer the static one when possible.
     /// # Safety
