@@ -26,6 +26,7 @@ pub struct Component_Manager {
 pub struct Component_Storage {
     alloc: Component_Allocator,
     ent_comp_map: HashMap<Entity, u32>,
+    comp_layout: std::alloc::Layout,
 }
 
 impl Component_Storage {
@@ -33,6 +34,7 @@ impl Component_Storage {
         Self {
             alloc: Component_Allocator::new::<T>(),
             ent_comp_map: HashMap::new(),
+            comp_layout: Component_Allocator::get_comp_layout::<T>()
         }
     }
 
@@ -83,6 +85,19 @@ impl Component_Storage {
         // Note: safe as long as ent_comp_map is in sync with the allocator
         unsafe {
             self.alloc.remove::<T>(*idx);
+        }
+    }
+
+    pub fn remove_component_dyn(&mut self, entity: Entity) {
+        let idx = self.ent_comp_map.get(&entity).unwrap_or_else(|| {
+            fatal!(
+                "Tried to remove inexisting component from entity {:?}",
+                entity
+            )
+        });
+        // Note: safe as long as ent_comp_map is in sync with the allocator
+        unsafe {
+            self.alloc.remove_dyn(*idx, &self.comp_layout);
         }
     }
 }
@@ -187,7 +202,10 @@ impl Component_Manager {
     }
 
     pub fn remove_all_components(&mut self, entity: Entity) {
-    
+        let comp_set = &self.entity_comp_set[entity.index as usize];
+        for handle in comp_set {
+            self.storages[handle as usize].remove_component_dyn(entity);
+        }
     }
 
     pub fn get_components<T: Copy + 'static>(&self) -> impl Iterator<Item = &T> {

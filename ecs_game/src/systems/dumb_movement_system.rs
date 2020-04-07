@@ -19,9 +19,9 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, rng: &mut Default_Rng) {
             .get_component_mut::<C_Dumb_Movement>(entity)
             .unwrap();
         dumb_movement.time_since_change += *dt;
-        if dumb_movement.time_since_change < MIN_T_TO_CHANGE {
-            return;
-        }
+        //if dumb_movement.time_since_change < MIN_T_TO_CHANGE {
+        //    return;
+        //}
 
         let collider = ecs_world.get_component::<Collider>(entity).unwrap();
         let colliding_with = collider.colliding_with;
