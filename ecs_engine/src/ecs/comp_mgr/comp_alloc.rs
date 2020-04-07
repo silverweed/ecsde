@@ -58,6 +58,10 @@ impl Component_Allocator {
             layout,
         }
     }
+
+    pub fn get_comp_layout<T: Copy>() -> Layout {
+        unsafe { Layout::from_size_align_unchecked(mem::size_of::<Comp_Wrapper<T>>(), mem::align_of::<Comp_Wrapper<T>>()) }
+    }
 }
 
 impl Drop for Component_Allocator {
@@ -154,17 +158,33 @@ impl Component_Allocator {
     /// # Safety
     /// The idx-th slot must be actually occupied.
     pub unsafe fn remove<T: Copy>(&mut self, idx: u32) {
-        debug_assert_eq!(mem::align_of::<Comp_Wrapper<T>>(), self.layout.align());
+        self.remove_dyn(idx, &Layout::from_size_align_unchecked(mem::size_of::<T>(), mem::align_of::<T>()));
+    }
 
-        let ptr_to_removed = Relative_Ptr::with_offset(idx as u32).to_abs::<T>(self.data);
+    /// # Safety
+    /// The idx-th slot must be actually occupied.
+    /// The given layout should be the one retrieved from get_comp_layout::<T>, with the same T
+    /// used to construct the Component_Allocator.
+    pub unsafe fn remove_dyn(&mut self, idx: u32, wrapper_layout: &Layout) {
+        debug_assert_eq!(wrapper_layout.align(), self.layout.align());
 
-        let ptr_prev = (*ptr_to_removed).prev;
-        let ptr_next = (*ptr_to_removed).next;
+        let ptr_to_removed = Relative_Ptr::with_offset(idx as u32).to_abs_dyn(self.data, wrapper_layout.size());
+
+        // Risky beesness! But we don't have much choice...
+        // @Robustness: ensure that the prev and next offsets are always the ones we're
+        // calculating.
+        let prev_off = 0; //std::cmp::max(wrapper_layout.size(), mem::align_of::<Relative_Ptr>());
+        let next_off = prev_off + mem::size_of::<Relative_Ptr>();
+        debug_assert_eq!(prev_off % mem::align_of::<Relative_Ptr>(), 0);
+        debug_assert_eq!(next_off % mem::align_of::<Relative_Ptr>(), 0);
+        let ptr_prev = *(ptr_to_removed.add(prev_off) as *const Relative_Ptr);
+        let ptr_next = *(ptr_to_removed.add(next_off) as *const Relative_Ptr);
 
         // Patch the previous node's `next` pointer (or set the filled_head as the removed node's next pointer)
         if !ptr_prev.is_null() {
-            let prev = ptr_prev.to_abs::<T>(self.data);
-            (*prev).next = ptr_next;
+            let prev = ptr_prev.to_abs_dyn(self.data, wrapper_layout.size());
+            let prev_next = prev.add(next_off) as *mut Relative_Ptr;
+            *prev_next = ptr_next;
         } else {
             // We're removing the head
             self.filled_head = ptr_next;
@@ -172,8 +192,9 @@ impl Component_Allocator {
 
         // Patch the next node's `prev` pointer
         if !ptr_next.is_null() {
-            let next = ptr_next.to_abs::<T>(self.data);
-            (*next).prev = ptr_prev;
+            let next = ptr_next.to_abs_dyn(self.data, wrapper_layout.size());
+            let next_prev = next.add(prev_off) as *mut Relative_Ptr;
+            *next_prev = ptr_prev;
         } else {
             // We're removing the tail
             self.filled_tail = ptr_prev;
@@ -197,46 +218,6 @@ impl Component_Allocator {
         debug_assert_eq!(ptr.align_offset(mem::align_of::<Comp_Wrapper<T>>()), 0);
 
         ptr
-    }
-
-    #[cfg(debug_assertions)]
-    fn debug_print<T: Copy + Debug>(&self) {
-        let mut ptr = self.data as *mut Comp_Wrapper<T>;
-        println!("----");
-        unsafe {
-            println!("data: {:p}", self.data);
-            println!(
-                "free_head: {:?} ({:p})",
-                self.free_head,
-                self.free_head.to_abs::<T>(self.data)
-            );
-            println!(
-                "filled_head: {:?} ({:p})",
-                self.filled_head,
-                self.filled_head.to_abs::<T>(self.data)
-            );
-            println!("---- filled ----");
-            println!("{:?} [0] [{:p}]", *ptr, ptr);
-            while !(*ptr).next.is_null() {
-                let ptr_next = (*ptr).next;
-                ptr = ptr_next.to_abs::<T>(self.data);
-                let idx = ptr_next.offset();
-                println!("{:?} [{}] [{:p}]", *ptr, idx, ptr);
-            }
-
-            //let mut off = self.free_head;
-            //if !off.is_null() {
-            //println!("---- free ----");
-            //while !off.is_null()
-            //&& (off.offset() as usize) * mem::size_of::<T>() < self.layout.size()
-            //{
-            //let ptr = off.to_abs::<T>(self.data) as *const Free_Slot;
-            //let idx = off.offset();
-            //println!("{:?} [{}] [{:p}]", *ptr, idx, ptr);
-            //off = (*ptr).next;
-            //}
-            //}
-        }
     }
 
     #[cold]
@@ -356,6 +337,7 @@ impl Component_Allocator {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[repr(transparent)]
 struct Relative_Ptr(u32);
 
 impl Debug for Relative_Ptr {
@@ -400,14 +382,28 @@ impl Relative_Ptr {
             (base as *mut Comp_Wrapper<T>).add(self.0 as usize - 1)
         }
     }
+    
+    /// A fully-dynamic version of to_abs, used when we can't know the type statically.
+    /// Always prefer the static one when possible.
+    /// # Safety
+    /// See to_abs.
+    pub unsafe fn to_abs_dyn(self, base: *mut u8, wrapper_size: usize) -> *mut u8 {
+        if self.0 == 0 {
+            ptr::null_mut()
+        } else {
+            base.add((self.0 as usize - 1) * wrapper_size)
+        }
+    }
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 struct Comp_Wrapper<T: Copy> {
-    pub comp: T,
-    pub next: Relative_Ptr,
+    // @Speed @Robustness: right now we keep these first to address them more easily
+    // in remove_dyn
     pub prev: Relative_Ptr,
+    pub next: Relative_Ptr,
+    pub comp: T,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -425,6 +421,48 @@ where
             "Comp_Wrapper {{ comp: {:?}, next: {:?} }}",
             self.comp, self.next
         )
+    }
+}
+
+#[cfg(debug_assertions)]
+impl Component_Allocator {
+    fn debug_print<T: Copy + Debug>(&self) {
+        let mut ptr = self.data as *mut Comp_Wrapper<T>;
+        println!("----");
+        unsafe {
+            println!("data: {:p}", self.data);
+            println!(
+                "free_head: {:?} ({:p})",
+                self.free_head,
+                self.free_head.to_abs::<T>(self.data)
+            );
+            println!(
+                "filled_head: {:?} ({:p})",
+                self.filled_head,
+                self.filled_head.to_abs::<T>(self.data)
+            );
+            println!("---- filled ----");
+            println!("{:?} [0] [{:p}]", *ptr, ptr);
+            while !(*ptr).next.is_null() {
+                let ptr_next = (*ptr).next;
+                ptr = ptr_next.to_abs::<T>(self.data);
+                let idx = ptr_next.offset();
+                println!("{:?} [{}] [{:p}]", *ptr, idx, ptr);
+            }
+
+            //let mut off = self.free_head;
+            //if !off.is_null() {
+            //println!("---- free ----");
+            //while !off.is_null()
+            //&& (off.offset() as usize) * mem::size_of::<T>() < self.layout.size()
+            //{
+            //let ptr = off.to_abs::<T>(self.data) as *const Free_Slot;
+            //let idx = off.offset();
+            //println!("{:?} [{}] [{:p}]", *ptr, idx, ptr);
+            //off = (*ptr).next;
+            //}
+            //}
+        }
     }
 }
 
