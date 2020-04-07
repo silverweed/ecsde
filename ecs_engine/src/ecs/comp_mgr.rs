@@ -34,7 +34,7 @@ impl Component_Storage {
         Self {
             alloc: Component_Allocator::new::<T>(),
             ent_comp_map: HashMap::new(),
-            comp_layout: Component_Allocator::get_comp_layout::<T>()
+            comp_layout: Component_Allocator::get_comp_layout::<T>(),
         }
     }
 

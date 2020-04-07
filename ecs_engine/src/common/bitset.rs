@@ -86,15 +86,15 @@ impl BitAnd for &Bit_Set {
 
 pub struct Bit_Set_Iter<'a> {
     bitset: &'a Bit_Set,
-    idx: usize
+    idx: usize,
 }
 
 impl Iterator for Bit_Set_Iter<'_> {
-     type Item = usize;
+    type Item = usize;
 
-     fn next(&mut self) -> Option<Self::Item> {
-         let mut idx = self.idx;
-         self.idx += 1;
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut idx = self.idx;
+        self.idx += 1;
         while idx < self.bitset.len() {
             if self.bitset.get(idx) {
                 return Some(idx);
@@ -103,17 +103,17 @@ impl Iterator for Bit_Set_Iter<'_> {
             self.idx += 1;
         }
         None
-     }
+    }
 }
 
 impl<'a> IntoIterator for &'a Bit_Set {
     type Item = usize;
-    type IntoIter = Bit_Set_Iter<'a> ;
+    type IntoIter = Bit_Set_Iter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter {
             bitset: self,
-            idx: 0
+            idx: 0,
         }
     }
 }

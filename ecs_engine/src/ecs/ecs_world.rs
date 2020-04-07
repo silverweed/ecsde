@@ -52,7 +52,7 @@ impl Ecs_World {
         Ecs_World {
             entity_manager: Entity_Manager::new(),
             component_manager: Component_Manager::new(),
-            entities_pending_destroy: vec![]
+            entities_pending_destroy: vec![],
         }
     }
 

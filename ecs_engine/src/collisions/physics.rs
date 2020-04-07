@@ -2,13 +2,10 @@
 
 use crate::collisions::collider::{C_Phys_Data, Collider, Collision_Shape};
 use crate::common::math::clamp;
-use crate::common::vector::Vec2f;
+use crate::common::vector::{sanity_check_v, Vec2f};
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Ecs_World, Entity};
 use rayon::prelude::*;
-
-#[cfg(debug_assertions)]
-use crate::common::vector::sanity_check_v;
 
 type Body_Id = u32;
 
@@ -296,13 +293,10 @@ fn solve_collision_roughly(objects: &mut [Rigidbody], a_id: Body_Id, b_id: Body_
         return;
     }
 
-    #[cfg(debug_assertions)]
-    {
-        sanity_check_v(a.velocity);
-        sanity_check_v(b.velocity);
-        sanity_check_v(rel_vel);
-        debug_assert!(!vel_along_normal.is_nan());
-    }
+    sanity_check_v(a.velocity);
+    sanity_check_v(b.velocity);
+    sanity_check_v(rel_vel);
+    debug_assert!(!vel_along_normal.is_nan());
 
     let e = a.phys_data.restitution.min(b.phys_data.restitution);
 
@@ -320,12 +314,10 @@ fn solve_collision_roughly(objects: &mut [Rigidbody], a_id: Body_Id, b_id: Body_
 
     // apply friction
     let new_rel_vel = b.velocity - a.velocity;
-    #[cfg(debug_assertions)]
-    {
-        sanity_check_v(a.velocity);
-        sanity_check_v(b.velocity);
-        sanity_check_v(new_rel_vel);
-    }
+    sanity_check_v(a.velocity);
+    sanity_check_v(b.velocity);
+    sanity_check_v(new_rel_vel);
+
     let tangent = (new_rel_vel - new_rel_vel.dot(normal) * normal).normalized_or_zero();
 
     let jt = -new_rel_vel.dot(tangent) / (a.phys_data.inv_mass * b.phys_data.inv_mass);
@@ -451,7 +443,9 @@ pub fn update_collisions(ecs_world: &mut Ecs_World) {
     }
 }
 
-fn prepare_colliders_and_gather_rigidbodies(world: &mut Ecs_World) -> (Vec<Rigidbody>, Vec<isize>, Vec<Entity>) {
+fn prepare_colliders_and_gather_rigidbodies(
+    world: &mut Ecs_World,
+) -> (Vec<Rigidbody>, Vec<isize>, Vec<Entity>) {
     let mut objects = vec![];
     // Maps collider_idx => rigidbody_idx (-1 if no rb associated)
     let mut id_map = vec![];
@@ -461,10 +455,8 @@ fn prepare_colliders_and_gather_rigidbodies(world: &mut Ecs_World) -> (Vec<Rigid
         let spatial = world.get_component::<C_Spatial2D>(entity).unwrap();
         let pos = spatial.global_transform.position();
         let velocity = spatial.velocity;
-        #[cfg(debug_assertions)]
-        {
-            sanity_check_v(velocity);
-        }
+        sanity_check_v(velocity);
+
         let collider = world.get_component_mut::<Collider>(entity).unwrap();
         collider.position = pos;
         collider.colliding_with = None;
