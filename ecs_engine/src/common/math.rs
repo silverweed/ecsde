@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Sub};
+// @WaitForStable: make most functions here const when possible.
 
 #[inline(always)]
 pub fn fast_sqrt(n: f32) -> f32 {
@@ -27,27 +27,9 @@ pub fn clamp(x: f32, min: f32, max: f32) -> f32 {
     x.min(max).max(min)
 }
 
-// @WaitForStable: make this const when trait bounds are stable
-pub fn lerp<T: Lerpable>(a: T, b: T, t: T) -> T {
-    a * (T::ONE - t) + b * t
+pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a * (1.0 - t) + b * t
 }
-
-pub trait Lerpable: Copy + Add<Output = Self> + Mul<Output = Self> + Sub<Output = Self> {
-    const ONE: Self;
-}
-
-macro_rules! def_lerpable {
-    ($($type: ty),*: $one: expr) => {
-        $(
-            impl Lerpable for $type {
-                const ONE: Self = $one;
-            }
-        )*
-    }
-}
-
-def_lerpable!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize: 1);
-def_lerpable!(f32, f64: 1.0);
 
 #[cfg(test)]
 mod tests {
