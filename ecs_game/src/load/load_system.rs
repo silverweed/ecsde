@@ -44,6 +44,7 @@ pub fn level_load_sync(
         &mut level,
         gs_cfg,
     );
+    calc_terrain_colliders(&mut level.world);
     lok!(
         "Loaded level {}. N. entities = {}, n. cameras = {}",
         level_id,
@@ -235,7 +236,7 @@ fn init_demo_entities(
         //}
     }
 
-    spawn_rock_at(level, env, rsrc, v2!(0., 100.), ground);
+    //spawn_rock_at(level, env, rsrc, v2!(0., 100.), ground);
 }
 
 fn spawn_rock_at(
@@ -264,14 +265,14 @@ fn spawn_rock_at(
         level.scene_tree.add(rock, Some(ground), &t.local_transform);
     }
 
-    {
-        let c = level.world.add_component(rock, Collider::default());
-        c.shape = Collision_Shape::Rect {
-            width: sw as f32,
-            height: sh as f32,
-        };
-        c.is_static = true;
-    }
+    //{
+    //    let c = level.world.add_component(rock, Collider::default());
+    //    c.shape = Collision_Shape::Rect {
+    //        width: sw as f32,
+    //        height: sh as f32,
+    //    };
+    //    c.is_static = true;
+    //}
     {
         level.world.add_component(
             rock,
@@ -283,4 +284,46 @@ fn spawn_rock_at(
             },
         );
     }
+}
+
+fn calc_terrain_colliders(world: &mut Ecs_World) {
+    use ecs_engine::common::vector::Vec2i;
+    use std::collections::HashSet;
+
+    const ROCK_SIZE: f32 = 32.;
+    let mut pos_set = HashSet::new();
+    //let mut to_add_cld = vec![];
+
+    // for each rock ...
+    foreach_entity!(world, +C_Spatial2D, +C_Phys_Data, ~Collider, |entity| {
+        let pos = world.get_component::<C_Spatial2D>(entity).unwrap().local_transform.position();
+        let tile = Vec2i::from(pos / ROCK_SIZE);
+        pos_set.insert(tile);
+    });
+
+    foreach_entity!(world, +C_Spatial2D, +C_Phys_Data, ~Collider, |entity| {
+        let pos = world.get_component::<C_Spatial2D>(entity).unwrap().local_transform.position();
+        let tile = Vec2i::from(pos / ROCK_SIZE);
+
+        let up = tile - v2!(0, 1);
+        let down = tile + v2!(0, 1);
+        let left = tile - v2!(1, 0);
+        let right = tile + v2!(1, 0);
+
+        //let upup = up - v2!(0, 1);
+        //let downdown = down + v2!(0, 1);
+        //let leftleft = left - v2!(1, 0);
+        //let rightright = right + v2!(1, 0);
+
+        //if !(pos_set.contains(&up) && pos_set.contains(&right) && pos_set.contains(&down) && pos_set.contains(&left)) {
+            world.add_component(entity, Collider {
+                shape: Collision_Shape::Rect {
+                    width: ROCK_SIZE,
+                    height: ROCK_SIZE
+                },
+                is_static: true,
+                ..Default::default()
+            });
+       // }
+    });
 }

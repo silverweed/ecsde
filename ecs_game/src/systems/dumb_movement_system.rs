@@ -44,6 +44,6 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, rng: &mut Default_Rng) {
             .unwrap();
         dumb_movement.time_since_change = Duration::default();
 
-        ecs_world.destroy_entity(colliding_with.unwrap());
+        //ecs_world.destroy_entity(colliding_with.unwrap());
     });
 }

@@ -157,3 +157,7 @@ pub fn raw_project_world_pos(
         .map_coords_to_pixel_current_view(pos_cam_space);
     screen_pos.into()
 }
+
+pub fn set_key_repeat_enabled(window: &mut Window_Handle, enabled: bool) {
+    window.handle.set_key_repeat_enabled(enabled);
+}
