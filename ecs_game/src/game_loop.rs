@@ -214,9 +214,15 @@ pub fn tick_game<'a>(
 
         #[cfg(debug_assertions)]
         {
+            use ecs_engine::debug::console::Console_Status;
             use ecs_engine::input::input_system::Action_Kind;
+
             if actions.contains(&(String_Id::from("toggle_console"), Action_Kind::Pressed)) {
                 game_state.engine_state.debug_systems.console.toggle();
+                window::set_key_repeat_enabled(
+                    &mut game_state.window,
+                    game_state.engine_state.debug_systems.console.status == Console_Status::Open,
+                );
             }
 
             if actions.contains(&(String_Id::from("calipers"), Action_Kind::Pressed)) {

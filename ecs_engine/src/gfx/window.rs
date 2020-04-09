@@ -137,3 +137,7 @@ pub fn unproject_screen_pos(
 pub fn project_world_pos(world_pos: Vec2f, window: &Window_Handle, camera: &Transform2D) -> Vec2i {
     backend::raw_project_world_pos(world_pos, window, camera)
 }
+
+pub fn set_key_repeat_enabled(window: &mut Window_Handle, enabled: bool) {
+    backend::set_key_repeat_enabled(window, enabled);
+}
