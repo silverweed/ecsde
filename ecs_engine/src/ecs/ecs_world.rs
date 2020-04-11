@@ -82,7 +82,6 @@ impl Ecs_World {
 
     pub fn destroy_pending(&mut self) -> Vec<Entity> {
         for &entity in &self.entities_pending_destroy {
-            ldebug!("removing all {:?}", entity);
             self.component_manager.remove_all_components(entity);
             self.entity_manager.destroy_entity(entity);
         }
