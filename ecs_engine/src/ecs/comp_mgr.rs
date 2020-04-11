@@ -9,6 +9,9 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::mem::size_of;
 
+#[cfg(debug_assertions)]
+use crate::debug::painter::Debug_Painter;
+
 // Note: must be visible to entity_stream
 pub(super) type Component_Handle = u32;
 
@@ -264,4 +267,14 @@ impl Component_Manager {
             .get(&TypeId::of::<T>())
             .unwrap_or_else(|| fatal!("Component {:?} was not registered!", type_name::<T>()))
     }
+}
+
+#[cfg(debug_assertions)]
+pub(super) fn draw_comp_alloc<T: 'static + Copy>(
+    world: &super::ecs_world::Ecs_World,
+    painter: &mut Debug_Painter,
+) {
+    world.component_manager.storages[world.component_manager.get_handle::<T>() as usize]
+        .alloc
+        .debug_draw::<T>(painter);
 }

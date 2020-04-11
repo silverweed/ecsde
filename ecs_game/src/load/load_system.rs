@@ -118,7 +118,7 @@ fn init_demo_entities(
         level.scene_tree.add(ground, None, &t.local_transform);
     }
 
-    let ext = 7;
+    let ext = 10;
     let int = 2;
     let sw = 32;
     let sh = 32;
@@ -292,7 +292,6 @@ fn calc_terrain_colliders(world: &mut Ecs_World) {
 
     const ROCK_SIZE: f32 = 32.;
     let mut pos_set = HashSet::new();
-    //let mut to_add_cld = vec![];
 
     // for each rock ...
     foreach_entity!(world, +C_Spatial2D, +C_Phys_Data, ~Collider, |entity| {
@@ -310,12 +309,7 @@ fn calc_terrain_colliders(world: &mut Ecs_World) {
         let left = tile - v2!(1, 0);
         let right = tile + v2!(1, 0);
 
-        //let upup = up - v2!(0, 1);
-        //let downdown = down + v2!(0, 1);
-        //let leftleft = left - v2!(1, 0);
-        //let rightright = right + v2!(1, 0);
-
-        //if !(pos_set.contains(&up) && pos_set.contains(&right) && pos_set.contains(&down) && pos_set.contains(&left)) {
+        if true || (!(pos_set.contains(&up) && pos_set.contains(&right) && pos_set.contains(&down) && pos_set.contains(&left))) {
             world.add_component(entity, Collider {
                 shape: Collision_Shape::Rect {
                     width: ROCK_SIZE,
@@ -324,6 +318,6 @@ fn calc_terrain_colliders(world: &mut Ecs_World) {
                 is_static: true,
                 ..Default::default()
             });
-       // }
+        }
     });
 }
