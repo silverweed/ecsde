@@ -4,6 +4,9 @@ use std::marker::PhantomData;
 use std::mem;
 use std::ptr;
 
+#[cfg(debug_assertions)]
+use crate::debug::painter::Debug_Painter;
+
 // @Speed @Convenience: consider making this configurable
 const INITIAL_N_ELEMS: usize = 8;
 
@@ -31,6 +34,8 @@ pub struct Component_Allocator {
     filled_tail: Relative_Ptr,
 
     layout: Layout,
+
+    loop_next_frame: bool,
 }
 
 impl Component_Allocator {
@@ -56,6 +61,7 @@ impl Component_Allocator {
             filled_head: Relative_Ptr::null(),
             filled_tail: Relative_Ptr::null(),
             layout,
+            loop_next_frame: false,
         }
     }
 
@@ -478,6 +484,142 @@ impl Component_Allocator {
             //off = (*ptr).next;
             //}
             //}
+        }
+    }
+
+    pub fn debug_draw<T: Copy>(&self, painter: &mut Debug_Painter) {
+        use crate::common::colors;
+        use crate::common::shapes::{Arrow, Circle};
+        use crate::common::transform::Transform2D;
+        use crate::common::vector::Vec2f;
+        use crate::gfx::paint_props::Paint_Properties;
+
+        let props = Paint_Properties {
+            color: colors::rgba(150, 150, 150, 150),
+            border_color: colors::BLACK,
+            border_thick: 1.,
+            ..Default::default()
+        };
+        const SIZE: f32 = 20.;
+
+        fn calc_pos(idx: usize) -> Vec2f {
+            const START_POS: Vec2f = v2!(10., 60.);
+            let mut pos = START_POS;
+            for _ in 0..idx {
+                pos.x += SIZE;
+                if pos.x > 800. - SIZE {
+                    pos.x = 10.;
+                    pos.y += 2. * SIZE;
+                }
+            }
+            pos
+        }
+
+        for i in 0..self.layout.size() / mem::size_of::<Comp_Wrapper<T>>() {
+            let transform = Transform2D::from_pos(calc_pos(i));
+            painter.add_rect(v2!(SIZE, SIZE), &transform, props);
+        }
+
+        fn draw_arrow(
+            painter: &mut Debug_Painter,
+            from: u32,
+            to: u32,
+            color: colors::Color,
+            calc_pos: fn(usize) -> Vec2f,
+            offset: f32,
+        ) {
+            let start = calc_pos(from as _) + v2!(SIZE * 0.5, SIZE * 0.5 + offset);
+            let end = calc_pos(to as _) + v2!(SIZE * 0.5, SIZE * 0.5 + offset);
+            if start.y != end.y {
+                let arrow = Arrow {
+                    center: start,
+                    direction: end - start,
+                    thickness: 1.,
+                    arrow_size: 5.,
+                };
+                painter.add_arrow(arrow, color);
+            } else {
+                let off = crate::common::math::lerp(1., 50., (end.x - start.x) / 600.);
+                let middle = v2!((end.x + start.x) * 0.5, end.y - off);
+                let sgn = (end.x - start.x).signum() as f32;
+                let dir1 = v2!(sgn * SIZE * 0.3, -off);
+                let dir2 = v2!(end.x - start.x - sgn * SIZE * 0.6, 0.);
+                let dir3 = v2!(sgn * SIZE * 0.3, off);
+                let arrow1 = Arrow {
+                    center: start,
+                    direction: dir1,
+                    thickness: 1.,
+                    arrow_size: 0.,
+                };
+                let arrow2 = Arrow {
+                    center: start + dir1,
+                    direction: dir2,
+                    ..arrow1
+                };
+                let arrow3 = Arrow {
+                    center: end - dir3,
+                    direction: dir3,
+                    arrow_size: 5.,
+                    ..arrow1
+                };
+                painter.add_arrow(arrow1, color);
+                painter.add_arrow(arrow2, color);
+                painter.add_arrow(arrow3, color);
+            }
+        }
+
+        let filled_props = Paint_Properties {
+            color: colors::GREEN,
+            ..props
+        };
+        let mut rel_ptr = self.filled_head;
+        unsafe {
+            while !rel_ptr.is_null() {
+                let ptr = rel_ptr.to_abs::<T>(self.data);
+                let idx = rel_ptr.offset();
+                let transform = Transform2D::from_pos(calc_pos(idx as _));
+                painter.add_rect(v2!(SIZE, SIZE), &transform, filled_props);
+                let prev = (*ptr).prev;
+                let next = (*ptr).next;
+                if !prev.is_null() {
+                    let prev_idx = prev.offset();
+                    //draw_arrow(painter, idx, prev_idx, colors::YELLOW, calc_pos, -5.);
+                }
+                if !next.is_null() {
+                    let next_idx = next.offset();
+                    draw_arrow(painter, idx, next_idx, colors::FUCHSIA, calc_pos, 5.);
+                }
+
+                rel_ptr = (*ptr).next;
+            }
+        }
+
+        let free_props = Paint_Properties {
+            color: colors::RED,
+            ..props
+        };
+        let mut rel_ptr = self.free_head;
+        unsafe {
+            painter.add_circle(
+                Circle {
+                    center: calc_pos(rel_ptr.offset() as _) + v2!(SIZE * 0.5 - 3., SIZE * 0.5 - 3.),
+                    radius: 3.,
+                },
+                colors::BLUE,
+            );
+            while !rel_ptr.is_null() {
+                let ptr = rel_ptr.to_abs::<T>(self.data) as *const Free_Slot;
+                let idx = rel_ptr.offset();
+                let transform = Transform2D::from_pos(calc_pos(idx as _));
+                painter.add_rect(v2!(SIZE, SIZE), &transform, free_props);
+                let next = (*ptr).next;
+                if !next.is_null() {
+                    let next_idx = next.offset();
+                    draw_arrow(painter, idx, next_idx, colors::BLUE, calc_pos, 0.);
+                }
+
+                rel_ptr = (*ptr).next;
+            }
         }
     }
 }

@@ -4,6 +4,9 @@ use crate::common::bitset::Bit_Set;
 use std::any::type_name;
 use std::vec::Vec;
 
+#[cfg(debug_assertions)]
+use crate::debug::painter::Debug_Painter;
+
 pub type Entity = Generational_Index;
 
 pub struct Entity_Manager {
@@ -79,7 +82,7 @@ impl Ecs_World {
 
     pub fn destroy_pending(&mut self) -> Vec<Entity> {
         for &entity in &self.entities_pending_destroy {
-            println!("removing all {:?}", entity);
+            ldebug!("removing all {:?}", entity);
             self.component_manager.remove_all_components(entity);
             self.entity_manager.destroy_entity(entity);
         }
@@ -216,6 +219,11 @@ impl<T: Copy> Component_Storage_Mut<'_, T> {
     pub fn get_component_mut(&mut self, entity: Entity) -> Option<&mut T> {
         self.storage.get_component_mut::<T>(entity)
     }
+}
+
+#[cfg(debug_assertions)]
+pub fn draw_comp_alloc<T: 'static + Copy>(world: &Ecs_World, painter: &mut Debug_Painter) {
+    comp_mgr::draw_comp_alloc::<T>(world, painter);
 }
 
 #[cfg(tests)]

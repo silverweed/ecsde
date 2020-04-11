@@ -108,7 +108,10 @@ impl Generational_Allocator {
             let gen = self.gens[index];
 
             if gen > idx.gen {
-                fatal!("Tried to deallocate an old Generational_Index! Double free?");
+                fatal!(
+                    "Tried to deallocate an old Generational_Index {:?}! Double free?",
+                    idx
+                );
             }
             if gen < idx.gen {
                 fatal!("Tried to deallocate a Generational_Index with a generation greater than current!");

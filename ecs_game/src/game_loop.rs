@@ -584,7 +584,7 @@ fn update_debug(game_state: &mut Game_State) {
     ////// Per-Level debugs //////
     let painters = &mut debug_systems.painters;
     let collision_system = &engine_state.systems.collision_system;
-    let ui_system = &mut debug_systems.debug_ui;
+    let debug_ui = &mut debug_systems.debug_ui;
     let target_win_size = engine_state.app_config.target_win_size;
 
     let cvars = &game_state.debug_cvars;
@@ -596,6 +596,7 @@ fn update_debug(game_state: &mut Game_State) {
         .draw_collision_applied_impulses
         .read(&engine_state.config);
     let draw_debug_grid = cvars.draw_debug_grid.read(&engine_state.config);
+    let draw_comp_alloc_colliders = cvars.draw_comp_alloc_colliders.read(&engine_state.config);
     let square_size = cvars.debug_grid_square_size.read(&engine_state.config);
     let opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
 
@@ -604,9 +605,9 @@ fn update_debug(game_state: &mut Game_State) {
             .get_mut(&level.id)
             .unwrap_or_else(|| fatal!("Debug painter not found for level {:?}", level.id));
 
-        update_entities_debug_overlay(ui_system.get_overlay(sid_entities), &level.world);
+        update_entities_debug_overlay(debug_ui.get_overlay(sid_entities), &level.world);
 
-        update_camera_debug_overlay(ui_system.get_overlay(sid_camera), &level.get_camera());
+        update_camera_debug_overlay(debug_ui.get_overlay(sid_camera), &level.get_camera());
 
         if draw_entities {
             debug_draw_transforms(debug_painter, &level.world);
@@ -639,6 +640,14 @@ fn update_debug(game_state: &mut Game_State) {
 
         if draw_collision_applied_impulses {
             collision_system.debug_draw_applied_impulses(debug_painter);
+        }
+
+        if draw_comp_alloc_colliders {
+            use ecs_engine::collisions::collider::Collider;
+            ecs_engine::ecs::ecs_world::draw_comp_alloc::<Collider>(
+                &level.world,
+                painters.get_mut(&String_Id::from("")).unwrap(),
+            );
         }
     });
 }
