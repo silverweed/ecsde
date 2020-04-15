@@ -118,8 +118,8 @@ fn init_demo_entities(
         level.scene_tree.add(ground, None, &t.local_transform);
     }
 
-    let ext = 10;
-    let int = 2;
+    let ext = 20;
+    let int = 5;
     let sw = 32;
     let sh = 32;
     for x in -ext..=ext {
@@ -309,7 +309,7 @@ fn calc_terrain_colliders(world: &mut Ecs_World) {
         let left = tile - v2!(1, 0);
         let right = tile + v2!(1, 0);
 
-        if true || (!(pos_set.contains(&up) && pos_set.contains(&right) && pos_set.contains(&down) && pos_set.contains(&left))) {
+        if (!(pos_set.contains(&up) && pos_set.contains(&right) && pos_set.contains(&down) && pos_set.contains(&left))) {
             world.add_component(entity, Collider {
                 shape: Collision_Shape::Rect {
                     width: ROCK_SIZE,

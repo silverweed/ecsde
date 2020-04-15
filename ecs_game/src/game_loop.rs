@@ -305,7 +305,9 @@ pub fn tick_game<'a>(
         game_state.fps_debug.tick(&real_dt);
     }
 
-    game_state.gameplay_system.late_update();
+    game_state
+        .gameplay_system
+        .late_update(&mut game_state.engine_state.systems.evt_register);
 
     {
         trace!("display");

@@ -23,6 +23,7 @@ use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::ecs::entity_stream::new_entity_stream;
+use ecs_engine::events::evt_register::Event_Register;
 use ecs_engine::gfx;
 use ecs_engine::gfx::render::batcher::Batches;
 use ecs_engine::input::axes::Virtual_Axes;
@@ -202,11 +203,11 @@ impl Gameplay_System {
         });
     }
 
-    pub fn late_update(&mut self) {
+    pub fn late_update(&mut self, evt_register: &mut Event_Register) {
         trace!("gameplay_system::late_update");
 
         self.foreach_active_level(|level| {
-            let destroyed = level.world.destroy_pending();
+            let destroyed = level.world.destroy_pending(evt_register);
             // @Incomplete: scene_tree
         });
     }
