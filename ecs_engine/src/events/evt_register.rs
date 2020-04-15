@@ -81,9 +81,23 @@ pub fn wrap_cb_data<T: 'static>(data: T) -> Event_Callback_Data {
     Arc::new(Mutex::new(data))
 }
 
-pub fn with_cb_data<T: 'static, R, F: FnMut(&mut T) -> R>(data: &mut Event_Callback_Data, mut cb: F) -> R{
-    let mut locked = data.lock().unwrap_or_else(|err| fatal!("unwrap_cb_data<{:?}>: failed to lock mutex: {:?}.", std::any::type_name::<T>(), err));
-    let downcasted = locked.downcast_mut::<T>().unwrap_or_else(|| fatal!("unwrap_cb_data<{:?}>: unwrapped data is not of the expected type.", std::any::type_name::<T>()));
+pub fn with_cb_data<T: 'static, R, F: FnMut(&mut T) -> R>(
+    data: &mut Event_Callback_Data,
+    mut cb: F,
+) -> R {
+    let mut locked = data.lock().unwrap_or_else(|err| {
+        fatal!(
+            "unwrap_cb_data<{:?}>: failed to lock mutex: {:?}.",
+            std::any::type_name::<T>(),
+            err
+        )
+    });
+    let downcasted = locked.downcast_mut::<T>().unwrap_or_else(|| {
+        fatal!(
+            "unwrap_cb_data<{:?}>: unwrapped data is not of the expected type.",
+            std::any::type_name::<T>()
+        )
+    });
     cb(downcasted)
 }
 

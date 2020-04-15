@@ -22,7 +22,7 @@ use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 
 #[derive(Copy, Clone, Default)]
 pub struct C_Ground {
-    pub neighbours: [Entity; 4]
+    pub neighbours: [Entity; 4],
 }
 
 pub fn level_load_sync(
