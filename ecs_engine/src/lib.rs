@@ -26,6 +26,7 @@ pub mod collisions;
 pub mod common;
 pub mod core;
 pub mod ecs;
+pub mod events;
 pub mod fs;
 pub mod gfx;
 pub mod input;

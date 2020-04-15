@@ -1,6 +1,7 @@
 use super::comp_mgr::{self, Component_Manager};
 use crate::alloc::gen_alloc::{Generational_Allocator, Generational_Index};
 use crate::common::bitset::Bit_Set;
+use crate::events::evt_register;
 use std::any::type_name;
 use std::vec::Vec;
 
@@ -9,38 +10,10 @@ use crate::debug::painter::Debug_Painter;
 
 pub type Entity = Generational_Index;
 
-pub struct Entity_Manager {
-    alloc: Generational_Allocator,
-    entities: Vec<Entity>,
-}
+pub struct Evt_Entity_Destroyed;
 
-impl Entity_Manager {
-    pub fn new() -> Entity_Manager {
-        Entity_Manager {
-            alloc: Generational_Allocator::new(64),
-            entities: vec![],
-        }
-    }
-
-    pub fn new_entity(&mut self) -> Entity {
-        let e = self.alloc.allocate();
-        self.entities.push(e);
-        e
-    }
-
-    pub fn destroy_entity(&mut self, entity: Entity) {
-        self.alloc.deallocate(entity);
-        let idx = self.entities.iter().position(|e| *e == entity).unwrap();
-        self.entities.remove(idx);
-    }
-
-    pub fn is_valid_entity(&self, entity: Entity) -> bool {
-        self.alloc.is_valid(entity)
-    }
-
-    pub fn n_live_entities(&self) -> usize {
-        self.entities.len()
-    }
+impl evt_register::Event for Evt_Entity_Destroyed {
+    type Args = Entity;
 }
 
 pub struct Ecs_World {
@@ -80,10 +53,14 @@ impl Ecs_World {
         self.entities_pending_destroy.push(entity);
     }
 
-    pub fn destroy_pending(&mut self) -> Vec<Entity> {
+    pub fn destroy_pending(
+        &mut self,
+        evt_register: &mut evt_register::Event_Register,
+    ) -> Vec<Entity> {
         for &entity in &self.entities_pending_destroy {
             self.component_manager.remove_all_components(entity);
             self.entity_manager.destroy_entity(entity);
+            evt_register.raise::<Evt_Entity_Destroyed>(entity);
         }
         let destroyed = self.entities_pending_destroy.split_off(0);
         destroyed
@@ -182,6 +159,40 @@ impl Ecs_World {
             storage: self.component_manager.get_component_storage_mut::<T>(),
             _marker: std::marker::PhantomData,
         }
+    }
+}
+
+pub struct Entity_Manager {
+    alloc: Generational_Allocator,
+    entities: Vec<Entity>,
+}
+
+impl Entity_Manager {
+    pub fn new() -> Entity_Manager {
+        Entity_Manager {
+            alloc: Generational_Allocator::new(64),
+            entities: vec![],
+        }
+    }
+
+    pub fn new_entity(&mut self) -> Entity {
+        let e = self.alloc.allocate();
+        self.entities.push(e);
+        e
+    }
+
+    pub fn destroy_entity(&mut self, entity: Entity) {
+        self.alloc.deallocate(entity);
+        let idx = self.entities.iter().position(|e| *e == entity).unwrap();
+        self.entities.remove(idx);
+    }
+
+    pub fn is_valid_entity(&self, entity: Entity) -> bool {
+        self.alloc.is_valid(entity)
+    }
+
+    pub fn n_live_entities(&self) -> usize {
+        self.entities.len()
     }
 }
 
