@@ -2,6 +2,7 @@
 
 use super::systems::controllable_system::{self, C_Controllable};
 use super::systems::dumb_movement_system;
+use super::systems::ground_collision_calculation_system::Ground_Collision_Calculation_System;
 use crate::input_utils::{get_movement_from_input, Input_Config};
 use crate::load::load_system;
 use crate::movement_system;
@@ -71,6 +72,8 @@ pub struct Gameplay_System {
     pub input_cfg: Input_Config,
     cfg: Gameplay_System_Config,
 
+    ground_collision_calc_system: Ground_Collision_Calculation_System,
+
     #[cfg(debug_assertions)]
     debug_data: Debug_Data,
 }
@@ -89,6 +92,7 @@ impl Gameplay_System {
             active_levels: vec![],
             input_cfg: Input_Config::default(),
             cfg: Gameplay_System_Config::default(),
+            ground_collision_calc_system: Ground_Collision_Calculation_System::new(),
             #[cfg(debug_assertions)]
             debug_data: Debug_Data::default(),
         }
@@ -113,13 +117,13 @@ impl Gameplay_System {
     pub fn init(
         &mut self,
         gres: &mut Gfx_Resources,
-        env: &Env_Info,
-        rng: &mut rand::Default_Rng,
-        cfg: &cfg::Config,
+        engine_state: &mut Engine_State,
         gs_cfg: Gameplay_System_Config,
     ) -> common::Maybe_Error {
-        self.input_cfg = read_input_cfg(cfg);
+        self.input_cfg = read_input_cfg(&engine_state.config);
         self.cfg = gs_cfg;
+        self.ground_collision_calc_system.init(engine_state);
+
         Ok(())
     }
 
@@ -163,12 +167,18 @@ impl Gameplay_System {
         }
 
         ///// Update all game systems in all worlds /////
-        let input_cfg = self.input_cfg;
-        self.foreach_active_level(|level| {
+        // Note: inlining foreach_active_levels because we don't want to borrow self.
+        for &idx in &self.active_levels {
+            let mut level = self.loaded_levels[idx]
+                .lock()
+                .unwrap_or_else(|err| fatal!("Failed to lock level {}: {}", idx, err));
+
+            let level = &mut *level;
+
             let world = &mut level.world;
 
             gfx::animation_system::update(&dt, world);
-            controllable_system::update(&dt, actions, axes, world, input_cfg, cfg);
+            controllable_system::update(&dt, actions, axes, world, self.input_cfg, cfg);
 
             {
                 trace!("scene_tree::copy_transforms");
@@ -195,19 +205,24 @@ impl Gameplay_System {
                 }
             }
 
+            let world = &mut level.world;
+
             // @Incomplete: level-specific gameplay update
             update_demo_entites(world, &dt);
 
+            self.ground_collision_calc_system.update(world);
+
             //movement_system::update(&dt, world);
             dumb_movement_system::update(&dt, world, rng);
-        });
+        }
     }
 
     pub fn late_update(&mut self, evt_register: &mut Event_Register) {
         trace!("gameplay_system::late_update");
 
         self.foreach_active_level(|level| {
-            let destroyed = level.world.destroy_pending(evt_register);
+            level.world.notify_destroyed(evt_register);
+            let destroyed = level.world.destroy_pending();
             // @Incomplete: scene_tree
         });
     }

@@ -3,7 +3,7 @@ use crate::alloc::gen_alloc::{Generational_Allocator, Generational_Index};
 use crate::common::bitset::Bit_Set;
 use crate::events::evt_register;
 use std::any::type_name;
-use std::vec::Vec;
+use std::collections::HashSet;
 
 #[cfg(debug_assertions)]
 use crate::debug::painter::Debug_Painter;
@@ -20,6 +20,7 @@ pub struct Ecs_World {
     entity_manager: Entity_Manager,
     // Note: must be visible to entity_stream
     pub(super) component_manager: Component_Manager,
+    entities_pending_destroy_notify: HashSet<Entity>,
     entities_pending_destroy: Vec<Entity>,
 }
 
@@ -28,6 +29,7 @@ impl Ecs_World {
         Ecs_World {
             entity_manager: Entity_Manager::new(),
             component_manager: Component_Manager::new(),
+            entities_pending_destroy_notify: HashSet::new(),
             entities_pending_destroy: vec![],
         }
     }
@@ -50,24 +52,28 @@ impl Ecs_World {
     }
 
     pub fn destroy_entity(&mut self, entity: Entity) {
-        self.entities_pending_destroy.push(entity);
+        debug_assert!(self.is_valid_entity(entity));
+        self.entities_pending_destroy_notify.insert(entity);
     }
 
-    pub fn destroy_pending(
-        &mut self,
-        evt_register: &mut evt_register::Event_Register,
-    ) -> Vec<Entity> {
+    pub fn notify_destroyed(&self, evt_register: &mut evt_register::Event_Register) {
+        for &entity in &self.entities_pending_destroy_notify {
+            evt_register.raise::<Evt_Entity_Destroyed>(entity);
+        }
+    }
+
+    pub fn destroy_pending(&mut self) -> Vec<Entity> {
         for &entity in &self.entities_pending_destroy {
             self.component_manager.remove_all_components(entity);
             self.entity_manager.destroy_entity(entity);
-            evt_register.raise::<Evt_Entity_Destroyed>(entity);
         }
         let destroyed = self.entities_pending_destroy.split_off(0);
+        self.entities_pending_destroy = self.entities_pending_destroy_notify.drain().collect();
         destroyed
     }
 
     pub fn is_valid_entity(&self, entity: Entity) -> bool {
-        self.entity_manager.is_valid_entity(entity)
+        self.entity_manager.is_valid_entity(entity) && !self.entities_pending_destroy.contains(&entity)
     }
 
     pub fn register_component<T: 'static + Copy>(&mut self) {

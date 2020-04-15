@@ -44,7 +44,7 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, rng: &mut Default_Rng) {
             .unwrap();
         dumb_movement.time_since_change = Duration::default();
 
-        if rand::rand_01(rng) < 0.2 {
+        if rand::rand_01(rng) < 1.2 {
             let to_destroy = colliding_with.unwrap();
             if ecs_world.is_valid_entity(to_destroy) {
                 if let Some(cld) = ecs_world.get_component::<Collider>(to_destroy) {
