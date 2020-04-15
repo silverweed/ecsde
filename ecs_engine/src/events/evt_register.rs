@@ -1,7 +1,5 @@
-use crate::common::stringid::String_Id;
 use anymap::AnyMap;
 use std::any::Any;
-use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
@@ -60,8 +58,7 @@ impl Event_Register {
 
     pub fn unsubscribe<E: 'static + Event>(&mut self, handle: Event_Subscription_Handle<E>) {
         let idx = handle.idx;
-        let obs = self.observers.get_mut::<Observers<E>>();
-        if let Some(obs) = obs {
+        if let Some(obs) = self.observers.get_mut::<Observers<E>>() {
             if obs.len() < idx {
                 let _ = obs.remove(idx);
                 return;
@@ -72,8 +69,7 @@ impl Event_Register {
     }
 
     pub fn raise<E: 'static + Event>(&mut self, args: E::Args) {
-        let obs = self.observers.get_mut::<Observers<E>>();
-        if let Some(obs) = obs {
+        if let Some(obs) = self.observers.get_mut::<Observers<E>>() {
             for (cb, cb_data) in obs {
                 cb(args.clone(), cb_data.as_mut());
             }
