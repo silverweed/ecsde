@@ -179,6 +179,7 @@ impl Component_Allocator {
     /// The idx-th slot must be actually occupied.
     /// The given layout should be the one retrieved from get_comp_layout::<T>, with the same T
     /// used to construct the Component_Allocator.
+    #[allow(clippy::cast_ptr_alignment)]
     pub unsafe fn remove_dyn(&mut self, idx: u32, wrapper_layout: &Layout) {
         debug_assert_eq!(wrapper_layout.align(), self.layout.align());
 
@@ -530,7 +531,7 @@ impl Component_Allocator {
         ) {
             let start = calc_pos(from as _) + v2!(SIZE * 0.5, SIZE * 0.5 + offset);
             let end = calc_pos(to as _) + v2!(SIZE * 0.5, SIZE * 0.5 + offset);
-            if start.y != end.y {
+            if (start.y - end.y).abs() > std::f32::EPSILON {
                 let arrow = Arrow {
                     center: start,
                     direction: end - start,
