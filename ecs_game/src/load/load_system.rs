@@ -20,6 +20,11 @@ use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::gfx;
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 
+#[derive(Copy, Clone, Default)]
+pub struct C_Ground {
+    pub neighbours: [Entity; 4]
+}
+
 pub fn level_load_sync(
     level_id: String_Id,
     engine_state: &mut Engine_State,
@@ -65,6 +70,7 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<Collider>();
     world.register_component::<C_Dumb_Movement>();
     world.register_component::<C_Phys_Data>();
+    world.register_component::<C_Ground>();
 }
 
 // @Temporary
@@ -265,6 +271,8 @@ fn spawn_rock_at(
         level.scene_tree.add(rock, Some(ground), &t.local_transform);
     }
 
+    level.world.add_component(rock, C_Ground::default());
+
     //{
     //    let c = level.world.add_component(rock, Collider::default());
     //    c.shape = Collision_Shape::Rect {
@@ -288,19 +296,19 @@ fn spawn_rock_at(
 
 fn calc_terrain_colliders(world: &mut Ecs_World) {
     use ecs_engine::common::vector::Vec2i;
-    use std::collections::HashSet;
+    use std::collections::HashMap;
 
     const ROCK_SIZE: f32 = 32.;
-    let mut pos_set = HashSet::new();
+    let mut rocks_by_tile = HashMap::new();
 
     // for each rock ...
-    foreach_entity!(world, +C_Spatial2D, +C_Phys_Data, ~Collider, |entity| {
+    foreach_entity!(world, +C_Ground, |entity| {
         let pos = world.get_component::<C_Spatial2D>(entity).unwrap().local_transform.position();
         let tile = Vec2i::from(pos / ROCK_SIZE);
-        pos_set.insert(tile);
+        rocks_by_tile.insert(tile, entity);
     });
 
-    foreach_entity!(world, +C_Spatial2D, +C_Phys_Data, ~Collider, |entity| {
+    foreach_entity!(world, +C_Ground, |entity| {
         let pos = world.get_component::<C_Spatial2D>(entity).unwrap().local_transform.position();
         let tile = Vec2i::from(pos / ROCK_SIZE);
 
@@ -309,7 +317,22 @@ fn calc_terrain_colliders(world: &mut Ecs_World) {
         let left = tile - v2!(1, 0);
         let right = tile + v2!(1, 0);
 
-        if (!(pos_set.contains(&up) && pos_set.contains(&right) && pos_set.contains(&down) && pos_set.contains(&left))) {
+        let mut neighs = 0;
+        let e_up = rocks_by_tile.get(&up);
+        let e_right = rocks_by_tile.get(&right);
+        let e_left = rocks_by_tile.get(&left);
+        let e_down = rocks_by_tile.get(&down);
+
+        let ground = world.get_component_mut::<C_Ground>(entity).unwrap();
+        // Note: order must be the same as Square_Directions!
+        for (i, &dir) in [e_up, e_right, e_down, e_left].iter().enumerate() {
+            if let Some(e) = dir {
+                neighs += 1;
+                ground.neighbours[i] = *e;
+            }
+        }
+
+        if neighs < 4 {
             world.add_component(entity, Collider {
                 shape: Collision_Shape::Rect {
                     width: ROCK_SIZE,

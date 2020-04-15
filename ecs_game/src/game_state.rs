@@ -104,9 +104,7 @@ pub(super) fn internal_game_init<'a>(
 
         game_state.gameplay_system.init(
             gres,
-            env,
-            &mut game_state.engine_state.rng,
-            cfg,
+            &mut game_state.engine_state,
             gameplay_system::Gameplay_System_Config {
                 n_entities_to_spawn: parsed_cmdline_args.n_entities_to_spawn.unwrap_or(1),
             },
