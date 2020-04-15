@@ -73,7 +73,8 @@ impl Ecs_World {
     }
 
     pub fn is_valid_entity(&self, entity: Entity) -> bool {
-        self.entity_manager.is_valid_entity(entity) && !self.entities_pending_destroy.contains(&entity)
+        self.entity_manager.is_valid_entity(entity)
+            && !self.entities_pending_destroy.contains(&entity)
     }
 
     pub fn register_component<T: 'static + Copy>(&mut self) {

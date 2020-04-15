@@ -5,8 +5,8 @@
 #[macro_use]
 extern crate ecs_engine;
 
-mod directions;
 mod cmdline;
+mod directions;
 mod game_loop;
 mod game_state;
 mod gameplay_system;
