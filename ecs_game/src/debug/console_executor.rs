@@ -45,7 +45,6 @@ fn parse_cmd(cmdline: &str) -> Result<Console_Cmd, Console_Error> {
     if tokens.is_empty() {
         Err(Console_Error::new("Empty command"))
     } else {
-        println!("{:?}", tokens);
         match tokens.as_slice() {
             ["quit"] => Ok(Console_Cmd::Quit),
             ["cam", x, y] => Ok(Console_Cmd::Move_Camera {
@@ -83,7 +82,7 @@ fn execute_command(
             None
         }
         Console_Cmd::Move_Camera { to } => {
-            //gs.move_camera_to(to);
+            gs.foreach_active_level(|level| level.move_camera_to(to));
             None
         }
         Console_Cmd::Get_Cfg_Var { name } => Some((

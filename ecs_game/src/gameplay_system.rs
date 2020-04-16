@@ -270,7 +270,7 @@ impl Gameplay_System {
                 .unwrap();
 
             let sx = camera.transform.scale().x;
-            let v = v * sx;
+            let mut v = v * sx;
 
             let mut add_scale = Vec2f::new(0., 0.);
             const BASE_CAM_DELTA_ZOOM_PER_SCROLL: f32 = 0.2;
@@ -295,7 +295,15 @@ impl Gameplay_System {
                 }
             }
 
-            camera.transform.add_scale_v(add_scale);
+            if add_scale.magnitude2() > 0. {
+                camera.transform.add_scale_v(add_scale);
+
+                // Keep viewport centered
+                let win_w = Cfg_Var::<i32>::new("engine/window/width", &cfg).read(&cfg);
+                let win_h = Cfg_Var::<i32>::new("engine/window/height", &cfg).read(&cfg);
+                v -= add_scale * 0.5  * v2!(win_w as f32, win_h as f32);
+            }
+            
             //return;
             camera.transform.translate_v(v);
 
