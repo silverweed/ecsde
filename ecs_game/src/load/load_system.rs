@@ -124,8 +124,8 @@ fn init_demo_entities(
         level.scene_tree.add(ground, None, &t.local_transform);
     }
 
-    let ext = 20;
-    let int = 5;
+    let ext = 10;
+    let int = 2;
     let sw = 32;
     let sh = 32;
     for x in -ext..=ext {

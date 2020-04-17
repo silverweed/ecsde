@@ -1,7 +1,5 @@
-use crate::gameplay_system::Gameplay_System;
-use crate::states::state::Persistent_Game_State;
+use crate::states::state::{Game_State_Args, Persistent_Game_State};
 use ecs_engine::common::stringid::String_Id;
-use ecs_engine::core::app::Engine_State;
 use ecs_engine::input::input_system::{Action_Kind, Game_Action};
 
 pub struct Game_Base_State {
@@ -17,12 +15,7 @@ impl Game_Base_State {
 }
 
 impl Persistent_Game_State for Game_Base_State {
-    fn handle_actions(
-        &mut self,
-        actions: &[Game_Action],
-        _state: &mut Engine_State,
-        _gs: &mut Gameplay_System,
-    ) -> bool {
+    fn handle_actions(&mut self, actions: &[Game_Action], _args: &mut Game_State_Args) -> bool {
         for action in actions.iter() {
             match action {
                 (name, Action_Kind::Pressed) if *name == self.sid_quit => {
