@@ -1,6 +1,4 @@
-use super::state::{Game_State, Persistent_Game_State, State_Transition};
-use crate::gameplay_system::Gameplay_System;
-use ecs_engine::core::app::Engine_State;
+use super::state::{Game_State, Game_State_Args, Persistent_Game_State, State_Transition};
 use ecs_engine::input::input_system::Game_Action;
 use std::vec::Vec;
 
@@ -23,38 +21,31 @@ impl State_Manager {
         }
     }
 
-    pub fn update(&mut self, engine_state: &mut Engine_State, gs: &mut Gameplay_System) {
+    pub fn update(&mut self, args: &mut Game_State_Args) {
         for state in &mut self.persistent_states {
-            state.update(engine_state, gs);
+            state.update(args);
         }
 
         if let Some(state) = self.current_state() {
-            match state.update(engine_state, gs) {
+            match state.update(args) {
                 State_Transition::None => {}
-                State_Transition::Push(new_state) => self.push_state(new_state, engine_state, gs),
-                State_Transition::Replace(new_state) => {
-                    self.replace_state(engine_state, gs, new_state)
-                }
-                State_Transition::Pop => self.pop_state(engine_state, gs),
+                State_Transition::Push(new_state) => self.push_state(new_state, args),
+                State_Transition::Replace(new_state) => self.replace_state(new_state, args),
+                State_Transition::Pop => self.pop_state(args),
             }
         }
     }
 
     /// Returns true if should quit
-    pub fn handle_actions(
-        &mut self,
-        actions: &[Game_Action],
-        engine_state: &mut Engine_State,
-        gs: &mut Gameplay_System,
-    ) -> bool {
+    pub fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Game_State_Args) -> bool {
         let mut should_quit = false;
 
         if let Some(state) = self.current_state() {
-            should_quit |= state.handle_actions(actions, engine_state, gs);
+            should_quit |= state.handle_actions(actions, args);
         }
 
         for state in &mut self.persistent_states {
-            should_quit |= state.handle_actions(actions, engine_state, gs);
+            should_quit |= state.handle_actions(actions, args);
         }
 
         should_quit
@@ -62,11 +53,10 @@ impl State_Manager {
 
     pub fn add_persistent_state(
         &mut self,
-        engine_state: &mut Engine_State,
-        gs: &mut Gameplay_System,
         mut state: Box<dyn Persistent_Game_State>,
+        args: &mut Game_State_Args,
     ) {
-        state.on_start(engine_state, gs);
+        state.on_start(args);
         self.persistent_states.push(state);
     }
 
@@ -80,46 +70,37 @@ impl State_Manager {
         }
     }
 
-    fn push_state(
-        &mut self,
-        mut state: Box<dyn Game_State>,
-        engine_state: &mut Engine_State,
-        gs: &mut Gameplay_System,
-    ) {
+    fn push_state(&mut self, mut state: Box<dyn Game_State>, args: &mut Game_State_Args) {
         if let Some(s) = self.current_state() {
-            s.on_pause(engine_state, gs);
+            s.on_pause(args);
         }
-        state.on_start(engine_state, gs);
+        state.on_start(args);
         self.state_stack.push(state);
     }
 
-    fn pop_state(&mut self, engine_state: &mut Engine_State, gs: &mut Gameplay_System) {
+    fn pop_state(&mut self, args: &mut Game_State_Args) {
         if let Some(mut prev_state) = self.state_stack.pop() {
-            prev_state.on_end(engine_state, gs);
+            prev_state.on_end(args);
         } else {
             lerr!("Tried to pop state, but state stack is empty!");
         }
 
         if let Some(state) = self.current_state() {
-            state.on_resume(engine_state, gs);
+            state.on_resume(args);
         }
     }
 
-    fn replace_state(
-        &mut self,
-        engine_state: &mut Engine_State,
-        gs: &mut Gameplay_System,
-        mut state: Box<dyn Game_State>,
-    ) {
+    fn replace_state(&mut self, mut state: Box<dyn Game_State>, args: &mut Game_State_Args) {
         if let Some(mut prev_state) = self.state_stack.pop() {
-            prev_state.on_end(engine_state, gs);
+            prev_state.on_end(args);
         }
 
-        state.on_start(engine_state, gs);
+        state.on_start(args);
         self.state_stack.push(state);
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -232,3 +213,4 @@ mod tests {
         );
     }
 }
+*/

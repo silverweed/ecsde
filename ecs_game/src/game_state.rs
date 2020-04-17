@@ -119,6 +119,7 @@ pub(super) fn internal_game_init<'a>(
             &mut game_state.state_mgr,
             &mut game_state.engine_state,
             &mut game_state.gameplay_system,
+            &mut game_state.window,
         );
 
         #[cfg(debug_assertions)]
@@ -330,15 +331,26 @@ fn init_states(
     state_mgr: &mut states::state_manager::State_Manager,
     engine_state: &mut app::Engine_State,
     gs: &mut gameplay_system::Gameplay_System,
+    window: &mut window::Window_Handle,
 ) {
+    let mut args = states::state::Game_State_Args {
+        engine_state,
+        gameplay_system: gs,
+        window,
+    };
     let base_state = Box::new(states::persistent::game_base_state::Game_Base_State::new());
-    state_mgr.add_persistent_state(engine_state, gs, base_state);
+    state_mgr.add_persistent_state(base_state, &mut args);
     #[cfg(debug_assertions)]
     {
         let debug_base_state = Box::new(
             states::persistent::debug_base_state::Debug_Base_State::new(&engine_state.config),
         );
-        state_mgr.add_persistent_state(engine_state, gs, debug_base_state);
+        let mut args = states::state::Game_State_Args {
+            engine_state,
+            gameplay_system: gs,
+            window,
+        };
+        state_mgr.add_persistent_state(debug_base_state, &mut args);
     }
 }
 

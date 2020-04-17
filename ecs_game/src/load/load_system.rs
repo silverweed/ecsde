@@ -131,8 +131,8 @@ fn init_demo_entities(
         level.world.add_component(ground, C_Spatial2D::default());
     }
 
-    let ext = 20;
-    let int = 5;
+    let ext = 10;
+    let int = 2;
     let sw = 32;
     let sh = 32;
     for x in -ext..=ext {

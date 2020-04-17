@@ -1,4 +1,5 @@
 use super::{Game_Resources, Game_State};
+use crate::states::state::Game_State_Args;
 use ecs_engine::collisions::physics;
 use ecs_engine::common::colors;
 use ecs_engine::common::transform::Transform2D;
@@ -205,12 +206,13 @@ pub fn tick_game<'a>(
 
         // Update states
         {
+            let mut args = Game_State_Args {
+                engine_state: &mut game_state.engine_state,
+                gameplay_system: &mut game_state.gameplay_system,
+                window: &mut game_state.window,
+            };
             trace!("state_mgr::handle_actions");
-            if game_state.state_mgr.handle_actions(
-                &actions,
-                &mut game_state.engine_state,
-                &mut game_state.gameplay_system,
-            ) {
+            if game_state.state_mgr.handle_actions(&actions, &mut args) {
                 game_state.engine_state.should_close = true;
                 return Ok(());
             }
@@ -223,10 +225,6 @@ pub fn tick_game<'a>(
 
             if actions.contains(&(String_Id::from("toggle_console"), Action_Kind::Pressed)) {
                 game_state.engine_state.debug_systems.console.toggle();
-                window::set_key_repeat_enabled(
-                    &mut game_state.window,
-                    game_state.engine_state.debug_systems.console.status == Console_Status::Open,
-                );
             }
 
             if actions.contains(&(String_Id::from("calipers"), Action_Kind::Pressed)) {
@@ -244,6 +242,11 @@ pub fn tick_game<'a>(
                     .calipers
                     .end_measuring();
             }
+
+            window::set_key_repeat_enabled(
+                &mut game_state.window,
+                game_state.engine_state.debug_systems.console.status == Console_Status::Open,
+            );
         }
 
         // Update game systems

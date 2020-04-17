@@ -245,7 +245,6 @@ impl Component_Allocator {
 
     #[cold]
     fn grow<T: Copy>(&mut self) {
-        //println!("GROW");
         debug_assert_eq!(mem::align_of::<Comp_Wrapper<T>>(), self.layout.align());
 
         let new_size = self.layout.size() * 2;
@@ -639,8 +638,7 @@ impl Component_Allocator {
                     let next_idx = next.offset();
                     draw_arrow(painter, idx, next_idx, colors::FUCHSIA, calc_pos, 5.);
                 }
-
-                rel_ptr = (*ptr).next;
+                rel_ptr = next;
             }
         }
 
@@ -667,8 +665,7 @@ impl Component_Allocator {
                     let next_idx = next.offset();
                     draw_arrow(painter, idx, next_idx, colors::BLUE, calc_pos, 0.);
                 }
-
-                rel_ptr = (*ptr).next;
+                rel_ptr = next;
             }
         }
     }
