@@ -3,6 +3,7 @@ use crate::common::transform::Transform2D;
 use crate::ecs::ecs_world::Entity;
 
 type Node = Generational_Index;
+type Matrix = cgmath::Matrix3<f32>;
 
 pub struct Scene_Tree {
     node_allocator: Generational_Allocator,
@@ -17,8 +18,8 @@ pub struct Scene_Tree {
     // it's 0 if the root has not been set, 1 otherwise.
     hierarchy: Vec<Node>,
 
-    local_transforms: Vec<Transform2D>,
-    global_transforms: Vec<Transform2D>,
+    local_transforms: Vec<Matrix>,
+    global_transforms: Vec<Matrix>,
 }
 
 impl Scene_Tree {
@@ -34,9 +35,9 @@ impl Scene_Tree {
 
     pub fn add(&mut self, e: Entity, parent: Option<Entity>, local_transform: &Transform2D) {
         // Check invariants
-        assert_eq!(self.local_transforms.len(), self.global_transforms.len());
-        assert!(self.local_transforms.len() <= self.hierarchy.len());
-        assert!(!self.hierarchy.is_empty());
+        debug_assert_eq!(self.local_transforms.len(), self.global_transforms.len());
+        debug_assert!(self.local_transforms.len() <= self.hierarchy.len());
+        debug_assert!(!self.hierarchy.is_empty());
 
         // Ensure we have enough space in the entity => node map
         if e.index as usize >= self.nodes.len() {
@@ -82,7 +83,7 @@ impl Scene_Tree {
                 return;
             }
 
-            assert_ne!(child_node.index, parent_node.index);
+            debug_assert_ne!(child_node.index, parent_node.index);
 
             // Ensure the child node's id is greater than the parent's. If that's not the case, swap their node ids.
             if child_node.index < parent.index {
@@ -99,14 +100,14 @@ impl Scene_Tree {
             // Add the new node to the list along with its parent and its associated transform
             self.nodes[e.index as usize] = Some(child_node);
             if child_node.index as usize >= self.hierarchy.len() {
-                assert_eq!(self.hierarchy.len(), child_node.index as usize - 1);
+                debug_assert_eq!(self.hierarchy.len(), child_node.index as usize - 1);
                 self.hierarchy.push(parent_node);
-                self.local_transforms.push(*local_transform);
-                self.global_transforms.push(*local_transform);
+                self.local_transforms.push(local_transform.get_matrix());
+                self.global_transforms.push(local_transform.get_matrix());
             } else {
                 self.hierarchy[child_node.index as usize - 1] = parent_node;
-                self.local_transforms[child_node.index as usize - 1] = *local_transform;
-                self.global_transforms[child_node.index as usize - 1] = *local_transform;
+                self.local_transforms[child_node.index as usize - 1] = local_transform.get_matrix();
+                self.global_transforms[child_node.index as usize - 1] = local_transform.get_matrix();
             }
         } else {
             // This entity is the root.
@@ -115,21 +116,22 @@ impl Scene_Tree {
             }
             self.nodes[e.index as usize] = Some(self.node_allocator.allocate());
             self.hierarchy[0] = Generational_Index { index: 1, gen: 0 };
-            self.local_transforms.push(*local_transform);
-            self.global_transforms.push(*local_transform);
+            self.local_transforms.push(local_transform.get_matrix());
+            self.global_transforms.push(local_transform.get_matrix());
         }
 
-        assert_eq!(self.local_transforms.len(), self.hierarchy.len());
+        debug_assert_eq!(self.local_transforms.len(), self.hierarchy.len());
     }
 
     pub fn set_local_transform(&mut self, e: Entity, new_transform: &Transform2D) {
         self.local_transforms[self.nodes[e.index as usize].unwrap().index as usize - 1] =
-            *new_transform;
+            new_transform.get_matrix();
     }
 
-    pub fn get_global_transform(&self, e: Entity) -> Option<&Transform2D> {
+    pub fn get_global_transform(&self, e: Entity) -> Option<Transform2D> {
         self.global_transforms
             .get(self.nodes.get(e.index as usize)?.unwrap().index as usize - 1)
+            .map(Transform2D::new_from_matrix)
     }
 
     pub fn compute_global_transforms(&mut self) {
@@ -142,10 +144,7 @@ impl Scene_Tree {
 
         for i in 1..global_transforms.len() {
             let parent_index = hierarchy[i].index as usize - 1;
-            // @Speed: this recalculates matrices every time! Optimize this!
-            global_transforms[i] = Transform2D::new_from_matrix(
-                &(global_transforms[parent_index].get_matrix() * local_transforms[i].get_matrix()),
-            );
+            global_transforms[i] = global_transforms[parent_index] * local_transforms[i];
             // To disable parenting for debug:
             //global_transforms[i] = local_transforms[i];
         }

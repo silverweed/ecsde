@@ -637,6 +637,9 @@ impl Component_Allocator {
                 if !next.is_null() {
                     let next_idx = next.offset();
                     draw_arrow(painter, idx, next_idx, colors::FUCHSIA, calc_pos, 5.);
+                    painter.add_text(&next_idx.to_string(), calc_pos(idx as _), 8, colors::BLACK);
+                } else {
+                    painter.add_text("N", calc_pos(idx as _), 8, colors::BLACK);
                 }
                 rel_ptr = next;
             }
@@ -664,6 +667,9 @@ impl Component_Allocator {
                 if !next.is_null() {
                     let next_idx = next.offset();
                     draw_arrow(painter, idx, next_idx, colors::BLUE, calc_pos, 0.);
+                    painter.add_text(&next_idx.to_string(), calc_pos(idx as _), 8, colors::BLACK);
+                } else {
+                    painter.add_text("N", calc_pos(idx as _), 8, colors::BLACK);
                 }
                 rel_ptr = next;
             }
