@@ -18,9 +18,8 @@ pub enum Input_Action {
     Key(keyboard::Key),
     Joystick(Joystick_Button),
     Mouse(Mouse_Button),
-    /// positive is up, negative is down.
     Mouse_Wheel {
-        positive: bool,
+        up: bool,
     },
 }
 
@@ -113,9 +112,9 @@ impl Input_Bindings {
         self.action_bindings.get(&Input_Action::Mouse(button))
     }
 
-    pub(super) fn get_mouse_wheel_actions(&self, positive: bool) -> Option<&Vec<String_Id>> {
+    pub(super) fn get_mouse_wheel_actions(&self, up: bool) -> Option<&Vec<String_Id>> {
         self.action_bindings
-            .get(&Input_Action::Mouse_Wheel { positive })
+            .get(&Input_Action::Mouse_Wheel { up })
     }
 
     pub(super) fn get_key_emulated_axes(
@@ -156,10 +155,10 @@ impl Input_Bindings {
 
     pub(super) fn get_mouse_wheel_emulated_axes(
         &self,
-        positive: bool,
+        up: bool,
     ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
         self.axis_bindings
             .emulated
-            .get(&Input_Action::Mouse_Wheel { positive })
+            .get(&Input_Action::Mouse_Wheel { up })
     }
 }

@@ -99,9 +99,9 @@ fn parse_action(s: &str) -> Option<Input_Action> {
     } else if s.starts_with("Mouse_") {
         mouse::string_to_mouse_btn(&s["Mouse_".len()..]).map(Input_Action::Mouse)
     } else if s == "Wheel_Up" {
-        Some(Input_Action::Mouse_Wheel { positive: true })
+        Some(Input_Action::Mouse_Wheel { up: true })
     } else if s == "Wheel_Down" {
-        Some(Input_Action::Mouse_Wheel { positive: false })
+        Some(Input_Action::Mouse_Wheel { up: false })
     } else {
         keyboard::string_to_key(s).map(Input_Action::Key)
     }

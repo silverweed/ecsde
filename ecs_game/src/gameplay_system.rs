@@ -200,7 +200,7 @@ impl Gameplay_System {
                 let entities: Vec<Entity> = world.entities().iter().copied().collect();
                 for e in entities {
                     if let Some(t) = world.get_component_mut::<C_Spatial2D>(e) {
-                        t.global_transform = *level.scene_tree.get_global_transform(e).unwrap();
+                        t.global_transform = level.scene_tree.get_global_transform(e).unwrap();
                     }
                 }
             }
