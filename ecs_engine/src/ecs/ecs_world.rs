@@ -8,7 +8,14 @@ use std::collections::HashSet;
 #[cfg(debug_assertions)]
 use crate::debug::painter::Debug_Painter;
 
+// NOTE: we reserve the MSB to distinguish static (0)/dynamic (1)
 pub type Entity = Generational_Index;
+
+#[derive(PartialEq, Eq, Copy, Clone)]
+pub enum Entity_Static_Or_Dyn {
+    Static,
+    Dynamic
+}
 
 pub struct Evt_Entity_Destroyed;
 
@@ -43,12 +50,20 @@ impl Ecs_World {
         self.component_manager.get_entity_comp_set(entity)
     }
 
-    pub fn new_entity(&mut self) -> Entity {
-        self.entity_manager.new_entity()
+    pub fn new_entity(&mut self, static_or_dyn: Entity_Static_Or_Dyn) -> Entity {
+        self.entity_manager.new_entity(static_or_dyn)
     }
 
     pub fn entities(&self) -> &[Entity] {
         &self.entity_manager.entities
+    }
+
+    pub fn static_entities(&self) -> &[Entity] {
+        &self.entity_manager.static_entities
+    }
+
+    pub fn dynamic_entities(&self) -> &[Entity] {
+        &self.entity_manager.dyn_entities
     }
 
     pub fn destroy_entity(&mut self, entity: Entity) {
@@ -171,7 +186,12 @@ impl Ecs_World {
 
 pub struct Entity_Manager {
     alloc: Generational_Allocator,
+    // All entities, both static and dynamic
     entities: Vec<Entity>,
+    // Entities that cannot ever move
+    static_entities: Vec<Entity>,
+    // Entities that can move
+    dyn_entities: Vec<Entity>,
 }
 
 impl Entity_Manager {
@@ -179,27 +199,68 @@ impl Entity_Manager {
         Entity_Manager {
             alloc: Generational_Allocator::new(64),
             entities: vec![],
+            static_entities: vec![],
+            dyn_entities: vec![],
         }
     }
 
-    pub fn new_entity(&mut self) -> Entity {
-        let e = self.alloc.allocate();
+    pub fn new_entity(&mut self, static_or_dyn: Entity_Static_Or_Dyn) -> Entity {
+        let mut e = self.alloc.allocate();
+        assert!(e.gen < 0x8000, "Entity generation too high!");
+
+        if static_or_dyn == Entity_Static_Or_Dyn::Static {
+            Self::make_static(&mut e);
+            self.static_entities.push(e);
+        } else {
+            Self::make_dynamic(&mut e);
+            self.dyn_entities.push(e);
+        }
         self.entities.push(e);
+        debug_assert_eq!(self.entities.len(), self.static_entities.len() + self.dyn_entities.len());
+
         e
     }
 
     pub fn destroy_entity(&mut self, entity: Entity) {
         self.alloc.deallocate(entity);
+        // @Cleanup @WaitForStable: use remove_item
         let idx = self.entities.iter().position(|e| *e == entity).unwrap();
         self.entities.remove(idx);
+        if Self::is_static(entity) {
+            let idx = self.static_entities.iter().position(|e| *e == entity).unwrap();
+            self.static_entities.remove(idx);
+        } else {
+            let idx = self.dyn_entities.iter().position(|e| *e == entity).unwrap();
+            self.dyn_entities.remove(idx);
+        }
     }
 
     pub fn is_valid_entity(&self, entity: Entity) -> bool {
-        self.alloc.is_valid(entity)
+        self.alloc.is_valid(Self::to_valid_gen_index(entity))
     }
 
     pub fn n_live_entities(&self) -> usize {
         self.entities.len()
+    }
+
+    fn make_static(entity: &mut Entity) {
+        entity.gen &= 0x7FFF;
+    }
+
+    fn make_dynamic(entity: &mut Entity) {
+        entity.gen |= 0x8000;
+    }
+
+    fn is_static(entity: Entity) -> bool {
+        entity.gen & 0x8000 == 0
+    }
+
+    // Inverse function of make_static/make_dynamic
+    fn to_valid_gen_index(entity: Entity) -> Entity {
+        Entity {
+            gen: entity.gen & 0x7FFF,
+            index: entity.index,
+        }
     }
 }
 

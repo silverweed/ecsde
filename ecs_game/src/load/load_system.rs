@@ -20,6 +20,8 @@ use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::gfx;
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 
+use ecs_engine::ecs::ecs_world::Entity_Static_Or_Dyn::*;
+
 #[derive(Copy, Clone, Default)]
 pub struct C_Ground {
     pub neighbours: [Entity; 4],
@@ -85,7 +87,7 @@ fn init_demo_entities(
     #![allow(warnings)]
     use ecs_engine::common::angle;
 
-    let camera = level.world.new_entity();
+    let camera = level.world.new_entity(Dynamic);
     {
         let cam = level.world.add_component(camera, C_Camera2D::default());
         //cam.transform.set_scale(2.5, 2.5);
@@ -104,7 +106,7 @@ fn init_demo_entities(
     }
 
     let mut prev_entity: Option<Entity> = None;
-    let ground = level.world.new_entity();
+    let ground = level.world.new_entity(Static);
 
     {
         let rend = level.world.add_component(
@@ -145,7 +147,7 @@ fn init_demo_entities(
 
     let n_frames = 3;
     for i in 0..gs_cfg.n_entities_to_spawn {
-        let entity = level.world.new_entity();
+        let entity = level.world.new_entity(Dynamic);
         let (sw, sh) = {
             let rend = level.world.add_component(
                 entity,
@@ -252,7 +254,7 @@ fn spawn_rock_at(
     pos: Vec2f,
     ground: Entity,
 ) {
-    let rock = level.world.new_entity();
+    let rock = level.world.new_entity(Static);
 
     let (sw, sh) = {
         let rend = level.world.add_component(rock, C_Renderable::default());

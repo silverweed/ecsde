@@ -134,7 +134,10 @@ impl Gameplay_System {
         level_batches: &mut HashMap<String_Id, Batches>,
     ) {
         let level_id = String_Id::from("test");
-        let level = load_system::level_load_sync(level_id, engine_state, game_res, self.cfg);
+        let mut level = load_system::level_load_sync(level_id, engine_state, game_res, self.cfg);
+
+        let entities = level.world.entities().iter().copied().collect::<Vec<_>>();
+        update_scene_tree(&mut level, &entities);
 
         self.loaded_levels.push(Arc::new(Mutex::new(level)));
         self.active_levels.push(self.loaded_levels.len() - 1);
@@ -180,30 +183,8 @@ impl Gameplay_System {
             gfx::animation_system::update(&dt, world);
             controllable_system::update(&dt, actions, axes, world, self.input_cfg, cfg);
 
-            {
-                trace!("scene_tree::copy_transforms");
-                for e in world.entities().iter().copied() {
-                    if let Some(t) = world.get_component::<C_Spatial2D>(e) {
-                        level.scene_tree.set_local_transform(e, &t.local_transform);
-                    }
-                }
-            }
-
-            {
-                trace!("scene_tree::compute_global_transforms");
-                level.scene_tree.compute_global_transforms();
-            }
-
-            {
-                trace!("scene_tree::backcopy_transforms");
-                // @Speed
-                let entities: Vec<Entity> = world.entities().iter().copied().collect();
-                for e in entities {
-                    if let Some(t) = world.get_component_mut::<C_Spatial2D>(e) {
-                        t.global_transform = level.scene_tree.get_global_transform(e).unwrap();
-                    }
-                }
-            }
+            let dyn_entities = level.world.dynamic_entities().iter().copied().collect::<Vec<_>>();
+            update_scene_tree(level, &dyn_entities);
 
             let world = &mut level.world;
 
@@ -488,6 +469,32 @@ fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration) {
             //t.local_transform.set_rotation(deg(30.));
         }
     });
+}
+
+fn update_scene_tree(level: &mut Level, entities: &[Entity]) {
+    {
+        trace!("scene_tree::copy_transforms");
+        for &e in entities {
+            if let Some(t) = level.world.get_component::<C_Spatial2D>(e) {
+                level.scene_tree.set_local_transform(e, &t.local_transform);
+            }
+        }
+    }
+
+    {
+        trace!("scene_tree::compute_global_transforms");
+        level.scene_tree.compute_global_transforms();
+    }
+
+    {
+        trace!("scene_tree::backcopy_transforms");
+        // @Speed
+        for &e in entities {
+            if let Some(t) = level.world.get_component_mut::<C_Spatial2D>(e) {
+                t.global_transform = level.scene_tree.get_global_transform(e).unwrap();
+            }
+        }
+    }
 }
 
 fn read_input_cfg(cfg: &cfg::Config) -> Input_Config {

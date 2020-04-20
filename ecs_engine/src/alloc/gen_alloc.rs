@@ -5,9 +5,10 @@ pub type Index_Type = u32;
 pub type Gen_Type = u32;
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Hash, Eq)]
+#[repr(C)] // To ensure the generation always comes first
 pub struct Generational_Index {
-    pub index: Index_Type,
     pub gen: Gen_Type,
+    pub index: Index_Type,
 }
 
 impl Generational_Index {
