@@ -106,9 +106,9 @@ impl Component_Allocator {
         // Check if need to grow
         {
             let wrapper_size = mem::size_of::<Comp_Wrapper<T>>();
-            let remaining_space_in_bytes = self.layout.size() - wrapper_size;
+            let max_free_head_pos_allowed = self.layout.size() - wrapper_size;
             let free_head_off_in_bytes = (self.free_head.offset() as usize) * wrapper_size;
-            if free_head_off_in_bytes > remaining_space_in_bytes {
+            if free_head_off_in_bytes > max_free_head_pos_allowed {
                 self.grow::<T>();
             }
         }
