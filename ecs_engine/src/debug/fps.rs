@@ -1,18 +1,16 @@
 use std::time::Duration;
 
-pub struct Fps_Console_Printer {
+pub struct Fps_Counter {
     pub update_rate: Duration,
-    tag: String,
     frames_elapsed: u32,
     time_elapsed: Duration,
     latest_calc_fps: f32,
 }
 
-impl Fps_Console_Printer {
-    pub fn new(update_rate: &Duration, tag: &str) -> Fps_Console_Printer {
-        Fps_Console_Printer {
+impl Fps_Counter {
+    pub fn with_update_rate(update_rate: &Duration) -> Self {
+        Self {
             update_rate: *update_rate,
-            tag: String::from(tag),
             frames_elapsed: 0,
             time_elapsed: Duration::new(0, 0),
             latest_calc_fps: 0.0,

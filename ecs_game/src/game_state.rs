@@ -28,7 +28,7 @@ pub struct Game_State<'a> {
 
     pub state_mgr: states::state_manager::State_Manager,
     #[cfg(debug_assertions)]
-    pub fps_debug: ngdebug::fps::Fps_Console_Printer,
+    pub fps_debug: ngdebug::fps::Fps_Counter,
 
     pub execution_time: Duration,
     pub input_provider: Box<dyn input::provider::Input_Provider>,
@@ -247,7 +247,7 @@ fn create_game_state<'a>(
             engine_state,
 
             #[cfg(debug_assertions)]
-            fps_debug: ngdebug::fps::Fps_Console_Printer::new(&Duration::from_secs(2), "game"),
+            fps_debug: ngdebug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(2)),
 
             sleep_granularity: None,
 

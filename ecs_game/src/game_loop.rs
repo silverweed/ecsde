@@ -712,7 +712,7 @@ fn update_time_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, 
 #[cfg(debug_assertions)]
 fn update_fps_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
-    fps: &debug::fps::Fps_Console_Printer,
+    fps: &debug::fps::Fps_Counter,
     target_fps: u64,
     vsync: bool,
 ) {
@@ -973,7 +973,7 @@ fn debug_draw_grid(
 fn update_graph_fps(
     graph: &mut debug::graph::Debug_Graph_View,
     time: &time::Time,
-    fps: &debug::fps::Fps_Console_Printer,
+    fps: &debug::fps::Fps_Counter,
 ) {
     const TIME_LIMIT: f32 = 60.0;
 
