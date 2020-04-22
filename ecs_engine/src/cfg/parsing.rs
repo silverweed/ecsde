@@ -57,7 +57,7 @@ fn parse_config_dir(dir_path: &Path) -> Result<Vec<Cfg_Section>, std::io::Error>
         let mut n_parsed = 0;
         for entry in fs::read_dir(dir_path)? {
             match entry {
-                Ok(ref e) if e.path().extension() == Some(OsStr::new("cfg")) => {
+                Ok(e) if e.path().extension() == Some(OsStr::new("cfg")) => {
                     n_parsed += 1;
                     sections.append(&mut parse_config_file(&e.path())?)
                 }
