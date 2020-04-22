@@ -21,7 +21,7 @@ impl Config_Watch_Handler {
 impl file_watcher::File_Watcher_Event_Handler for Config_Watch_Handler {
     fn handle(&mut self, event: &DebouncedEvent) {
         match event {
-            DebouncedEvent::Write(ref pathbuf) | DebouncedEvent::Create(ref pathbuf)
+            DebouncedEvent::Write(pathbuf) | DebouncedEvent::Create(pathbuf)
                 if !utils::is_hidden(pathbuf) =>
             {
                 if let Ok(sections) = parsing::parse_config_file(pathbuf) {

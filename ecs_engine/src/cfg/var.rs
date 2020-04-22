@@ -29,7 +29,7 @@ fn read_cfg_str(path_id: String_Id, cfg: &Config) -> &String {
         .read_cfg(path_id)
         .unwrap_or_else(|| fatal!(r#"Tried to read inexistent Cfg_Var "{}""#, path_id));
 
-    if let Cfg_Value::String(ref s) = value {
+    if let Cfg_Value::String(s) = value {
         s
     } else {
         fatal!(
