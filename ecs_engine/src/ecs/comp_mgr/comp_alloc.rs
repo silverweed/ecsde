@@ -13,9 +13,9 @@ const INITIAL_N_ELEMS: usize = 8;
 pub struct Component_Allocator {
     /// This data is filled out by contiguous "Component Wrappers" of the form:
     /// struct {
-    ///     comp: T,
-    ///     next: Relative_Ptr,
     ///     prev: Relative_Ptr,
+    ///     next: Relative_Ptr,
+    ///     comp: T,
     ///     _pad: [u8; _]
     /// }
     /// whose align is >= align_of::<T>().
@@ -34,8 +34,6 @@ pub struct Component_Allocator {
     filled_tail: Relative_Ptr,
 
     layout: Layout,
-
-    loop_next_frame: bool,
 }
 
 impl Component_Allocator {
@@ -61,7 +59,6 @@ impl Component_Allocator {
             filled_head: Relative_Ptr::null(),
             filled_tail: Relative_Ptr::null(),
             layout,
-            loop_next_frame: false,
         }
     }
 
@@ -171,7 +168,10 @@ impl Component_Allocator {
     pub unsafe fn remove<T: Copy>(&mut self, idx: u32) {
         self.remove_dyn(
             idx,
-            &Layout::from_size_align_unchecked(mem::size_of::<T>(), mem::align_of::<T>()),
+            &Layout::from_size_align_unchecked(
+                mem::size_of::<Comp_Wrapper<T>>(),
+                mem::align_of::<Comp_Wrapper<T>>(),
+            ),
         );
     }
 
@@ -374,18 +374,22 @@ impl Debug for Relative_Ptr {
 }
 
 impl Relative_Ptr {
+    #[inline(always)]
     pub fn null() -> Self {
         Self(0)
     }
 
+    #[inline(always)]
     pub fn with_offset(off: u32) -> Self {
         Self(off + 1)
     }
 
+    #[inline(always)]
     pub fn is_null(self) -> bool {
         self.0 == 0
     }
 
+    #[inline(always)]
     pub fn offset(self) -> u32 {
         debug_assert_ne!(self.0, 0);
         self.0 - 1
@@ -398,11 +402,20 @@ impl Relative_Ptr {
 
     /// # Safety
     /// If the pointer has an invalid offset from base, it's UB.
+    #[inline(always)]
     pub unsafe fn to_abs<T: Copy>(self, base: *mut u8) -> *mut Comp_Wrapper<T> {
         if self.0 == 0 {
             ptr::null_mut()
         } else {
-            (base as *mut Comp_Wrapper<T>).add(self.0 as usize - 1)
+            println!(
+                "base = {:p} + {} = {:p} (T = {:?}, sizeof = {})",
+                base as *mut Comp_Wrapper<T>,
+                self.offset(),
+                (base as *mut Comp_Wrapper<T>).add(self.offset() as _),
+                std::any::type_name::<Comp_Wrapper<T>>(),
+                mem::size_of::<Comp_Wrapper<T>>()
+            );
+            (base as *mut Comp_Wrapper<T>).add(self.offset() as _)
         }
     }
 
@@ -410,11 +423,12 @@ impl Relative_Ptr {
     /// Always prefer the static one when possible.
     /// # Safety
     /// See to_abs.
+    #[inline(always)]
     pub unsafe fn to_abs_dyn(self, base: *mut u8, wrapper_size: usize) -> *mut u8 {
         if self.0 == 0 {
             ptr::null_mut()
         } else {
-            base.add((self.0 as usize - 1) * wrapper_size)
+            base.add((self.offset() as usize) * wrapper_size)
         }
     }
 }
@@ -464,13 +478,57 @@ impl Component_Allocator {
                 self.filled_head,
                 self.filled_head.to_abs::<T>(self.data)
             );
+            println!(
+                "filled_tail: {:?} ({:p})",
+                self.filled_tail,
+                self.filled_tail.to_abs::<T>(self.data)
+            );
             println!("---- filled ----");
-            println!("{:?} [0] [{:p}]", *ptr, ptr);
+            println!(
+                "{:?} [0] [{:p}] {}{}{}",
+                *ptr,
+                ptr,
+                if !self.free_head.is_null() && 0 == self.free_head.offset() {
+                    "<(F)"
+                } else {
+                    ""
+                },
+                if !self.filled_head.is_null() && 0 == self.filled_head.offset() {
+                    "<(H)"
+                } else {
+                    ""
+                },
+                if !self.filled_tail.is_null() && 0 == self.filled_tail.offset() {
+                    "<(T)"
+                } else {
+                    ""
+                }
+            );
             while !(*ptr).next.is_null() {
                 let ptr_next = (*ptr).next;
                 ptr = ptr_next.to_abs::<T>(self.data);
                 let idx = ptr_next.offset();
-                println!("{:?} [{}] [{:p}]", *ptr, idx, ptr);
+                println!(
+                    "{:?} [{}] [{:p}] {}{}{}",
+                    *ptr,
+                    idx,
+                    ptr,
+                    if !self.free_head.is_null() && idx == self.free_head.offset() {
+                        "<(F)"
+                    } else {
+                        ""
+                    },
+                    if !self.filled_head.is_null() && idx == self.filled_head.offset() {
+                        "<(H)"
+                    } else {
+                        ""
+                    },
+                    if !self.filled_tail.is_null() && idx == self.filled_tail.offset() {
+                        "<(T)"
+                    } else {
+                        ""
+                    }
+                );
             }
 
             //let mut off = self.free_head;
@@ -635,6 +693,32 @@ mod tests {
     }
 
     #[test]
+    fn rel_ptr() {
+        let base = 0x0000_0000 as *mut Comp_Wrapper<C_Test>;
+        assert_eq!(base, unsafe {
+            Relative_Ptr::with_offset(0).to_abs::<C_Test>(base as _)
+        });
+        for &i in &[1, 2, 10, 100, 345] {
+            assert_eq!(unsafe { base.add(i as _) }, unsafe {
+                Relative_Ptr::with_offset(i).to_abs::<C_Test>(base as _)
+            });
+        }
+
+        assert!(Relative_Ptr::null().is_null());
+        assert!(!Relative_Ptr::with_offset(1).is_null());
+
+        assert_eq!(Relative_Ptr::with_offset(1), Relative_Ptr::with_offset(1));
+        assert_eq!(Relative_Ptr::null(), Relative_Ptr::null());
+        assert_eq!(
+            unsafe { Relative_Ptr::with_offset(10).to_abs::<C_Test>(base as _) as *mut u8 },
+            unsafe {
+                Relative_Ptr::with_offset(10)
+                    .to_abs_dyn(base as _, mem::size_of::<Comp_Wrapper<C_Test>>())
+            }
+        );
+    }
+
+    #[test]
     fn grow() {
         let mut alloc = Component_Allocator::new::<C_Test>();
         alloc.grow::<C_Test>();
@@ -763,15 +847,28 @@ mod tests {
     fn deallocate() {
         let mut alloc = Component_Allocator::new::<C_Test>();
 
+        alloc.debug_print::<C_Test>();
         let (i, _) = alloc.add(C_Test { foo: 1, bar: 1. });
         unsafe {
             alloc.remove::<C_Test>(i);
         }
+        assert!(alloc.filled_head.is_null());
+        assert!(alloc.filled_tail.is_null());
+        assert_eq!(alloc.free_head.offset(), 0);
+
         let (idx, _) = alloc.add(C_Test { foo: 42, bar: 64. });
+        assert_eq!(alloc.filled_head.offset(), 0);
+        assert_eq!(alloc.filled_tail.offset(), 0);
+        assert_eq!(alloc.free_head.offset(), 1);
 
         unsafe {
             alloc.remove::<C_Test>(idx);
         }
+        assert!(alloc.filled_head.is_null());
+        assert!(alloc.filled_tail.is_null());
+        assert_eq!(alloc.free_head.offset(), 0);
+
+        alloc.debug_print::<C_Test>();
 
         let (_, b) = alloc.add(C_Test {
             foo: 122,
@@ -779,19 +876,35 @@ mod tests {
         });
         assert_eq!(b.foo, 122);
         assert_eq!(b.bar, 233.);
+        assert_eq!(alloc.filled_head.offset(), 0);
+        assert_eq!(alloc.filled_tail.offset(), 0);
+        assert_eq!(alloc.free_head.offset(), 1);
+
         let mut v = vec![];
         alloc.debug_print::<C_Test>();
         for _ in 0..10 {
             let (idx, _) = alloc.add(C_Test { foo: 1, bar: -2. });
             v.push(idx);
-            alloc.debug_print::<C_Test>();
+            assert_eq!(alloc.filled_head.offset(), 0);
+            assert_eq!(alloc.filled_tail.offset(), idx);
+            assert_eq!(alloc.free_head.offset(), alloc.filled_tail.offset() + 1);
+            //alloc.debug_print::<C_Test>();
         }
+        alloc.debug_print::<C_Test>();
         unsafe {
             alloc.remove::<C_Test>(3);
         }
+        assert_eq!(alloc.filled_head.offset(), 0);
+        assert_eq!(alloc.filled_tail.offset(), 10);
+        assert_eq!(alloc.free_head.offset(), 3);
+
         alloc.debug_print::<C_Test>();
         alloc.add(C_Test { foo: 33, bar: 33. });
         alloc.debug_print::<C_Test>();
+
+        assert_eq!(alloc.filled_head.offset(), 0);
+        assert_eq!(alloc.filled_tail.offset(), 3);
+        assert_eq!(alloc.free_head.offset(), 11);
 
         for idx in v {
             unsafe {
