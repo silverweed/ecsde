@@ -1,5 +1,8 @@
 use ecs_engine::common::vector::Vec2f;
-use ecs_engine::ecs::ecs_world::Entity;
+use ecs_engine::core::app::Engine_State;
+use ecs_engine::ecs::components::base::C_Spatial2D;
+use ecs_engine::ecs::ecs_world::{Ecs_World, Entity, Evt_Entity_Destroyed};
+use ecs_engine::events::evt_register::{with_cb_data, wrap_cb_data, Event_Callback_Data};
 use std::collections::HashMap;
 
 #[cfg(debug_assertions)]
@@ -30,9 +33,9 @@ impl Chunk_Coords {
     }
 }
 
-#[derive(Default)]
 pub struct World_Chunks {
     chunks: HashMap<Chunk_Coords, World_Chunk>,
+    to_destroy: Event_Callback_Data,
 }
 
 #[derive(Default, Debug)]
@@ -41,9 +44,44 @@ pub struct World_Chunk {
 }
 
 impl World_Chunks {
+    pub fn new() -> Self {
+        Self {
+            chunks: HashMap::new(),
+            to_destroy: wrap_cb_data(Vec::<Entity>::new()),
+        }
+    }
+
+    pub fn init(&mut self, engine_state: &mut Engine_State) {
+        engine_state
+            .systems
+            .evt_register
+            .subscribe::<Evt_Entity_Destroyed>(
+                Box::new(|entity, to_destroy| {
+                    with_cb_data(to_destroy.unwrap(), |to_destroy: &mut Vec<Entity>| {
+                        to_destroy.push(entity);
+                    });
+                }),
+                Some(self.to_destroy.clone()),
+            );
+    }
+
+    pub fn update(&mut self, ecs_world: &Ecs_World) {
+        let mut to_remove = vec![];
+        with_cb_data(&mut self.to_destroy, |to_destroy: &mut Vec<Entity>| {
+            for &entity in to_destroy.iter() {
+                if let Some(spatial) = ecs_world.get_component::<C_Spatial2D>(entity) {
+                    to_remove.push((entity, spatial.transform.position()));
+                }
+            }
+            to_destroy.clear();
+        });
+        for (entity, pos) in to_remove {
+            self.remove_entity(entity, pos);
+        }
+    }
+
     pub fn add_entity(&mut self, entity: Entity, pos: Vec2f) {
         let coords = Chunk_Coords::from_pos(pos);
-        println!("coords: {:?} -> {:?}", pos, coords);
         self.add_entity_coords(entity, coords);
     }
 
@@ -53,7 +91,7 @@ impl World_Chunks {
             !chunk.entities.contains(&entity),
             "Duplicate entity {:?} in chunk {:?}!",
             entity,
-            chunk
+            coords
         );
         chunk.entities.push(entity);
     }

@@ -20,6 +20,9 @@ use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::gfx;
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 
+#[cfg(debug_assertions)]
+use crate::debug::entity_debug::C_Debug_Data;
+
 #[derive(Copy, Clone, Default)]
 pub struct C_Ground {
     pub neighbours: [Entity; 4],
@@ -36,7 +39,7 @@ pub fn level_load_sync(
         world: Ecs_World::new(),
         cameras: vec![],
         active_camera: 0,
-        chunks: World_Chunks::default(),
+        chunks: World_Chunks::new(),
     };
 
     linfo!("Loading level {} ...", level_id);
@@ -72,6 +75,11 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Dumb_Movement>();
     world.register_component::<C_Phys_Data>();
     world.register_component::<C_Ground>();
+
+    #[cfg(debug_assertions)]
+    {
+        world.register_component::<C_Debug_Data>();
+    }
 }
 
 // @Temporary
@@ -104,7 +112,6 @@ fn init_demo_entities(
         );
     }
 
-    let mut prev_entity: Option<Entity> = None;
     let ground = level.world.new_entity();
 
     {
@@ -226,7 +233,11 @@ fn init_demo_entities(
         level
             .world
             .add_component(entity, C_Dumb_Movement::default());
-        prev_entity = Some(entity);
+
+        #[cfg(debug_assertions)]
+        {
+            level.world.add_component(entity, C_Debug_Data::default());
+        }
         //{
         //    let mut t = level.world.add_component::<C_Spatial2D>(entity);
         //    t.transform.set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
@@ -343,7 +354,12 @@ fn calc_terrain_colliders(world: &mut Ecs_World) {
 
 fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World) {
     foreach_entity!(world, +C_Spatial2D, |entity| {
-        let pos = world.get_component::<C_Spatial2D>(entity).unwrap().transform.position();
-        chunks.add_entity(entity, pos);
+        let spatial = world.get_component_mut::<C_Spatial2D>(entity).unwrap();
+
+        // @Cleanup @Soundness: this is not the right place to set this value! It should
+        // be done after updating the scene tree for the first time (and use the global transform)!
+        spatial.frame_starting_pos = spatial.transform.position();
+
+        chunks.add_entity(entity, spatial.transform.position());
     });
 }

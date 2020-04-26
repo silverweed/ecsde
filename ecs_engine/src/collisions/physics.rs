@@ -448,10 +448,11 @@ fn prepare_colliders_and_gather_rigidbodies(
     let mut entities = vec![];
 
     foreach_entity!(world, +Collider, +C_Spatial2D, |entity| {
-        let spatial = world.get_component::<C_Spatial2D>(entity).unwrap();
+        let spatial = world.get_component_mut::<C_Spatial2D>(entity).unwrap();
         let pos = spatial.transform.position();
         let velocity = spatial.velocity;
         sanity_check_v(velocity);
+        spatial.frame_starting_pos = pos;
 
         let collider = world.get_component_mut::<Collider>(entity).unwrap();
         collider.position = pos;

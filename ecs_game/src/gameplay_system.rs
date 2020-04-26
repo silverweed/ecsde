@@ -134,7 +134,9 @@ impl Gameplay_System {
         level_batches: &mut HashMap<String_Id, Batches>,
     ) {
         let level_id = String_Id::from("test");
-        let level = load_system::level_load_sync(level_id, engine_state, game_res, self.cfg);
+        let mut level = load_system::level_load_sync(level_id, engine_state, game_res, self.cfg);
+
+        level.chunks.init(engine_state);
 
         self.loaded_levels.push(Arc::new(Mutex::new(level)));
         self.active_levels.push(self.loaded_levels.len() - 1);
@@ -189,6 +191,8 @@ impl Gameplay_System {
 
             //movement_system::update(&dt, world);
             dumb_movement_system::update(&dt, world, rng);
+
+            level.chunks.update(world);
         }
     }
 
@@ -197,7 +201,7 @@ impl Gameplay_System {
 
         self.foreach_active_level(|level| {
             level.world.notify_destroyed(evt_register);
-            let destroyed = level.world.destroy_pending();
+            level.world.destroy_pending();
         });
     }
 

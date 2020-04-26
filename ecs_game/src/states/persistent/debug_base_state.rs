@@ -89,7 +89,13 @@ impl Persistent_Game_State for Debug_Base_State {
                     gs.step(&step_delta, &engine_state.config, &mut engine_state.rng);
                     gs.foreach_active_level(|level| {
                         ecs_engine::collisions::physics::update_collisions(&mut level.world);
-                        crate::movement_system::update(&step_delta, &mut level.world);
+                        let mut moved = vec![];
+                        crate::movement_system::update(&step_delta, &mut level.world, &mut moved);
+                        for mov in moved {
+                            level
+                                .chunks
+                                .update_entity(mov.entity, mov.prev_pos, mov.new_pos);
+                        }
                     });
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_print_em_debug_info => {

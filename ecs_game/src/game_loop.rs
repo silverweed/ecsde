@@ -284,7 +284,15 @@ pub fn tick_game<'a>(
         gameplay_system.foreach_active_level(|level| {
             //collision_system.update(&mut level.world);
             ecs_engine::collisions::physics::update_collisions(&mut level.world);
-            crate::movement_system::update(&update_dt, &mut level.world);
+
+            let mut moved = vec![]; // @Speed: don't create a new vec each frame
+            crate::movement_system::update(&update_dt, &mut level.world, &mut moved);
+
+            for mov in moved {
+                level
+                    .chunks
+                    .update_entity(mov.entity, mov.prev_pos, mov.new_pos);
+            }
         });
     }
 
@@ -292,6 +300,15 @@ pub fn tick_game<'a>(
     {
         trace!("audio_system_update");
         game_state.engine_state.systems.audio_system.update();
+    }
+
+    // We clear batches before update_debug, so debug can draw textures
+    {
+        trace!("clear_batches");
+        gfx::render::batcher::clear_batches(&mut game_state.engine_state.global_batches);
+        for batches in game_state.level_batches.values_mut() {
+            gfx::render::batcher::clear_batches(batches);
+        }
     }
 
     #[cfg(debug_assertions)]
@@ -374,14 +391,6 @@ fn update_graphics(
 
         gfx::window::set_clear_color(window, colors::rgb(0, 0, 0));
         gfx::window::clear(window);
-    }
-
-    {
-        trace!("clear_batches");
-        gfx::render::batcher::clear_batches(&mut game_state.engine_state.global_batches);
-        for batches in game_state.level_batches.values_mut() {
-            gfx::render::batcher::clear_batches(batches);
-        }
     }
 
     let cfg = &game_state.engine_state.config;
@@ -592,6 +601,9 @@ fn update_debug(game_state: &mut Game_State) {
     let cvars = &game_state.debug_cvars;
     let draw_entities = cvars.draw_entities.read(&engine_state.config);
     let draw_velocities = cvars.draw_velocities.read(&engine_state.config);
+    let draw_entity_prev_frame_ghost = cvars
+        .draw_entity_prev_frame_ghost
+        .read(&engine_state.config);
     let draw_colliders = cvars.draw_colliders.read(&engine_state.config);
     let draw_collision_quadtree = cvars.draw_collision_quadtree.read(&engine_state.config);
     let draw_collision_applied_impulses = cvars
@@ -602,6 +614,7 @@ fn update_debug(game_state: &mut Game_State) {
     let square_size = cvars.debug_grid_square_size.read(&engine_state.config);
     let opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
     let draw_world_chunks = cvars.draw_world_chunks.read(&engine_state.config);
+    let lv_batches = &mut game_state.level_batches;
 
     game_state.gameplay_system.foreach_active_level(|level| {
         let debug_painter = painters
@@ -618,6 +631,11 @@ fn update_debug(game_state: &mut Game_State) {
 
         if draw_velocities {
             debug_draw_velocities(debug_painter, &level.world);
+        }
+
+        if draw_entity_prev_frame_ghost {
+            let batches = lv_batches.get_mut(&level.id).unwrap();
+            debug_draw_entities_prev_frame_ghost(debug_painter, batches, &mut level.world);
         }
 
         if draw_colliders {
@@ -919,6 +937,51 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
             12,
             COLOR,
         );
+    });
+}
+
+#[cfg(debug_assertions)]
+fn debug_draw_entities_prev_frame_ghost(
+    debug_painter: &mut Debug_Painter,
+    batches: &mut gfx::render::batcher::Batches,
+    ecs_world: &mut Ecs_World,
+) {
+    use crate::debug::entity_debug::C_Debug_Data;
+    use ecs_engine::common::shapes::Arrow;
+    use ecs_engine::ecs::components::base::C_Spatial2D;
+    use ecs_engine::ecs::components::gfx::C_Renderable;
+    use ecs_engine::gfx::render;
+
+    foreach_entity!(ecs_world, +C_Spatial2D, +C_Renderable, +C_Debug_Data, |entity| {
+        let frame_starting_pos = ecs_world.get_component::<C_Spatial2D>(entity).unwrap().frame_starting_pos;
+        let C_Renderable {
+            texture,
+            rect,
+            modulate,
+            z_index,
+        } = ecs_world.get_component::<C_Renderable>(entity).unwrap().clone();
+
+        let debug_data = ecs_world.get_component_mut::<C_Debug_Data>(entity).unwrap();
+        if (debug_data.n_prev_positions_filled as usize) < debug_data.prev_positions.len() {
+            debug_data.prev_positions[debug_data.n_prev_positions_filled as usize] = frame_starting_pos;
+            debug_data.n_prev_positions_filled += 1;
+        } else {
+            for i in 0..debug_data.prev_positions.len() - 1 {
+                debug_data.prev_positions[i] = debug_data.prev_positions[i + 1];
+            }
+            debug_data.prev_positions[debug_data.prev_positions.len() - 1] = frame_starting_pos;
+        }
+
+        for i in 0..debug_data.n_prev_positions_filled {
+            let transform = Transform2D::from_pos(debug_data.prev_positions[i as usize]);
+            let color = colors::rgba(
+                modulate.r,
+                modulate.g,
+                modulate.b,
+                200 - 10 * (debug_data.prev_positions.len() - i as usize) as u8,
+            );
+            render::render_texture_ws(batches, texture, &rect, color, &transform, z_index);
+        }
     });
 }
 

@@ -5,4 +5,5 @@ use crate::common::vector::Vec2f;
 pub struct C_Spatial2D {
     pub transform: Transform2D,
     pub velocity: Vec2f,
+    pub frame_starting_pos: Vec2f,
 }
