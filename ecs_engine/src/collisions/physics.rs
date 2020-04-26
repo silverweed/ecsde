@@ -433,8 +433,7 @@ pub fn update_collisions(ecs_world: &mut Ecs_World) {
                 } = objects[body];
 
                 let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
-                // @Incomplete should be global_transform
-                spatial.local_transform.set_position_v(position);
+                spatial.transform.set_position_v(position);
                 spatial.velocity = velocity;
             }
         }
@@ -450,7 +449,7 @@ fn prepare_colliders_and_gather_rigidbodies(
 
     foreach_entity!(world, +Collider, +C_Spatial2D, |entity| {
         let spatial = world.get_component::<C_Spatial2D>(entity).unwrap();
-        let pos = spatial.global_transform.position();
+        let pos = spatial.transform.position();
         let velocity = spatial.velocity;
         sanity_check_v(velocity);
 

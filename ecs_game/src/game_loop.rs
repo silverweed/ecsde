@@ -861,7 +861,7 @@ fn debug_draw_transforms(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 
     foreach_entity!(ecs_world, +C_Spatial2D, |entity| {
         let spatial = ecs_world.get_component::<C_Spatial2D>(entity).unwrap();
-        let transform = &spatial.global_transform;
+        let transform = &spatial.transform;
         debug_painter.add_circle(
             Circle {
                 radius: 5.,
@@ -897,7 +897,7 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 
     foreach_entity!(ecs_world, +C_Spatial2D, |entity| {
         let spatial = ecs_world.get_component::<C_Spatial2D>(entity).unwrap();
-        let transform = &spatial.global_transform;
+        let transform = &spatial.transform;
         debug_painter.add_arrow(
             Arrow {
                 center: transform.position(),

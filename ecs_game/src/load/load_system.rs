@@ -14,7 +14,6 @@ use ecs_engine::common::vector::Vec2f;
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::rand;
-use ecs_engine::core::scene_tree::Scene_Tree;
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
@@ -37,7 +36,6 @@ pub fn level_load_sync(
         world: Ecs_World::new(),
         cameras: vec![],
         active_camera: 0,
-        scene_tree: Scene_Tree::new(),
         chunks: World_Chunks::default(),
     };
 
@@ -123,8 +121,7 @@ fn init_demo_entities(
         rend.rect = Rect::new(0, 0, sw as i32 * 100, sh as i32 * 100);
         rsrc.get_texture_mut(rend.texture).set_repeated(true);
 
-        let t = level.world.add_component(ground, C_Spatial2D::default());
-        level.scene_tree.add(ground, None, &t.local_transform);
+        level.world.add_component(ground, C_Spatial2D::default());
     }
 
     let ext = 20;
@@ -184,13 +181,10 @@ fn init_demo_entities(
             let y = rand::rand_01(rng);
             if i > 0 {
                 //t.local_transform.set_position(i as f32 * 242.0, 0.);
-                t.local_transform.set_position(x * 50., 1. * y * 50.);
+                t.transform.set_position(x * 50., 1. * y * 50.);
                 //t.local_transform.set_rotation(angle::deg(45. * i as f32));
                 //t.local_transform.set_scale(2., 4.);
             }
-            level
-                .scene_tree
-                .add(entity, Some(ground), &t.local_transform);
         }
         {
             let c = level.world.add_component(
@@ -270,8 +264,7 @@ fn spawn_rock_at(
 
     {
         let t = level.world.add_component(rock, C_Spatial2D::default());
-        t.local_transform.set_position_v(pos);
-        level.scene_tree.add(rock, Some(ground), &t.local_transform);
+        t.transform.set_position_v(pos);
     }
 
     level.world.add_component(rock, C_Ground::default());
@@ -306,13 +299,13 @@ fn calc_terrain_colliders(world: &mut Ecs_World) {
 
     // for each rock ...
     foreach_entity!(world, +C_Ground, |entity| {
-        let pos = world.get_component::<C_Spatial2D>(entity).unwrap().local_transform.position();
+        let pos = world.get_component::<C_Spatial2D>(entity).unwrap().transform.position();
         let tile = Vec2i::from(pos / ROCK_SIZE);
         rocks_by_tile.insert(tile, entity);
     });
 
     foreach_entity!(world, +C_Ground, |entity| {
-        let pos = world.get_component::<C_Spatial2D>(entity).unwrap().local_transform.position();
+        let pos = world.get_component::<C_Spatial2D>(entity).unwrap().transform.position();
         let tile = Vec2i::from(pos / ROCK_SIZE);
 
         let up = tile - v2!(0, 1);
@@ -350,7 +343,7 @@ fn calc_terrain_colliders(world: &mut Ecs_World) {
 
 fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World) {
     foreach_entity!(world, +C_Spatial2D, |entity| {
-        let pos = world.get_component::<C_Spatial2D>(entity).unwrap().local_transform.position();
+        let pos = world.get_component::<C_Spatial2D>(entity).unwrap().transform.position();
         chunks.add_entity(entity, pos);
     });
 }

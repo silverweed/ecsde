@@ -93,7 +93,7 @@ impl Quad_Tree {
                 let transform = &ecs_world
                     .get_component::<C_Spatial2D>(entity)
                     .unwrap()
-                    .global_transform;
+                    .transform;
                 let index = get_index(collider, transform, &self.bounds);
                 if index >= 0 {
                     subnodes[index as usize].add(
@@ -383,7 +383,7 @@ mod tests {
             let spat = ecs_world.add_component(entity, C_Spatial2D::default());
             let trans =
                 Transform2D::from_pos_rot_scale(Vec2f::new(x, y), rad(0.), Vec2f::new(sx, sy));
-            spat.global_transform = trans;
+            spat.transform = trans;
 
             (entity, collider, trans)
         }

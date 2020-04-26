@@ -66,7 +66,7 @@ pub fn update(args: Render_System_Update_Args) {
                     window,
                     *src_rect,
                     cfg.draw_sprites_bg_color,
-                    &spatial.global_transform,
+                    &spatial.transform,
                     camera,
                 );
             }
@@ -77,7 +77,7 @@ pub fn update(args: Render_System_Update_Args) {
             *tex_id,
             src_rect,
             *modulate,
-            &spatial.global_transform,
+            &spatial.transform,
             *z_index,
         );
     }

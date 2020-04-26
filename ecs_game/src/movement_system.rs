@@ -7,6 +7,6 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World) {
 
     for spatial in ecs_world.get_components_mut::<C_Spatial2D>() {
         let translation = spatial.velocity * dt_secs;
-        spatial.local_transform.translate_v(translation);
+        spatial.transform.translate_v(translation);
     }
 }

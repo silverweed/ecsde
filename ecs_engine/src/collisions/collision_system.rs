@@ -86,7 +86,7 @@ impl Collision_System {
             let transform = &ecs_world
                 .get_component::<C_Spatial2D>(entity)
                 .unwrap()
-                .global_transform;
+                .transform;
 
             painter.add_text(&id, transform.position(), 16, colors::rgb(0, 50, 200));
         }
@@ -266,7 +266,7 @@ fn check_collision_with_neighbours(
 
         let oth_cld = map_collider.get_component(neighbour).unwrap();
         let oth_spatial = map_spatial.get_component(neighbour).unwrap();
-        let oth_transf = &oth_spatial.global_transform;
+        let oth_transf = &oth_spatial.transform;
         let oth_velocity = oth_spatial.velocity;
         let oth_pos = oth_transf.position() + oth_cld.offset;
         let oth_scale = oth_transf.scale();

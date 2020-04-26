@@ -19,7 +19,6 @@ use ecs_engine::common::vector::Vec2f;
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::rand;
-use ecs_engine::core::scene_tree;
 use ecs_engine::core::time;
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
@@ -48,7 +47,6 @@ pub struct Level {
     pub chunks: World_Chunks,
     pub cameras: Vec<Entity>,
     pub active_camera: usize, // index inside 'cameras'
-    pub scene_tree: scene_tree::Scene_Tree,
 }
 
 impl Level {
@@ -182,31 +180,6 @@ impl Gameplay_System {
             gfx::animation_system::update(&dt, world);
             controllable_system::update(&dt, actions, axes, world, self.input_cfg, cfg);
 
-            {
-                trace!("scene_tree::copy_transforms");
-                for e in world.entities().iter().copied() {
-                    if let Some(t) = world.get_component::<C_Spatial2D>(e) {
-                        level.scene_tree.set_local_transform(e, &t.local_transform);
-                    }
-                }
-            }
-
-            {
-                trace!("scene_tree::compute_global_transforms");
-                level.scene_tree.compute_global_transforms();
-            }
-
-            {
-                trace!("scene_tree::backcopy_transforms");
-                // @Speed
-                let entities: Vec<Entity> = world.entities().iter().copied().collect();
-                for e in entities {
-                    if let Some(t) = world.get_component_mut::<C_Spatial2D>(e) {
-                        t.global_transform = *level.scene_tree.get_global_transform(e).unwrap();
-                    }
-                }
-            }
-
             let world = &mut level.world;
 
             // @Incomplete: level-specific gameplay update
@@ -225,7 +198,6 @@ impl Gameplay_System {
         self.foreach_active_level(|level| {
             level.world.notify_destroyed(evt_register);
             let destroyed = level.world.destroy_pending();
-            // @Incomplete: scene_tree
         });
     }
 
@@ -317,7 +289,7 @@ impl Gameplay_System {
                     .world
                     .get_component::<C_Spatial2D>(moved)
                     .unwrap()
-                    .global_transform
+                    .transform
                     .position();
 
                 let camera = level
