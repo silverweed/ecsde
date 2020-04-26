@@ -56,6 +56,7 @@ pub fn lerp_col(a: Color, b: Color, t: f32) -> Color {
     )
 }
 
+#[allow(clippy::many_single_char_names, clippy::float_cmp)]
 pub fn to_hsv(c: Color) -> (f32, f32, f32) {
     let r = c.r as f32 / 255.0;
     let g = c.g as f32 / 255.0;
@@ -81,6 +82,7 @@ pub fn to_hsv(c: Color) -> (f32, f32, f32) {
     (h, s, v)
 }
 
+#[allow(clippy::many_single_char_names)]
 pub fn from_hsv((h, s, v): (f32, f32, f32)) -> Color {
     let c = v * s;
     let x = c * (1. - (h / FRAC_PI_3 % 2. - 1.).abs());

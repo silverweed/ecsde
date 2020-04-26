@@ -147,7 +147,7 @@ impl World_Chunks {
 }
 
 impl Spatial_Accelerator<Entity> for World_Chunks {
-    fn get_neighbours<R>(&self, entity: Entity, pos: Vec2f, extent: Vec2f, result: &mut R)
+    fn get_neighbours<R>(&self, pos: Vec2f, extent: Vec2f, result: &mut R)
     where
         R: Extend<Entity>,
     {

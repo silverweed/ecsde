@@ -140,13 +140,7 @@ fn init_demo_entities(
             if (-int..=int).contains(&x) && (-int..=int).contains(&y) {
                 continue;
             }
-            spawn_rock_at(
-                level,
-                env,
-                rsrc,
-                v2!((x * sw) as f32, (y * sh) as f32),
-                ground,
-            );
+            spawn_rock_at(level, env, rsrc, v2!((x * sw) as f32, (y * sh) as f32));
         }
     }
 
@@ -253,16 +247,10 @@ fn init_demo_entities(
     //spawn_rock_at(level, env, rsrc, v2!(0., 100.), ground);
 }
 
-fn spawn_rock_at(
-    level: &mut Level,
-    env: &Env_Info,
-    rsrc: &mut Gfx_Resources,
-    pos: Vec2f,
-    ground: Entity,
-) {
+fn spawn_rock_at(level: &mut Level, env: &Env_Info, rsrc: &mut Gfx_Resources, pos: Vec2f) {
     let rock = level.world.new_entity();
 
-    let (sw, sh) = {
+    {
         let rend = level.world.add_component(rock, C_Renderable::default());
         rend.texture = rsrc.load_texture(&tex_path(&env, "rock.png"));
         rend.z_index = 1;
@@ -270,7 +258,6 @@ fn spawn_rock_at(
         let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
         let (sw, sh) = (sw as i32, sh as i32);
         rend.rect = Rect::new(0, 0, sw, sh);
-        (sw, sh)
     };
 
     {
@@ -280,14 +267,6 @@ fn spawn_rock_at(
 
     level.world.add_component(rock, C_Ground::default());
 
-    //{
-    //    let c = level.world.add_component(rock, Collider::default());
-    //    c.shape = Collision_Shape::Rect {
-    //        width: sw as f32,
-    //        height: sh as f32,
-    //    };
-    //    c.is_static = true;
-    //}
     {
         level.world.add_component(
             rock,

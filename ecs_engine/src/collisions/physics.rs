@@ -281,7 +281,7 @@ where
         let a_part_cb = COLLISION_CB_TABLE[a_shape];
 
         let mut neighbours = vec![];
-        accelerator.get_neighbours(ent_a, a.position, a_extent, &mut neighbours);
+        accelerator.get_neighbours(a.position, a_extent, &mut neighbours);
 
         for &ent_b in neighbours.iter() {
             if ent_a == ent_b {

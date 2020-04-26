@@ -279,17 +279,15 @@ pub fn tick_game<'a>(
 
     // Update collisions
     {
-        trace!("collision_system::update");
+        trace!("physics::update");
 
         let gameplay_system = &mut game_state.gameplay_system;
-        //let collision_system = &mut game_state.engine_state.systems.collision_system;
         let time = &game_state.engine_state.time;
         let update_dt = time::mul_duration(
             &target_time_per_frame,
             time.time_scale * (!time.paused as u32 as f32),
         );
         gameplay_system.foreach_active_level(|level| {
-            //collision_system.update(&mut level.world);
             let coll_debug = collision_debug_data
                 .entry(level.id)
                 .or_insert_with(physics::Collision_System_Debug_Data::default);
@@ -620,7 +618,6 @@ fn update_debug(
 
     ////// Per-Level debugs //////
     let painters = &mut debug_systems.painters;
-    let collision_system = &engine_state.systems.collision_system;
     let debug_ui = &mut debug_systems.debug_ui;
     let target_win_size = engine_state.app_config.target_win_size;
 
@@ -631,10 +628,6 @@ fn update_debug(
         .draw_entity_prev_frame_ghost
         .read(&engine_state.config);
     let draw_colliders = cvars.draw_colliders.read(&engine_state.config);
-    let draw_collision_quadtree = cvars.draw_collision_quadtree.read(&engine_state.config);
-    let draw_collision_applied_impulses = cvars
-        .draw_collision_applied_impulses
-        .read(&engine_state.config);
     let draw_debug_grid = cvars.draw_debug_grid.read(&engine_state.config);
     let draw_comp_alloc_colliders = cvars.draw_comp_alloc_colliders.read(&engine_state.config);
     let square_size = cvars.debug_grid_square_size.read(&engine_state.config);
@@ -667,17 +660,11 @@ fn update_debug(
 
         if draw_entity_prev_frame_ghost {
             let batches = lv_batches.get_mut(&level.id).unwrap();
-            debug_draw_entities_prev_frame_ghost(debug_painter, batches, &mut level.world);
+            debug_draw_entities_prev_frame_ghost(batches, &mut level.world);
         }
 
         if draw_colliders {
             debug_draw_colliders(debug_painter, &level.world);
-        }
-
-        if draw_collision_quadtree {
-            collision_system.debug_draw_quadtree(debug_painter);
-
-            collision_system.debug_draw_entities_quad_id(&level.world, debug_painter);
         }
 
         // Debug grid
@@ -689,10 +676,6 @@ fn update_debug(
                 square_size,
                 opacity,
             );
-        }
-
-        if draw_collision_applied_impulses {
-            collision_system.debug_draw_applied_impulses(debug_painter);
         }
 
         if draw_world_chunks {
@@ -991,12 +974,10 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 
 #[cfg(debug_assertions)]
 fn debug_draw_entities_prev_frame_ghost(
-    debug_painter: &mut Debug_Painter,
     batches: &mut gfx::render::batcher::Batches,
     ecs_world: &mut Ecs_World,
 ) {
     use crate::debug::entity_debug::C_Debug_Data;
-    use ecs_engine::common::shapes::Arrow;
     use ecs_engine::ecs::components::base::C_Spatial2D;
     use ecs_engine::ecs::components::gfx::C_Renderable;
     use ecs_engine::gfx::render;
@@ -1008,7 +989,7 @@ fn debug_draw_entities_prev_frame_ghost(
             rect,
             modulate,
             z_index,
-        } = ecs_world.get_component::<C_Renderable>(entity).unwrap().clone();
+        } = *ecs_world.get_component::<C_Renderable>(entity).unwrap();
 
         let debug_data = ecs_world.get_component_mut::<C_Debug_Data>(entity).unwrap();
         if (debug_data.n_prev_positions_filled as usize) < debug_data.prev_positions.len() {

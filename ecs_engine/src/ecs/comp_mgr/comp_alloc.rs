@@ -632,7 +632,7 @@ impl Component_Allocator {
                 let prev = (*ptr).prev;
                 let next = (*ptr).next;
                 if !prev.is_null() {
-                    let prev_idx = prev.offset();
+                    let _prev_idx = prev.offset();
                     //draw_arrow(painter, idx, prev_idx, colors::YELLOW, calc_pos, -5.);
                 }
                 if !next.is_null() {
