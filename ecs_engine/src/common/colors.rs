@@ -190,4 +190,16 @@ mod tests {
         assert_eq!(from_hsv(to_hsv(GREEN)), GREEN);
         assert_eq!(from_hsv(to_hsv(BLUE)), BLUE);
     }
+
+    #[test]
+    fn test_darken() {
+        let red_hsv = to_hsv(RED);
+        assert_eq!(
+            darken(RED, 0.3),
+            from_hsv((red_hsv.0, red_hsv.1, red_hsv.2 * 0.7))
+        );
+        let blue_hsv = to_hsv(BLUE);
+        assert_eq!(darken(BLUE, 1.0), from_hsv((blue_hsv.0, blue_hsv.1, 0.)));
+        assert_eq!(darken(GREEN, 0.0), GREEN);
+    }
 }
