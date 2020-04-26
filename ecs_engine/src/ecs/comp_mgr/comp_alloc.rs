@@ -407,14 +407,6 @@ impl Relative_Ptr {
         if self.0 == 0 {
             ptr::null_mut()
         } else {
-            println!(
-                "base = {:p} + {} = {:p} (T = {:?}, sizeof = {})",
-                base as *mut Comp_Wrapper<T>,
-                self.offset(),
-                (base as *mut Comp_Wrapper<T>).add(self.offset() as _),
-                std::any::type_name::<Comp_Wrapper<T>>(),
-                mem::size_of::<Comp_Wrapper<T>>()
-            );
             (base as *mut Comp_Wrapper<T>).add(self.offset() as _)
         }
     }
