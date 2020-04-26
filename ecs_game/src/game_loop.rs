@@ -295,6 +295,7 @@ pub fn tick_game<'a>(
                 .or_insert_with(physics::Collision_System_Debug_Data::default);
             physics::update_collisions(
                 &mut level.world,
+                &level.chunks,
                 #[cfg(debug_assertions)]
                 coll_debug,
             );
@@ -653,6 +654,7 @@ fn update_debug(
         update_physics_debug_overlay(
             debug_ui.get_overlay(sid_physics),
             &collision_debug_data[&level.id],
+            &level.chunks,
         );
 
         if draw_entities {
@@ -868,12 +870,14 @@ fn update_camera_debug_overlay(
 fn update_physics_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
     collision_data: &physics::Collision_System_Debug_Data,
+    chunks: &crate::spatial::World_Chunks,
 ) {
     debug_overlay.clear();
     debug_overlay.add_line_color(
         &format!(
-            "[phys] n_inter_tests: {}",
-            collision_data.n_intersection_tests
+            "[phys] n_inter_tests: {}, n_chunks: {}",
+            collision_data.n_intersection_tests,
+            chunks.n_chunks(),
         ),
         colors::rgba(0, 173, 90, 220),
     );

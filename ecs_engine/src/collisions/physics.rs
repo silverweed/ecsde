@@ -1,5 +1,6 @@
 // reference: https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331
 
+use super::spatial::Spatial_Accelerator;
 use crate::collisions::collider::{C_Phys_Data, Collider, Collision_Shape};
 use crate::common::math::clamp;
 use crate::common::vector::{sanity_check_v, Vec2f};
@@ -243,11 +244,22 @@ const COLLISION_CB_TABLE: [[Collision_Cb; 2]; 2] = [
     [detect_rect_circle, detect_rect_rect],
 ];
 
-fn detect_collisions(
+fn get_extent(shape: Collision_Shape) -> Vec2f {
+    match shape {
+        Collision_Shape::Circle { radius } => v2!(radius, radius) * 2.,
+        Collision_Shape::Rect { width, height } => v2!(width, height),
+    }
+}
+
+fn detect_collisions<T_Spatial_Accelerator>(
     colliders: &Component_Storage<'_, Collider>,
     entities: &[Entity],
+    accelerator: &T_Spatial_Accelerator,
     #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
-) -> Vec<Collision_Info> {
+) -> Vec<Collision_Info>
+where
+    T_Spatial_Accelerator: Spatial_Accelerator<Entity>,
+{
     trace!("physics::detect_collisions");
 
     #[cfg(debug_assertions)]
@@ -255,38 +267,41 @@ fn detect_collisions(
         debug_data.n_intersection_tests = 0;
     }
 
-    // TODO Broad phase
-
-    // Narrow phase
     let mut collision_infos = vec![];
-    // @Speed
     let mut stored = std::collections::HashSet::new();
-    for (i, &ent_a) in entities.iter().enumerate() {
+
+    // @Speed: maybe we should iterate on the chunks? Can we do that in parallel?
+    for &ent_a in entities.iter() {
         let a = colliders.get_component(ent_a).unwrap();
         if a.is_static {
             continue;
         }
+        let a_extent = get_extent(a.shape);
         let a_shape = collision_shape_type_index(&a.shape);
         let a_part_cb = COLLISION_CB_TABLE[a_shape];
 
-        for (j, &ent_b) in entities.iter().enumerate() {
-            if i == j {
+        let mut neighbours = vec![];
+        accelerator.get_neighbours(ent_a, a.position, a_extent, &mut neighbours);
+
+        for &ent_b in neighbours.iter() {
+            if ent_a == ent_b {
                 continue;
             }
-            let b = colliders.get_component(ent_b).unwrap();
-            let b_shape = collision_shape_type_index(&b.shape);
+            if let Some(b) = colliders.get_component(ent_b) {
+                let b_shape = collision_shape_type_index(&b.shape);
 
-            let info = a_part_cb[b_shape](ent_a, ent_b, a, b);
+                let info = a_part_cb[b_shape](ent_a, ent_b, a, b);
 
-            #[cfg(debug_assertions)]
-            {
-                debug_data.n_intersection_tests += 1;
-            }
+                #[cfg(debug_assertions)]
+                {
+                    debug_data.n_intersection_tests += 1;
+                }
 
-            if let Some(info) = info {
-                if !stored.contains(&(j, i)) {
-                    collision_infos.push(info);
-                    stored.insert((i, j));
+                if let Some(info) = info {
+                    if !stored.contains(&(ent_b, ent_a)) {
+                        collision_infos.push(info);
+                        stored.insert((ent_a, ent_b));
+                    }
                 }
             }
         }
@@ -408,10 +423,13 @@ fn solve_collisions(objects: &mut HashMap<Entity, Rigidbody>, infos: &[&Collisio
     }
 }
 
-pub fn update_collisions(
+pub fn update_collisions<T_Spatial_Accelerator>(
     ecs_world: &mut Ecs_World,
+    accelerator: &T_Spatial_Accelerator,
     #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
-) {
+) where
+    T_Spatial_Accelerator: Spatial_Accelerator<Entity>,
+{
     let (mut objects, entities) = prepare_colliders_and_gather_rigidbodies(ecs_world);
 
     let colliders = ecs_world.get_component_storage::<Collider>();
@@ -419,6 +437,7 @@ pub fn update_collisions(
     let infos = detect_collisions(
         &colliders,
         &entities,
+        accelerator,
         #[cfg(debug_assertions)]
         debug_data,
     );

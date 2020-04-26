@@ -1,3 +1,4 @@
+use ecs_engine::collisions::spatial::Spatial_Accelerator;
 use ecs_engine::common::vector::Vec2f;
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::ecs::components::base::C_Spatial2D;
@@ -8,8 +9,9 @@ use std::collections::HashMap;
 #[cfg(debug_assertions)]
 use ecs_engine::debug::painter::Debug_Painter;
 
-const CHUNK_WIDTH: f32 = 1000.;
-const CHUNK_HEIGHT: f32 = 1000.;
+// @Speed: tune these numbers
+const CHUNK_WIDTH: f32 = 200.;
+const CHUNK_HEIGHT: f32 = 200.;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Chunk_Coords {
@@ -80,6 +82,10 @@ impl World_Chunks {
         }
     }
 
+    pub fn n_chunks(&self) -> usize {
+        self.chunks.len()
+    }
+
     pub fn add_entity(&mut self, entity: Entity, pos: Vec2f) {
         let coords = Chunk_Coords::from_pos(pos);
         self.add_entity_coords(entity, coords);
@@ -115,6 +121,9 @@ impl World_Chunks {
         let idx = chunk.entities.iter().position(|&e| e == entity);
         if let Some(idx) = idx {
             chunk.entities.remove(idx);
+            if chunk.entities.is_empty() {
+                self.chunks.remove(&coords);
+            }
         } else {
             lerr!(
                 "Entity {:?} not found in expected chunk {:?}.",
@@ -134,6 +143,30 @@ impl World_Chunks {
 
         self.remove_entity_coords(entity, prev_coords);
         self.add_entity_coords(entity, new_coords);
+    }
+}
+
+impl Spatial_Accelerator<Entity> for World_Chunks {
+    fn get_neighbours<R>(&self, entity: Entity, pos: Vec2f, extent: Vec2f, result: &mut R)
+    where
+        R: Extend<Entity>,
+    {
+        let coords_topleft = Chunk_Coords::from_pos(pos);
+        let coords_topright = Chunk_Coords::from_pos(pos + v2!(extent.x, 0.));
+        let coords_botleft = Chunk_Coords::from_pos(pos + v2!(0., extent.y));
+        let coords_botright = Chunk_Coords::from_pos(pos + extent);
+
+        if let Some(chunk) = self.chunks.get(&coords_topleft) {
+            result.extend(chunk.entities.iter().copied());
+        }
+
+        for &coords in &[coords_topright, coords_botleft, coords_botright] {
+            if coords != coords_topleft {
+                if let Some(chunk) = self.chunks.get(&coords) {
+                    result.extend(chunk.entities.iter().copied());
+                }
+            }
+        }
     }
 }
 
@@ -168,14 +201,14 @@ impl World_Chunks {
                 Paint_Properties {
                     color: col,
                     border_color: colors::darken(col, 0.7),
-                    border_thick: 20.,
+                    border_thick: (CHUNK_WIDTH / 50.).max(5.),
                     ..Default::default()
                 },
             );
             painter.add_text(
                 &format!("{},{}: {}", coords.x, coords.y, chunk.entities.len()),
                 world_pos + v2!(10., 5.),
-                100,
+                (CHUNK_WIDTH as u16 / 10).max(20),
                 colors::rgba(50, 220, 0, 250),
             );
         }
