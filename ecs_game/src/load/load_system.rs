@@ -1,5 +1,6 @@
 use crate::gameplay_system::Gameplay_System_Config;
 use crate::gameplay_system::Level;
+use crate::spatial::World_Chunks;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::dumb_movement_system::C_Dumb_Movement;
 use crate::Game_Resources;
@@ -37,6 +38,7 @@ pub fn level_load_sync(
         cameras: vec![],
         active_camera: 0,
         scene_tree: Scene_Tree::new(),
+        chunks: World_Chunks::default(),
     };
 
     linfo!("Loading level {} ...", level_id);
@@ -49,6 +51,7 @@ pub fn level_load_sync(
         &mut level,
         gs_cfg,
     );
+    fill_world_chunks(&mut level.chunks, &mut level.world);
     calc_terrain_colliders(&mut level.world);
     lok!(
         "Loaded level {}. N. entities = {}, n. cameras = {}",
@@ -342,5 +345,12 @@ fn calc_terrain_colliders(world: &mut Ecs_World) {
                 ..Default::default()
             });
         }
+    });
+}
+
+fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World) {
+    foreach_entity!(world, +C_Spatial2D, |entity| {
+        let pos = world.get_component::<C_Spatial2D>(entity).unwrap().local_transform.position();
+        chunks.add_entity(entity, pos);
     });
 }

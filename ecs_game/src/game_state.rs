@@ -77,6 +77,8 @@ pub struct Debug_CVars {
     pub draw_mouse_rulers: Cfg_Var<bool>,
 
     pub draw_comp_alloc_colliders: Cfg_Var<bool>,
+
+    pub draw_world_chunks: Cfg_Var<bool>,
 }
 
 #[repr(C)]
@@ -298,6 +300,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     let draw_prev_frame_t_graph = Cfg_Var::new("engine/debug/graphs/prev_frame_t", cfg);
     let draw_mouse_rulers = Cfg_Var::new("engine/debug/window/draw_mouse_rulers", cfg);
     let draw_comp_alloc_colliders = Cfg_Var::new("engine/debug/ecs/comp_alloc/colliders", cfg);
+    let draw_world_chunks = Cfg_Var::new("engine/debug/world/draw_chunks", cfg);
 
     Debug_CVars {
         draw_sprites_bg,
@@ -316,6 +319,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
         draw_prev_frame_t_graph,
         draw_mouse_rulers,
         draw_comp_alloc_colliders,
+        draw_world_chunks,
     }
 }
 

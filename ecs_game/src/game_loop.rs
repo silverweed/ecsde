@@ -601,6 +601,7 @@ fn update_debug(game_state: &mut Game_State) {
     let draw_comp_alloc_colliders = cvars.draw_comp_alloc_colliders.read(&engine_state.config);
     let square_size = cvars.debug_grid_square_size.read(&engine_state.config);
     let opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
+    let draw_world_chunks = cvars.draw_world_chunks.read(&engine_state.config);
 
     game_state.gameplay_system.foreach_active_level(|level| {
         let debug_painter = painters
@@ -642,6 +643,10 @@ fn update_debug(game_state: &mut Game_State) {
 
         if draw_collision_applied_impulses {
             collision_system.debug_draw_applied_impulses(debug_painter);
+        }
+
+        if draw_world_chunks {
+            level.chunks.debug_draw(debug_painter);
         }
 
         if draw_comp_alloc_colliders {

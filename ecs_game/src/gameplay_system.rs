@@ -6,6 +6,7 @@ use super::systems::ground_collision_calculation_system::Ground_Collision_Calcul
 use crate::input_utils::{get_movement_from_input, Input_Config};
 use crate::load::load_system;
 use crate::movement_system;
+use crate::spatial::World_Chunks;
 use crate::Game_Resources;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider;
@@ -44,6 +45,7 @@ pub struct Gameplay_System_Config {
 pub struct Level {
     pub id: String_Id,
     pub world: Ecs_World,
+    pub chunks: World_Chunks,
     pub cameras: Vec<Entity>,
     pub active_camera: usize, // index inside 'cameras'
     pub scene_tree: scene_tree::Scene_Tree,
@@ -301,9 +303,9 @@ impl Gameplay_System {
                 // Keep viewport centered
                 let win_w = Cfg_Var::<i32>::new("engine/window/width", &cfg).read(&cfg);
                 let win_h = Cfg_Var::<i32>::new("engine/window/height", &cfg).read(&cfg);
-                v -= add_scale * 0.5  * v2!(win_w as f32, win_h as f32);
+                v -= add_scale * 0.5 * v2!(win_w as f32, win_h as f32);
             }
-            
+
             //return;
             camera.transform.translate_v(v);
 
