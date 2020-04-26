@@ -51,7 +51,7 @@ impl Event_Register {
             .or_insert_with(Vec::default);
         obs.push((cb, cb_data));
         Event_Subscription_Handle {
-            idx: obs.len(),
+            idx: obs.len() - 1,
             _pd: PhantomData,
         }
     }
@@ -59,13 +59,13 @@ impl Event_Register {
     pub fn unsubscribe<E: 'static + Event>(&mut self, handle: Event_Subscription_Handle<E>) {
         let idx = handle.idx;
         if let Some(obs) = self.observers.get_mut::<Observers<E>>() {
-            if obs.len() < idx {
+            if idx < obs.len() {
                 let _ = obs.remove(idx);
                 return;
             }
         }
 
-        lerr!("Tried to unsubscribe with invalid handle {:?}", handle);
+        fatal!("Tried to unsubscribe with invalid handle {:?}", handle);
     }
 
     pub fn raise<E: 'static + Event>(&mut self, args: E::Args) {
