@@ -86,7 +86,10 @@ impl World_Chunks {
     }
 
     fn add_entity_coords(&mut self, entity: Entity, coords: Chunk_Coords) {
-        let chunk = self.chunks.entry(coords).or_insert(World_Chunk::default());
+        let chunk = self
+            .chunks
+            .entry(coords)
+            .or_insert_with(World_Chunk::default);
         debug_assert!(
             !chunk.entities.contains(&entity),
             "Duplicate entity {:?} in chunk {:?}!",

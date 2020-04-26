@@ -34,6 +34,13 @@ struct Collision_Info {
     pub normal: Vec2f,
 }
 
+#[cfg(debug_assertions)]
+#[derive(Default)]
+pub struct Collision_System_Debug_Data {
+    // How many intersections were tested during this frame
+    pub n_intersection_tests: usize,
+}
+
 fn detect_circle_circle(
     ent_a: Entity,
     ent_b: Entity,
@@ -239,8 +246,14 @@ const COLLISION_CB_TABLE: [[Collision_Cb; 2]; 2] = [
 fn detect_collisions(
     colliders: &Component_Storage<'_, Collider>,
     entities: &[Entity],
+    #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
 ) -> Vec<Collision_Info> {
     trace!("physics::detect_collisions");
+
+    #[cfg(debug_assertions)]
+    {
+        debug_data.n_intersection_tests = 0;
+    }
 
     // TODO Broad phase
 
@@ -264,6 +277,11 @@ fn detect_collisions(
             let b_shape = collision_shape_type_index(&b.shape);
 
             let info = a_part_cb[b_shape](ent_a, ent_b, a, b);
+
+            #[cfg(debug_assertions)]
+            {
+                debug_data.n_intersection_tests += 1;
+            }
 
             if let Some(info) = info {
                 if !stored.contains(&(j, i)) {
@@ -390,12 +408,20 @@ fn solve_collisions(objects: &mut HashMap<Entity, Rigidbody>, infos: &[&Collisio
     }
 }
 
-pub fn update_collisions(ecs_world: &mut Ecs_World) {
+pub fn update_collisions(
+    ecs_world: &mut Ecs_World,
+    #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
+) {
     let (mut objects, entities) = prepare_colliders_and_gather_rigidbodies(ecs_world);
 
     let colliders = ecs_world.get_component_storage::<Collider>();
 
-    let infos = detect_collisions(&colliders, &entities);
+    let infos = detect_collisions(
+        &colliders,
+        &entities,
+        #[cfg(debug_assertions)]
+        debug_data,
+    );
 
     let mut colliders = ecs_world.get_component_storage_mut::<Collider>();
 

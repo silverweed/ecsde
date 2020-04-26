@@ -88,7 +88,9 @@ impl Persistent_Game_State for Debug_Base_State {
                     engine_state.time.step(&step_delta);
                     gs.step(&step_delta, &engine_state.config, &mut engine_state.rng);
                     gs.foreach_active_level(|level| {
-                        ecs_engine::collisions::physics::update_collisions(&mut level.world);
+                        use ecs_engine::collisions::physics;
+                        let mut _ignored = physics::Collision_System_Debug_Data::default();
+                        physics::update_collisions(&mut level.world, &mut _ignored);
                         let mut moved = vec![];
                         crate::movement_system::update(&step_delta, &mut level.world, &mut moved);
                         for mov in moved {

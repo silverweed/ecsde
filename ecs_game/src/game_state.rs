@@ -398,6 +398,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
     overlay.config.vert_align = Align::End;
     overlay.config.horiz_align = Align::Begin;
     overlay.position = Vec2f::new(0.0, win_h as f32 - 22. * ui_scale);
+
     // Camera overlay
     let overlay = debug_ui
         .create_overlay(String_Id::from("camera"), overlay_cfg)
@@ -405,6 +406,14 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
     overlay.config.vert_align = Align::End;
     overlay.config.horiz_align = Align::End;
     overlay.position = Vec2f::new(win_w as f32, win_h as f32 - 40. * ui_scale);
+
+    // Physics overlay
+    let overlay = debug_ui
+        .create_overlay(String_Id::from("physics"), overlay_cfg)
+        .unwrap();
+    overlay.config.vert_align = Align::End;
+    overlay.config.horiz_align = Align::Begin;
+    overlay.position = Vec2f::new(0.0, win_h as f32 - 40. * ui_scale);
 
     // Console hints
     game_state.engine_state.debug_systems.console.add_hints(

@@ -1,4 +1,5 @@
 use super::{Game_Resources, Game_State};
+use ecs_engine::collisions::physics;
 use ecs_engine::common::colors;
 use ecs_engine::common::transform::Transform2D;
 use ecs_engine::common::Maybe_Error;
@@ -13,10 +14,13 @@ use std::convert::TryInto;
 use std::time::{Duration, Instant};
 
 #[cfg(debug_assertions)]
-use ecs_engine::{
-    common::angle::rad, common::stringid::String_Id, common::vector::Vec2f, debug,
-    debug::painter::Debug_Painter, ecs::ecs_world::Ecs_World, gfx::paint_props::Paint_Properties,
-    gfx::window,
+use {
+    ecs_engine::{
+        common::angle::rad, common::stringid::String_Id, common::vector::Vec2f, debug,
+        debug::painter::Debug_Painter, ecs::ecs_world::Ecs_World,
+        gfx::paint_props::Paint_Properties, gfx::window,
+    },
+    std::collections::HashMap,
 };
 
 pub fn tick_game<'a>(
@@ -270,6 +274,9 @@ pub fn tick_game<'a>(
         }
     }
 
+    #[cfg(debug_assertions)]
+    let mut collision_debug_data = HashMap::new();
+
     // Update collisions
     {
         trace!("collision_system::update");
@@ -283,7 +290,14 @@ pub fn tick_game<'a>(
         );
         gameplay_system.foreach_active_level(|level| {
             //collision_system.update(&mut level.world);
-            ecs_engine::collisions::physics::update_collisions(&mut level.world);
+            let coll_debug = collision_debug_data
+                .entry(level.id)
+                .or_insert_with(physics::Collision_System_Debug_Data::default);
+            physics::update_collisions(
+                &mut level.world,
+                #[cfg(debug_assertions)]
+                coll_debug,
+            );
 
             let mut moved = vec![]; // @Speed: don't create a new vec each frame
             crate::movement_system::update(&update_dt, &mut level.world, &mut moved);
@@ -312,7 +326,7 @@ pub fn tick_game<'a>(
     }
 
     #[cfg(debug_assertions)]
-    update_debug(game_state);
+    update_debug(game_state, collision_debug_data);
 
     update_graphics(game_state, &mut game_resources.gfx, real_dt)?;
 
@@ -507,12 +521,24 @@ fn update_graphics(
 }
 
 #[cfg(debug_assertions)]
-fn update_debug(game_state: &mut Game_State) {
+fn update_debug(
+    game_state: &mut Game_State,
+    collision_debug_data: HashMap<String_Id, physics::Collision_System_Debug_Data>,
+) {
     let engine_state = &mut game_state.engine_state;
     let debug_systems = &mut engine_state.debug_systems;
 
     // @Speed @WaitForStable: these should all be computed at compile time.
-    let (sid_time, sid_fps, sid_entities, sid_camera, sid_mouse, sid_window, sid_prev_frame_time) = (
+    let (
+        sid_time,
+        sid_fps,
+        sid_entities,
+        sid_camera,
+        sid_mouse,
+        sid_window,
+        sid_prev_frame_time,
+        sid_physics,
+    ) = (
         String_Id::from("time"),
         String_Id::from("fps"),
         String_Id::from("entities"),
@@ -520,9 +546,8 @@ fn update_debug(game_state: &mut Game_State) {
         String_Id::from("mouse"),
         String_Id::from("window"),
         String_Id::from("prev_frame_time"),
+        String_Id::from("physics"),
     );
-
-    // Frame scroller
 
     // Overlays
     update_time_debug_overlay(
@@ -624,6 +649,11 @@ fn update_debug(game_state: &mut Game_State) {
         update_entities_debug_overlay(debug_ui.get_overlay(sid_entities), &level.world);
 
         update_camera_debug_overlay(debug_ui.get_overlay(sid_camera), &level.get_camera());
+
+        update_physics_debug_overlay(
+            debug_ui.get_overlay(sid_physics),
+            &collision_debug_data[&level.id],
+        );
 
         if draw_entities {
             debug_draw_transforms(debug_painter, &level.world);
@@ -831,6 +861,21 @@ fn update_camera_debug_overlay(
             camera.transform.scale().x
         ),
         colors::rgba(220, 180, 100, 220),
+    );
+}
+
+#[cfg(debug_assertions)]
+fn update_physics_debug_overlay(
+    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    collision_data: &physics::Collision_System_Debug_Data,
+) {
+    debug_overlay.clear();
+    debug_overlay.add_line_color(
+        &format!(
+            "[phys] n_inter_tests: {}",
+            collision_data.n_intersection_tests
+        ),
+        colors::rgba(0, 173, 90, 220),
     );
 }
 
