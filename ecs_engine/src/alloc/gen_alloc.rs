@@ -202,9 +202,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(
-        expected = "Tried to deallocate a Generational_Index whose index is greater than biggest one!"
-    )]
+    #[should_panic]
     fn gen_alloc_bad_deallocate_1() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
@@ -212,7 +210,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Tried to deallocate an old Generational_Index! Double free?")]
+    #[should_panic]
     fn gen_alloc_bad_deallocate_2() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
@@ -223,9 +221,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(
-        expected = "Tried to deallocate a Generational_Index with a generation greater than current!"
-    )]
+    #[should_panic]
     fn gen_alloc_bad_deallocate_3() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
@@ -234,7 +230,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Tried to deallocate an old Generational_Index! Double free?")]
+    #[should_panic]
     fn gen_alloc_bad_deallocate_4() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
@@ -242,9 +238,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(
-        expected = "Tried to deallocate a Generational_Index which was never allocated!"
-    )]
+    #[should_panic]
     fn gen_alloc_bad_deallocate_5() {
         let n = 10;
         let mut alloc = Generational_Allocator::new(n);
