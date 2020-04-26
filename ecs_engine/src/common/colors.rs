@@ -1,6 +1,8 @@
 #[cfg(feature = "use-sfml")]
 mod sfml;
 
+use std::f32::consts::{FRAC_PI_3, PI};
+
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Color {
     pub r: u8,
@@ -54,9 +56,73 @@ pub fn lerp_col(a: Color, b: Color, t: f32) -> Color {
     )
 }
 
+pub fn to_hsv(c: Color) -> (f32, f32, f32) {
+    let r = c.r as f32 / 255.0;
+    let g = c.g as f32 / 255.0;
+    let b = c.b as f32 / 255.0;
+    let cmax = [r, g, b]
+        .iter()
+        .copied()
+        .fold(-std::f32::INFINITY, f32::max);
+    let cmin = [r, g, b].iter().copied().fold(std::f32::INFINITY, f32::min);
+    let delta = cmax - cmin;
+    let h = if delta == 0. {
+        0.
+    } else if r == cmax {
+        FRAC_PI_3 * (((g - b) / delta) % 6.)
+    } else if g == cmax {
+        FRAC_PI_3 * ((b - r) / delta + 2.)
+    } else {
+        FRAC_PI_3 * ((r - g) / delta + 4.)
+    };
+    let s = if cmax == 0. { 0. } else { delta / cmax };
+    let v = cmax;
+
+    (h, s, v)
+}
+
+pub fn from_hsv((h, s, v): (f32, f32, f32)) -> Color {
+    let c = v * s;
+    let x = c * (1. - (h / FRAC_PI_3 % 2. - 1.).abs());
+    let m = v - c;
+    let (r, g, b) = if h < FRAC_PI_3 {
+        (c, x, 0.)
+    } else if h < 2. * FRAC_PI_3 {
+        (x, c, 0.)
+    } else if h < PI {
+        (0., c, x)
+    } else if h < 4. * FRAC_PI_3 {
+        (0., x, c)
+    } else if h < 5. * FRAC_PI_3 {
+        (x, 0., c)
+    } else {
+        (c, 0., x)
+    };
+
+    Color {
+        r: ((r + m) * 255.) as u8,
+        g: ((g + m) * 255.) as u8,
+        b: ((b + m) * 255.) as u8,
+        a: 255,
+    }
+}
+
+/// Heuristic "darken" function that multiplies the value of `c` by `1 - amount`.
+pub fn darken(c: Color, amount: f32) -> Color {
+    let (h, s, v) = to_hsv(c);
+    from_hsv((h, s, v * (1. - amount)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_common::*;
+
+    impl Approx_Eq_Testable for (f32, f32, f32) {
+        fn cmp_list(&self) -> Vec<f32> {
+            vec![self.0, self.1, self.2]
+        }
+    }
 
     #[test]
     fn test_color_to_hex() {
@@ -104,5 +170,24 @@ mod tests {
         let c = rgb(10, 100, 150);
         let d = rgb(20, 200, 250);
         assert_eq!(lerp_col(c, d, 0.75), rgb(17, 175, 225));
+    }
+
+    #[test]
+    fn test_to_hsv() {
+        assert_approx_eq!(to_hsv(BLACK), (0., 0., 0.));
+        assert_approx_eq!(to_hsv(WHITE), (0., 0., 1.));
+        assert_approx_eq!(to_hsv(RED), (0., 1., 1.));
+        assert_approx_eq!(to_hsv(GREEN), (2. * FRAC_PI_3, 1., 1.));
+        assert_approx_eq!(to_hsv(BLUE), (4. * FRAC_PI_3, 1., 1.));
+        assert_approx_eq!(to_hsv(YELLOW), (FRAC_PI_3, 1., 1.));
+        assert_approx_eq!(to_hsv(rgb(128, 0, 0)), (0., 1., 0.5), eps = 0.1);
+        assert_approx_eq!(to_hsv(rgb(191, 191, 191)), (0., 0., 0.75), eps = 0.1);
+        assert_approx_eq!(to_hsv(rgb(0, 128, 128)), (PI, 1., 0.5), eps = 0.1);
+
+        assert_eq!(from_hsv(to_hsv(BLACK)), BLACK);
+        assert_eq!(from_hsv(to_hsv(WHITE)), WHITE);
+        assert_eq!(from_hsv(to_hsv(RED)), RED);
+        assert_eq!(from_hsv(to_hsv(GREEN)), GREEN);
+        assert_eq!(from_hsv(to_hsv(BLUE)), BLUE);
     }
 }
