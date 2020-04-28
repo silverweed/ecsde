@@ -107,7 +107,8 @@ impl Scene_Tree {
             } else {
                 self.hierarchy[child_node.index as usize - 1] = parent_node;
                 self.local_transforms[child_node.index as usize - 1] = local_transform.get_matrix();
-                self.global_transforms[child_node.index as usize - 1] = local_transform.get_matrix();
+                self.global_transforms[child_node.index as usize - 1] =
+                    local_transform.get_matrix();
             }
         } else {
             // This entity is the root.

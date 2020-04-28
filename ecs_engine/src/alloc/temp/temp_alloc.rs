@@ -75,7 +75,7 @@ impl Temp_Allocator {
         let offset = ptr.align_offset(align);
 
         // @Robustness: maybe reallocate rather than crashing
-        assert!(self.used + offset <= self.cap - n_bytes, "Out of memory!");
+        assert!(self.used + offset + n_bytes <= self.cap, "Out of memory!");
 
         self.used += offset + n_bytes;
         #[cfg(debug_assertions)]

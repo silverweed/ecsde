@@ -90,7 +90,7 @@ pub fn create_engine_state<'r>(
         input_state,
         systems,
         global_batches: gfx::render::batcher::Batches::default(),
-        frame_alloc: Temp_Allocator::with_capacity(megabytes(1)),
+        frame_alloc: Temp_Allocator::with_capacity(megabytes(10)),
         #[cfg(debug_assertions)]
         debug_systems,
         #[cfg(debug_assertions)]

@@ -3,7 +3,7 @@ use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
-use crate::gfx::render;
+use crate::gfx::render::{self, Vertex};
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Gfx_Resources, Texture_Handle};
 use rayon::prelude::*;
@@ -24,7 +24,68 @@ pub struct Batches {
 
 struct Vertex_Buffer_Holder {
     pub vbuf: Vertex_Buffer,
-    pub n_elems: usize,
+    pub n_elems: u32,
+    #[cfg(debug_assertions)]
+    id: Texture_Handle,
+}
+
+impl Vertex_Buffer_Holder {
+    pub fn with_initial_vertex_count(
+        initial_cap: u32,
+        #[cfg(debug_assertions)] id: Texture_Handle,
+    ) -> Self {
+        Self {
+            vbuf: Vertex_Buffer::new(PrimitiveType::Quads, initial_cap, VertexBufferUsage::Stream),
+            n_elems: 0,
+            #[cfg(debug_assertions)]
+            id,
+        }
+    }
+
+    pub fn update(&mut self, vertices: &mut [Vertex], n_vertices: u32) {
+        trace!("vbuf_update");
+
+        debug_assert!(vertices.len() <= std::u32::MAX as usize);
+
+        // @WaitForStable make this const
+        let null_vertex: Vertex =
+            Vertex::new(v2!(0., 0.), colors::TRANSPARENT.into(), v2!(0., 0.).into());
+
+        debug_assert!(
+            n_vertices <= self.vbuf.vertex_count(),
+            "Can't hold all the vertices! {} / {}",
+            n_vertices,
+            self.vbuf.vertex_count()
+        );
+
+        // Zero all the excess vertices
+        for vertex in vertices
+            .iter_mut()
+            .take(self.n_elems as usize)
+            .skip(n_vertices as usize)
+        {
+            *vertex = null_vertex;
+        }
+
+        self.vbuf.update(vertices, 0);
+        self.n_elems = vertices.len() as u32;
+    }
+
+    pub fn grow(&mut self, vertices_to_hold_at_least: u32) {
+        let new_cap = vertices_to_hold_at_least.next_power_of_two();
+        ldebug!(
+            "Growing Vertex_Buffer_Holder {:?} to hold {} vertices ({} requested).",
+            self.id,
+            new_cap,
+            vertices_to_hold_at_least
+        );
+
+        let mut new_vbuf =
+            Vertex_Buffer::new(PrimitiveType::Quads, new_cap, VertexBufferUsage::Stream);
+        new_vbuf.update_from_vertex_buffer(&self.vbuf);
+
+        self.vbuf = new_vbuf;
+    }
 }
 
 struct Texture_Props_Ws {
@@ -41,32 +102,40 @@ pub(super) fn add_texture_ws(
     transform: &Transform2D,
     z_index: render::Z_Index,
 ) {
-    batches
-        .textures_ws
-        .entry(z_index)
-        .or_insert_with(HashMap::new)
-        .entry(texture)
-        .or_insert_with(|| {
-            ldebug!("creating buffer for texture {:?}", texture);
-            (
-                // @Incomplete: make a growable vertex buffer
-                Vertex_Buffer_Holder {
-                    vbuf: Vertex_Buffer::new(
-                        PrimitiveType::Quads,
-                        65536,
-                        VertexBufferUsage::Stream,
+    let z_index_texmap = {
+        trace!("get_z_texmap");
+        batches
+            .textures_ws
+            .entry(z_index)
+            .or_insert_with(HashMap::new)
+    };
+
+    let tex_batches = {
+        trace!("get_tex_batches");
+        &mut z_index_texmap
+            .entry(texture)
+            .or_insert_with(|| {
+                ldebug!("creating buffer for texture {:?}", texture);
+                (
+                    Vertex_Buffer_Holder::with_initial_vertex_count(
+                        48,
+                        #[cfg(debug_assertions)]
+                        texture,
                     ),
-                    n_elems: 0,
-                },
-                vec![],
-            )
-        })
-        .1
-        .push(Texture_Props_Ws {
+                    vec![],
+                )
+            })
+            .1
+    };
+
+    {
+        trace!("push_tex");
+        tex_batches.push(Texture_Props_Ws {
             tex_rect: *tex_rect,
             color,
             transform: *transform,
         });
+    }
 }
 
 pub fn clear_batches(batches: &mut Batches) {
@@ -95,21 +164,26 @@ pub fn draw_batches(
             let n_threads = rayon::current_num_threads();
             let n_texs = tex_props.len();
             let n_texs_per_chunk = cmp::min(n_texs, n_texs / n_threads + 1);
-            let n_vertices = n_texs * 4;
+
+            debug_assert!(n_texs * 4 <= std::u32::MAX as usize);
+            let n_vertices = (n_texs * 4) as u32;
 
             let mut vertices = temp::excl_temp_array(frame_alloc);
             unsafe {
                 // Note: we allocate extra space if vbuffer.n_elems > n_vertices (i.e. the number
                 // of actual vertices we're gonna add) because we'll use it to overwrite the
                 // current buffer with "null" vertices.
-                vertices.alloc_additional_uninit(n_vertices.max(vbuffer.n_elems));
+                vertices.alloc_additional_uninit(n_vertices.max(vbuffer.n_elems) as usize);
             }
             let vertices = vertices.as_slice_mut();
-            let vert_chunks = vertices[..n_vertices]
+            let vert_chunks = vertices[..n_vertices as usize]
                 .par_iter_mut()
                 .chunks(n_texs_per_chunk * 4);
 
-            debug_assert!(n_vertices <= vbuffer.vbuf.vertex_count() as usize);
+            if n_vertices > vbuffer.vbuf.vertex_count() {
+                vbuffer.grow(n_vertices);
+            }
+            debug_assert!(n_vertices <= vbuffer.vbuf.vertex_count());
 
             {
                 trace!("tex_batch_ws");
@@ -154,22 +228,7 @@ pub fn draw_batches(
                     });
             }
 
-            {
-                trace!("vbuf_update");
-
-                // @WaitForStable make this const
-                let null_vertex = render::Vertex::new(
-                    v2!(0., 0.),
-                    colors::TRANSPARENT.into(),
-                    v2!(0., 0.).into(),
-                );
-
-                for vertex in vertices.iter_mut().take(vbuffer.n_elems).skip(n_vertices) {
-                    *vertex = null_vertex;
-                }
-                vbuffer.vbuf.update(vertices, 0);
-                vbuffer.n_elems = vertices.len();
-            }
+            vbuffer.update(vertices, n_vertices as u32);
 
             // @Temporary
             use sfml::graphics::RenderTarget;

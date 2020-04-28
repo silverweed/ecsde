@@ -18,9 +18,7 @@ pub enum Input_Action {
     Key(keyboard::Key),
     Joystick(Joystick_Button),
     Mouse(Mouse_Button),
-    Mouse_Wheel {
-        up: bool,
-    },
+    Mouse_Wheel { up: bool },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -113,8 +111,7 @@ impl Input_Bindings {
     }
 
     pub(super) fn get_mouse_wheel_actions(&self, up: bool) -> Option<&Vec<String_Id>> {
-        self.action_bindings
-            .get(&Input_Action::Mouse_Wheel { up })
+        self.action_bindings.get(&Input_Action::Mouse_Wheel { up })
     }
 
     pub(super) fn get_key_emulated_axes(
