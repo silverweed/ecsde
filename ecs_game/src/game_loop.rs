@@ -291,9 +291,11 @@ pub fn tick_game<'a>(
             time.time_scale * (!time.paused as u32 as f32),
         );
         gameplay_system.foreach_active_level(|level| {
+            #[cfg(debug_assertions)]
             let coll_debug = collision_debug_data
                 .entry(level.id)
                 .or_insert_with(physics::Collision_System_Debug_Data::default);
+
             physics::update_collisions(
                 &mut level.world,
                 &level.chunks,

@@ -82,7 +82,11 @@ impl Vertex_Buffer_Holder {
 
         let mut new_vbuf =
             Vertex_Buffer::new(PrimitiveType::Quads, new_cap, VertexBufferUsage::Stream);
-        new_vbuf.update_from_vertex_buffer(&self.vbuf);
+        let _res = new_vbuf.update_from_vertex_buffer(&self.vbuf);
+        #[cfg(debug_assertions)]
+        {
+            debug_assert!(_res, "Vertex Buffer copying failed ({:?})!", self.id);
+        }
 
         self.vbuf = new_vbuf;
     }
