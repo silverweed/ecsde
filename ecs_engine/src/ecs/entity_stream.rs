@@ -18,12 +18,16 @@ impl Entity_Stream {
             let comp_set = world.get_entity_comp_set(entity);
             let comp_set = comp_set.borrow();
 
-            if (comp_set & req_comps) != *req_comps {
-                continue;
-            }
+            {
+                trace!("entity_stream::bitset_test");
 
-            if (comp_set & exc_comps) != Bit_Set::default() {
-                continue;
+                if (comp_set & req_comps) != *req_comps {
+                    continue;
+                }
+
+                if (comp_set & exc_comps) != Bit_Set::default() {
+                    continue;
+                }
             }
 
             self.cur_idx = i + 1;

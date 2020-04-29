@@ -727,7 +727,7 @@ mod tests {
         let (idx, a) = alloc.add(C_Test { foo: 42, bar: 84. });
         assert_eq!(a.foo, 42);
         assert_eq!(a.bar, 84.);
-        alloc.debug_print::<C_Test>();
+        //alloc.debug_print::<C_Test>();
 
         let a = unsafe { alloc.get::<C_Test>(idx) };
         assert_eq!(a.foo, 42);
@@ -747,7 +747,7 @@ mod tests {
         let (idxb, b) = alloc.add(C_Test { foo: 42, bar: 84. });
         assert_eq!(b.foo, 42);
         assert_eq!(b.bar, 84.);
-        alloc.debug_print::<C_Test>();
+        //alloc.debug_print::<C_Test>();
 
         let a = unsafe { alloc.get::<C_Test>(idx) };
         assert_eq!(a.foo, 11);
@@ -842,7 +842,7 @@ mod tests {
     fn deallocate() {
         let mut alloc = Component_Allocator::new::<C_Test>();
 
-        alloc.debug_print::<C_Test>();
+        //alloc.debug_print::<C_Test>();
         let (i, _) = alloc.add(C_Test { foo: 1, bar: 1. });
         unsafe {
             alloc.remove::<C_Test>(i);
@@ -863,7 +863,7 @@ mod tests {
         assert!(alloc.filled_tail.is_null());
         assert_eq!(alloc.free_head.offset(), 0);
 
-        alloc.debug_print::<C_Test>();
+        //alloc.debug_print::<C_Test>();
 
         let (_, b) = alloc.add(C_Test {
             foo: 122,
@@ -876,7 +876,7 @@ mod tests {
         assert_eq!(alloc.free_head.offset(), 1);
 
         let mut v = vec![];
-        alloc.debug_print::<C_Test>();
+        //alloc.debug_print::<C_Test>();
         for _ in 0..10 {
             let (idx, _) = alloc.add(C_Test { foo: 1, bar: -2. });
             v.push(idx);
@@ -885,7 +885,7 @@ mod tests {
             assert_eq!(alloc.free_head.offset(), alloc.filled_tail.offset() + 1);
             //alloc.debug_print::<C_Test>();
         }
-        alloc.debug_print::<C_Test>();
+        //alloc.debug_print::<C_Test>();
         unsafe {
             alloc.remove::<C_Test>(3);
         }
@@ -893,9 +893,9 @@ mod tests {
         assert_eq!(alloc.filled_tail.offset(), 10);
         assert_eq!(alloc.free_head.offset(), 3);
 
-        alloc.debug_print::<C_Test>();
+        //alloc.debug_print::<C_Test>();
         alloc.add(C_Test { foo: 33, bar: 33. });
-        alloc.debug_print::<C_Test>();
+        //alloc.debug_print::<C_Test>();
 
         assert_eq!(alloc.filled_head.offset(), 0);
         assert_eq!(alloc.filled_tail.offset(), 3);
@@ -904,7 +904,7 @@ mod tests {
         for idx in v {
             unsafe {
                 alloc.remove::<C_Test>(idx);
-                alloc.debug_print::<C_Test>();
+                //alloc.debug_print::<C_Test>();
             }
         }
     }

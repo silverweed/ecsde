@@ -1,3 +1,5 @@
+pub mod drawing;
+
 use crate::prelude::Debug_Tracer;
 use rayon::prelude::*;
 use std::collections::HashMap;
