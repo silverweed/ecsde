@@ -2,7 +2,6 @@ use crate::states::state::{Game_State_Args, Persistent_Game_State};
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::vector::Vec2f;
-use ecs_engine::gfx::window;
 use ecs_engine::input::input_system::{Action_Kind, Game_Action};
 
 pub struct Debug_Base_State {

@@ -11,7 +11,6 @@ pub struct Entity_Stream {
 
 impl Entity_Stream {
     pub fn next(&mut self, world: &Ecs_World) -> Option<Entity> {
-        let i = self.cur_idx;
         let req_comps = &self.required_components;
         let exc_comps = &self.excluded_components;
         let entities = world.entities();
@@ -31,7 +30,7 @@ impl Entity_Stream {
             return Some(entity);
         }
 
-        self.cur_idx = i;
+        self.cur_idx = entities.len();
         None
     }
 
