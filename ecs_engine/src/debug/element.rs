@@ -4,7 +4,7 @@ use crate::resources::gfx::Gfx_Resources;
 use std::time::Duration;
 
 pub trait Debug_Element {
-    fn update(&mut self, _dt: &Duration) {}
+    fn update(&mut self, _dt: &Duration, _window: &Window_Handle) {}
     fn draw(
         &self,
         window: &mut Window_Handle,

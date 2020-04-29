@@ -187,17 +187,17 @@ impl Debug_Ui_System {
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
         for elem in &mut self.graphs.actives {
-            elem.update(dt);
+            elem.update(dt, window);
             elem.draw(window, gres, frame_alloc);
         }
 
         for elem in &mut self.overlays.actives {
-            elem.update(dt);
+            elem.update(dt, window);
             elem.draw(window, gres, frame_alloc);
         }
 
         for elem in &mut self.fadeout_overlays.actives {
-            elem.update(dt);
+            elem.update(dt, window);
             elem.draw(window, gres, frame_alloc);
         }
 

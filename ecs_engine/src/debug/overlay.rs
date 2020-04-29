@@ -25,6 +25,38 @@ pub struct Debug_Overlay_Config {
     pub font: Font_Handle,
     pub horiz_align: Align,
     pub vert_align: Align,
+    pub hoverable: bool,
+}
+
+#[derive(Default)]
+pub struct Hover_Data {
+    pub hovered_line: Option<usize>,
+
+    // Note: this value represents the *index* of the selected line, therefore if a logic
+    // involving the content of that line needs to be carried on for multiple frames, and if the lines
+    // of this Overlay can change, that content should be cloned somewhere, as in the next frame 
+    // this same index may refer to a totally different line!
+    //
+    // e.g.
+    // 
+    // Frame 1
+    // ---------
+    //       Line A
+    //     > Line B <  (selected)
+    //       Line C
+    //
+    // ... query the selected line and do some logic regarding Line B (like using it as a function
+    // name to query the debug tracer).
+    //
+    // Frame 2
+    // --------
+    //      Line B
+    //    > Line A < (the index didn't change, but the line did!)
+    //      Line C
+    //
+    // ... if the content of Line B was not saved, but rather the overlay is blindly indexed with
+    // the selected index, we will do a totally wrong logic!
+    pub latest_selected_line: Option<usize>,
 }
 
 #[derive(Default)]
@@ -33,6 +65,11 @@ pub struct Debug_Overlay {
 
     pub config: Debug_Overlay_Config,
     pub position: Vec2f,
+
+    // Latest drawn row bounds
+    max_row_bounds: std::cell::Cell<(f32, f32)>,
+
+    pub hover_data: Hover_Data,
 }
 
 impl Debug_Element for Debug_Overlay {
@@ -92,6 +129,8 @@ impl Debug_Element for Debug_Overlay {
             self.config.background,
         );
 
+        self.max_row_bounds.set((max_row_width, max_row_height));
+
         // Draw bg rects
         for (i, (bg_col, bg_fill_ratio)) in self
             .lines
@@ -116,7 +155,41 @@ impl Debug_Element for Debug_Overlay {
                 vert_align.aligned_pos(pad_y, tot_height)
                     + (i as f32) * (max_row_height + row_spacing),
             );
+            // @Incomplete
+            if let Some(line) = self.hover_data.hovered_line {
+                if line == i {
+                    *color = colors::WHITE;
+                }
+            }
             gfx::render::render_text(window, text, *color, position + pos);
+        }
+    }
+
+    fn update(&mut self, _dt: &std::time::Duration, window: &Window_Handle) {
+        use crate::common::rect::rect_contains;
+        use crate::gfx::window;
+        use crate::input::bindings::mouse;
+
+        if !self.config.hoverable {
+            return;
+        }
+
+        let (row_width, row_height) = self.max_row_bounds.get();
+        // @Incomplete: this calculation is probably broken for alignments different from Align_Middle
+        let Vec2f { x: sx, y: sy } = self.position + v2!(self.config.pad_x, self.config.pad_y) - v2!(row_width * 0.5, (row_height + self.config.row_spacing) * (self.lines.len() as f32) * 0.5);
+        let mpos = Vec2f::from(window::mouse_pos_in_window(window));
+
+        if mouse::is_mouse_btn_pressed(mouse::Mouse_Button::Left) {
+            self.hover_data.selected_line = self.hover_data.hovered_line;
+        }
+
+        self.hover_data.hovered_line = None;
+        for i in 0..self.lines.len() {
+            let line_rect = Rect::new(sx, sy + (i as f32) * (row_height + self.config.row_spacing), row_width, row_height);
+            if rect_contains(&line_rect, mpos) {
+                self.hover_data.hovered_line = Some(i);
+                break;
+            }
         }
     }
 }

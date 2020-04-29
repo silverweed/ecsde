@@ -233,6 +233,7 @@ pub fn init_engine_debug(
             .unwrap();
         trace_overlay.config.vert_align = Align::Middle;
         trace_overlay.config.horiz_align = Align::Middle;
+        trace_overlay.config.hoverable = true;
         trace_overlay.position = Vec2f::new(win_w * 0.5, win_h * 0.5);
         // Trace overlay starts disabled
         debug_ui.set_overlay_enabled(String_Id::from("trace"), false);
