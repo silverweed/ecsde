@@ -4,9 +4,6 @@
 
 extern crate libloading as ll;
 
-#[cfg(debug_assertions)]
-extern crate notify;
-
 mod game_api;
 mod hotload;
 
@@ -43,14 +40,14 @@ macro_rules! get_argc_argv {
 #[cfg(debug_assertions)]
 fn main() -> std::io::Result<()> {
     use std::path::PathBuf;
-    use std::sync::mpsc::sync_channel;
+    use std::sync::mpsc::{channel, sync_channel};
 
     let game_dll_abs_path = format!("{}/{}", GAME_DLL_FOLDER, GAME_DLL_FILE);
     let game_dll_path = PathBuf::from(game_dll_abs_path.clone());
 
     // Start file watch for hotloading
     let (reload_pending_send, reload_pending_recv) = sync_channel(1);
-    {
+    let fw_thread = {
         let dll_watcher = Box::new(Game_Dll_File_Watcher::new(
             game_dll_path,
             reload_pending_send,
@@ -63,8 +60,8 @@ fn main() -> std::io::Result<()> {
             std::path::PathBuf::from(GAME_DLL_FOLDER),
             dll_watcher_cfg,
             vec![dll_watcher],
-        )?;
-    }
+        )?
+    };
 
     // Convert rust args to C args, since our game API expects that.
     get_argc_argv!(argc, argv);
@@ -98,6 +95,8 @@ fn main() -> std::io::Result<()> {
             }
         }
     }
+
+    file_watcher::stop_file_watch(fw_thread);
 
     unsafe {
         (game_api.shutdown)(game_state, game_resources);
