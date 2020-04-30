@@ -1,10 +1,10 @@
 use super::element::Debug_Element;
 use crate::alloc::temp;
 use crate::common::colors;
-use crate::core::time;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2u};
+use crate::core::time;
 use crate::gfx::render;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
@@ -92,7 +92,12 @@ impl Debug_Element for Debug_Graph_View {
                 render::render_line(window, &v1, &v2);
                 // Skip first x label, or it overlaps with first y label
                 if iters > 0 {
-                    render::render_text(window, &mut text, colors::WHITE, pos2 + Vec2f::new(2., 0.));
+                    render::render_text(
+                        window,
+                        &mut text,
+                        colors::WHITE,
+                        pos2 + Vec2f::new(2., 0.),
+                    );
                 }
 
                 x += xstep;
@@ -228,7 +233,12 @@ impl Debug_Graph {
     }
 }
 
-pub fn graph_add_point_and_scroll(graph: &mut Debug_Graph_View, time: &time::Time, time_limit: f32, point: f32) {
+pub fn graph_add_point_and_scroll(
+    graph: &mut Debug_Graph_View,
+    time: &time::Time,
+    time_limit: f32,
+    point: f32,
+) {
     let now = time.get_real_time().as_secs_f32();
     graph.data.x_range.end = now;
     if graph.data.x_range.end - graph.data.x_range.start > time_limit {
@@ -236,4 +246,3 @@ pub fn graph_add_point_and_scroll(graph: &mut Debug_Graph_View, time: &time::Tim
     }
     graph.data.add_point(now, point);
 }
-

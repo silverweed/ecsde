@@ -34,11 +34,11 @@ pub struct Hover_Data {
 
     /// Note: this value represents the *index* of the selected line, therefore if a logic
     /// involving the content of that line needs to be carried on for multiple frames, and if the lines
-    /// of this Overlay can change, that content should be cloned somewhere, as in the next frame 
+    /// of this Overlay can change, that content should be cloned somewhere, as in the next frame
     /// this same index may refer to a totally different line!
     ///
     /// e.g.
-    /// 
+    ///
     /// Frame 1
     /// ---------
     ///       Line A
@@ -179,7 +179,11 @@ impl Debug_Element for Debug_Overlay {
 
         let (row_width, row_height) = self.max_row_bounds.get();
         // @Incomplete: this calculation is probably broken for alignments different from Align_Middle
-        let Vec2f { x: sx, y: sy } = self.position + v2!(self.config.pad_x, self.config.pad_y) - v2!(row_width * 0.5, (row_height + self.config.row_spacing) * (self.lines.len() as f32) * 0.5);
+        let Vec2f { x: sx, y: sy } = self.position + v2!(self.config.pad_x, self.config.pad_y)
+            - v2!(
+                row_width * 0.5,
+                (row_height + self.config.row_spacing) * (self.lines.len() as f32) * 0.5
+            );
         let mpos = Vec2f::from(window::mouse_pos_in_window(window));
 
         if mouse::is_mouse_btn_pressed(mouse::Mouse_Button::Left) {
@@ -191,7 +195,12 @@ impl Debug_Element for Debug_Overlay {
 
         self.hover_data.hovered_line = None;
         for i in 0..self.lines.len() {
-            let line_rect = Rect::new(sx, sy + (i as f32) * (row_height + self.config.row_spacing), row_width, row_height);
+            let line_rect = Rect::new(
+                sx,
+                sy + (i as f32) * (row_height + self.config.row_spacing),
+                row_width,
+                row_height,
+            );
             if rect_contains(&line_rect, mpos) {
                 self.hover_data.hovered_line = Some(i);
                 break;

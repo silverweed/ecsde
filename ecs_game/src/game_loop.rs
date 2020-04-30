@@ -1089,5 +1089,10 @@ fn update_graph_prev_frame_t(
 ) {
     const TIME_LIMIT: f32 = 10.0;
 
-    debug::graph::graph_add_point_and_scroll(graph, time, TIME_LIMIT, prev_frame_t.as_secs_f32() * 1000.);
+    debug::graph::graph_add_point_and_scroll(
+        graph,
+        time,
+        TIME_LIMIT,
+        prev_frame_t.as_secs_f32() * 1000.,
+    );
 }

@@ -1,13 +1,13 @@
+use crate::cfg;
+use crate::common::colors;
+use crate::common::stringid::String_Id;
+use crate::common::units::format_bytes_pretty;
 use crate::core::app::Engine_State;
+use crate::core::time;
 use crate::debug::graph;
+use crate::debug::overlay::Debug_Overlay;
 use crate::debug::tracer::{self, Trace_Tree, Tracer_Node_Final};
 use std::time::Duration;
-use crate::common::units::format_bytes_pretty;
-use crate::core::time;
-use crate::common::colors;
-use crate::cfg;
-use crate::common::stringid::String_Id;
-use crate::debug::overlay::Debug_Overlay;
 
 fn add_tracer_node_line(
     node: &Tracer_Node_Final,
@@ -165,9 +165,16 @@ pub fn update_graph_traced_fn(
     // @Incomplete: make this configurable
     const TIME_LIMIT: f32 = 20.0;
 
-    let fn_tot_time = traces.iter().filter_map(|t| if t.info.tag == traced_fn {
-        Some(t.info.tot_duration().as_secs_f32() * 1000.)
-    } else { None }).sum();
+    let fn_tot_time = traces
+        .iter()
+        .filter_map(|t| {
+            if t.info.tag == traced_fn {
+                Some(t.info.tot_duration().as_secs_f32() * 1000.)
+            } else {
+                None
+            }
+        })
+        .sum();
 
     graph::graph_add_point_and_scroll(graph, time, TIME_LIMIT, fn_tot_time);
 }

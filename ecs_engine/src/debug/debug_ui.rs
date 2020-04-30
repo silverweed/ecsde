@@ -84,7 +84,11 @@ impl<T> Debug_Element_Container<T> {
                         self.inactives.len() - 1,
                         Active_State::Active,
                         Active_State::Inactive,
-                        if *idx < self.actives.len() { Some(self.actives.len()) } else { None },
+                        if *idx < self.actives.len() {
+                            Some(self.actives.len())
+                        } else {
+                            None
+                        },
                     )
                 }
                 (Active_State::Inactive, idx) => {
@@ -99,7 +103,11 @@ impl<T> Debug_Element_Container<T> {
                         self.actives.len() - 1,
                         Active_State::Inactive,
                         Active_State::Active,
-                        if *idx < self.inactives.len() { Some(self.inactives.len()) } else { None },
+                        if *idx < self.inactives.len() {
+                            Some(self.inactives.len())
+                        } else {
+                            None
+                        },
                     )
                 }
             };
@@ -108,9 +116,20 @@ impl<T> Debug_Element_Container<T> {
 
         // Patch the index of the element moved with swap_remove
         if let Some(idx_to_patch) = idx_to_patch {
-            let entry = self.all.iter_mut().find(|(_, (state, idx))| *state == old_state && *idx == idx_to_patch).unwrap();
+            let entry = self
+                .all
+                .iter_mut()
+                .find(|(_, (state, idx))| *state == old_state && *idx == idx_to_patch)
+                .unwrap();
             *entry.1 = (old_state, old_idx);
-            debug_assert!(old_idx < if old_state == Active_State::Inactive { self.inactives.len() } else { self.actives.len() });
+            debug_assert!(
+                old_idx
+                    < if old_state == Active_State::Inactive {
+                        self.inactives.len()
+                    } else {
+                        self.actives.len()
+                    }
+            );
         }
     }
 }
