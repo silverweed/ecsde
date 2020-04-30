@@ -1,6 +1,7 @@
 use super::element::Debug_Element;
 use crate::alloc::temp;
 use crate::common::colors;
+use crate::core::time;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2u};
@@ -10,13 +11,13 @@ use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
 use std::ops::Range;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum Grid_Step {
     Fixed_Step(f32),
     Fixed_Subdivs(usize),
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct Debug_Graph_View_Config {
     pub grid_xstep: Option<Grid_Step>,
     pub grid_ystep: Option<Grid_Step>,
@@ -89,7 +90,10 @@ impl Debug_Element for Debug_Graph_View {
                 let mut text = render::create_text(&format!("{:.1}", x), font, font_size);
 
                 render::render_line(window, &v1, &v2);
-                render::render_text(window, &mut text, colors::WHITE, pos2 + Vec2f::new(2., 0.));
+                // Skip first x label, or it overlaps with first y label
+                if iters > 0 {
+                    render::render_text(window, &mut text, colors::WHITE, pos2 + Vec2f::new(2., 0.));
+                }
 
                 x += xstep;
                 iters += 1;
@@ -110,7 +114,7 @@ impl Debug_Element for Debug_Graph_View {
                 let v2 =
                     render::new_vertex(pos2, colors::rgba(180, 180, 180, 200), Vec2f::default());
 
-                let mut text = render::create_text(&format!("{:.1}", y), font, font_size);
+                let mut text = render::create_text(&format!("{:.2}", y), font, font_size);
 
                 render::render_line(window, &v1, &v2);
                 render::render_text(window, &mut text, colors::WHITE, pos1 + Vec2f::new(0., -2.));
@@ -223,3 +227,13 @@ impl Debug_Graph {
         }
     }
 }
+
+pub fn graph_add_point_and_scroll(graph: &mut Debug_Graph_View, time: &time::Time, time_limit: f32, point: f32) {
+    let now = time.get_real_time().as_secs_f32();
+    graph.data.x_range.end = now;
+    if graph.data.x_range.end - graph.data.x_range.start > time_limit {
+        graph.data.x_range.start = graph.data.x_range.end - time_limit;
+    }
+    graph.data.add_point(now, point);
+}
+

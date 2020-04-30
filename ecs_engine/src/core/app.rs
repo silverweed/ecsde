@@ -292,9 +292,19 @@ pub fn init_engine_debug(
         let graph = engine_state
             .debug_systems
             .debug_ui
-            .create_graph(String_Id::from("prev_frame_time"), graph_config)
+            .create_graph(String_Id::from("prev_frame_time"), graph_config.clone())
             .unwrap();
         graph.pos.y = (0.15 * win_h) as u32;
+        graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
+
+        // Function profile
+        graph_config.fixed_y_range = None;
+        graph_config.grid_ystep = Some(graph::Grid_Step::Fixed_Subdivs(4));
+        graph_config.low_threshold = Some((0.01, colors::GREEN));
+        graph_config.high_threshold = Some((10., colors::RED));
+        graph_config.title = None;
+        let graph = engine_state.debug_systems.debug_ui.create_graph(String_Id::from("fn_profile"), graph_config).unwrap();
+        graph.pos.y = (0.3 * win_h) as u32;
         graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
     }
 
@@ -423,4 +433,38 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
             }
         }
     }
+
+    let sid_fn_profile = String_Id::from("fn_profile");
+    let sid_trace = String_Id::from("trace");
+    let debug_systems = &mut engine_state.debug_systems;
+    let trace_hover_data = debug_systems.debug_ui.get_overlay(sid_trace).hover_data.clone();
+    if let Some(tracer_selected_idx) = trace_hover_data.selected_line {
+        debug_systems
+            .debug_ui
+            .set_graph_enabled(sid_fn_profile, true);
+
+        if trace_hover_data.just_selected {
+            let line_text = &debug_systems.debug_ui.get_overlay(sid_trace).lines[tracer_selected_idx].text;
+            let fn_name = String::from(line_text.split(": ").next().unwrap().trim());
+            debug_systems.traced_fn = fn_name.clone();
+            let graph = debug_systems.debug_ui.get_graph(sid_fn_profile);
+            graph.config.title = Some(fn_name);
+            graph.data.points.clear();
+        }
+
+        let graph = debug_systems.debug_ui.get_graph(sid_fn_profile);
+
+        let flattened_traces = tracer::flatten_traces(&final_traces);
+        tracer::drawing::update_graph_traced_fn(
+            &flattened_traces,
+            graph,
+            &engine_state.time,
+            &debug_systems.traced_fn,
+        );
+    } else {
+        debug_systems
+            .debug_ui
+            .set_graph_enabled(sid_fn_profile, false);
+    }
+
 }

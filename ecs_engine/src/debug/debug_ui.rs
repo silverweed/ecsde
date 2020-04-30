@@ -30,7 +30,7 @@ impl Default for Debug_Ui_System_Config {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
 enum Active_State {
     Active,
     Inactive,
@@ -64,7 +64,7 @@ impl<T> Debug_Element_Container<T> {
     }
 
     fn set_enabled(&mut self, id: String_Id, enabled: bool) {
-        let (old_idx, new_idx, old_state, new_state) =
+        let (old_idx, new_idx, old_state, new_state, idx_to_patch) =
             match self.all.get(&id).unwrap_or_else(|| {
                 fatal!(
                     "Tried to set_enabled inexisting {} {}",
@@ -76,6 +76,7 @@ impl<T> Debug_Element_Container<T> {
                     if enabled {
                         return;
                     }
+                    debug_assert!(*idx < self.actives.len());
                     let elem = self.actives.swap_remove(*idx);
                     self.inactives.push(elem);
                     (
@@ -83,12 +84,14 @@ impl<T> Debug_Element_Container<T> {
                         self.inactives.len() - 1,
                         Active_State::Active,
                         Active_State::Inactive,
+                        if *idx < self.actives.len() { Some(self.actives.len()) } else { None },
                     )
                 }
                 (Active_State::Inactive, idx) => {
                     if !enabled {
                         return;
                     }
+                    debug_assert!(*idx < self.inactives.len());
                     let elem = self.inactives.swap_remove(*idx);
                     self.actives.push(elem);
                     (
@@ -96,20 +99,18 @@ impl<T> Debug_Element_Container<T> {
                         self.actives.len() - 1,
                         Active_State::Inactive,
                         Active_State::Active,
+                        if *idx < self.inactives.len() { Some(self.inactives.len()) } else { None },
                     )
                 }
             };
 
         self.all.insert(id, (new_state, new_idx));
 
-        for (_, (_, idx)) in self
-            .all
-            .iter_mut()
-            .filter(|(_, (state, _))| *state == old_state)
-        {
-            if *idx > old_idx {
-                *idx -= 1;
-            }
+        // Patch the index of the element moved with swap_remove
+        if let Some(idx_to_patch) = idx_to_patch {
+            let entry = self.all.iter_mut().find(|(_, (state, idx))| *state == old_state && *idx == idx_to_patch).unwrap();
+            *entry.1 = (old_state, old_idx);
+            debug_assert!(old_idx < if old_state == Active_State::Inactive { self.inactives.len() } else { self.actives.len() });
         }
     }
 }

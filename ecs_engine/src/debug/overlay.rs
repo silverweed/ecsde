@@ -8,14 +8,14 @@ use crate::gfx::align::Align;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
-struct Debug_Line {
+pub struct Debug_Line {
     pub text: String,
     pub color: Color,
     // (fill color, horizontal fill ratio)
     pub bg_rect_fill: Option<(Color, f32)>, // @Cleanup: this is not very pretty
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct Debug_Overlay_Config {
     pub row_spacing: f32,
     pub font_size: u16,
@@ -28,40 +28,43 @@ pub struct Debug_Overlay_Config {
     pub hoverable: bool,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Hover_Data {
     pub hovered_line: Option<usize>,
 
-    // Note: this value represents the *index* of the selected line, therefore if a logic
-    // involving the content of that line needs to be carried on for multiple frames, and if the lines
-    // of this Overlay can change, that content should be cloned somewhere, as in the next frame 
-    // this same index may refer to a totally different line!
-    //
-    // e.g.
-    // 
-    // Frame 1
-    // ---------
-    //       Line A
-    //     > Line B <  (selected)
-    //       Line C
-    //
-    // ... query the selected line and do some logic regarding Line B (like using it as a function
-    // name to query the debug tracer).
-    //
-    // Frame 2
-    // --------
-    //      Line B
-    //    > Line A < (the index didn't change, but the line did!)
-    //      Line C
-    //
-    // ... if the content of Line B was not saved, but rather the overlay is blindly indexed with
-    // the selected index, we will do a totally wrong logic!
-    pub latest_selected_line: Option<usize>,
+    /// Note: this value represents the *index* of the selected line, therefore if a logic
+    /// involving the content of that line needs to be carried on for multiple frames, and if the lines
+    /// of this Overlay can change, that content should be cloned somewhere, as in the next frame 
+    /// this same index may refer to a totally different line!
+    ///
+    /// e.g.
+    /// 
+    /// Frame 1
+    /// ---------
+    ///       Line A
+    ///     > Line B <  (selected)
+    ///       Line C
+    ///
+    /// ... query the selected line and do some logic regarding Line B (like using it as a function
+    /// name to query the debug tracer).
+    ///
+    /// Frame 2
+    /// --------
+    ///      Line B
+    ///    > Line A < (the index didn't change, but the line did!)
+    ///      Line C
+    ///
+    /// ... if the content of Line B was not saved, but rather the overlay is blindly indexed with
+    /// the selected index, we will do a totally wrong logic!
+    pub selected_line: Option<usize>,
+
+    /// Whether the selection changed this frame or not
+    pub just_selected: bool,
 }
 
 #[derive(Default)]
 pub struct Debug_Overlay {
-    lines: Vec<Debug_Line>,
+    pub lines: Vec<Debug_Line>,
 
     pub config: Debug_Overlay_Config,
     pub position: Vec2f,
@@ -181,6 +184,9 @@ impl Debug_Element for Debug_Overlay {
 
         if mouse::is_mouse_btn_pressed(mouse::Mouse_Button::Left) {
             self.hover_data.selected_line = self.hover_data.hovered_line;
+            self.hover_data.just_selected = true;
+        } else {
+            self.hover_data.just_selected = false;
         }
 
         self.hover_data.hovered_line = None;

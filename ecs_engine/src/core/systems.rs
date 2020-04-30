@@ -30,6 +30,7 @@ pub struct Debug_Systems {
 
     pub show_trace_overlay: bool,
     pub trace_overlay_update_t: f32,
+    pub traced_fn: String,
 }
 
 impl Core_Systems<'_> {
@@ -64,6 +65,7 @@ impl Debug_Systems {
             console: console::Console::new(),
             log: log::Debug_Log::with_hist_len((debug_log_size * fps) as _),
             calipers: calipers::Debug_Calipers::default(),
+            traced_fn: String::default(),
         }
     }
 

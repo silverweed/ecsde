@@ -1,4 +1,5 @@
 use crate::core::app::Engine_State;
+use crate::debug::graph;
 use crate::debug::tracer::{self, Trace_Tree, Tracer_Node_Final};
 use std::time::Duration;
 use crate::common::units::format_bytes_pretty;
@@ -153,4 +154,20 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
     {
         add_tracer_node_line(node, &total_traced_time, 0, overlay);
     }
+}
+
+pub fn update_graph_traced_fn(
+    traces: &[Tracer_Node_Final], // NOTE: these must be flattened!
+    graph: &mut graph::Debug_Graph_View,
+    time: &time::Time,
+    traced_fn: &str,
+) {
+    // @Incomplete: make this configurable
+    const TIME_LIMIT: f32 = 20.0;
+
+    let fn_tot_time = traces.iter().filter_map(|t| if t.info.tag == traced_fn {
+        Some(t.info.tot_duration().as_secs_f32() * 1000.)
+    } else { None }).sum();
+
+    graph::graph_add_point_and_scroll(graph, time, TIME_LIMIT, fn_tot_time);
 }

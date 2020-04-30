@@ -17,7 +17,7 @@ struct Fadeout_Text {
     pub time: Duration,
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct Fadeout_Debug_Overlay_Config {
     pub row_spacing: f32,
     pub font_size: u16,
