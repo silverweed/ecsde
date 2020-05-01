@@ -9,21 +9,12 @@ use crate::ecs::ecs_world::{Component_Storage, Ecs_World, Entity};
 use rayon::prelude::*;
 use std::collections::HashMap;
 
-type Body_Id = u32;
-
 #[derive(Debug, Clone)]
 struct Rigidbody {
-    // Used in detect_collisions
     pub shape: Collision_Shape,
-
-    // Used to copy back results
     pub entity: Entity,
-
-    // Used in positional_correction
-    pub position: Vec2f, // and copy back // and detect collision
-
-    // Used in solve_collisions_roughly
-    pub velocity: Vec2f, // and copy back
+    pub position: Vec2f,
+    pub velocity: Vec2f,
     pub phys_data: C_Phys_Data,
 }
 
@@ -244,13 +235,6 @@ const COLLISION_CB_TABLE: [[Collision_Cb; 2]; 2] = [
     [detect_rect_circle, detect_rect_rect],
 ];
 
-fn get_extent(shape: Collision_Shape) -> Vec2f {
-    match shape {
-        Collision_Shape::Circle { radius } => v2!(radius, radius) * 2.,
-        Collision_Shape::Rect { width, height } => v2!(width, height),
-    }
-}
-
 fn detect_collisions<T_Spatial_Accelerator>(
     colliders: &Component_Storage<'_, Collider>,
     entities: &[Entity],
@@ -276,7 +260,7 @@ where
         if a.is_static {
             continue;
         }
-        let a_extent = get_extent(a.shape);
+        let a_extent = a.shape.extent();
         let a_shape = collision_shape_type_index(&a.shape);
         let a_part_cb = COLLISION_CB_TABLE[a_shape];
 

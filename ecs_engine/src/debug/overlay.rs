@@ -40,7 +40,6 @@ pub struct Hover_Data {
     /// e.g.
     ///
     /// Frame 1
-    /// ---------
     ///       Line A
     ///     > Line B <  (selected)
     ///       Line C
@@ -49,7 +48,6 @@ pub struct Hover_Data {
     /// name to query the debug tracer).
     ///
     /// Frame 2
-    /// --------
     ///      Line B
     ///    > Line A < (the index didn't change, but the line did!)
     ///      Line C

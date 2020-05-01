@@ -309,7 +309,7 @@ pub fn tick_game<'a>(
             for mov in moved {
                 level
                     .chunks
-                    .update_entity(mov.entity, mov.prev_pos, mov.new_pos);
+                    .update_entity(mov.entity, mov.prev_pos, mov.new_pos, mov.extent);
             }
         });
     }

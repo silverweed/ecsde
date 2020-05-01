@@ -1,8 +1,10 @@
 use crate::directions;
 use crate::load::load_system::C_Ground;
+use crate::spatial::World_Chunks;
 use ecs_engine::collisions::collider::{Collider, Collision_Shape};
 use ecs_engine::common::vector::Vec2i;
 use ecs_engine::core::app::Engine_State;
+use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::components::gfx::C_Renderable;
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity, Evt_Entity_Destroyed};
 use ecs_engine::events::evt_register::{with_cb_data, wrap_cb_data, Event_Callback_Data};
@@ -32,7 +34,7 @@ impl Ground_Collision_Calculation_System {
             );
     }
 
-    pub fn update(&mut self, world: &mut Ecs_World) {
+    pub fn update(&mut self, world: &mut Ecs_World, chunks: &mut World_Chunks) {
         with_cb_data(
             &mut self.entities_to_recalc,
             |to_recalc: &mut Vec<Entity>| {
@@ -53,17 +55,24 @@ impl Ground_Collision_Calculation_System {
                                 y: height,
                             } = renderable.rect.size();
                             if !world.has_component::<Collider>(e) {
+                                let shape = Collision_Shape::Rect {
+                                    width: width as f32,
+                                    height: height as f32,
+                                };
                                 world.add_component(
                                     e,
                                     Collider {
-                                        shape: Collision_Shape::Rect {
-                                            width: width as f32,
-                                            height: height as f32,
-                                        },
+                                        shape,
                                         is_static: true,
                                         ..Default::default()
                                     },
                                 );
+                                let pos = world
+                                    .get_component::<C_Spatial2D>(e)
+                                    .unwrap()
+                                    .transform
+                                    .position();
+                                chunks.add_entity(e, pos, shape.extent());
                             }
                         }
                     }

@@ -52,8 +52,8 @@ pub fn level_load_sync(
         &mut level,
         gs_cfg,
     );
-    fill_world_chunks(&mut level.chunks, &mut level.world);
     calc_terrain_colliders(&mut level.world);
+    fill_world_chunks(&mut level.chunks, &mut level.world);
     lok!(
         "Loaded level {}. N. entities = {}, n. cameras = {}",
         level_id,
@@ -244,7 +244,9 @@ fn init_demo_entities(
         //}
     }
 
-    //spawn_rock_at(level, env, rsrc, v2!(0., 100.), ground);
+    //spawn_rock_at(level, env, rsrc, v2!(0., 200.));
+    //spawn_rock_at(level, env, rsrc, v2!(-100., 200.));
+    //spawn_rock_at(level, env, rsrc, v2!(300., 200.));
 }
 
 fn spawn_rock_at(level: &mut Level, env: &Env_Info, rsrc: &mut Gfx_Resources, pos: Vec2f) {
@@ -332,13 +334,11 @@ fn calc_terrain_colliders(world: &mut Ecs_World) {
 }
 
 fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World) {
-    foreach_entity!(world, +C_Spatial2D, |entity| {
+    foreach_entity!(world, +C_Spatial2D, +Collider, |entity| {
         let spatial = world.get_component_mut::<C_Spatial2D>(entity).unwrap();
-
-        // @Cleanup @Soundness: this is not the right place to set this value! It should
-        // be done after updating the scene tree for the first time (and use the global transform)!
-        spatial.frame_starting_pos = spatial.transform.position();
-
-        chunks.add_entity(entity, spatial.transform.position());
+        let pos = spatial.transform.position();
+        spatial.frame_starting_pos = pos;
+        let collider = world.get_component::<Collider>(entity).unwrap();
+        chunks.add_entity(entity, pos, collider.shape.extent());
     });
 }

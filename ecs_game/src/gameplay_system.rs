@@ -187,7 +187,8 @@ impl Gameplay_System {
             // @Incomplete: level-specific gameplay update
             update_demo_entites(world, &dt);
 
-            self.ground_collision_calc_system.update(world);
+            self.ground_collision_calc_system
+                .update(world, &mut level.chunks);
 
             //movement_system::update(&dt, world);
             dumb_movement_system::update(&dt, world, rng);

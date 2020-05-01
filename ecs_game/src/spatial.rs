@@ -1,13 +1,17 @@
+use ecs_engine::collisions::collider::Collider;
 use ecs_engine::collisions::spatial::Spatial_Accelerator;
 use ecs_engine::common::vector::Vec2f;
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity, Evt_Entity_Destroyed};
 use ecs_engine::events::evt_register::{with_cb_data, wrap_cb_data, Event_Callback_Data};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
 #[cfg(debug_assertions)]
-use ecs_engine::debug::painter::Debug_Painter;
+use {
+    ecs_engine::debug::painter::Debug_Painter, std::collections::HashSet, std::iter::FromIterator,
+};
 
 // @Speed: tune these numbers
 const CHUNK_WIDTH: f32 = 200.;
@@ -17,6 +21,22 @@ const CHUNK_HEIGHT: f32 = 200.;
 pub struct Chunk_Coords {
     pub x: i32,
     pub y: i32,
+}
+
+impl PartialOrd for Chunk_Coords {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Chunk_Coords {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.y.cmp(&other.y) {
+            Ordering::Greater => Ordering::Greater,
+            Ordering::Less => Ordering::Less,
+            Ordering::Equal => self.x.cmp(&other.x),
+        }
+    }
 }
 
 impl Chunk_Coords {
@@ -72,13 +92,19 @@ impl World_Chunks {
         with_cb_data(&mut self.to_destroy, |to_destroy: &mut Vec<Entity>| {
             for &entity in to_destroy.iter() {
                 if let Some(spatial) = ecs_world.get_component::<C_Spatial2D>(entity) {
-                    to_remove.push((entity, spatial.transform.position()));
+                    if let Some(collider) = ecs_world.get_component::<Collider>(entity) {
+                        to_remove.push((
+                            entity,
+                            spatial.transform.position(),
+                            collider.shape.extent(),
+                        ));
+                    }
                 }
             }
             to_destroy.clear();
         });
-        for (entity, pos) in to_remove {
-            self.remove_entity(entity, pos);
+        for (entity, pos, extent) in to_remove {
+            self.remove_entity(entity, pos, extent);
         }
     }
 
@@ -86,9 +112,10 @@ impl World_Chunks {
         self.chunks.len()
     }
 
-    pub fn add_entity(&mut self, entity: Entity, pos: Vec2f) {
-        let coords = Chunk_Coords::from_pos(pos);
-        self.add_entity_coords(entity, coords);
+    pub fn add_entity(&mut self, entity: Entity, pos: Vec2f, extent: Vec2f) {
+        for coords in self.get_all_chunks_containing(pos, extent) {
+            self.add_entity_coords(entity, coords);
+        }
     }
 
     fn add_entity_coords(&mut self, entity: Entity, coords: Chunk_Coords) {
@@ -105,9 +132,10 @@ impl World_Chunks {
         chunk.entities.push(entity);
     }
 
-    pub fn remove_entity(&mut self, entity: Entity, pos: Vec2f) {
-        let coords = Chunk_Coords::from_pos(pos);
-        self.remove_entity_coords(entity, coords);
+    pub fn remove_entity(&mut self, entity: Entity, pos: Vec2f, extent: Vec2f) {
+        for coords in self.get_all_chunks_containing(pos, extent) {
+            self.remove_entity_coords(entity, coords);
+        }
     }
 
     fn remove_entity_coords(&mut self, entity: Entity, coords: Chunk_Coords) {
@@ -133,16 +161,99 @@ impl World_Chunks {
         }
     }
 
-    pub fn update_entity(&mut self, entity: Entity, prev_pos: Vec2f, new_pos: Vec2f) {
-        let prev_coords = Chunk_Coords::from_pos(prev_pos);
-        let new_coords = Chunk_Coords::from_pos(new_pos);
+    pub fn update_entity(
+        &mut self,
+        entity: Entity,
+        prev_pos: Vec2f,
+        new_pos: Vec2f,
+        extent: Vec2f,
+    ) {
+        let prev_coords = self.get_all_chunks_containing(prev_pos, extent);
+        let new_coords = self.get_all_chunks_containing(new_pos, extent);
 
-        if prev_coords == new_coords {
-            return;
+        // @Speed: use temp allocator
+        let mut chunks_to_add = vec![];
+        let mut chunks_to_remove = vec![];
+
+        // Find chunks to add and to remove in O(n).
+        // This algorithm assumes that both prev_coords and new_coords are sorted and deduped.
+        let mut p_idx = 0;
+        let mut n_idx = 0;
+        while p_idx < prev_coords.len() && n_idx < new_coords.len() {
+            let pc = prev_coords[p_idx];
+            let nc = new_coords[n_idx];
+            if pc < nc {
+                chunks_to_remove.push(pc);
+                p_idx += 1;
+            } else if pc > nc {
+                chunks_to_add.push(nc);
+                n_idx += 1;
+            } else {
+                p_idx += 1;
+                n_idx += 1;
+            }
+        }
+        if p_idx < prev_coords.len() {
+            chunks_to_remove.extend(&prev_coords[p_idx..]);
+        } else if n_idx < new_coords.len() {
+            chunks_to_add.extend(&new_coords[n_idx..]);
         }
 
-        self.remove_entity_coords(entity, prev_coords);
-        self.add_entity_coords(entity, new_coords);
+        #[cfg(debug_assertions)]
+        {
+            debug_assert_eq!(
+                HashSet::<Chunk_Coords>::from_iter(chunks_to_remove.iter().copied())
+                    .intersection(&HashSet::from_iter(chunks_to_add.iter().copied()))
+                    .count(),
+                0
+            );
+        }
+
+        for coord in chunks_to_remove {
+            self.remove_entity_coords(entity, coord);
+        }
+
+        for coord in chunks_to_add {
+            self.add_entity_coords(entity, coord);
+        }
+    }
+
+    fn get_all_chunks_containing(&self, pos: Vec2f, extent: Vec2f) -> Vec<Chunk_Coords> {
+        let mut coords = vec![];
+
+        // We need to @Cleanup the -extent*0.5 offset we need to apply and make it consistent throughout the game!
+        let pos = pos - extent * 0.5;
+        let coords_topleft = Chunk_Coords::from_pos(pos);
+        coords.push(coords_topleft);
+
+        let coords_botright = Chunk_Coords::from_pos(pos + extent);
+
+        // Note: we cycle y-major so the result is automatically sorted (as for Chunk_Coords::cmp)
+        for y in 0..=coords_botright.y - coords_topleft.y {
+            for x in 0..=coords_botright.x - coords_topleft.x {
+                if x == 0 && y == 0 {
+                    continue;
+                }
+                coords.push(Chunk_Coords::from_pos(
+                    pos + v2!(x as f32 * CHUNK_WIDTH, y as f32 * CHUNK_HEIGHT),
+                ));
+            }
+        }
+
+        #[cfg(debug_assertions)]
+        {
+            // @WaitForStable
+            //debug_assert!(coords.iter().is_sorted());
+            for i in 1..coords.len() {
+                debug_assert!(coords[i] > coords[i - 1]);
+            }
+
+            let mut deduped = coords.clone();
+            deduped.dedup();
+            debug_assert_eq!(coords.len(), deduped.len());
+        }
+
+        coords
     }
 }
 
@@ -151,20 +262,9 @@ impl Spatial_Accelerator<Entity> for World_Chunks {
     where
         R: Extend<Entity>,
     {
-        let coords_topleft = Chunk_Coords::from_pos(pos);
-        let coords_topright = Chunk_Coords::from_pos(pos + v2!(extent.x, 0.));
-        let coords_botleft = Chunk_Coords::from_pos(pos + v2!(0., extent.y));
-        let coords_botright = Chunk_Coords::from_pos(pos + extent);
-
-        if let Some(chunk) = self.chunks.get(&coords_topleft) {
-            result.extend(chunk.entities.iter().copied());
-        }
-
-        for &coords in &[coords_topright, coords_botleft, coords_botright] {
-            if coords != coords_topleft {
-                if let Some(chunk) = self.chunks.get(&coords) {
-                    result.extend(chunk.entities.iter().copied());
-                }
+        for coords in self.get_all_chunks_containing(pos, extent) {
+            if let Some(chunk) = self.chunks.get(&coords) {
+                result.extend(chunk.entities.iter().copied());
             }
         }
     }
@@ -212,5 +312,18 @@ impl World_Chunks {
                 colors::rgba(50, 220, 0, 250),
             );
         }
+    }
+}
+
+#[cfg(tests)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chunk_coords_ord() {
+        assert!(Chunk_Coords { x: 0, y: 0 } < Chunk_Coords { x: 1, y: 0 });
+        assert!(Chunk_Coords { x: 1, y: 0 } < Chunk_Coords { x: 0, y: 1 });
+        assert!(Chunk_Coords { x: 1, y: 1 } < Chunk_Coords { x: 2, y: 1 });
+        assert!(Chunk_Coords { x: 2, y: 1 } < Chunk_Coords { x: 1, y: 2 });
     }
 }

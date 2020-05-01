@@ -163,10 +163,15 @@ pub fn draw_batches(
     for tex_map in batches.textures_ws.values_mut() {
         // for each texture...
         for (tex_id, (vbuffer, tex_props)) in tex_map {
+            let n_texs = tex_props.len();
+            if n_texs == 0 {
+                // @Speed: right now we don't delete this batch from the tex_map, but it may be worth doing so.
+                continue;
+            }
+
             let texture = gres.get_texture(*tex_id);
 
             let n_threads = rayon::current_num_threads();
-            let n_texs = tex_props.len();
             let n_texs_per_chunk = cmp::min(n_texs, n_texs / n_threads + 1);
 
             debug_assert!(n_texs * 4 <= std::u32::MAX as usize);

@@ -92,9 +92,12 @@ impl Persistent_Game_State for Debug_Base_State {
                         let mut moved = vec![];
                         crate::movement_system::update(&step_delta, &mut level.world, &mut moved);
                         for mov in moved {
-                            level
-                                .chunks
-                                .update_entity(mov.entity, mov.prev_pos, mov.new_pos);
+                            level.chunks.update_entity(
+                                mov.entity,
+                                mov.prev_pos,
+                                mov.new_pos,
+                                mov.extent,
+                            );
                         }
                     });
                 }

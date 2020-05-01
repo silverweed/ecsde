@@ -8,6 +8,15 @@ pub enum Collision_Shape {
     Circle { radius: f32 },
 }
 
+impl Collision_Shape {
+    pub fn extent(self) -> Vec2f {
+        match self {
+            Collision_Shape::Circle { radius } => v2!(radius, radius) * 2.,
+            Collision_Shape::Rect { width, height } => v2!(width, height),
+        }
+    }
+}
+
 impl Default for Collision_Shape {
     fn default() -> Collision_Shape {
         Collision_Shape::Circle { radius: 0. }
