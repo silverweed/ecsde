@@ -1,7 +1,13 @@
 use crate::states::state::{Game_State_Args, Persistent_Game_State};
+use crate::systems::pixel_collision_system::C_Texture_Collider;
 use ecs_engine::cfg::{self, Cfg_Var};
+use ecs_engine::common::colors;
+use ecs_engine::common::rect::Rect;
 use ecs_engine::common::stringid::String_Id;
-use ecs_engine::common::vector::Vec2f;
+use ecs_engine::common::vector::{Vec2f, Vec2i};
+use ecs_engine::gfx::render;
+use ecs_engine::gfx::window;
+use ecs_engine::input::bindings::mouse;
 use ecs_engine::input::input_system::{Action_Kind, Game_Action};
 
 pub struct Debug_Base_State {
@@ -12,9 +18,11 @@ pub struct Debug_Base_State {
     sid_print_em_debug_info: String_Id,
     sid_toggle_trace_overlay: String_Id,
     sid_move_camera_to_origin: String_Id,
+    sid_debug_dig: String_Id,
     // @Cleanup: this cfg_var is already in Game_State!
     // Should we perhaps move it into Engine_State and read it from handle_actions?
     gameplay_update_tick_ms: Cfg_Var<f32>,
+    digging: bool,
 }
 
 const CHANGE_SPEED_DELTA: f32 = 0.1;
@@ -29,7 +37,9 @@ impl Debug_Base_State {
             sid_print_em_debug_info: String_Id::from("print_em_debug_info"),
             sid_toggle_trace_overlay: String_Id::from("toggle_trace_overlay"),
             sid_move_camera_to_origin: String_Id::from("move_camera_to_origin"),
+            sid_debug_dig: String_Id::from("debug_dig"),
             gameplay_update_tick_ms: Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg),
+            digging: false,
         }
     }
 }
@@ -96,7 +106,7 @@ impl Persistent_Game_State for Debug_Base_State {
                     engine_state.time.paused = true;
                     engine_state.time.step(&step_delta);
                     gs.step(&step_delta, engine_state, game_resources);
-                    gs.foreach_active_level(|level| {
+                    gs.levels.foreach_active_level(|level| {
                         use ecs_engine::collisions::physics;
                         let mut _ignored = physics::Collision_System_Debug_Data::default();
                         physics::update_collisions(&mut level.world, &level.chunks, &mut _ignored);
@@ -124,12 +134,83 @@ impl Persistent_Game_State for Debug_Base_State {
                         .set_overlay_enabled(String_Id::from("trace"), *show_trace);
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_move_camera_to_origin => {
-                    gs.foreach_active_level(|level| level.move_camera_to(Vec2f::new(0., 0.)));
+                    gs.levels
+                        .foreach_active_level(|level| level.move_camera_to(Vec2f::new(0., 0.)));
                     add_msg!(engine_state, "Moved camera to origin");
+                }
+                (name, Action_Kind::Pressed) if *name == self.sid_debug_dig => {
+                    self.digging = true;
+                }
+                (name, Action_Kind::Released) if *name == self.sid_debug_dig => {
+                    self.digging = false;
                 }
                 _ => {}
             }
         }
         false
+    }
+
+    fn update(&mut self, args: &mut Game_State_Args) {
+        if !self.digging {
+            return;
+        }
+
+        let mleft = mouse::is_mouse_btn_pressed(mouse::Mouse_Button::Left);
+        let mright = mouse::is_mouse_btn_pressed(mouse::Mouse_Button::Right);
+        if mleft || mright {
+            let mpos = window::mouse_pos_in_world(
+                args.window,
+                &args
+                    .gameplay_system
+                    .levels
+                    .first_active_level()
+                    .unwrap()
+                    .get_camera()
+                    .transform,
+            );
+
+            let texture = args
+                .gameplay_system
+                .levels
+                .first_active_level()
+                .unwrap() // assume we have an active level
+                .world
+                .get_components::<C_Texture_Collider>()
+                .next()
+                .unwrap() // assume we have a texture collider (and it's the one we're interested in)
+                .texture;
+            let (tex_w, tex_h) =
+                render::get_texture_size(args.game_resources.gfx.get_texture(texture));
+            let pixel_collision_system = &mut args.gameplay_system.pixel_collision_system;
+
+            const SIZE: u32 = 50;
+            let mpos = Vec2i::from(mpos);
+
+            if Rect::new(
+                -(tex_w as i32) / 2,
+                -(tex_h as i32) / 2,
+                2 * tex_w as i32,
+                2 * tex_h as i32,
+            )
+            .contains(mpos)
+            {
+                pixel_collision_system.change_pixels_circle(
+                    texture,
+                    ecs_engine::common::shapes::Circle {
+                        center: v2!(
+                            (mpos.x + tex_w as i32 / 2) as f32,
+                            (mpos.y + tex_h as i32 / 2) as f32
+                        ),
+                        radius: (SIZE / 2) as f32,
+                    },
+                    if mleft {
+                        colors::TRANSPARENT
+                    } else {
+                        colors::rgb(102, 57, 49)
+                    },
+                    &mut args.game_resources.gfx,
+                );
+            }
+        }
     }
 }

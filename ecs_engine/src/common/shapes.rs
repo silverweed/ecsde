@@ -1,12 +1,12 @@
 use super::vector::Vec2f;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Circle {
     pub radius: f32,
     pub center: Vec2f,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Arrow {
     pub center: Vec2f,
     pub direction: Vec2f, // also includes magnitude

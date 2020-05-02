@@ -103,10 +103,15 @@ where
     backend::rects_intersection(a, b)
 }
 
-// @WaitForStable: make this const
-pub fn rect_contains<T>(r: &Rect<T>, pos: Vector2<T>) -> bool
-where
-    T: PartialOrd + Add<Output = T> + Copy,
-{
-    pos.x >= r.x && pos.x <= r.x + r.width && pos.y >= r.y && pos.y <= r.y + r.height
+impl<T> Rect<T> {
+    // @WaitForStable: make this const
+    pub fn contains(&self, pos: Vector2<T>) -> bool
+    where
+        T: PartialOrd + Add<Output = T> + Copy,
+    {
+        pos.x >= self.x
+            && pos.x <= self.x + self.width
+            && pos.y >= self.y
+            && pos.y <= self.y + self.height
+    }
 }

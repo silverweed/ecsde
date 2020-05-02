@@ -1,7 +1,10 @@
 use ecs_engine::alloc::temp::*;
 use ecs_engine::collisions::collider::Collider;
 use ecs_engine::common::colors::Color;
-use ecs_engine::common::vector::Vec2f;
+use ecs_engine::common::math::clamp;
+use ecs_engine::common::rect::Rect;
+use ecs_engine::common::shapes::Circle;
+use ecs_engine::common::vector::{Vec2f, Vec2i};
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::gfx::render::{self, Image};
@@ -26,7 +29,7 @@ pub struct Pixel_Collision_System {
 }
 
 #[inline(always)]
-fn is_solid(pixel: &Color) -> bool {
+fn is_solid(pixel: Color) -> bool {
     pixel.a > 0
 }
 
@@ -39,7 +42,7 @@ fn approx_normal(image: &Image, x: u32, y: u32, step: i32) -> Vec2f {
     let y_range = (y as i32 - step).max(0) as u32..(y as i32 + step).min(size.0 as i32) as u32;
     for (i, x) in x_range.enumerate() {
         for (j, y) in y_range.clone().enumerate() {
-            if is_solid(&render::get_pixel(image, x, y)) {
+            if is_solid(render::get_pixel(image, x, y)) {
                 avg.x -= (i as i32 - step) as f32;
                 avg.y -= (j as i32 - step) as f32;
             }
@@ -50,6 +53,87 @@ fn approx_normal(image: &Image, x: u32, y: u32, step: i32) -> Vec2f {
 }
 
 impl Pixel_Collision_System {
+    pub fn change_pixels_rect(
+        &mut self,
+        texture: Texture_Handle,
+        rect: &Rect<u32>,
+        new_val: Color,
+        gres: &mut Gfx_Resources,
+    ) {
+        let img = self.images.get_mut(&texture).unwrap_or_else(|| {
+            fatal!(
+                "Tried to update_pixels for inexisting texture {:?}",
+                texture
+            )
+        });
+
+        for x in rect.x..rect.x + rect.width {
+            for y in rect.y..rect.y + rect.height {
+                render::set_image_pixel(img, x, y, new_val);
+            }
+        }
+
+        let pixels = vec![new_val; rect.width as usize * rect.height as usize];
+        let texture = gres.get_texture_mut(texture);
+        debug_assert!(
+            render::get_texture_size(&texture).0 >= rect.width + rect.x
+                && render::get_texture_size(&texture).1 >= rect.height + rect.y
+        );
+        render::update_texture_pixels(texture, rect, &pixels);
+    }
+
+    pub fn change_pixels_circle(
+        &mut self,
+        texture: Texture_Handle,
+        circle: Circle,
+        new_val: Color,
+        gres: &mut Gfx_Resources,
+    ) {
+        let img = self.images.get_mut(&texture).unwrap_or_else(|| {
+            fatal!(
+                "Tried to update_pixels for inexisting texture {:?}",
+                texture
+            )
+        });
+
+        let r = circle.radius as i32;
+        let Vec2i { x: cx, y: cy } = Vec2i::from(circle.center);
+        let size = render::get_image_size(img);
+        let mut pixels = vec![new_val; 4 * (r * r) as usize];
+
+        let mut iy = 0;
+        for y in (-r).max(-cy)..r.min(size.1 as i32 - cy) {
+            let mut ix = 0;
+            for x in (-r).max(-cx)..r.min(size.0 as i32 - cx) {
+                debug_assert!(cx + x >= 0 && cx + x < size.0 as i32);
+                debug_assert!(cy + y >= 0 && cy + y < size.1 as i32);
+                let img_x = (cx + x) as u32;
+                let img_y = (cy + y) as u32;
+                if x * x + y * y <= r * r {
+                    render::set_image_pixel(img, img_x, img_y, new_val);
+                    pixels[(iy * 2 * r + ix) as usize] = new_val;
+                } else {
+                    pixels[(iy * 2 * r + ix) as usize] = render::get_pixel(img, img_x, img_y);
+                }
+                ix += 1;
+            }
+            iy += 1;
+        }
+
+        let texture = gres.get_texture_mut(texture);
+        debug_assert!(
+            render::get_texture_size(&texture).0 >= (r + cx) as u32
+                && render::get_texture_size(&texture).1 >= (r + cy) as u32
+        );
+        let rect = Rect::new(
+            clamp(cx - r, 0, size.0 as i32) as u32,
+            clamp(cy - r, 0, size.1 as i32) as u32,
+            2 * r as u32,
+            2 * r as u32,
+        );
+        render::update_texture_pixels(texture, &rect, &pixels);
+    }
+
     pub fn update(
         &mut self,
         world: &mut Ecs_World,

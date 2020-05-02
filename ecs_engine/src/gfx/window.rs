@@ -100,6 +100,10 @@ pub fn raw_mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
     backend::raw_mouse_pos_in_window(window)
 }
 
+pub fn mouse_pos_in_world(window: &Window_Handle, camera: &Transform2D) -> Vec2f {
+    unproject_screen_pos(raw_mouse_pos_in_window(window), window, camera)
+}
+
 pub fn mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
     let v = Vec2f::from(backend::raw_mouse_pos_in_window(window));
 

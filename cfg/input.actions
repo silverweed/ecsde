@@ -20,3 +20,4 @@ camera_zoom_down: Wheel_Down
 move_camera_to_origin: O
 toggle_console: Tilde
 calipers: Mouse_Middle
+debug_dig: LControl

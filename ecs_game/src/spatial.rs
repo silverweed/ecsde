@@ -182,15 +182,19 @@ impl World_Chunks {
         while p_idx < prev_coords.len() && n_idx < new_coords.len() {
             let pc = prev_coords[p_idx];
             let nc = new_coords[n_idx];
-            if pc < nc {
-                chunks_to_remove.push(pc);
-                p_idx += 1;
-            } else if pc > nc {
-                chunks_to_add.push(nc);
-                n_idx += 1;
-            } else {
-                p_idx += 1;
-                n_idx += 1;
+            match pc.cmp(&nc) {
+                Ordering::Less => {
+                    chunks_to_remove.push(pc);
+                    p_idx += 1;
+                }
+                Ordering::Greater => {
+                    chunks_to_add.push(nc);
+                    n_idx += 1;
+                }
+                Ordering::Equal => {
+                    p_idx += 1;
+                    n_idx += 1;
+                }
             }
         }
         if p_idx < prev_coords.len() {

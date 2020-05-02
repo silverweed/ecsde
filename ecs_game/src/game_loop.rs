@@ -217,6 +217,8 @@ pub fn tick_game<'a>(
                 game_state.engine_state.should_close = true;
                 return Ok(());
             }
+
+            game_state.state_mgr.update(&mut args);
         }
 
         #[cfg(debug_assertions)]
@@ -230,7 +232,11 @@ pub fn tick_game<'a>(
 
             if actions.contains(&(String_Id::from("calipers"), Action_Kind::Pressed)) {
                 // @Robustness
-                let level = game_state.gameplay_system.first_active_level().unwrap();
+                let level = game_state
+                    .gameplay_system
+                    .levels
+                    .first_active_level()
+                    .unwrap();
                 game_state
                     .engine_state
                     .debug_systems
@@ -290,9 +296,10 @@ pub fn tick_game<'a>(
             &target_time_per_frame,
             time.time_scale * (!time.paused as u32 as f32),
         );
-        let pixel_collision_system = &mut game_state.pixel_collision_system;
+        let pixel_collision_system = &mut gameplay_system.pixel_collision_system;
+        let levels = &gameplay_system.levels;
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
-        gameplay_system.foreach_active_level(|level| {
+        levels.foreach_active_level(|level| {
             #[cfg(debug_assertions)]
             let coll_debug = collision_debug_data
                 .entry(level.id)
@@ -430,7 +437,7 @@ fn update_graphics(
         let gameplay_system = &mut game_state.gameplay_system;
         let batches = &mut game_state.level_batches;
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
-        gameplay_system.foreach_active_level(|level| {
+        gameplay_system.levels.foreach_active_level(|level| {
             let render_args = render_system::Render_System_Update_Args {
                 batches: batches.get_mut(&level.id).unwrap(),
                 ecs_world: &level.world,
@@ -449,15 +456,18 @@ fn update_graphics(
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
         let lv_batches = &mut game_state.level_batches;
         let window = &mut game_state.window;
-        game_state.gameplay_system.foreach_active_level(|level| {
-            gfx::render::batcher::draw_batches(
-                window,
-                &gres,
-                lv_batches.get_mut(&level.id).unwrap(),
-                &level.get_camera().transform,
-                frame_alloc,
-            );
-        });
+        game_state
+            .gameplay_system
+            .levels
+            .foreach_active_level(|level| {
+                gfx::render::batcher::draw_batches(
+                    window,
+                    &gres,
+                    lv_batches.get_mut(&level.id).unwrap(),
+                    &level.get_camera().transform,
+                    frame_alloc,
+                );
+            });
         gfx::render::batcher::draw_batches(
             window,
             &gres,
@@ -474,7 +484,11 @@ fn update_graphics(
             // @Incomplete @Robustness: first_active_level()?
             let calipers = &game_state.engine_state.debug_systems.calipers;
             let painters = &mut game_state.engine_state.debug_systems.painters;
-            let level = game_state.gameplay_system.first_active_level().unwrap();
+            let level = game_state
+                .gameplay_system
+                .levels
+                .first_active_level()
+                .unwrap();
             calipers.draw(
                 &game_state.window,
                 painters.get_mut(&level.id).unwrap(),
@@ -485,13 +499,16 @@ fn update_graphics(
         // Draw debug painter (one per active level)
         let painters = &mut game_state.engine_state.debug_systems.painters;
         let window = &mut game_state.window;
-        game_state.gameplay_system.foreach_active_level(|level| {
-            let painter = painters
-                .get_mut(&level.id)
-                .unwrap_or_else(|| panic!("Debug painter not found for level {:?}", level.id));
-            painter.draw(window, gres, &level.get_camera().transform);
-            painter.clear();
-        });
+        game_state
+            .gameplay_system
+            .levels
+            .foreach_active_level(|level| {
+                let painter = painters
+                    .get_mut(&level.id)
+                    .unwrap_or_else(|| panic!("Debug painter not found for level {:?}", level.id));
+                painter.draw(window, gres, &level.get_camera().transform);
+                painter.clear();
+            });
 
         // Global painter
         let painter = game_state.engine_state.debug_systems.global_painter();
@@ -644,61 +661,64 @@ fn update_debug(
     let draw_world_chunks = cvars.draw_world_chunks.read(&engine_state.config);
     let lv_batches = &mut game_state.level_batches;
 
-    game_state.gameplay_system.foreach_active_level(|level| {
-        let debug_painter = painters
-            .get_mut(&level.id)
-            .unwrap_or_else(|| fatal!("Debug painter not found for level {:?}", level.id));
+    game_state
+        .gameplay_system
+        .levels
+        .foreach_active_level(|level| {
+            let debug_painter = painters
+                .get_mut(&level.id)
+                .unwrap_or_else(|| fatal!("Debug painter not found for level {:?}", level.id));
 
-        update_entities_debug_overlay(debug_ui.get_overlay(sid_entities), &level.world);
+            update_entities_debug_overlay(debug_ui.get_overlay(sid_entities), &level.world);
 
-        update_camera_debug_overlay(debug_ui.get_overlay(sid_camera), &level.get_camera());
+            update_camera_debug_overlay(debug_ui.get_overlay(sid_camera), &level.get_camera());
 
-        update_physics_debug_overlay(
-            debug_ui.get_overlay(sid_physics),
-            &collision_debug_data[&level.id],
-            &level.chunks,
-        );
-
-        if draw_entities {
-            debug_draw_transforms(debug_painter, &level.world);
-        }
-
-        if draw_velocities {
-            debug_draw_velocities(debug_painter, &level.world);
-        }
-
-        if draw_entity_prev_frame_ghost {
-            let batches = lv_batches.get_mut(&level.id).unwrap();
-            debug_draw_entities_prev_frame_ghost(batches, &mut level.world);
-        }
-
-        if draw_colliders {
-            debug_draw_colliders(debug_painter, &level.world);
-        }
-
-        // Debug grid
-        if draw_debug_grid {
-            debug_draw_grid(
-                debug_painter,
-                &level.get_camera().transform,
-                target_win_size,
-                square_size,
-                opacity,
+            update_physics_debug_overlay(
+                debug_ui.get_overlay(sid_physics),
+                &collision_debug_data[&level.id],
+                &level.chunks,
             );
-        }
 
-        if draw_world_chunks {
-            level.chunks.debug_draw(debug_painter);
-        }
+            if draw_entities {
+                debug_draw_transforms(debug_painter, &level.world);
+            }
 
-        if draw_comp_alloc_colliders {
-            use ecs_engine::collisions::collider::Collider;
-            ecs_engine::ecs::ecs_world::draw_comp_alloc::<Collider>(
-                &level.world,
-                painters.get_mut(&String_Id::from("")).unwrap(),
-            );
-        }
-    });
+            if draw_velocities {
+                debug_draw_velocities(debug_painter, &level.world);
+            }
+
+            if draw_entity_prev_frame_ghost {
+                let batches = lv_batches.get_mut(&level.id).unwrap();
+                debug_draw_entities_prev_frame_ghost(batches, &mut level.world);
+            }
+
+            if draw_colliders {
+                debug_draw_colliders(debug_painter, &level.world);
+            }
+
+            // Debug grid
+            if draw_debug_grid {
+                debug_draw_grid(
+                    debug_painter,
+                    &level.get_camera().transform,
+                    target_win_size,
+                    square_size,
+                    opacity,
+                );
+            }
+
+            if draw_world_chunks {
+                level.chunks.debug_draw(debug_painter);
+            }
+
+            if draw_comp_alloc_colliders {
+                use ecs_engine::collisions::collider::Collider;
+                ecs_engine::ecs::ecs_world::draw_comp_alloc::<Collider>(
+                    &level.world,
+                    painters.get_mut(&String_Id::from("")).unwrap(),
+                );
+            }
+        });
 }
 
 #[cfg(debug_assertions)]

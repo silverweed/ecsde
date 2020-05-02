@@ -1,4 +1,3 @@
-use super::systems::pixel_collision_system::Pixel_Collision_System;
 use crate::cmdline;
 use crate::gameplay_system;
 use crate::states;
@@ -44,9 +43,6 @@ pub struct Game_State<'a> {
 
     #[cfg(debug_assertions)]
     pub debug_cvars: Debug_CVars,
-
-    // @Temporary
-    pub pixel_collision_system: Pixel_Collision_System,
 }
 
 pub struct CVars {
@@ -266,8 +262,6 @@ fn create_game_state<'a>(
             cvars,
             #[cfg(debug_assertions)]
             debug_cvars,
-
-            pixel_collision_system: Pixel_Collision_System::default(),
         }),
         parsed_cmdline_args,
     ))

@@ -187,7 +187,7 @@ impl Debug_Frame_Scroller {
                     subdiv_w,
                     height,
                 );
-                let hovered = rect::rect_contains(&subdiv_rect, mpos.into());
+                let hovered = subdiv_rect.contains(mpos.into());
                 if hovered {
                     debug_assert!(self.hovered.is_none());
                     self.hovered = Some((row, i as u16));
@@ -219,7 +219,7 @@ impl Debug_Frame_Scroller {
         };
 
         let row_r = rect::Rectf::new(self.pos.x as _, y, self.size.x as _, height);
-        let row_hovered = rect::rect_contains(&row_r, mpos.into());
+        let row_hovered = row_r.contains(mpos.into());
         {
             // Draw outline
             let paint_props = Paint_Properties {

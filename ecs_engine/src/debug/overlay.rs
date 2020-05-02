@@ -167,7 +167,6 @@ impl Debug_Element for Debug_Overlay {
     }
 
     fn update(&mut self, _dt: &std::time::Duration, window: &Window_Handle) {
-        use crate::common::rect::rect_contains;
         use crate::gfx::window;
         use crate::input::bindings::mouse;
 
@@ -199,7 +198,7 @@ impl Debug_Element for Debug_Overlay {
                 row_width,
                 row_height,
             );
-            if rect_contains(&line_rect, mpos) {
+            if line_rect.contains(mpos) {
                 self.hover_data.hovered_line = Some(i);
                 break;
             }

@@ -204,6 +204,8 @@ pub fn start_draw_lines(n_vertices: usize) -> Vertex_Buffer_Lines {
     Vertex_Buffer_Lines(backend::start_draw_lines(n_vertices))
 }
 
+///////////////////////////////// UPDATING ///////////////////////////////////
+
 pub fn add_quad(
     vbuf: &mut Vertex_Buffer_Quads,
     v1: &Vertex,
@@ -228,4 +230,12 @@ pub fn add_vertex(vbuf: &mut Vertex_Buffer_Linestrip, v: &Vertex) {
 
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     backend::new_vertex(pos, col, tex_coords)
+}
+
+pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {
+    backend::set_image_pixel(image, x, y, val);
+}
+
+pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[Color]) {
+    backend::update_texture_pixels(texture, rect, pixels);
 }

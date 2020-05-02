@@ -82,7 +82,8 @@ fn execute_command(
             None
         }
         Console_Cmd::Move_Camera { to } => {
-            gs.foreach_active_level(|level| level.move_camera_to(to));
+            gs.levels
+                .foreach_active_level(|level| level.move_camera_to(to));
             None
         }
         Console_Cmd::Get_Cfg_Var { name } => Some((

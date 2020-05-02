@@ -287,10 +287,23 @@ pub fn get_pixel(image: &Image, x: u32, y: u32) -> Color {
 }
 
 #[inline(always)]
+pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {
+    image.set_pixel(x, y, val.into());
+}
+
+#[inline(always)]
 pub fn get_pixels(image: &Image) -> &[Color] {
     let pixel_data = image.pixel_data();
     debug_assert_eq!(pixel_data.len() % 4, 0);
     let len = pixel_data.len() / 4;
     // Safe because Color is repr(C) and SFML pixel data are packed as r,g,b,a
     unsafe { std::slice::from_raw_parts(pixel_data.as_ptr() as *const Color, len) }
+}
+
+pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[Color]) {
+    assert_eq!(pixels.len(), rect.width as usize * rect.height as usize);
+    unsafe {
+        let pixels = std::slice::from_raw_parts(pixels.as_ptr() as *const u8, pixels.len() * 4);
+        texture.update_from_pixels(pixels, rect.width, rect.height, rect.x, rect.y);
+    }
 }

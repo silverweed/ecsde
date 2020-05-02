@@ -22,9 +22,19 @@ pub fn fast_invsqrt_unchecked(n: f32) -> f32 {
     y * (1.5 - (x2 * y * y))
 }
 
-pub fn clamp(x: f32, min: f32, max: f32) -> f32 {
+#[inline]
+pub fn clamp<T>(x: T, min: T, max: T) -> T
+where
+    T: PartialOrd,
+{
     debug_assert!(min <= max);
-    x.min(max).max(min)
+    if x < min {
+        min
+    } else if x > max {
+        max
+    } else {
+        x
+    }
 }
 
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
