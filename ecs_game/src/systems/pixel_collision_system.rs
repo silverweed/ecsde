@@ -101,23 +101,20 @@ impl Pixel_Collision_System {
         let size = render::get_image_size(img);
         let mut pixels = vec![new_val; 4 * (r * r) as usize];
 
-        let mut iy = 0;
-        for y in (-r).max(-cy)..r.min(size.1 as i32 - cy) {
-            let mut ix = 0;
-            for x in (-r).max(-cx)..r.min(size.0 as i32 - cx) {
+        for (iy, y) in ((-r).max(-cy)..r.min(size.1 as i32 - cy)).enumerate() {
+            for (ix, x) in ((-r).max(-cx)..r.min(size.0 as i32 - cx)).enumerate() {
                 debug_assert!(cx + x >= 0 && cx + x < size.0 as i32);
                 debug_assert!(cy + y >= 0 && cy + y < size.1 as i32);
                 let img_x = (cx + x) as u32;
                 let img_y = (cy + y) as u32;
                 if x * x + y * y <= r * r {
                     render::set_image_pixel(img, img_x, img_y, new_val);
-                    pixels[(iy * 2 * r + ix) as usize] = new_val;
+                    pixels[(iy as i32 * 2 * r) as usize + ix] = new_val;
                 } else {
-                    pixels[(iy * 2 * r + ix) as usize] = render::get_pixel(img, img_x, img_y);
+                    pixels[(iy as i32 * 2 * r) as usize + ix] =
+                        render::get_pixel(img, img_x, img_y);
                 }
-                ix += 1;
             }
-            iy += 1;
         }
 
         let texture = gres.get_texture_mut(texture);
