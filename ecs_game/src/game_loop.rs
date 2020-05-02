@@ -210,6 +210,7 @@ pub fn tick_game<'a>(
                 engine_state: &mut game_state.engine_state,
                 gameplay_system: &mut game_state.gameplay_system,
                 window: &mut game_state.window,
+                game_resources,
             };
             trace!("state_mgr::handle_actions");
             if game_state.state_mgr.handle_actions(&actions, &mut args) {
@@ -270,9 +271,8 @@ pub fn tick_game<'a>(
             game_state.gameplay_system.update(
                 &update_dt,
                 &actions,
-                axes,
-                &game_state.engine_state.config,
-                &mut game_state.engine_state.rng,
+                &mut game_state.engine_state,
+                game_resources,
             );
         }
     }
@@ -290,6 +290,8 @@ pub fn tick_game<'a>(
             &target_time_per_frame,
             time.time_scale * (!time.paused as u32 as f32),
         );
+        let pixel_collision_system = &mut game_state.pixel_collision_system;
+        let frame_alloc = &mut game_state.engine_state.frame_alloc;
         gameplay_system.foreach_active_level(|level| {
             #[cfg(debug_assertions)]
             let coll_debug = collision_debug_data
@@ -302,6 +304,8 @@ pub fn tick_game<'a>(
                 #[cfg(debug_assertions)]
                 coll_debug,
             );
+
+            pixel_collision_system.update(&mut level.world, &game_resources.gfx, frame_alloc);
 
             let mut moved = vec![]; // @Speed: don't create a new vec each frame
             crate::movement_system::update(&update_dt, &mut level.world, &mut moved);

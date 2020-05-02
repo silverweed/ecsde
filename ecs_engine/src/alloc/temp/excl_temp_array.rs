@@ -173,6 +173,15 @@ impl<T> DerefMut for Exclusive_Temp_Array<'_, T> {
     }
 }
 
+impl<'a, T> IntoIterator for &'a Exclusive_Temp_Array<'a, T> {
+    type IntoIter = std::slice::Iter<'a, T>;
+    type Item = &'a T;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

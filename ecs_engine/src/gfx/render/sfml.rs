@@ -13,6 +13,7 @@ use sfml::system::Vector2f;
 // @Speed: probably replace this with a VertexBuffer
 pub type Vertex_Buffer = sfml::graphics::VertexArray;
 pub type Vertex = sfml::graphics::Vertex;
+pub type Image = sfml::graphics::Image;
 
 sf_wrap!(Texture, sfml::graphics::Texture);
 sf_wrap!(Font, sfml::graphics::Font);
@@ -158,27 +159,38 @@ pub fn get_texture_size(texture: &sfml::graphics::Texture) -> (u32, u32) {
 }
 
 #[inline(always)]
+pub fn get_image_size(image: &sfml::graphics::Image) -> (u32, u32) {
+    let s = image.size();
+    (s.x, s.y)
+}
+
+#[inline(always)]
 pub fn get_text_size(text: &sfml::graphics::Text<'_>) -> Vec2f {
     let Rect { width, height, .. } = text.local_bounds().into();
     v2!(width, height)
 }
 
+#[inline(always)]
 pub fn start_draw_quads(_n_quads: usize) -> Vertex_Buffer {
     sfml::graphics::VertexArray::new(PrimitiveType::Quads, 0)
 }
 
+#[inline(always)]
 pub fn start_draw_triangles(_n_tris: usize) -> Vertex_Buffer {
     sfml::graphics::VertexArray::new(PrimitiveType::Triangles, 0)
 }
 
+#[inline(always)]
 pub fn start_draw_linestrip(_n_vertices: usize) -> Vertex_Buffer {
     sfml::graphics::VertexArray::new(PrimitiveType::LineStrip, 0)
 }
 
+#[inline(always)]
 pub fn start_draw_lines(_n_lines: usize) -> Vertex_Buffer {
     sfml::graphics::VertexArray::new(PrimitiveType::Lines, 0)
 }
 
+#[inline(always)]
 pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
     vbuf.append(v1);
     vbuf.append(v2);
@@ -186,21 +198,25 @@ pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex,
     vbuf.append(v4);
 }
 
+#[inline(always)]
 pub fn add_triangle(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
     vbuf.append(v1);
     vbuf.append(v2);
     vbuf.append(v3);
 }
 
+#[inline(always)]
 pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {
     vbuf.append(v);
 }
 
+#[inline(always)]
 pub fn add_line(vbuf: &mut Vertex_Buffer, from: &Vertex, to: &Vertex) {
     vbuf.append(from);
     vbuf.append(to);
 }
 
+#[inline(always)]
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     Vertex::new(Vector2f::from(pos), col.into(), Vector2f::from(tex_coords))
 }
@@ -248,6 +264,7 @@ fn render_vbuf_internal(
     window.draw_vertex_array(vbuf, render_states);
 }
 
+#[inline(always)]
 pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
     Text::new(string, font, size as u32)
 }
@@ -255,4 +272,25 @@ pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
 pub fn render_line(window: &mut Window_Handle, start: &Vertex, end: &Vertex) {
     let vertices: [sfml::graphics::Vertex; 2] = [*start, *end];
     window.draw_primitives(&vertices, PrimitiveType::Lines, RenderStates::default());
+}
+
+#[inline(always)]
+pub fn copy_texture_to_image(texture: &Texture) -> Image {
+    texture
+        .copy_to_image()
+        .expect("Failed to copy Texture to image!")
+}
+
+#[inline(always)]
+pub fn get_pixel(image: &Image, x: u32, y: u32) -> Color {
+    image.pixel_at(x, y).into()
+}
+
+#[inline(always)]
+pub fn get_pixels(image: &Image) -> &[Color] {
+    let pixel_data = image.pixel_data();
+    debug_assert_eq!(pixel_data.len() % 4, 0);
+    let len = pixel_data.len() / 4;
+    // Safe because Color is repr(C) and SFML pixel data are packed as r,g,b,a
+    unsafe { std::slice::from_raw_parts(pixel_data.as_ptr() as *const Color, len) }
 }

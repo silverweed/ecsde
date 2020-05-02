@@ -1,5 +1,5 @@
 use super::ecs_world::{Ecs_World, Entity};
-use crate::alloc::temp::{Exclusive_Temp_Array, Temp_Array};
+use crate::alloc::temp::Exclusive_Temp_Array;
 use crate::common::bitset::Bit_Set;
 use std::borrow::Borrow;
 
@@ -90,12 +90,6 @@ pub trait Pushable<T> {
 }
 
 impl<T> Pushable<T> for Vec<T> {
-    fn push(&mut self, elem: T) {
-        self.push(elem);
-    }
-}
-
-impl<T: Copy> Pushable<T> for Temp_Array<'_, T> {
     fn push(&mut self, elem: T) {
         self.push(elem);
     }

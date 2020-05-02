@@ -34,15 +34,24 @@ impl Debug_Base_State {
     }
 }
 
+macro_rules! add_msg {
+    ($engine_state: expr, $msg: expr) => {
+        $engine_state
+            .debug_systems
+            .debug_ui
+            .get_fadeout_overlay(String_Id::from("msg"))
+            .add_line($msg)
+    };
+}
+
 impl Persistent_Game_State for Debug_Base_State {
     fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Game_State_Args) -> bool {
         let Game_State_Args {
             engine_state,
             gameplay_system: gs,
+            game_resources,
             ..
         } = args;
-        let debug_ui = &mut engine_state.debug_systems.debug_ui;
-
         // @Speed: eventually we want to replace all the *name == sid with a const sid function, to allow doing
         // (sid!("game_speed_up"), Action_Kind::Pressed) => { ... }
         for action in actions.iter() {
@@ -60,31 +69,33 @@ impl Persistent_Game_State for Debug_Base_State {
                     if ts > 0.0 {
                         engine_state.time.time_scale = ts;
                     }
-                    let msg_overlay = debug_ui.get_fadeout_overlay(String_Id::from("msg"));
-                    msg_overlay
-                        .add_line(&format!("Time scale: {:.2}", engine_state.time.time_scale));
+                    add_msg!(
+                        engine_state,
+                        &format!("Time scale: {:.2}", engine_state.time.time_scale)
+                    );
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_pause_toggle => {
-                    let msg_overlay = debug_ui.get_fadeout_overlay(String_Id::from("msg"));
                     engine_state.time.pause_toggle();
-                    msg_overlay.add_line(if engine_state.time.paused {
-                        "Paused"
-                    } else {
-                        "Resumed"
-                    });
+                    add_msg!(
+                        engine_state,
+                        if engine_state.time.paused {
+                            "Paused"
+                        } else {
+                            "Resumed"
+                        }
+                    );
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_step_sim => {
-                    let msg_overlay = debug_ui.get_fadeout_overlay(String_Id::from("msg"));
                     let step_delta = std::time::Duration::from_millis(
                         self.gameplay_update_tick_ms.read(&engine_state.config) as u64,
                     );
-                    msg_overlay.add_line(&format!(
-                        "Stepping of: {:.2} ms",
-                        step_delta.as_secs_f32() * 1000.0
-                    ));
+                    add_msg!(
+                        engine_state,
+                        &format!("Stepping of: {:.2} ms", step_delta.as_secs_f32() * 1000.0)
+                    );
                     engine_state.time.paused = true;
                     engine_state.time.step(&step_delta);
-                    gs.step(&step_delta, &engine_state.config, &mut engine_state.rng);
+                    gs.step(&step_delta, engine_state, game_resources);
                     gs.foreach_active_level(|level| {
                         use ecs_engine::collisions::physics;
                         let mut _ignored = physics::Collision_System_Debug_Data::default();
@@ -107,12 +118,14 @@ impl Persistent_Game_State for Debug_Base_State {
                 (name, Action_Kind::Pressed) if *name == self.sid_toggle_trace_overlay => {
                     let show_trace = &mut engine_state.debug_systems.show_trace_overlay;
                     *show_trace = !*show_trace;
-                    debug_ui.set_overlay_enabled(String_Id::from("trace"), *show_trace);
+                    engine_state
+                        .debug_systems
+                        .debug_ui
+                        .set_overlay_enabled(String_Id::from("trace"), *show_trace);
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_move_camera_to_origin => {
                     gs.foreach_active_level(|level| level.move_camera_to(Vec2f::new(0., 0.)));
-                    let msg_overlay = debug_ui.get_fadeout_overlay(String_Id::from("msg"));
-                    msg_overlay.add_line("Moved camera to origin");
+                    add_msg!(engine_state, "Moved camera to origin");
                 }
                 _ => {}
             }

@@ -21,6 +21,7 @@ pub type Z_Index = i8;
 pub type Text<'a> = backend::Text<'a>;
 pub type Font<'a> = backend::Font<'a>;
 pub type Texture<'a> = backend::Texture<'a>;
+pub type Image = backend::Image;
 
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
@@ -129,6 +130,22 @@ pub fn render_line(window: &mut Window_Handle, start: &Vertex, end: &Vertex) {
 ///////////////////////////////// QUERYING ///////////////////////////////////
 pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
     backend::get_texture_size(texture)
+}
+
+pub fn copy_texture_to_image(texture: &Texture) -> Image {
+    backend::copy_texture_to_image(texture)
+}
+
+pub fn get_pixel(image: &Image, x: u32, y: u32) -> Color {
+    backend::get_pixel(image, x, y)
+}
+
+pub fn get_image_size(image: &Image) -> (u32, u32) {
+    backend::get_image_size(image)
+}
+
+pub fn get_pixels(image: &Image) -> &[Color] {
+    backend::get_pixels(image)
 }
 
 pub fn get_text_size(text: &Text<'_>) -> Vec2f {

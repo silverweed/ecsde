@@ -1,3 +1,4 @@
+use crate::game_state::Game_Resources;
 use crate::gameplay_system::Gameplay_System;
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::gfx::window::Window_Handle;
@@ -10,10 +11,11 @@ pub enum State_Transition {
     Pop,
 }
 
-pub struct Game_State_Args<'e, 'r, 'g, 'w> {
+pub struct Game_State_Args<'e, 'r, 'g, 'w, 'r1, 'r2> {
     pub engine_state: &'e mut Engine_State<'r>,
     pub gameplay_system: &'g mut Gameplay_System,
     pub window: &'w mut Window_Handle,
+    pub game_resources: &'r1 mut Game_Resources<'r2>,
 }
 
 pub trait Game_State {

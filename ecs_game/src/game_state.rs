@@ -1,3 +1,4 @@
+use super::systems::pixel_collision_system::Pixel_Collision_System;
 use crate::cmdline;
 use crate::gameplay_system;
 use crate::states;
@@ -43,6 +44,9 @@ pub struct Game_State<'a> {
 
     #[cfg(debug_assertions)]
     pub debug_cvars: Debug_CVars,
+
+    // @Temporary
+    pub pixel_collision_system: Pixel_Collision_System,
 }
 
 pub struct CVars {
@@ -120,6 +124,7 @@ pub(super) fn internal_game_init<'a>(
             &mut game_state.engine_state,
             &mut game_state.gameplay_system,
             &mut game_state.window,
+            &mut *game_resources,
         );
 
         #[cfg(debug_assertions)]
@@ -261,6 +266,8 @@ fn create_game_state<'a>(
             cvars,
             #[cfg(debug_assertions)]
             debug_cvars,
+
+            pixel_collision_system: Pixel_Collision_System::default(),
         }),
         parsed_cmdline_args,
     ))
@@ -332,11 +339,13 @@ fn init_states(
     engine_state: &mut app::Engine_State,
     gs: &mut gameplay_system::Gameplay_System,
     window: &mut window::Window_Handle,
+    game_resources: &mut Game_Resources,
 ) {
     let mut args = states::state::Game_State_Args {
         engine_state,
         gameplay_system: gs,
         window,
+        game_resources,
     };
     let base_state = Box::new(states::persistent::game_base_state::Game_Base_State::new());
     state_mgr.add_persistent_state(base_state, &mut args);
@@ -349,6 +358,7 @@ fn init_states(
             engine_state,
             gameplay_system: gs,
             window,
+            game_resources,
         };
         state_mgr.add_persistent_state(debug_base_state, &mut args);
     }

@@ -3,6 +3,7 @@ use crate::gameplay_system::Level;
 use crate::spatial::World_Chunks;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::dumb_movement_system::C_Dumb_Movement;
+use crate::systems::pixel_collision_system::C_Texture_Collider;
 use crate::Game_Resources;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider::{C_Phys_Data, Collider, Collision_Shape};
@@ -75,6 +76,7 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Dumb_Movement>();
     world.register_component::<C_Phys_Data>();
     world.register_component::<C_Ground>();
+    world.register_component::<C_Texture_Collider>();
 
     #[cfg(debug_assertions)]
     {
@@ -112,9 +114,8 @@ fn init_demo_entities(
         );
     }
 
-    let ground = level.world.new_entity();
-
     {
+        let ground = level.world.new_entity();
         let rend = level.world.add_component(
             ground,
             C_Renderable {
@@ -131,8 +132,8 @@ fn init_demo_entities(
         level.world.add_component(ground, C_Spatial2D::default());
     }
 
-    let ext = 10;
-    let int = 2;
+    let ext = 0;
+    let int = 5;
     let sw = 32;
     let sh = 32;
     for x in -ext..=ext {
@@ -142,6 +143,30 @@ fn init_demo_entities(
             }
             spawn_rock_at(level, env, rsrc, v2!((x * sw) as f32, (y * sh) as f32));
         }
+    }
+
+    // Spawn terrain
+    {
+        let gnd = level.world.new_entity();
+
+        level.world.add_component(gnd, C_Spatial2D::default());
+
+        let rend = level.world.add_component(
+            gnd,
+            C_Renderable {
+                texture: rsrc.load_texture(&tex_path(&env, "ground2.png")),
+                ..Default::default()
+            },
+        );
+        assert!(rend.texture.is_some(), "Could not load texture!");
+        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
+        rend.rect = Rect::new(0, 0, sw as i32 * 1, sh as i32 * 1);
+        //rsrc.get_texture_mut(rend.texture).set_repeated(true);
+        let texture = rend.texture;
+
+        level
+            .world
+            .add_component(gnd, C_Texture_Collider { texture });
     }
 
     let n_frames = 3;

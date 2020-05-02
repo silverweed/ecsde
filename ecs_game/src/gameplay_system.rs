@@ -157,16 +157,20 @@ impl Gameplay_System {
         &mut self,
         dt: &Duration,
         actions: &[Game_Action],
-        axes: &Virtual_Axes,
-        cfg: &cfg::Config,
-        rng: &mut rand::Default_Rng,
+        engine_state: &mut Engine_State,
+        rsrc: &mut Game_Resources,
     ) {
         trace!("gameplay_system::update");
+
+        let axes = &engine_state.input_state.axes;
 
         #[cfg(debug_assertions)]
         {
             self.debug_data.latest_frame_actions = actions.to_vec();
         }
+
+        let rng = &mut engine_state.rng;
+        let cfg = &engine_state.config;
 
         ///// Update all game systems in all worlds /////
         // Note: inlining foreach_active_levels because we don't want to borrow self.
@@ -310,9 +314,14 @@ impl Gameplay_System {
     }
 
     #[cfg(debug_assertions)]
-    pub fn step(&mut self, dt: &Duration, cfg: &cfg::Config, rng: &mut rand::Default_Rng) {
+    pub fn step(
+        &mut self,
+        dt: &Duration,
+        engine_state: &mut Engine_State,
+        resources: &mut Game_Resources,
+    ) {
         // @Incomplete: probably should use previous frame actions
-        self.update(dt, &[], &Virtual_Axes::default(), cfg, rng);
+        self.update(dt, &[], engine_state, resources);
     }
 
     /*
