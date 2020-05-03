@@ -1,5 +1,6 @@
 use super::{Game_Resources, Game_State};
 use crate::states::state::Game_State_Args;
+use ecs_engine::alloc::temp::*;
 use ecs_engine::collisions::physics;
 use ecs_engine::common::colors;
 use ecs_engine::common::transform::Transform2D;
@@ -314,13 +315,20 @@ pub fn tick_game<'a>(
 
             pixel_collision_system.update(&mut level.world, &game_resources.gfx, frame_alloc);
 
-            let mut moved = vec![]; // @Speed: don't create a new vec each frame
-            crate::movement_system::update(&update_dt, &mut level.world, &mut moved);
+            {
+                let mut moved = excl_temp_array(frame_alloc);
+                crate::movement_system::update(&update_dt, &mut level.world, &mut moved);
 
-            for mov in moved {
-                level
-                    .chunks
-                    .update_entity(mov.entity, mov.prev_pos, mov.new_pos, mov.extent);
+                let moved = unsafe { moved.into_read_only() };
+                for mov in &moved {
+                    level.chunks.update_entity(
+                        mov.entity,
+                        mov.prev_pos,
+                        mov.new_pos,
+                        mov.extent,
+                        frame_alloc,
+                    );
+                }
             }
         });
     }

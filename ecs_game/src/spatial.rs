@@ -1,3 +1,4 @@
+use ecs_engine::alloc::temp::*;
 use ecs_engine::collisions::collider::Collider;
 use ecs_engine::collisions::spatial::Spatial_Accelerator;
 use ecs_engine::common::vector::Vec2f;
@@ -17,7 +18,7 @@ use {
 const CHUNK_WIDTH: f32 = 200.;
 const CHUNK_HEIGHT: f32 = 200.;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Chunk_Coords {
     pub x: i32,
     pub y: i32,
@@ -167,13 +168,26 @@ impl World_Chunks {
         prev_pos: Vec2f,
         new_pos: Vec2f,
         extent: Vec2f,
+        frame_alloc: &mut Temp_Allocator,
     ) {
+        trace!("world_chunks::update_entity");
+
         let prev_coords = self.get_all_chunks_containing(prev_pos, extent);
         let new_coords = self.get_all_chunks_containing(new_pos, extent);
 
-        // @Speed: use temp allocator
-        let mut chunks_to_add = vec![];
-        let mut chunks_to_remove = vec![];
+        let mut all_chunks = excl_temp_array(frame_alloc);
+        // Pre-allocate enough memory to hold all the chunks; then `chunks_to_add` starts at index 0,
+        // while `chunks_to_remove` starts at index `new_coords.len()`.
+        // This works because we can have at most `new_coords.len()` chunks to add and `prev_coords.len()`
+        // chunks to remove.
+        unsafe {
+            all_chunks.alloc_additional_uninit(new_coords.len() + prev_coords.len());
+        }
+
+        let mut n_chunks_to_add = 0;
+        let mut n_chunks_to_remove = 0;
+        let chunks_to_add_offset = 0;
+        let chunks_to_remove_offset = new_coords.len();
 
         // Find chunks to add and to remove in O(n).
         // This algorithm assumes that both prev_coords and new_coords are sorted and deduped.
@@ -184,11 +198,13 @@ impl World_Chunks {
             let nc = new_coords[n_idx];
             match pc.cmp(&nc) {
                 Ordering::Less => {
-                    chunks_to_remove.push(pc);
+                    all_chunks[chunks_to_remove_offset + n_chunks_to_remove] = pc;
+                    n_chunks_to_remove += 1;
                     p_idx += 1;
                 }
                 Ordering::Greater => {
-                    chunks_to_add.push(nc);
+                    all_chunks[chunks_to_add_offset + n_chunks_to_add] = nc;
+                    n_chunks_to_add += 1;
                     n_idx += 1;
                 }
                 Ordering::Equal => {
@@ -198,27 +214,53 @@ impl World_Chunks {
             }
         }
         if p_idx < prev_coords.len() {
-            chunks_to_remove.extend(&prev_coords[p_idx..]);
+            let diff = prev_coords.len() - p_idx;
+            for i in 0..diff {
+                all_chunks[chunks_to_remove_offset + n_chunks_to_remove + i] =
+                    prev_coords[p_idx + i];
+            }
+            n_chunks_to_remove += diff;
         } else if n_idx < new_coords.len() {
-            chunks_to_add.extend(&new_coords[n_idx..]);
+            let diff = new_coords.len() - n_idx;
+            for i in 0..diff {
+                all_chunks[chunks_to_add_offset + n_chunks_to_add + i] = new_coords[n_idx + i];
+            }
+            n_chunks_to_add += diff;
         }
 
         #[cfg(debug_assertions)]
         {
-            debug_assert_eq!(
-                HashSet::<Chunk_Coords>::from_iter(chunks_to_remove.iter().copied())
-                    .intersection(&HashSet::from_iter(chunks_to_add.iter().copied()))
-                    .count(),
-                0
+            let to_remove = HashSet::<Chunk_Coords>::from_iter(
+                all_chunks
+                    .iter()
+                    .cloned()
+                    .skip(chunks_to_remove_offset)
+                    .take(n_chunks_to_remove),
             );
+            let to_add = HashSet::from_iter(
+                all_chunks
+                    .iter()
+                    .cloned()
+                    .skip(chunks_to_add_offset)
+                    .take(n_chunks_to_add),
+            );
+            debug_assert_eq!(to_remove.intersection(&to_add).count(), 0);
         }
 
-        for coord in chunks_to_remove {
-            self.remove_entity_coords(entity, coord);
+        for coord in all_chunks
+            .iter()
+            .skip(chunks_to_add_offset)
+            .take(n_chunks_to_add)
+        {
+            self.add_entity_coords(entity, *coord);
         }
 
-        for coord in chunks_to_add {
-            self.add_entity_coords(entity, coord);
+        for coord in all_chunks
+            .iter()
+            .skip(chunks_to_remove_offset)
+            .take(n_chunks_to_remove)
+        {
+            self.remove_entity_coords(entity, *coord);
         }
     }
 

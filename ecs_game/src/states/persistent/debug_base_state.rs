@@ -110,14 +110,17 @@ impl Persistent_Game_State for Debug_Base_State {
                         use ecs_engine::collisions::physics;
                         let mut _ignored = physics::Collision_System_Debug_Data::default();
                         physics::update_collisions(&mut level.world, &level.chunks, &mut _ignored);
-                        let mut moved = vec![];
+                        let mut moved =
+                            ecs_engine::alloc::temp::excl_temp_array(&mut engine_state.frame_alloc);
                         crate::movement_system::update(&step_delta, &mut level.world, &mut moved);
-                        for mov in moved {
+                        let moved = unsafe { moved.into_read_only() };
+                        for mov in &moved {
                             level.chunks.update_entity(
                                 mov.entity,
                                 mov.prev_pos,
                                 mov.new_pos,
                                 mov.extent,
+                                &mut engine_state.frame_alloc,
                             );
                         }
                     });

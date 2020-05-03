@@ -1,9 +1,11 @@
+use ecs_engine::alloc::temp::*;
 use ecs_engine::collisions::collider::Collider;
 use ecs_engine::common::vector::Vec2f;
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use std::time::Duration;
 
+#[derive(Copy, Clone)]
 pub struct Moved_Entity {
     pub entity: Entity,
     pub prev_pos: Vec2f,
@@ -11,7 +13,11 @@ pub struct Moved_Entity {
     pub extent: Vec2f,
 }
 
-pub fn update(dt: &Duration, ecs_world: &mut Ecs_World, moved: &mut Vec<Moved_Entity>) {
+pub fn update(
+    dt: &Duration,
+    ecs_world: &mut Ecs_World,
+    moved: &mut Exclusive_Temp_Array<Moved_Entity>,
+) {
     let dt_secs = dt.as_secs_f32();
 
     foreach_entity!(ecs_world, +C_Spatial2D, |entity| {
