@@ -147,6 +147,7 @@ where
         let arr = Read_Only_Temp_Array {
             ptr: self.ptr,
             n_elems: self.n_elems,
+            #[cfg(debug_assertions)]
             parent_allocator: &*(self.parent_allocator as *const _),
             #[cfg(debug_assertions)]
             gen: self.gen,
@@ -228,8 +229,9 @@ where
 pub struct Read_Only_Temp_Array<T> {
     ptr: *const T,
     n_elems: usize,
-    parent_allocator: *const Temp_Allocator,
 
+    #[cfg(debug_assertions)]
+    parent_allocator: *const Temp_Allocator,
     #[cfg(debug_assertions)]
     gen: Gen_Type,
 }
