@@ -233,9 +233,11 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
 }
 
 pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {
+    trace!("set_image_pixels");
     backend::set_image_pixel(image, x, y, val);
 }
 
 pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[Color]) {
+    trace!("update_texture_pixels");
     backend::update_texture_pixels(texture, rect, pixels);
 }

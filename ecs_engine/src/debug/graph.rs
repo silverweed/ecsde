@@ -4,7 +4,6 @@ use crate::common::colors;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2u};
-use crate::core::time;
 use crate::gfx::render;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
@@ -233,13 +232,13 @@ impl Debug_Graph {
     }
 }
 
-pub fn graph_add_point_and_scroll(
+pub fn add_point_and_scroll(
     graph: &mut Debug_Graph_View,
-    time: &time::Time,
+    now: std::time::Duration,
     time_limit: f32,
     point: f32,
 ) {
-    let now = time.get_real_time().as_secs_f32();
+    let now = now.as_secs_f32();
     graph.data.x_range.end = now;
     if graph.data.x_range.end - graph.data.x_range.start > time_limit {
         graph.data.x_range.start = graph.data.x_range.end - time_limit;

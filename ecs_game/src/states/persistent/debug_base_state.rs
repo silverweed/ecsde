@@ -60,6 +60,7 @@ impl Persistent_Game_State for Debug_Base_State {
             engine_state,
             gameplay_system: gs,
             game_resources,
+            window,
             ..
         } = args;
         // @Speed: eventually we want to replace all the *name == sid with a const sid function, to allow doing
@@ -86,6 +87,7 @@ impl Persistent_Game_State for Debug_Base_State {
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_pause_toggle => {
                     engine_state.time.pause_toggle();
+                    window::set_key_repeat_enabled(window, engine_state.time.paused);
                     add_msg!(
                         engine_state,
                         if engine_state.time.paused {

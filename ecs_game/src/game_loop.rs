@@ -1110,7 +1110,7 @@ fn update_graph_fps(
     const TIME_LIMIT: f32 = 60.0;
 
     let fps = fps.get_instant_fps();
-    debug::graph::graph_add_point_and_scroll(graph, time, TIME_LIMIT, fps);
+    debug::graph::add_point_and_scroll(graph, time.get_real_time(), TIME_LIMIT, fps);
 }
 
 #[cfg(debug_assertions)]
@@ -1121,9 +1121,9 @@ fn update_graph_prev_frame_t(
 ) {
     const TIME_LIMIT: f32 = 10.0;
 
-    debug::graph::graph_add_point_and_scroll(
+    debug::graph::add_point_and_scroll(
         graph,
-        time,
+        time.get_real_time(),
         TIME_LIMIT,
         prev_frame_t.as_secs_f32() * 1000.,
     );

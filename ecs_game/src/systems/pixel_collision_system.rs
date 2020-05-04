@@ -89,6 +89,8 @@ impl Pixel_Collision_System {
         new_val: Color,
         gres: &mut Gfx_Resources,
     ) {
+        trace!("change_pixels_circle");
+
         let img = self.images.get_mut(&texture).unwrap_or_else(|| {
             fatal!(
                 "Tried to update_pixels for inexisting texture {:?}",

@@ -176,5 +176,6 @@ pub fn update_graph_traced_fn(
         })
         .sum();
 
-    graph::graph_add_point_and_scroll(graph, time, TIME_LIMIT, fn_tot_time);
+    // Note: we use the game time here, not the real time, because we want to be able to pause/resume.
+    graph::add_point_and_scroll(graph, time.get_game_time(), TIME_LIMIT, fn_tot_time);
 }

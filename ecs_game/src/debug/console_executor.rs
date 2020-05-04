@@ -14,13 +14,14 @@ pub enum Console_Cmd {
     Get_Cfg_Var { name: String },
     Set_Cfg_Var { name: String, value: Cfg_Value },
     Toggle_Cfg_Var { name: String },
+    Trace_Fn { fn_name: String },
 }
 
 // @Improve @Convenience: this is ugly! We must manually synch this list with
 // the parse_cmd below *and* the enum declaration above!
 // We can @WaitForStable until we can do a const match on the enum, but maybe
 // there is a better way.
-pub const ALL_CMD_STRINGS: [&str; 5] = ["quit", "cam", "var", "toggle", "fps"];
+pub const ALL_CMD_STRINGS: [&str; 6] = ["quit", "cam", "var", "toggle", "fps", "trace"];
 
 // Parses and executes 'cmdline'. May return a string to output to the console.
 pub fn execute(
@@ -65,6 +66,12 @@ fn parse_cmd(cmdline: &str) -> Result<Console_Cmd, Console_Error> {
             }),
             ["fps"] => Ok(Console_Cmd::Toggle_Cfg_Var {
                 name: String::from("engine/debug/graphs/fps"),
+            }),
+            ["trace", fn_name] => Ok(Console_Cmd::Trace_Fn {
+                fn_name: (*fn_name).to_string(),
+            }),
+            ["trace"] => Ok(Console_Cmd::Trace_Fn {
+                fn_name: String::default(),
             }),
             _ => Err(Console_Error::new(format!("Unknown command: {}", cmdline))),
         }
@@ -116,6 +123,10 @@ fn execute_command(
             } else {
                 Some((format!("Cfg_Var {} is not a bool!", name), colors::RED))
             }
+        }
+        Console_Cmd::Trace_Fn { fn_name } => {
+            ecs_engine::core::app::set_traced_fn(&mut engine_state.debug_systems, fn_name);
+            None
         }
     }
 }
