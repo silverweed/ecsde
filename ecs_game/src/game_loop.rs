@@ -12,7 +12,7 @@ use ecs_engine::gfx::render_system;
 use ecs_engine::input;
 use ecs_engine::resources::gfx::Gfx_Resources;
 use std::convert::TryInto;
-use std::time::{Duration};
+use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use {
@@ -27,7 +27,10 @@ use {
 pub fn tick_game<'a, 'b>(
     game_state: &'b mut Game_State<'a>,
     game_resources: &'b mut Game_Resources<'a>,
-) -> Result<(), Box<dyn std::error::Error>> where 'a: 'b {
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    'a: 'b,
+{
     trace!("tick_game");
 
     game_state.engine_state.cur_frame += 1;
@@ -204,19 +207,18 @@ pub fn tick_game<'a, 'b>(
 
         // Update states
         {
+            trace!("state_mgr::handle_actions");
+
             let mut args = Game_State_Args {
                 engine_state: &mut game_state.engine_state,
                 gameplay_system: &mut game_state.gameplay_system,
                 window: &mut game_state.window,
                 game_resources,
             };
-            trace!("state_mgr::handle_actions");
             if game_state.state_mgr.handle_actions(&actions, &mut args) {
                 game_state.engine_state.should_close = true;
                 return Ok(());
             }
-
-            game_state.state_mgr.update(&mut args);
         }
 
         #[cfg(debug_assertions)]
@@ -267,7 +269,22 @@ pub fn tick_game<'a, 'b>(
                 &game_state.engine_state.config,
             );
 
+            // @Cleanup: where do we put this? Do we want this inside gameplay_system? Or at all?
+            {
+                trace!("state_mgr::update");
+
+                let mut args = Game_State_Args {
+                    engine_state: &mut game_state.engine_state,
+                    gameplay_system: &mut game_state.gameplay_system,
+                    window: &mut game_state.window,
+                    game_resources,
+                };
+                game_state.state_mgr.update(&mut args);
+            }
+
             let time = &game_state.engine_state.time;
+            // @Cleanup @Soundness: either pass to the update the "actual" dt or accumulate the extra time to
+            // have a really fixed time step. That depends if we care about being deterministic or not.
             let update_dt = time::mul_duration(
                 &target_time_per_frame,
                 time.time_scale * (!time.paused as u32 as f32),
@@ -330,6 +347,10 @@ pub fn tick_game<'a, 'b>(
         });
     }
 
+    game_state
+        .gameplay_system
+        .late_update(&mut game_state.engine_state.systems.evt_register);
+
     // Update audio
     {
         trace!("audio_system_update");
@@ -355,10 +376,6 @@ pub fn tick_game<'a, 'b>(
         game_state.engine_state.config.update();
         game_state.fps_debug.tick(&real_dt);
     }
-
-    game_state
-        .gameplay_system
-        .late_update(&mut game_state.engine_state.systems.evt_register);
 
     {
         trace!("display");
