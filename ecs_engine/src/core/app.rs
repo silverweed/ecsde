@@ -286,6 +286,7 @@ pub fn init_engine_debug(
 
         // Prev frame time before display
         graph_config.grid_ystep = Some(graph::Grid_Step::Fixed_Subdivs(4));
+        graph_config.fixed_y_range = None;
         graph_config.title = Some(String::from("PrevFrameTime"));
         graph_config.low_threshold = Some((17., colors::GREEN));
         graph_config.high_threshold = Some((34., colors::RED));
@@ -461,7 +462,9 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
                 .debug_ui
                 .set_graph_enabled(String_Id::from("fn_profile"), true);
 
-            let graph = debug_systems.debug_ui.get_graph(String_Id::from("fn_profile"));
+            let graph = debug_systems
+                .debug_ui
+                .get_graph(String_Id::from("fn_profile"));
 
             let flattened_traces = tracer::flatten_traces(&final_traces);
             tracer::drawing::update_graph_traced_fn(
@@ -481,7 +484,9 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
 #[cfg(debug_assertions)]
 pub fn set_traced_fn(debug_systems: &mut Debug_Systems, fn_name: String) {
     debug_systems.traced_fn = fn_name.clone();
-    let graph = debug_systems.debug_ui.get_graph(String_Id::from("fn_profile"));
+    let graph = debug_systems
+        .debug_ui
+        .get_graph(String_Id::from("fn_profile"));
     graph.config.title = Some(fn_name);
     graph.data.points.clear();
 }

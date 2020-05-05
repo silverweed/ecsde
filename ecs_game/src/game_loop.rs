@@ -6,14 +6,13 @@ use ecs_engine::common::colors;
 use ecs_engine::common::transform::Transform2D;
 use ecs_engine::common::Maybe_Error;
 use ecs_engine::core::app;
-use ecs_engine::core::sleep;
 use ecs_engine::core::time;
 use ecs_engine::gfx;
 use ecs_engine::gfx::render_system;
 use ecs_engine::input;
 use ecs_engine::resources::gfx::Gfx_Resources;
 use std::convert::TryInto;
-use std::time::{Duration, Instant};
+use std::time::{Duration};
 
 #[cfg(debug_assertions)]
 use {
@@ -25,25 +24,15 @@ use {
     std::collections::HashMap,
 };
 
-pub fn tick_game<'a>(
-    game_state: &'a mut Game_State<'a>,
-    game_resources: &'a mut Game_Resources<'a>,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn tick_game<'a, 'b>(
+    game_state: &'b mut Game_State<'a>,
+    game_resources: &'b mut Game_Resources<'a>,
+) -> Result<(), Box<dyn std::error::Error>> where 'a: 'b {
     trace!("tick_game");
-
-    let t_before_work = Instant::now();
 
     game_state.engine_state.cur_frame += 1;
     game_state.engine_state.time.update();
     let real_dt = game_state.engine_state.time.real_dt();
-
-    // @Speed @WaitForStable: these should all be computed at compile time.
-    // Probably will do that when either const fn or proc macros/syntax extensions are stable.
-    #[cfg(debug_assertions)]
-    let (sid_joysticks, sid_msg) = (String_Id::from("joysticks"), String_Id::from("msg"));
-
-    #[cfg(debug_assertions)]
-    let debug_systems = &mut game_state.engine_state.debug_systems;
 
     let target_time_per_frame = Duration::from_micros(
         (game_state
@@ -52,6 +41,14 @@ pub fn tick_game<'a>(
             .read(&game_state.engine_state.config)
             * 1000.0) as u64,
     );
+
+    // @Speed @WaitForStable: these should all be computed at compile time.
+    // Probably will do that when either const fn or proc macros/syntax extensions are stable.
+    #[cfg(debug_assertions)]
+    let (sid_joysticks, sid_msg) = (String_Id::from("joysticks"), String_Id::from("msg"));
+
+    #[cfg(debug_assertions)]
+    let debug_systems = &mut game_state.engine_state.debug_systems;
 
     // Check if the replay ended this frame
     if game_state.is_replaying && game_state.input_provider.is_realtime_player_input() {
@@ -366,40 +363,6 @@ pub fn tick_game<'a>(
     {
         trace!("display");
         gfx::window::display(&mut game_state.window);
-    }
-
-    // @Fixme: this waits too long! Investigate!
-    if !gfx::window::has_vsync(&game_state.window) {
-        trace!("wait_end_frame");
-
-        let mut t_elapsed_for_work = t_before_work.elapsed();
-        if t_elapsed_for_work < target_time_per_frame {
-            while t_elapsed_for_work < target_time_per_frame {
-                if let Some(granularity) = game_state.sleep_granularity {
-                    if granularity < target_time_per_frame - t_elapsed_for_work {
-                        let gra_ns = granularity.as_nanos();
-                        let rem_ns = (target_time_per_frame - t_elapsed_for_work).as_nanos();
-                        let time_to_sleep =
-                            Duration::from_nanos((rem_ns / gra_ns).try_into().unwrap());
-                        sleep::sleep(time_to_sleep);
-                    }
-                }
-
-                t_elapsed_for_work = t_before_work.elapsed();
-            }
-        } else {
-            lerr!(
-                "Frame budget exceeded! At frame {}: {} / {} ms",
-                game_state.engine_state.cur_frame,
-                time::to_ms_frac(&t_elapsed_for_work),
-                time::to_ms_frac(&target_time_per_frame)
-            );
-        }
-    }
-
-    #[cfg(debug_assertions)]
-    {
-        game_state.engine_state.prev_frame_time = t_before_work.elapsed();
     }
 
     Ok(())

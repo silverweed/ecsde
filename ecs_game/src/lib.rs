@@ -22,10 +22,13 @@ mod debug;
 
 use ecs_engine::common::colors;
 use ecs_engine::common::stringid::String_Id;
-use ecs_engine::core::app;
+use ecs_engine::core::{app, sleep, time};
+use ecs_engine::gfx;
 use game_state::*;
+use std::time::{Duration, Instant};
 use std::ffi::CStr;
 use std::os::raw::c_char;
+use std::convert::TryInto;
 
 /// Given a c_char pointer, returns a String allocated from the raw string it points to,
 /// or an empty string if the conversion fails.
@@ -88,40 +91,49 @@ pub unsafe extern "C" fn game_update<'a>(
         fatal!("game_update: game state and/or resources are null!");
     }
 
+    let game_state = &mut *game_state;
+    if game_state.engine_state.should_close {
+        return false;
+    }
+
+    let t_before_work = Instant::now();
+
+    #[cfg(debug_assertions)]
     {
-        let game_state = &mut *game_state;
-        if game_state.engine_state.should_close {
-            return false;
-        }
+        ecs_engine::prelude::DEBUG_TRACER
+            .lock()
+            .unwrap()
+            .start_frame();
 
-        #[cfg(debug_assertions)]
-        {
-            ecs_engine::prelude::DEBUG_TRACER
-                .lock()
-                .unwrap()
-                .start_frame();
+        let log = &mut game_state.engine_state.debug_systems.log;
 
-            let log = &mut game_state.engine_state.debug_systems.log;
-
-            if !game_state.engine_state.time.paused {
-                if game_state.engine_state.time.was_paused {
-                    // Just resumed
-                    game_state
-                        .engine_state
-                        .debug_systems
-                        .debug_ui
-                        .frame_scroller
-                        .manually_selected = false;
-                    log.reset_from_frame(game_state.engine_state.cur_frame);
-                }
-                log.start_frame();
+        if !game_state.engine_state.time.paused {
+            if game_state.engine_state.time.was_paused {
+                // Just resumed
+                game_state
+                    .engine_state
+                    .debug_systems
+                    .debug_ui
+                    .frame_scroller
+                    .manually_selected = false;
+                log.reset_from_frame(game_state.engine_state.cur_frame);
             }
+            log.start_frame();
         }
+    }
 
-        let game_resources = &mut *game_resources;
-        if game_loop::tick_game(game_state, game_resources).is_err() {
-            return false;
-        }
+    let game_resources = &mut *game_resources;
+
+    let target_time_per_frame = Duration::from_micros(
+        (game_state
+            .cvars
+            .gameplay_update_tick_ms
+            .read(&game_state.engine_state.config)
+            * 1000.0) as u64,
+    );
+
+    if game_loop::tick_game(game_state, game_resources).is_err() {
+        return false;
     }
 
     #[cfg(debug_assertions)]
@@ -133,7 +145,38 @@ pub unsafe extern "C" fn game_update<'a>(
         );
     }
 
-    !(*game_state).engine_state.should_close
+    if !gfx::window::has_vsync(&game_state.window) {
+        let mut t_elapsed_for_work = t_before_work.elapsed();
+        if t_elapsed_for_work < target_time_per_frame {
+            while t_elapsed_for_work < target_time_per_frame {
+                if let Some(granularity) = game_state.sleep_granularity {
+                    if granularity < target_time_per_frame - t_elapsed_for_work {
+                        let gra_ns = granularity.as_nanos();
+                        let rem_ns = (target_time_per_frame - t_elapsed_for_work).as_nanos();
+                        let time_to_sleep =
+                            Duration::from_nanos((rem_ns / gra_ns).try_into().unwrap());
+                        sleep::sleep(time_to_sleep);
+                    }
+                }
+
+                t_elapsed_for_work = t_before_work.elapsed();
+            }
+        } else {
+            lerr!(
+                "Frame budget exceeded! At frame {}: {} / {} ms",
+                game_state.engine_state.cur_frame,
+                time::to_ms_frac(&t_elapsed_for_work),
+                time::to_ms_frac(&target_time_per_frame)
+            );
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    {
+        game_state.engine_state.prev_frame_time = t_before_work.elapsed();
+    }
+
+    !game_state.engine_state.should_close
 }
 
 /// # Safety
