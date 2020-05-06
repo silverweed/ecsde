@@ -230,6 +230,8 @@ pub fn draw_batches(
                         pl.attenuation,
                     );
                 }
+                shader.set_uniform_float("shininess", Material::decode_shininess(material.shininess));
+                shader.set_uniform_vec3("specular_color", col2v3(material.specular_color));
                 shader
             });
 

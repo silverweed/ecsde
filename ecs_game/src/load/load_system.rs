@@ -100,6 +100,27 @@ fn init_demo_lights(lights: &mut Lights) {
         color: colors::YELLOW,
     };
     lights.add_point_light(light);
+    let light = Point_Light {
+        position: v2!(100., 120.),
+        radius: 50.,
+        attenuation: 0.2,
+        color: colors::RED,
+    };
+    lights.add_point_light(light);
+    let light = Point_Light {
+        position: v2!(-20., 230.),
+        radius: 200.,
+        attenuation: 0.1,
+        color: colors::GREEN,
+    };
+    lights.add_point_light(light);
+    let light = Point_Light {
+        position: v2!(200., 330.),
+        radius: 300.,
+        attenuation: 0.01,
+        color: colors::BLUE,
+    };
+    lights.add_point_light(light);
 }
 
 // @Temporary
@@ -189,6 +210,7 @@ fn init_demo_entities(
                 material: Material {
                     texture: rsrc.load_texture(&tex_path(&env, "ground2.png")),
                     shader: sprite_flat_shader,
+                    shininess: Material::encode_shininess(0.2),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -218,6 +240,7 @@ fn init_demo_entities(
                         texture: rsrc.load_texture(&tex_path(&env, "jelly.png")),
                         normals: rsrc.load_texture(&tex_path(&env, "jelly_n.png")),
                         shader: sprite_normal_shader,
+                        shininess: Material::encode_shininess(10.0),
                         ..Default::default()
                     },
                     modulate: if i == 1 {

@@ -21,6 +21,8 @@ uniform sampler2D texture;
 uniform sampler2D normals;
 uniform Ambient_Light ambient_light;
 uniform Point_Light point_lights[MAX_POINT_LIGHTS];
+uniform float shininess;
+uniform vec3 specular_color;
 
 varying vec2 world_pos;
 
@@ -55,6 +57,8 @@ void main() {
     normal.y *= -1.0;
     normal = normalize(normal);
 
+    vec3 view_dir = vec3(0.0, 0.0, -1.0);
+
     for (int i = 0; i < MAX_POINT_LIGHTS; ++i) {
         Point_Light light = point_lights[i];
         vec2 frag_to_light = light.position - world_pos;
@@ -62,10 +66,15 @@ void main() {
         float diff = max(dot(normal, light_dir), 0.0);
         vec3 diffuse = (DIFFUSE_BIAS + diff) * light.color;
 
-        vec3 result = diffuse; // @Incomplete: specular?
+        vec3 half_dir = normalize(light_dir + view_dir);
+        float spec = pow(max(dot(half_dir, normal), 0.0), max(1.0, shininess));
+        vec3 specular = specular_color * spec * light.color;
+
+        vec3 result = diffuse + specular;
 
         float dist = length(frag_to_light);
-        float atten = float(dist < light.radius) * 1.0 / (1.0 + dist * light.attenuation);
+        //float atten = float(dist < light.radius) * 1.0 / (1.0 + dist * light.attenuation);
+        float atten = max(0.0, lerp(1.0, 0.0, dist / light.radius));
 
         color += vec4(result, 0.0) * atten;
     }
