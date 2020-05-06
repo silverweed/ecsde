@@ -1,8 +1,8 @@
 use crate::common::colors;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
-use crate::resources::gfx::{Texture_Handle, Shader_Handle};
 use crate::gfx::render;
+use crate::resources::gfx::{Shader_Handle, Texture_Handle};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Default)]
 pub struct Material {

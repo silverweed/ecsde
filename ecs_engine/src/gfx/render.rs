@@ -1,10 +1,10 @@
 use super::paint_props::Paint_Properties;
 use crate::common::colors::Color;
-use crate::ecs::components::gfx::Material;
 use crate::common::rect::Rect;
 use crate::common::shapes::Circle;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
+use crate::ecs::components::gfx::Material;
 use crate::gfx::window::Window_Handle;
 use std::convert::Into;
 
@@ -79,9 +79,7 @@ pub fn render_texture_ws(
     z_index: Z_Index,
 ) {
     trace!("render_texture_ws");
-    batcher::add_texture_ws(
-        batches, material, tex_rect, color, transform, z_index,
-    );
+    batcher::add_texture_ws(batches, material, tex_rect, color, transform, z_index);
 }
 
 pub fn render_text<P>(

@@ -1,6 +1,5 @@
 use crate::gameplay_system::Gameplay_System_Config;
 use crate::levels::Level;
-use ecs_engine::gfx::light::{Point_Light, Lights};
 use crate::spatial::World_Chunks;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::dumb_movement_system::C_Dumb_Movement;
@@ -20,6 +19,7 @@ use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable, Material};
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::gfx;
+use ecs_engine::gfx::light::{Lights, Point_Light};
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
@@ -89,9 +89,7 @@ fn register_all_components(world: &mut Ecs_World) {
 }
 
 // @Temporary
-fn init_demo_lights(
-    lights: &mut Lights,
-) {
+fn init_demo_lights(lights: &mut Lights) {
     lights.ambient_light.color = colors::rgb(200, 140, 180);
     lights.ambient_light.intensity = 1.;
 
@@ -123,8 +121,7 @@ fn init_demo_entities(
         shader_cache.load_shader(&shader_path(&env, SPRITE_NORMAL_SHADER_NAME));
 
     const SPRITE_FLAT_SHADER_NAME: &str = "sprite_flat";
-    let sprite_flat_shader =
-        shader_cache.load_shader(&shader_path(&env, SPRITE_FLAT_SHADER_NAME));
+    let sprite_flat_shader = shader_cache.load_shader(&shader_path(&env, SPRITE_FLAT_SHADER_NAME));
 
     let camera = level.world.new_entity();
     {
@@ -161,7 +158,8 @@ fn init_demo_entities(
         assert!(rend.material.texture.is_some(), "Could not load texture!");
         let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.material.texture));
         rend.rect = Rect::new(0, 0, sw as i32 * 100, sh as i32 * 100);
-        rsrc.get_texture_mut(rend.material.texture).set_repeated(true);
+        rsrc.get_texture_mut(rend.material.texture)
+            .set_repeated(true);
 
         level.world.add_component(ground, C_Spatial2D::default());
     }
@@ -251,8 +249,8 @@ fn init_demo_entities(
             if i > 0 {
                 //t.local_transform.set_position(i as f32 * 242.0, 0.);
                 t.transform.set_position(x * 50., 1. * y * 50.);
-                //t.local_transform.set_rotation(angle::deg(45. * i as f32));
-                //t.local_transform.set_scale(2., 4.);
+            //t.local_transform.set_rotation(angle::deg(45. * i as f32));
+            //t.local_transform.set_scale(2., 4.);
             } else {
                 t.transform.set_position(20., 20.);
             }
@@ -295,8 +293,8 @@ fn init_demo_entities(
             );
         }
         //level
-            //.world
-            //.add_component(entity, C_Dumb_Movement::default());
+        //.world
+        //.add_component(entity, C_Dumb_Movement::default());
 
         #[cfg(debug_assertions)]
         {

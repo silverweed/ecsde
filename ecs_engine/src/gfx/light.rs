@@ -1,5 +1,5 @@
-use crate::common::vector::Vec2f;
 use crate::common::colors::{self, Color};
+use crate::common::vector::Vec2f;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Point_Light {
@@ -31,7 +31,7 @@ impl Default for Ambient_Light {
     fn default() -> Self {
         Self {
             color: colors::WHITE,
-            intensity: 1.
+            intensity: 1.,
         }
     }
 }
@@ -49,14 +49,17 @@ impl Default for Lights {
         Self {
             point_lights: [Point_Light::default(); MAX_POINT_LIGHTS],
             n_actual_point_lights: 0,
-            ambient_light: Ambient_Light::default()
+            ambient_light: Ambient_Light::default(),
         }
     }
 }
 
 impl Lights {
     pub fn add_point_light(&mut self, light: Point_Light) {
-        assert!(self.n_actual_point_lights < self.point_lights.len(), "Too many point lights!");
+        assert!(
+            self.n_actual_point_lights < self.point_lights.len(),
+            "Too many point lights!"
+        );
         self.point_lights[self.n_actual_point_lights] = light;
         self.n_actual_point_lights += 1;
     }

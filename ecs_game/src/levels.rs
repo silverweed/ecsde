@@ -1,9 +1,9 @@
-use ecs_engine::common::stringid::String_Id;
-use ecs_engine::gfx::light::Lights;
-use ecs_engine::ecs::ecs_world::{Entity, Ecs_World};
 use crate::spatial::World_Chunks;
-use ecs_engine::ecs::components::gfx::C_Camera2D;
+use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::vector::Vec2f;
+use ecs_engine::ecs::components::gfx::C_Camera2D;
+use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
+use ecs_engine::gfx::light::Lights;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 // A Level is what gets loaded and unloaded
@@ -56,4 +56,3 @@ impl Levels {
         }
     }
 }
-

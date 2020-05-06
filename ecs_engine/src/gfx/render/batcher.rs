@@ -1,12 +1,12 @@
 use crate::alloc::temp;
-use crate::common::colors::{self, Color};
 use crate::common::angle::Angle;
+use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
-use crate::gfx::render::{self, Vertex, Texture, Shader};
-use crate::gfx::light::Lights;
 use crate::ecs::components::gfx::Material;
+use crate::gfx::light::Lights;
+use crate::gfx::render::{self, Shader, Texture, Vertex};
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Gfx_Resources, Shader_Cache, Texture_Handle};
 use rayon::prelude::*;
@@ -19,10 +19,8 @@ use sfml::graphics::VertexBufferUsage;
 
 #[derive(Default)]
 pub struct Batches {
-    textures_ws: BTreeMap<
-        render::Z_Index,
-        HashMap<Material, (Vertex_Buffer_Holder, Vec<Texture_Props_Ws>)>,
-    >,
+    textures_ws:
+        BTreeMap<render::Z_Index, HashMap<Material, (Vertex_Buffer_Holder, Vec<Texture_Props_Ws>)>>,
 }
 
 struct Vertex_Buffer_Holder {
@@ -122,10 +120,7 @@ pub(super) fn add_texture_ws(
         &mut z_index_texmap
             .entry(material)
             .or_insert_with(|| {
-                ldebug!(
-                    "creating buffer for material {:?}",
-                    material,
-                );
+                ldebug!("creating buffer for material {:?}", material,);
                 (
                     Vertex_Buffer_Holder::with_initial_vertex_count(
                         48,
@@ -158,8 +153,15 @@ pub fn clear_batches(batches: &mut Batches) {
 
 // !!! @Hack !!! to make set_uniform_texture work until https://github.com/jeremyletang/rust-sfml/issues/213 is solved
 #[allow(unused_unsafe)]
-unsafe fn set_uniform_texture_workaround(shader: &mut Shader, gres: &Gfx_Resources, name: &str, texture: Texture_Handle) {
-    let tex = unsafe { std::mem::transmute::<&Texture, *const Texture<'static>>(gres.get_texture(texture)) };
+unsafe fn set_uniform_texture_workaround(
+    shader: &mut Shader,
+    gres: &Gfx_Resources,
+    name: &str,
+    texture: Texture_Handle,
+) {
+    let tex = unsafe {
+        std::mem::transmute::<&Texture, *const Texture<'static>>(gres.get_texture(texture))
+    };
     shader.set_uniform_texture(name, unsafe { &*tex });
 }
 
@@ -173,7 +175,7 @@ fn encode_rot_as_color(rot: Angle) -> Color {
         r: 0,
         g: 0,
         b: ((encoded >> 8) & 0xFF) as u8,
-        a: (encoded & 0xFF) as u8
+        a: (encoded & 0xFF) as u8,
     }
 }
 
@@ -204,7 +206,9 @@ pub fn draw_batches(
             let shader = material.shader.map(|id| {
                 let shader = shader_cache.get_shader_mut(Some(id));
                 if material.normals.is_some() {
-                    unsafe { set_uniform_texture_workaround(shader, gres, "normals", material.normals); }
+                    unsafe {
+                        set_uniform_texture_workaround(shader, gres, "normals", material.normals);
+                    }
                 }
                 fn col2v3(color: Color) -> sfml::graphics::glsl::Vec3 {
                     let c = sfml::graphics::glsl::Vec4::from(sfml::graphics::Color::from(color));
@@ -214,11 +218,17 @@ pub fn draw_batches(
                 shader.set_uniform_float("ambient_light.intensity", lights.ambient_light.intensity);
                 shader.set_uniform_current_texture("texture");
                 for (i, pl) in lights.point_lights.iter().enumerate() {
-                    shader.set_uniform_vec2(&format!("point_lights[{}].position", i), sfml::graphics::glsl::Vec2::new(
-                            pl.position.x, pl.position.y));
-                    shader.set_uniform_vec3(&format!("point_lights[{}].color", i), col2v3(pl.color));
+                    shader.set_uniform_vec2(
+                        &format!("point_lights[{}].position", i),
+                        sfml::graphics::glsl::Vec2::new(pl.position.x, pl.position.y),
+                    );
+                    shader
+                        .set_uniform_vec3(&format!("point_lights[{}].color", i), col2v3(pl.color));
                     shader.set_uniform_float(&format!("point_lights[{}].radius", i), pl.radius);
-                    shader.set_uniform_float(&format!("point_lights[{}].attenuation", i), pl.attenuation);
+                    shader.set_uniform_float(
+                        &format!("point_lights[{}].attenuation", i),
+                        pl.attenuation,
+                    );
                 }
                 shader
             });
@@ -256,8 +266,8 @@ pub fn draw_batches(
                         for (i, tex_prop) in tex_chunk.iter().enumerate() {
                             let Texture_Props_Ws {
                                 tex_rect,
-                                color: _,
                                 transform,
+                                ..
                             } = tex_prop;
 
                             let uv: Rect<f32> = (*tex_rect).into();
