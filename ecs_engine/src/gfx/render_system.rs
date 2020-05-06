@@ -53,8 +53,7 @@ pub fn update(args: Render_System_Update_Args) {
         let spatial = spatials.get_component(entity).unwrap();
 
         let C_Renderable {
-            texture: tex_id,
-            shader,
+            material,
             rect: src_rect,
             modulate,
             z_index,
@@ -75,8 +74,7 @@ pub fn update(args: Render_System_Update_Args) {
 
         render::render_texture_ws(
             batches,
-            *tex_id,
-            *shader,
+            *material,
             src_rect,
             *modulate,
             &spatial.transform,

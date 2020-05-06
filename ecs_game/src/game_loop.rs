@@ -24,12 +24,13 @@ use {
     std::collections::HashMap,
 };
 
-pub fn tick_game<'a, 'b>(
-    game_state: &'b mut Game_State<'a>,
-    game_resources: &'b mut Game_Resources<'a>,
+pub fn tick_game<'a, 's, 'r>(
+    game_state: &'a mut Game_State<'s>,
+    game_resources: &'a mut Game_Resources<'r>,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
-    'a: 'b,
+    'r: 's,
+    's: 'a,
 {
     trace!("tick_game");
 
@@ -385,11 +386,15 @@ where
     Ok(())
 }
 
-fn update_graphics(
-    game_state: &mut Game_State,
-    gres: &mut Gfx_Resources,
+fn update_graphics<'a, 's, 'r>(
+    game_state: &'a mut Game_State<'s>,
+    gres: &'a mut Gfx_Resources<'r>,
     real_dt: Duration,
-) -> Maybe_Error {
+) -> Maybe_Error
+where
+    'r: 's,
+    's: 'a,
+{
     trace!("update_graphics");
 
     let window = &mut game_state.window;
@@ -444,6 +449,7 @@ fn update_graphics(
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
         let lv_batches = &mut game_state.level_batches;
         let window = &mut game_state.window;
+        let shader_cache = &mut game_state.engine_state.shader_cache;
         game_state
             .gameplay_system
             .levels
@@ -452,6 +458,7 @@ fn update_graphics(
                     window,
                     &gres,
                     lv_batches.get_mut(&level.id).unwrap(),
+                    shader_cache,
                     &level.get_camera().transform,
                     frame_alloc,
                 );
@@ -460,6 +467,7 @@ fn update_graphics(
             window,
             &gres,
             &mut game_state.engine_state.global_batches,
+            shader_cache,
             &Transform2D::default(),
             frame_alloc,
         );
@@ -1002,8 +1010,7 @@ fn debug_draw_entities_prev_frame_ghost(
     foreach_entity!(ecs_world, +C_Spatial2D, +C_Renderable, +C_Debug_Data, |entity| {
         let frame_starting_pos = ecs_world.get_component::<C_Spatial2D>(entity).unwrap().frame_starting_pos;
         let C_Renderable {
-            texture,
-            shader,
+            material,
             rect,
             modulate,
             z_index,
@@ -1028,7 +1035,7 @@ fn debug_draw_entities_prev_frame_ghost(
                 modulate.b,
                 200 - 10 * (debug_data.prev_positions.len() - i as usize) as u8,
             );
-            render::render_texture_ws(batches, texture, shader, &rect, color, &transform, z_index);
+            render::render_texture_ws(batches, material, &rect, color, &transform, z_index);
         }
     });
 }

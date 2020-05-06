@@ -1,13 +1,28 @@
 use crate::common::colors;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
+use crate::resources::gfx::{Texture_Handle, Shader_Handle};
 use crate::gfx::render;
-use crate::resources;
+
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Default)]
+pub struct Material {
+    pub texture: Texture_Handle,
+    pub normals: Texture_Handle,
+    pub shader: Shader_Handle,
+}
+
+impl Material {
+    pub fn with_texture(texture: Texture_Handle) -> Self {
+        Self {
+            texture,
+            ..Default::default()
+        }
+    }
+}
 
 #[derive(Copy, Clone, Debug)]
 pub struct C_Renderable {
-    pub texture: resources::gfx::Texture_Handle,
-    pub shader: resources::gfx::Shader_Handle,
+    pub material: Material,
     pub rect: Rect<i32>,
     pub modulate: colors::Color,
     pub z_index: render::Z_Index,
@@ -16,8 +31,11 @@ pub struct C_Renderable {
 impl Default for C_Renderable {
     fn default() -> Self {
         C_Renderable {
-            texture: resources::gfx::Texture_Handle::default(),
-            shader: resources::gfx::Shader_Handle::default(),
+            material: Material {
+                texture: Texture_Handle::default(),
+                normals: Texture_Handle::default(),
+                shader: Shader_Handle::default(),
+            },
             rect: Rect::new(0, 0, 0, 0),
             modulate: colors::WHITE,
             z_index: 0,

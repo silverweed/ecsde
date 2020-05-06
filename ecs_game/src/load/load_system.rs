@@ -16,10 +16,10 @@ use ecs_engine::core::app::Engine_State;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::rand;
 use ecs_engine::ecs::components::base::C_Spatial2D;
-use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
+use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable, Material};
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::gfx;
-use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
+use ecs_engine::resources::gfx::{tex_path, Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
 use crate::debug::entity_debug::C_Debug_Data;
@@ -47,6 +47,7 @@ pub fn level_load_sync(
     register_all_components(&mut level.world);
     init_demo_entities(
         &mut game_resources.gfx,
+        &mut engine_state.shader_cache,
         &engine_state.env,
         &mut engine_state.rng,
         &engine_state.config,
@@ -87,6 +88,7 @@ fn register_all_components(world: &mut Ecs_World) {
 // @Temporary
 fn init_demo_entities(
     rsrc: &mut Gfx_Resources,
+    shader_cache: &mut Shader_Cache,
     env: &Env_Info,
     rng: &mut rand::Default_Rng,
     cfg: &cfg::Config,
@@ -98,7 +100,8 @@ fn init_demo_entities(
     use ecs_engine::resources::gfx::shader_path;
 
     const SPRITE_NORMAL_SHADER_NAME: &str = "sprite_with_normals";
-    let sprite_normal_shader = rsrc.load_shader(&shader_path(&env, SPRITE_NORMAL_SHADER_NAME));
+    let sprite_normal_shader =
+        shader_cache.load_shader(&shader_path(&env, SPRITE_NORMAL_SHADER_NAME));
 
     let camera = level.world.new_entity();
     {
@@ -123,15 +126,15 @@ fn init_demo_entities(
         let rend = level.world.add_component(
             ground,
             C_Renderable {
-                texture: rsrc.load_texture(&tex_path(&env, "ground.png")),
+                material: Material::with_texture(rsrc.load_texture(&tex_path(&env, "ground.png"))),
                 z_index: -1,
                 ..Default::default()
             },
         );
-        assert!(rend.texture.is_some(), "Could not load texture!");
-        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
+        assert!(rend.material.texture.is_some(), "Could not load texture!");
+        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.material.texture));
         rend.rect = Rect::new(0, 0, sw as i32 * 100, sh as i32 * 100);
-        rsrc.get_texture_mut(rend.texture).set_repeated(true);
+        rsrc.get_texture_mut(rend.material.texture).set_repeated(true);
 
         level.world.add_component(ground, C_Spatial2D::default());
     }
@@ -158,15 +161,15 @@ fn init_demo_entities(
         let rend = level.world.add_component(
             gnd,
             C_Renderable {
-                texture: rsrc.load_texture(&tex_path(&env, "ground2.png")),
+                material: Material::with_texture(rsrc.load_texture(&tex_path(&env, "ground2.png"))),
                 ..Default::default()
             },
         );
-        assert!(rend.texture.is_some(), "Could not load texture!");
-        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
+        assert!(rend.material.texture.is_some(), "Could not load texture!");
+        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.material.texture));
         rend.rect = Rect::new(0, 0, sw as i32 * 1, sh as i32 * 1);
         //rsrc.get_texture_mut(rend.texture).set_repeated(true);
-        let texture = rend.texture;
+        let texture = rend.material.texture;
 
         level
             .world
@@ -182,7 +185,12 @@ fn init_demo_entities(
                 C_Renderable {
                     //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
                     //rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
-                    texture: rsrc.load_texture(&tex_path(&env, "jelly.png")),
+                    material: Material {
+                        texture: rsrc.load_texture(&tex_path(&env, "jelly.png")),
+                        normals: rsrc.load_texture(&tex_path(&env, "jelly_n.png")),
+                        shader: sprite_normal_shader,
+                        ..Default::default()
+                    },
                     modulate: if i == 1 {
                         colors::rgb(0, 255, 0)
                     } else {
@@ -191,8 +199,8 @@ fn init_demo_entities(
                     ..Default::default()
                 },
             );
-            assert!(rend.texture.is_some(), "Could not load texture!");
-            let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
+            assert!(rend.material.texture.is_some(), "Could not load texture!");
+            let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.material.texture));
             rend.rect = Rect::new(0, 0, sw as i32 / (n_frames as i32), sh as i32);
             (sw, sh)
         };
@@ -283,10 +291,10 @@ fn spawn_rock_at(level: &mut Level, env: &Env_Info, rsrc: &mut Gfx_Resources, po
 
     {
         let rend = level.world.add_component(rock, C_Renderable::default());
-        rend.texture = rsrc.load_texture(&tex_path(&env, "rock.png"));
+        rend.material.texture = rsrc.load_texture(&tex_path(&env, "rock.png"));
         rend.z_index = 1;
-        assert!(rend.texture.is_some(), "Could not load texture!");
-        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
+        assert!(rend.material.texture.is_some(), "Could not load texture!");
+        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.material.texture));
         let (sw, sh) = (sw as i32, sh as i32);
         rend.rect = Rect::new(0, 0, sw, sh);
     };

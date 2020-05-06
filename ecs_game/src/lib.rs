@@ -25,10 +25,10 @@ use ecs_engine::common::stringid::String_Id;
 use ecs_engine::core::{app, sleep, time};
 use ecs_engine::gfx;
 use game_state::*;
-use std::time::{Duration, Instant};
+use std::convert::TryInto;
 use std::ffi::CStr;
 use std::os::raw::c_char;
-use std::convert::TryInto;
+use std::time::{Duration, Instant};
 
 /// Given a c_char pointer, returns a String allocated from the raw string it points to,
 /// or an empty string if the conversion fails.
@@ -83,10 +83,13 @@ pub unsafe extern "C" fn game_init<'a>(
 /// # Safety
 /// Neither pointer is allowed to be null.
 #[no_mangle]
-pub unsafe extern "C" fn game_update<'a>(
-    game_state: *mut Game_State<'a>,
-    game_resources: *mut Game_Resources<'a>,
-) -> bool {
+pub unsafe extern "C" fn game_update<'s, 'r>(
+    game_state: *mut Game_State<'s>,
+    game_resources: *mut Game_Resources<'r>,
+) -> bool
+where
+    'r: 's,
+{
     if game_state.is_null() || game_resources.is_null() {
         fatal!("game_update: game state and/or resources are null!");
     }

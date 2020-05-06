@@ -9,6 +9,7 @@ use crate::core::rand;
 use crate::core::systems::Core_Systems;
 use crate::gfx;
 use crate::input;
+use crate::resources::gfx::Shader_Cache;
 
 #[cfg(debug_assertions)]
 use {
@@ -43,6 +44,9 @@ pub struct Engine_State<'r> {
     pub frame_alloc: Temp_Allocator,
 
     pub global_batches: gfx::render::batcher::Batches,
+
+    // @Temporary: figure out if this is the right place for this
+    pub shader_cache: Shader_Cache<'r>,
 
     #[cfg(debug_assertions)]
     pub debug_systems: Debug_Systems,
@@ -89,6 +93,7 @@ pub fn create_engine_state<'r>(
         input_state,
         systems,
         global_batches: gfx::render::batcher::Batches::default(),
+        shader_cache: Shader_Cache::new(),
         frame_alloc: Temp_Allocator::with_capacity(megabytes(10)),
         #[cfg(debug_assertions)]
         debug_systems,

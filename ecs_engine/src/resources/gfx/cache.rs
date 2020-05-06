@@ -1,10 +1,10 @@
-use crate::gfx::render::{Font, Texture, Shader};
-use crate::resources::loaders;
 use super::Shader_Handle;
-use std::collections::HashMap;
-use std::collections::hash_map::Entry;
-use crate::resources::loaders::Resource_Loader;
 use crate::common::stringid::String_Id;
+use crate::gfx::render::{Font, Shader, Texture};
+use crate::resources::loaders;
+use crate::resources::loaders::Resource_Loader;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 
 define_file_loader!(Texture, Texture_Loader, Texture_Cache);
 define_file_loader!(Font, Font_Loader, Font_Cache);
@@ -21,11 +21,8 @@ impl<'l> loaders::Resource_Loader<'l, Shader<'l>> for Shader_Loader {
         let (vertex, fragment) = args;
         Shader::from_file(Some(&vertex), None, Some(&fragment)).ok_or_else(|| {
             format!(
-                concat!(
-                    "[ WARNING ] Failed to load Shader from {} / {}"
-                ),
-                vertex,
-                fragment
+                concat!("[ WARNING ] Failed to load Shader from {} / {}"),
+                vertex, fragment
             )
         })
     }
@@ -37,11 +34,11 @@ pub(super) struct Shader_Cache<'l> {
 }
 
 impl<'l> Shader_Cache<'l> {
-    pub fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self::new_with_loader(&Shader_Loader {})
     }
 
-    pub fn new_with_loader(loader: &'l Shader_Loader) -> Self {
+    pub(super) fn new_with_loader(loader: &'l Shader_Loader) -> Self {
         Shader_Cache {
             cache: HashMap::new(),
             loader,

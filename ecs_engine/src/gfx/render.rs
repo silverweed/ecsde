@@ -1,11 +1,11 @@
 use super::paint_props::Paint_Properties;
 use crate::common::colors::Color;
+use crate::ecs::components::gfx::Material;
 use crate::common::rect::Rect;
 use crate::common::shapes::Circle;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::gfx::window::Window_Handle;
-use crate::resources::gfx::{Shader_Handle, Texture_Handle};
 use std::convert::Into;
 
 pub mod batcher;
@@ -72,15 +72,16 @@ pub fn render_circle_ws<P>(
 
 pub fn render_texture_ws(
     batches: &mut batcher::Batches,
-    texture: Texture_Handle,
-    shader: Shader_Handle,
+    material: Material,
     tex_rect: &Rect<i32>,
     color: Color,
     transform: &Transform2D,
     z_index: Z_Index,
 ) {
     trace!("render_texture_ws");
-    batcher::add_texture_ws(batches, texture, shader, tex_rect, color, transform, z_index);
+    batcher::add_texture_ws(
+        batches, material, tex_rect, color, transform, z_index,
+    );
 }
 
 pub fn render_text<P>(
@@ -152,6 +153,10 @@ pub fn get_pixels(image: &Image) -> &[Color] {
 
 pub fn get_text_size(text: &Text<'_>) -> Vec2f {
     backend::get_text_size(text)
+}
+
+pub fn shaders_are_available() -> bool {
+    backend::shaders_are_available()
 }
 
 ///////////////////////////////// CREATING ///////////////////////////////////

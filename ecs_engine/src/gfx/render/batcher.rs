@@ -4,8 +4,9 @@ use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::gfx::render::{self, Vertex};
+use crate::ecs::components::gfx::Material;
 use crate::gfx::window::Window_Handle;
-use crate::resources::gfx::{Gfx_Resources, Shader_Handle, Texture_Handle};
+use crate::resources::gfx::{Gfx_Resources, Shader_Cache};
 use rayon::prelude::*;
 use std::cmp;
 use std::collections::{BTreeMap, HashMap};
@@ -18,7 +19,7 @@ use sfml::graphics::VertexBufferUsage;
 pub struct Batches {
     textures_ws: BTreeMap<
         render::Z_Index,
-        HashMap<(Texture_Handle, Shader_Handle), (Vertex_Buffer_Holder, Vec<Texture_Props_Ws>)>,
+        HashMap<Material, (Vertex_Buffer_Holder, Vec<Texture_Props_Ws>)>,
     >,
 }
 
@@ -26,13 +27,13 @@ struct Vertex_Buffer_Holder {
     pub vbuf: Vertex_Buffer,
     pub n_elems: u32,
     #[cfg(debug_assertions)]
-    id: (Texture_Handle, Shader_Handle),
+    id: Material,
 }
 
 impl Vertex_Buffer_Holder {
     pub fn with_initial_vertex_count(
         initial_cap: u32,
-        #[cfg(debug_assertions)] id: (Texture_Handle, Shader_Handle),
+        #[cfg(debug_assertions)] id: Material,
     ) -> Self {
         Self {
             vbuf: Vertex_Buffer::new(PrimitiveType::Quads, initial_cap, VertexBufferUsage::Stream),
@@ -100,8 +101,7 @@ struct Texture_Props_Ws {
 
 pub(super) fn add_texture_ws(
     batches: &mut Batches,
-    texture: Texture_Handle,
-    shader: Shader_Handle,
+    material: Material,
     tex_rect: &Rect<i32>,
     color: Color,
     transform: &Transform2D,
@@ -118,14 +118,17 @@ pub(super) fn add_texture_ws(
     let tex_batches = {
         trace!("get_tex_batches");
         &mut z_index_texmap
-            .entry((texture, shader))
+            .entry(material)
             .or_insert_with(|| {
-                ldebug!("creating buffer for texture {:?} / shader {:?}", texture, shader);
+                ldebug!(
+                    "creating buffer for material {:?}",
+                    material,
+                );
                 (
                     Vertex_Buffer_Holder::with_initial_vertex_count(
                         48,
                         #[cfg(debug_assertions)]
-                        (texture, shader),
+                        material,
                     ),
                     vec![],
                 )
@@ -155,6 +158,7 @@ pub fn draw_batches(
     window: &mut Window_Handle,
     gres: &Gfx_Resources,
     batches: &mut Batches,
+    shader_cache: &mut Shader_Cache,
     camera: &Transform2D,
     frame_alloc: &mut temp::Temp_Allocator,
 ) {
@@ -163,15 +167,19 @@ pub fn draw_batches(
     // for each Z-index...
     for tex_map in batches.textures_ws.values_mut() {
         // for each texture/shader...
-        for ((tex_id, shader_id), (vbuffer, tex_props)) in tex_map {
+        for (material, (vbuffer, tex_props)) in tex_map {
             let n_texs = tex_props.len();
             if n_texs == 0 {
                 // @Speed: right now we don't delete this batch from the tex_map, but it may be worth doing so.
                 continue;
             }
 
-            let texture = gres.get_texture(*tex_id);
-            let shader = shader_id.map(|id| gres.get_shader(Some(id)));
+            let texture = gres.get_texture(material.texture);
+            let shader = material.shader.map(|id| {
+                let shader = shader_cache.get_shader_mut(Some(id));
+                shader.set_uniform_current_texture("texture");
+                shader
+            });
 
             let n_threads = rayon::current_num_threads();
             let n_texs_per_chunk = cmp::min(n_texs, n_texs / n_threads + 1);
@@ -247,7 +255,7 @@ pub fn draw_batches(
                 &vbuffer.vbuf,
                 sfml::graphics::RenderStates {
                     texture: Some(texture),
-                    shader, 
+                    shader: shader.map(|s| &*s),
                     transform: camera.get_matrix_sfml().inverse(),
                     ..sfml::graphics::RenderStates::default()
                 },

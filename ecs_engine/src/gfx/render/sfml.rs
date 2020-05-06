@@ -308,3 +308,8 @@ pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[
         texture.update_from_pixels(pixels, rect.width, rect.height, rect.x, rect.y);
     }
 }
+
+#[inline(always)]
+pub fn shaders_are_available() -> bool {
+    Shader::is_available()
+}
