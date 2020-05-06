@@ -25,7 +25,11 @@ impl Material {
 
     pub fn encode_shininess(sh: f32) -> u16 {
         if sh > Self::MAX_SHININESS {
-            lwarn!("value {} passed to encode_shininess is greater than max {} and will be capped.", sh, Self::MAX_SHININESS);
+            lwarn!(
+                "value {} passed to encode_shininess is greater than max {} and will be capped.",
+                sh,
+                Self::MAX_SHININESS
+            );
         }
         (sh.min(Self::MAX_SHININESS) / Self::MAX_SHININESS * std::u16::MAX as f32) as _
     }
@@ -39,7 +43,7 @@ impl Material {
 pub struct C_Renderable {
     pub material: Material,
     pub rect: Rect<i32>,
-    pub modulate: colors::Color,
+    pub modulate: colors::Color, // @Redundant: we're already passing color to render_texture_ws! Do we care about this?
     pub z_index: render::Z_Index,
 }
 

@@ -189,13 +189,14 @@ pub fn draw_batches(
     lights: &Lights,
     cfg: &cfg::Config,
     frame_alloc: &mut temp::Temp_Allocator,
+    shadows: HashMap<Texture_Handle, Vec<(Transform2D, Rect<i32>)>>,
 ) {
     trace!("draw_all_batches");
 
     let enable_shaders = Cfg_Var::<bool>::new("engine/rendering/enable_shaders", cfg).read(cfg);
 
     // for each Z-index...
-    for tex_map in batches.textures_ws.values_mut() {
+    for (z_index, tex_map) in &mut batches.textures_ws {
         // for each texture/shader...
         for (material, (vbuffer, tex_props)) in tex_map {
             let n_texs = tex_props.len();
@@ -205,6 +206,66 @@ pub fn draw_batches(
             }
 
             let texture = gres.get_texture(material.texture);
+
+            // @Temporary
+            if *z_index >= 0 {
+                if let Some(shad) = shadows.get(&material.texture) {
+                    let mut vbuf = render::start_draw_quads(shad.len());
+                    for (transform, tex_rect) in shad {
+                        let uv: Rect<f32> = (*tex_rect).into();
+                        let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
+                        let render_transform = *transform;
+
+                        let color = colors::rgba(0, 0, 0, 155);
+
+                        // Note: beware of the order of multiplications!
+                        // Scaling the local positions must be done BEFORE multiplying the matrix!
+                        let p1 = render_transform * (tex_size * v2!(-0.5, -0.5));
+                        let p2 = render_transform * (tex_size * v2!(0.5, -0.5));
+                        let p3 = render_transform * (tex_size * v2!(0.5, 0.5));
+                        let p4 = render_transform * (tex_size * v2!(-0.5, 0.5));
+
+                        let mut v1 = render::new_vertex(p1, color, v2!(uv.x, uv.y));
+                        let mut v2 = render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
+                        let mut v3 =
+                            render::new_vertex(p3, color, v2!(uv.x + uv.width, uv.y + uv.height));
+                        let mut v4 = render::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
+
+                        // TODO
+                        let light_pos = v2!(0., 0.);
+                        let d1 = light_pos - p1.into();
+                        let d2 = light_pos - p2.into();
+                        let d3 = light_pos - p3.into();
+                        let d4 = light_pos - p4.into();
+
+                        let mut v =
+                            vec![(d1, &mut v1), (d2, &mut v2), (d3, &mut v3), (d4, &mut v4)];
+
+                        v.sort_by(|(d1, _), (d2, _)| {
+                            d1.magnitude2().partial_cmp(&d2.magnitude2()).unwrap()
+                        });
+                        let max_d_sqr = v[0].0.magnitude2();
+                        use crate::common::math::lerp;
+
+                        for (d, v) in v.into_iter() {
+                            v.position -=
+                                (lerp(0.0, 1.0, d.magnitude2() / max_d_sqr - 1.0) * d).into();
+                        }
+
+                        //v1.position -= d1.into();
+                        //v2.position -= d2.into();
+
+                        render::add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
+                    }
+                    render::backend::render_vbuf_ws_texture(
+                        window,
+                        &vbuf,
+                        &Transform2D::default(),
+                        camera,
+                        texture,
+                    );
+                }
+            }
 
             // @Temporary
             let shader = if enable_shaders {

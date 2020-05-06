@@ -450,10 +450,22 @@ where
         let lv_batches = &mut game_state.level_batches;
         let window = &mut game_state.window;
         let shader_cache = &mut game_state.engine_state.shader_cache;
+
         game_state
             .gameplay_system
             .levels
             .foreach_active_level(|level| {
+
+                let mut shadows = HashMap::new();
+                {
+                    use ecs_engine::ecs::components::{base::*,gfx::*};
+                    foreach_entity!(&level.world, +C_Renderable, +C_Spatial2D, +C_Animated_Sprite, |entity| {
+                        let rend = level.world.get_component::<C_Renderable>(entity).unwrap();
+                        let tra = &level.world.get_component::<C_Spatial2D>(entity).unwrap().transform;
+                        shadows.entry(rend.material.texture).or_insert_with(Vec::default).push((tra.clone(), rend.rect));
+                    });
+                }
+                
                 gfx::render::batcher::draw_batches(
                     window,
                     &gres,
@@ -463,6 +475,7 @@ where
                     &level.lights,
                     cfg,
                     frame_alloc,
+                    shadows
                 );
             });
         gfx::render::batcher::draw_batches(
@@ -474,6 +487,7 @@ where
             &ecs_engine::gfx::light::Lights::default(),
             cfg,
             frame_alloc,
+            HashMap::default()
         );
     }
 
