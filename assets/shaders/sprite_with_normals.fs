@@ -74,7 +74,7 @@ void main() {
 
         float dist = length(frag_to_light);
         //float atten = float(dist < light.radius) * 1.0 / (1.0 + dist * light.attenuation);
-        float atten = max(0.0, lerp(1.0, 0.0, dist / light.radius));
+        float atten = max(0.0, mix(1.0, 0.0, dist / light.radius));
 
         color += vec4(result, 0.0) * atten;
     }

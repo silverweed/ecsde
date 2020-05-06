@@ -461,6 +461,7 @@ where
                     shader_cache,
                     &level.get_camera().transform,
                     &level.lights,
+                    cfg,
                     frame_alloc,
                 );
             });
@@ -471,6 +472,7 @@ where
             shader_cache,
             &Transform2D::default(),
             &ecs_engine::gfx::light::Lights::default(),
+            cfg,
             frame_alloc,
         );
     }

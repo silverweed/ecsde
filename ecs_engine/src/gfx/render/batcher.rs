@@ -1,4 +1,5 @@
 use crate::alloc::temp;
+use crate::cfg::{self, Cfg_Var};
 use crate::common::angle::Angle;
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
@@ -186,9 +187,12 @@ pub fn draw_batches(
     shader_cache: &mut Shader_Cache,
     camera: &Transform2D,
     lights: &Lights,
+    cfg: &cfg::Config,
     frame_alloc: &mut temp::Temp_Allocator,
 ) {
     trace!("draw_all_batches");
+
+    let enable_shaders = Cfg_Var::<bool>::new("engine/rendering/enable_shaders", cfg).read(cfg);
 
     // for each Z-index...
     for tex_map in batches.textures_ws.values_mut() {
@@ -203,37 +207,58 @@ pub fn draw_batches(
             let texture = gres.get_texture(material.texture);
 
             // @Temporary
-            let shader = material.shader.map(|id| {
-                let shader = shader_cache.get_shader_mut(Some(id));
-                if material.normals.is_some() {
-                    unsafe {
-                        set_uniform_texture_workaround(shader, gres, "normals", material.normals);
+            let shader = if enable_shaders {
+                material.shader.map(|id| {
+                    let shader = shader_cache.get_shader_mut(Some(id));
+                    if material.normals.is_some() {
+                        unsafe {
+                            set_uniform_texture_workaround(
+                                shader,
+                                gres,
+                                "normals",
+                                material.normals,
+                            );
+                        }
                     }
-                }
-                fn col2v3(color: Color) -> sfml::graphics::glsl::Vec3 {
-                    let c = sfml::graphics::glsl::Vec4::from(sfml::graphics::Color::from(color));
-                    sfml::graphics::glsl::Vec3::new(c.x, c.y, c.z)
-                }
-                shader.set_uniform_vec3("ambient_light.color", col2v3(lights.ambient_light.color));
-                shader.set_uniform_float("ambient_light.intensity", lights.ambient_light.intensity);
-                shader.set_uniform_current_texture("texture");
-                for (i, pl) in lights.point_lights.iter().enumerate() {
-                    shader.set_uniform_vec2(
-                        &format!("point_lights[{}].position", i),
-                        sfml::graphics::glsl::Vec2::new(pl.position.x, pl.position.y),
+                    fn col2v3(color: Color) -> sfml::graphics::glsl::Vec3 {
+                        let c =
+                            sfml::graphics::glsl::Vec4::from(sfml::graphics::Color::from(color));
+                        sfml::graphics::glsl::Vec3::new(c.x, c.y, c.z)
+                    }
+                    shader.set_uniform_vec3(
+                        "ambient_light.color",
+                        col2v3(lights.ambient_light.color),
                     );
-                    shader
-                        .set_uniform_vec3(&format!("point_lights[{}].color", i), col2v3(pl.color));
-                    shader.set_uniform_float(&format!("point_lights[{}].radius", i), pl.radius);
                     shader.set_uniform_float(
-                        &format!("point_lights[{}].attenuation", i),
-                        pl.attenuation,
+                        "ambient_light.intensity",
+                        lights.ambient_light.intensity,
                     );
-                }
-                shader.set_uniform_float("shininess", Material::decode_shininess(material.shininess));
-                shader.set_uniform_vec3("specular_color", col2v3(material.specular_color));
-                shader
-            });
+                    shader.set_uniform_current_texture("texture");
+                    for (i, pl) in lights.point_lights.iter().enumerate() {
+                        shader.set_uniform_vec2(
+                            &format!("point_lights[{}].position", i),
+                            sfml::graphics::glsl::Vec2::new(pl.position.x, pl.position.y),
+                        );
+                        shader.set_uniform_vec3(
+                            &format!("point_lights[{}].color", i),
+                            col2v3(pl.color),
+                        );
+                        shader.set_uniform_float(&format!("point_lights[{}].radius", i), pl.radius);
+                        shader.set_uniform_float(
+                            &format!("point_lights[{}].attenuation", i),
+                            pl.attenuation,
+                        );
+                    }
+                    shader.set_uniform_float(
+                        "shininess",
+                        Material::decode_shininess(material.shininess),
+                    );
+                    shader.set_uniform_vec3("specular_color", col2v3(material.specular_color));
+                    shader
+                })
+            } else {
+                None
+            };
 
             let n_threads = rayon::current_num_threads();
             let n_texs_per_chunk = cmp::min(n_texs, n_texs / n_threads + 1);
@@ -258,6 +283,7 @@ pub fn draw_batches(
             }
             debug_assert!(n_vertices <= vbuffer.vbuf.vertex_count());
 
+            let has_shader = shader.is_some();
             {
                 trace!("tex_batch_ws");
                 tex_props
@@ -269,7 +295,7 @@ pub fn draw_batches(
                             let Texture_Props_Ws {
                                 tex_rect,
                                 transform,
-                                ..
+                                color,
                             } = tex_prop;
 
                             let uv: Rect<f32> = (*tex_rect).into();
@@ -277,7 +303,11 @@ pub fn draw_batches(
                             let render_transform = *transform;
 
                             // Encode rotation in color
-                            let color = encode_rot_as_color(transform.rotation());
+                            let color = if has_shader {
+                                encode_rot_as_color(transform.rotation())
+                            } else {
+                                *color
+                            };
 
                             // Note: beware of the order of multiplications!
                             // Scaling the local positions must be done BEFORE multiplying the matrix!
