@@ -95,6 +95,10 @@ fn init_demo_entities(
 ) {
     #![allow(warnings)]
     use ecs_engine::common::angle;
+    use ecs_engine::resources::gfx::shader_path;
+
+    const SPRITE_NORMAL_SHADER_NAME: &str = "sprite_with_normals";
+    let sprite_normal_shader = rsrc.load_shader(&shader_path(&env, SPRITE_NORMAL_SHADER_NAME));
 
     let camera = level.world.new_entity();
     {

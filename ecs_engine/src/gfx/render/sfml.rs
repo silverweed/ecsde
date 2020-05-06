@@ -14,6 +14,7 @@ use sfml::system::Vector2f;
 pub type Vertex_Buffer = sfml::graphics::VertexArray;
 pub type Vertex = sfml::graphics::Vertex;
 pub type Image = sfml::graphics::Image;
+pub type Shader<'texture> = sfml::graphics::Shader<'texture>;
 
 sf_wrap!(Texture, sfml::graphics::Texture);
 sf_wrap!(Font, sfml::graphics::Font);

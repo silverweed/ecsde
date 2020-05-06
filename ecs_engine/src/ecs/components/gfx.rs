@@ -7,6 +7,7 @@ use crate::resources;
 #[derive(Copy, Clone, Debug)]
 pub struct C_Renderable {
     pub texture: resources::gfx::Texture_Handle,
+    pub shader: resources::gfx::Shader_Handle,
     pub rect: Rect<i32>,
     pub modulate: colors::Color,
     pub z_index: render::Z_Index,
@@ -16,6 +17,7 @@ impl Default for C_Renderable {
     fn default() -> Self {
         C_Renderable {
             texture: resources::gfx::Texture_Handle::default(),
+            shader: resources::gfx::Shader_Handle::default(),
             rect: Rect::new(0, 0, 0, 0),
             modulate: colors::WHITE,
             z_index: 0,

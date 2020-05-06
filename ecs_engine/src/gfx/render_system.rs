@@ -54,6 +54,7 @@ pub fn update(args: Render_System_Update_Args) {
 
         let C_Renderable {
             texture: tex_id,
+            shader,
             rect: src_rect,
             modulate,
             z_index,
@@ -75,6 +76,7 @@ pub fn update(args: Render_System_Update_Args) {
         render::render_texture_ws(
             batches,
             *tex_id,
+            *shader,
             src_rect,
             *modulate,
             &spatial.transform,

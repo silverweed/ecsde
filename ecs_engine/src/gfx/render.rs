@@ -5,7 +5,7 @@ use crate::common::shapes::Circle;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::gfx::window::Window_Handle;
-use crate::resources::gfx::Texture_Handle;
+use crate::resources::gfx::{Shader_Handle, Texture_Handle};
 use std::convert::Into;
 
 pub mod batcher;
@@ -21,6 +21,7 @@ pub type Z_Index = i8;
 pub type Text<'a> = backend::Text<'a>;
 pub type Font<'a> = backend::Font<'a>;
 pub type Texture<'a> = backend::Texture<'a>;
+pub type Shader<'a> = backend::Shader<'a>;
 pub type Image = backend::Image;
 
 pub type Vertex_Buffer = backend::Vertex_Buffer;
@@ -72,13 +73,14 @@ pub fn render_circle_ws<P>(
 pub fn render_texture_ws(
     batches: &mut batcher::Batches,
     texture: Texture_Handle,
+    shader: Shader_Handle,
     tex_rect: &Rect<i32>,
     color: Color,
     transform: &Transform2D,
     z_index: Z_Index,
 ) {
     trace!("render_texture_ws");
-    batcher::add_texture_ws(batches, texture, tex_rect, color, transform, z_index);
+    batcher::add_texture_ws(batches, texture, shader, tex_rect, color, transform, z_index);
 }
 
 pub fn render_text<P>(

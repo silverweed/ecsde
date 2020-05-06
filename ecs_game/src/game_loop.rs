@@ -1003,6 +1003,7 @@ fn debug_draw_entities_prev_frame_ghost(
         let frame_starting_pos = ecs_world.get_component::<C_Spatial2D>(entity).unwrap().frame_starting_pos;
         let C_Renderable {
             texture,
+            shader,
             rect,
             modulate,
             z_index,
@@ -1027,7 +1028,7 @@ fn debug_draw_entities_prev_frame_ghost(
                 modulate.b,
                 200 - 10 * (debug_data.prev_positions.len() - i as usize) as u8,
             );
-            render::render_texture_ws(batches, texture, &rect, color, &transform, z_index);
+            render::render_texture_ws(batches, texture, shader, &rect, color, &transform, z_index);
         }
     });
 }
