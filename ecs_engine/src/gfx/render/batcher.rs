@@ -3,10 +3,10 @@ use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
-use crate::gfx::render::{self, Vertex};
+use crate::gfx::render::{self, Vertex, Texture, Shader};
 use crate::ecs::components::gfx::Material;
 use crate::gfx::window::Window_Handle;
-use crate::resources::gfx::{Gfx_Resources, Shader_Cache};
+use crate::resources::gfx::{Gfx_Resources, Shader_Cache, Texture_Handle};
 use rayon::prelude::*;
 use std::cmp;
 use std::collections::{BTreeMap, HashMap};
@@ -154,6 +154,13 @@ pub fn clear_batches(batches: &mut Batches) {
         .for_each(|m| m.values_mut().for_each(|(_, v)| v.clear()));
 }
 
+// !!! @Hack !!! to make set_uniform_texture work until https://github.com/jeremyletang/rust-sfml/issues/213 is solved
+#[allow(unused_unsafe)]
+unsafe fn set_uniform_texture_workaround(shader: &mut Shader, gres: &Gfx_Resources, name: &str, texture: Texture_Handle) {
+    let tex = unsafe { std::mem::transmute::<&Texture, *const Texture<'static>>(gres.get_texture(texture)) };
+    shader.set_uniform_texture(name, unsafe { &*tex });
+}
+
 pub fn draw_batches(
     window: &mut Window_Handle,
     gres: &Gfx_Resources,
@@ -177,6 +184,7 @@ pub fn draw_batches(
             let texture = gres.get_texture(material.texture);
             let shader = material.shader.map(|id| {
                 let shader = shader_cache.get_shader_mut(Some(id));
+                unsafe { set_uniform_texture_workaround(shader, gres, "normals", material.normals); }
                 shader.set_uniform_current_texture("texture");
                 shader
             });
