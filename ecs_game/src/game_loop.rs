@@ -460,6 +460,7 @@ where
                     lv_batches.get_mut(&level.id).unwrap(),
                     shader_cache,
                     &level.get_camera().transform,
+                    &level.lights,
                     frame_alloc,
                 );
             });
@@ -469,6 +470,7 @@ where
             &mut game_state.engine_state.global_batches,
             shader_cache,
             &Transform2D::default(),
+            &ecs_engine::gfx::light::Lights::default(),
             frame_alloc,
         );
     }

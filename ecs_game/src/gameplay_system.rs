@@ -1,5 +1,6 @@
 #![allow(warnings)] // @Temporary
 
+use super::levels::{Level, Levels};
 use super::systems::controllable_system::{self, C_Controllable};
 use super::systems::dumb_movement_system;
 use super::systems::ground_collision_calculation_system::Ground_Collision_Calculation_System;
@@ -39,56 +40,6 @@ use std::time::Duration;
 #[derive(Default, Copy, Clone)]
 pub struct Gameplay_System_Config {
     pub n_entities_to_spawn: usize,
-}
-
-// A Level is what gets loaded and unloaded
-pub struct Level {
-    pub id: String_Id,
-    pub world: Ecs_World,
-    pub chunks: World_Chunks,
-    pub cameras: Vec<Entity>,
-    pub active_camera: usize, // index inside 'cameras'
-}
-
-impl Level {
-    // @Temporary: we need to better decide how to handle cameras
-    pub fn get_camera(&self) -> &C_Camera2D {
-        self.world.get_components::<C_Camera2D>().next().unwrap()
-    }
-
-    // @Temporary
-    pub fn move_camera_to(&mut self, pos: Vec2f) {
-        self.world
-            .get_components_mut::<C_Camera2D>()
-            .next()
-            .unwrap()
-            .transform
-            .set_position_v(pos);
-    }
-}
-
-#[derive(Default)]
-pub struct Levels {
-    pub loaded_levels: Vec<Arc<Mutex<Level>>>,
-    pub active_levels: Vec<usize>, // indices inside 'loaded_levels'
-}
-
-impl Levels {
-    pub fn first_active_level(&self) -> Option<MutexGuard<Level>> {
-        self.active_levels
-            .get(0)
-            .map(|idx| self.loaded_levels[*idx].lock().unwrap())
-    }
-
-    #[inline]
-    pub fn foreach_active_level<F: FnMut(&mut Level)>(&self, mut f: F) {
-        for &idx in &self.active_levels {
-            let mut level = self.loaded_levels[idx]
-                .lock()
-                .unwrap_or_else(|err| fatal!("Failed to lock level {}: {}", idx, err));
-            f(&mut *level);
-        }
-    }
 }
 
 pub struct Gameplay_System {
@@ -300,7 +251,7 @@ impl Gameplay_System {
             camera.transform.translate_v(v);
 
             // DEBUG: center camera on player
-            return;
+            //return;
 
             foreach_entity!(&level.world, +C_Controllable, ~C_Camera2D, |moved| {
                 let pos = level
@@ -317,7 +268,7 @@ impl Gameplay_System {
 
                 camera
                     .transform
-                    .set_position_v(pos + Vec2f::new(-300., -300.));
+                    .set_position_v(pos + Vec2f::new(-120., -75.));
             });
         });
     }
@@ -464,17 +415,17 @@ fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration) {
     //spat.velocity.y = transl.y;
     //}
 
-    foreach_entity_enumerate!(ecs_world, +C_Spatial2D, |entity, i| {
+    foreach_entity_enumerate!(ecs_world, +C_Spatial2D, +C_Controllable, |entity, i| {
         let t = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
 
         //if i == 1 {
         //t.velocity = Vec2f::new(-50.0, 0.);
         //}
         {
-            //use ecs_engine::common::angle::deg;
-            //let speed = 90.0;
+            use ecs_engine::common::angle::deg;
+            let speed = 90.0;
             //if i == 1 {
-            //t.local_transform.rotate(deg(dt_secs * speed));
+            t.transform.rotate(deg(dt_secs * speed));
             //}
             //let prev_pos = t.local_transform.position();
             //t.local_transform.set_position(

@@ -8,6 +8,7 @@ extern crate ecs_engine;
 mod cmdline;
 mod directions;
 mod game_loop;
+mod levels;
 mod game_state;
 mod gameplay_system;
 mod input_utils;

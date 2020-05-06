@@ -4,3 +4,4 @@ pub mod paint_props;
 pub mod render;
 pub mod render_system;
 pub mod window;
+pub mod light;

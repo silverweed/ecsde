@@ -1,5 +1,6 @@
 use crate::gameplay_system::Gameplay_System_Config;
-use crate::gameplay_system::Level;
+use crate::levels::Level;
+use ecs_engine::gfx::light::{Point_Light, Lights};
 use crate::spatial::World_Chunks;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::dumb_movement_system::C_Dumb_Movement;
@@ -41,6 +42,7 @@ pub fn level_load_sync(
         cameras: vec![],
         active_camera: 0,
         chunks: World_Chunks::new(),
+        lights: Lights::default(),
     };
 
     linfo!("Loading level {} ...", level_id);
@@ -54,6 +56,7 @@ pub fn level_load_sync(
         &mut level,
         gs_cfg,
     );
+    init_demo_lights(&mut level.lights);
     calc_terrain_colliders(&mut level.world);
     fill_world_chunks(&mut level.chunks, &mut level.world);
     lok!(
@@ -86,6 +89,22 @@ fn register_all_components(world: &mut Ecs_World) {
 }
 
 // @Temporary
+fn init_demo_lights(
+    lights: &mut Lights,
+) {
+    lights.ambient_light.color = colors::rgb(200, 140, 180);
+    lights.ambient_light.intensity = 1.;
+
+    let light = Point_Light {
+        position: v2!(0., 0.),
+        radius: 100.,
+        attenuation: 0.0,
+        color: colors::YELLOW,
+    };
+    lights.add_point_light(light);
+}
+
+// @Temporary
 fn init_demo_entities(
     rsrc: &mut Gfx_Resources,
     shader_cache: &mut Shader_Cache,
@@ -103,11 +122,15 @@ fn init_demo_entities(
     let sprite_normal_shader =
         shader_cache.load_shader(&shader_path(&env, SPRITE_NORMAL_SHADER_NAME));
 
+    const SPRITE_FLAT_SHADER_NAME: &str = "sprite_flat";
+    let sprite_flat_shader =
+        shader_cache.load_shader(&shader_path(&env, SPRITE_FLAT_SHADER_NAME));
+
     let camera = level.world.new_entity();
     {
         let cam = level.world.add_component(camera, C_Camera2D::default());
-        //cam.transform.set_scale(2.5, 2.5);
-        cam.transform.set_position(-300., -300.);
+        cam.transform.set_scale(0.2, 0.2);
+        cam.transform.set_position(-120., -75.);
     }
     level.cameras.push(camera);
 
@@ -126,7 +149,11 @@ fn init_demo_entities(
         let rend = level.world.add_component(
             ground,
             C_Renderable {
-                material: Material::with_texture(rsrc.load_texture(&tex_path(&env, "ground.png"))),
+                material: Material {
+                    texture: rsrc.load_texture(&tex_path(&env, "ground.png")),
+                    shader: sprite_flat_shader,
+                    ..Default::default()
+                },
                 z_index: -1,
                 ..Default::default()
             },
@@ -161,7 +188,11 @@ fn init_demo_entities(
         let rend = level.world.add_component(
             gnd,
             C_Renderable {
-                material: Material::with_texture(rsrc.load_texture(&tex_path(&env, "ground2.png"))),
+                material: Material {
+                    texture: rsrc.load_texture(&tex_path(&env, "ground2.png")),
+                    shader: sprite_flat_shader,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
         );
@@ -204,7 +235,7 @@ fn init_demo_entities(
             rend.rect = Rect::new(0, 0, sw as i32 / (n_frames as i32), sh as i32);
             (sw, sh)
         };
-        if i == 1 {
+        if i == 0 {
             let ctr = level.world.add_component(
                 entity,
                 C_Controllable {
@@ -222,6 +253,8 @@ fn init_demo_entities(
                 t.transform.set_position(x * 50., 1. * y * 50.);
                 //t.local_transform.set_rotation(angle::deg(45. * i as f32));
                 //t.local_transform.set_scale(2., 4.);
+            } else {
+                t.transform.set_position(20., 20.);
             }
         }
         {
@@ -261,9 +294,9 @@ fn init_demo_entities(
                 },
             );
         }
-        level
-            .world
-            .add_component(entity, C_Dumb_Movement::default());
+        //level
+            //.world
+            //.add_component(entity, C_Dumb_Movement::default());
 
         #[cfg(debug_assertions)]
         {

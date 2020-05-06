@@ -1,9 +1,11 @@
 use crate::alloc::temp;
 use crate::common::colors::{self, Color};
+use crate::common::angle::Angle;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::gfx::render::{self, Vertex, Texture, Shader};
+use crate::gfx::light::Lights;
 use crate::ecs::components::gfx::Material;
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Gfx_Resources, Shader_Cache, Texture_Handle};
@@ -161,12 +163,27 @@ unsafe fn set_uniform_texture_workaround(shader: &mut Shader, gres: &Gfx_Resourc
     shader.set_uniform_texture(name, unsafe { &*tex });
 }
 
+#[inline(always)]
+// NOTE: we're only using 2 bytes out of the 4 we have: we may fit more data in the future! (maybe an indexed color?)
+fn encode_rot_as_color(rot: Angle) -> Color {
+    const MAX_ENCODED: u32 = 65535;
+    let rad = rot.as_rad_0tau();
+    let encoded = (rad * MAX_ENCODED as f32 / std::f32::consts::PI * 0.5) as u32;
+    Color {
+        r: 0,
+        g: 0,
+        b: ((encoded >> 8) & 0xFF) as u8,
+        a: (encoded & 0xFF) as u8
+    }
+}
+
 pub fn draw_batches(
     window: &mut Window_Handle,
     gres: &Gfx_Resources,
     batches: &mut Batches,
     shader_cache: &mut Shader_Cache,
     camera: &Transform2D,
+    lights: &Lights,
     frame_alloc: &mut temp::Temp_Allocator,
 ) {
     trace!("draw_all_batches");
@@ -182,10 +199,27 @@ pub fn draw_batches(
             }
 
             let texture = gres.get_texture(material.texture);
+
+            // @Temporary
             let shader = material.shader.map(|id| {
                 let shader = shader_cache.get_shader_mut(Some(id));
-                unsafe { set_uniform_texture_workaround(shader, gres, "normals", material.normals); }
+                if material.normals.is_some() {
+                    unsafe { set_uniform_texture_workaround(shader, gres, "normals", material.normals); }
+                }
+                fn col2v3(color: Color) -> sfml::graphics::glsl::Vec3 {
+                    let c = sfml::graphics::glsl::Vec4::from(sfml::graphics::Color::from(color));
+                    sfml::graphics::glsl::Vec3::new(c.x, c.y, c.z)
+                }
+                shader.set_uniform_vec3("ambient_light.color", col2v3(lights.ambient_light.color));
+                shader.set_uniform_float("ambient_light.intensity", lights.ambient_light.intensity);
                 shader.set_uniform_current_texture("texture");
+                for (i, pl) in lights.point_lights.iter().enumerate() {
+                    shader.set_uniform_vec2(&format!("point_lights[{}].position", i), sfml::graphics::glsl::Vec2::new(
+                            pl.position.x, pl.position.y));
+                    shader.set_uniform_vec3(&format!("point_lights[{}].color", i), col2v3(pl.color));
+                    shader.set_uniform_float(&format!("point_lights[{}].radius", i), pl.radius);
+                    shader.set_uniform_float(&format!("point_lights[{}].attenuation", i), pl.attenuation);
+                }
                 shader
             });
 
@@ -222,14 +256,16 @@ pub fn draw_batches(
                         for (i, tex_prop) in tex_chunk.iter().enumerate() {
                             let Texture_Props_Ws {
                                 tex_rect,
-                                color,
+                                color: _,
                                 transform,
                             } = tex_prop;
 
-                            let color = *color;
                             let uv: Rect<f32> = (*tex_rect).into();
                             let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
                             let render_transform = *transform;
+
+                            // Encode rotation in color
+                            let color = encode_rot_as_color(transform.rotation());
 
                             // Note: beware of the order of multiplications!
                             // Scaling the local positions must be done BEFORE multiplying the matrix!
