@@ -2,6 +2,7 @@ use crate::alloc::temp;
 use crate::cfg::{self, Cfg_Var};
 use crate::common::angle::Angle;
 use crate::common::colors::{self, Color};
+use crate::common::math::lerp;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
@@ -10,7 +11,6 @@ use crate::gfx::light::Lights;
 use crate::gfx::render::{self, Shader, Texture, Vertex};
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Gfx_Resources, Shader_Cache, Texture_Handle};
-use crate::common::math::lerp;
 use rayon::prelude::*;
 use std::cmp;
 use std::collections::{BTreeMap, HashMap};
@@ -18,8 +18,8 @@ use std::collections::{BTreeMap, HashMap};
 // @Cleanup
 type Vertex_Buffer = sfml::graphics::VertexBuffer;
 use sfml::graphics::PrimitiveType;
-use sfml::graphics::VertexBufferUsage;
 use sfml::graphics::RenderTarget;
+use sfml::graphics::VertexBufferUsage;
 
 #[derive(Default)]
 pub struct Batches {
@@ -172,7 +172,7 @@ unsafe fn set_uniform_texture_workaround(
 #[inline(always)]
 // NOTE: we're only using 2 bytes out of the 4 we have: we may fit more data in the future! (maybe an indexed color?)
 fn encode_rot_as_color(rot: Angle) -> Color {
-    const MAX_ENCODED: u32 = 65535;
+    const MAX_ENCODED: u32 = std::u16::MAX as u32;
     let rad = rot.as_rad_0tau();
     let encoded = (rad * MAX_ENCODED as f32 / std::f32::consts::PI * 0.5) as u32;
     Color {
@@ -192,17 +192,16 @@ pub fn draw_batches(
     lights: &Lights,
     cfg: &cfg::Config,
     frame_alloc: &mut temp::Temp_Allocator,
-    shadows: HashMap<Texture_Handle, Vec<(Transform2D, Rect<i32>)>>,
 ) {
     trace!("draw_all_batches");
 
     let enable_shaders = Cfg_Var::<bool>::new("engine/rendering/enable_shaders", cfg).read(cfg);
 
     // for each Z-index...
-    for (z_index, tex_map) in &mut batches.textures_ws {
+    for tex_map in batches.textures_ws.values_mut() {
         // for each texture/shader...
         for (material, (vbuffer, tex_props)) in tex_map {
-            let n_texs = tex_props.len(); 
+            let n_texs = tex_props.len();
             if n_texs == 0 {
                 // @Speed: right now we don't delete this batch from the tex_map, but it may be worth doing so.
                 continue;
@@ -264,11 +263,11 @@ pub fn draw_batches(
                 None
             };
 
-            let cast_shadows = *z_index >= 0; // @Temporary
+            let cast_shadows = material.cast_shadows;
             let n_threads = rayon::current_num_threads();
             let n_texs_per_chunk = cmp::min(n_texs, n_texs / n_threads + 1);
 
-            debug_assert!(n_texs * 4 * if cast_shadows { 2 } else { 1 }<= std::u32::MAX as usize);
+            debug_assert!(n_texs * 4 * if cast_shadows { 2 } else { 1 } <= std::u32::MAX as usize);
             let n_vertices_without_shadows = (n_texs * 4) as u32;
             let n_vertices = n_vertices_without_shadows * if cast_shadows { 2 } else { 1 };
 
@@ -279,7 +278,8 @@ pub fn draw_batches(
                 // current buffer with "null" vertices.
                 vertices.alloc_additional_uninit(n_vertices.max(vbuffer.n_elems) as usize);
             }
-            let (vertices, shadow_vertices) = vertices.split_at_mut(n_vertices_without_shadows as usize);
+            let (vertices, shadow_vertices) =
+                vertices.split_at_mut(n_vertices_without_shadows as usize);
             let vert_chunks = vertices[..n_vertices_without_shadows as usize]
                 .par_iter_mut()
                 .chunks(n_texs_per_chunk * 4);
@@ -293,7 +293,10 @@ pub fn draw_batches(
             {
                 trace!("tex_batch_ws");
                 if cast_shadows {
-                    let shadow_chunks = shadow_vertices[..(n_vertices - n_vertices_without_shadows) as usize].par_iter_mut().chunks(n_texs_per_chunk * 4);
+                    let shadow_chunks = shadow_vertices
+                        [..(n_vertices - n_vertices_without_shadows) as usize]
+                        .par_iter_mut()
+                        .chunks(n_texs_per_chunk * 4);
                     tex_props
                         .par_iter()
                         .chunks(n_texs_per_chunk)
@@ -308,7 +311,8 @@ pub fn draw_batches(
                                 } = tex_prop;
 
                                 let uv: Rect<f32> = (*tex_rect).into();
-                                let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
+                                let tex_size =
+                                    Vec2f::new(tex_rect.width as _, tex_rect.height as _);
                                 let render_transform = *transform;
 
                                 // Encode rotation in color
@@ -326,13 +330,15 @@ pub fn draw_batches(
                                 let p4 = render_transform * (tex_size * v2!(-0.5, 0.5));
 
                                 let mut v1 = render::new_vertex(p1, color, v2!(uv.x, uv.y));
-                                let mut v2 = render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
+                                let mut v2 =
+                                    render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
                                 let mut v3 = render::new_vertex(
                                     p3,
                                     color,
                                     v2!(uv.x + uv.width, uv.y + uv.height),
                                 );
-                                let mut v4 = render::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
+                                let mut v4 =
+                                    render::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
 
                                 *vert_chunk[i * 4] = v1;
                                 *vert_chunk[i * 4 + 1] = v2;
@@ -342,7 +348,9 @@ pub fn draw_batches(
                                 // @Incomplete:
                                 // Should we support multiple shadows per entity? In that case, they should be
                                 // probably calculated beforehand
-                                if let Some(light) = lights.get_nearest_point_light(transform.position()) {
+                                if let Some(light) =
+                                    lights.get_nearest_point_light(transform.position())
+                                {
                                     let light_pos = light.position;
                                     let recp_radius2 = 1.0 / (light.radius * light.radius);
                                     let d1 = light_pos - p1;
@@ -350,24 +358,44 @@ pub fn draw_batches(
                                     let d3 = light_pos - p3;
                                     let d4 = light_pos - p4;
 
-                                    let distances2: [f32; 4] = [d1.magnitude2(), d2.magnitude2(), d3.magnitude2(), d4.magnitude2()];
-                                    let min_d_sqr = distances2.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+                                    let distances2: [f32; 4] = [
+                                        d1.magnitude2(),
+                                        d2.magnitude2(),
+                                        d3.magnitude2(),
+                                        d4.magnitude2(),
+                                    ];
+                                    let min_d_sqr = distances2
+                                        .iter()
+                                        .min_by(|a, b| a.partial_cmp(b).unwrap())
+                                        .unwrap();
 
-                                    v1.position -= (lerp(0.0, 1.0, distances2[0] / min_d_sqr - 1.0) * d1).into();
+                                    v1.position -=
+                                        (lerp(0.0, 1.0, distances2[0] / min_d_sqr - 1.0) * d1)
+                                            .into();
                                     let t = (1.0 - distances2[0] * recp_radius2).max(0.0);
-                                    v1.color = colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
+                                    v1.color =
+                                        colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
 
-                                    v2.position -= (lerp(0.0, 1.0, distances2[1] / min_d_sqr - 1.0) * d2).into();
+                                    v2.position -=
+                                        (lerp(0.0, 1.0, distances2[1] / min_d_sqr - 1.0) * d2)
+                                            .into();
                                     let t = (1.0 - distances2[1] * recp_radius2).max(0.0);
-                                    v2.color = colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
+                                    v2.color =
+                                        colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
 
-                                    v3.position -= (lerp(0.0, 1.0, distances2[2] / min_d_sqr - 1.0) * d3).into();
+                                    v3.position -=
+                                        (lerp(0.0, 1.0, distances2[2] / min_d_sqr - 1.0) * d3)
+                                            .into();
                                     let t = (1.0 - distances2[2] * recp_radius2).max(0.0);
-                                    v3.color = colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
+                                    v3.color =
+                                        colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
 
-                                    v4.position -= (lerp(0.0, 1.0, distances2[3] / min_d_sqr - 1.0) * d4).into();
+                                    v4.position -=
+                                        (lerp(0.0, 1.0, distances2[3] / min_d_sqr - 1.0) * d4)
+                                            .into();
                                     let t = (1.0 - distances2[3] * recp_radius2).max(0.0);
-                                    v4.color = colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
+                                    v4.color =
+                                        colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
 
                                     *shad_chunk[i * 4] = v1;
                                     *shad_chunk[i * 4 + 1] = v2;
@@ -390,7 +418,8 @@ pub fn draw_batches(
                                 } = tex_prop;
 
                                 let uv: Rect<f32> = (*tex_rect).into();
-                                let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
+                                let tex_size =
+                                    Vec2f::new(tex_rect.width as _, tex_rect.height as _);
                                 let render_transform = *transform;
 
                                 // Encode rotation in color

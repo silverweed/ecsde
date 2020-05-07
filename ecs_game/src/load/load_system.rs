@@ -242,6 +242,7 @@ fn init_demo_entities(
                         normals: rsrc.load_texture(&tex_path(&env, "jelly_n.png")),
                         shader: sprite_normal_shader,
                         shininess: Material::encode_shininess(10.0),
+                        cast_shadows: true,
                         ..Default::default()
                     },
                     modulate: if i == 1 {
