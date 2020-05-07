@@ -54,13 +54,17 @@ impl<'l> Shader_Cache<'l> {
             Entry::Vacant(v) => {
                 let vs_name = format!("{}.vs", shader_name);
                 let fs_name = format!("{}.fs", shader_name);
-                let res = self
-                    .loader
-                    .load(&(vs_name, fs_name))
-                    .unwrap_or_else(|err| fatal!("Error loading {}: {}", shader_name, err));
-                v.insert(res);
-                lok!("Loaded shader {}", shader_name);
-                Some(id)
+                match self.loader.load(&(vs_name, fs_name)) {
+                    Ok(res) => {
+                        v.insert(res);
+                        lok!("Loaded shader {}", shader_name);
+                        Some(id)
+                    }
+                    Err(err) => {
+                        lerr!("Error loading {}: {}", shader_name, err);
+                        None
+                    }
+                }
             }
         }
     }
