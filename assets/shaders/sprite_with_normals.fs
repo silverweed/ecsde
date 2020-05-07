@@ -27,10 +27,10 @@ uniform vec3 specular_color;
 varying vec2 world_pos;
 
 float decode_rot(vec4 color) {
-    uint r = uint(255.0 * color.r);
-    uint g = uint(255.0 * color.g);
-    uint b = uint(255.0 * color.b);
-    uint a = uint(255.0 * color.a);
+    int r = int(255.0 * color.r);
+    int g = int(255.0 * color.g);
+    int b = int(255.0 * color.b);
+    int a = int(255.0 * color.a);
 
     return float((r << 24) | (g << 16) | (b << 8) | a) / float(MAX_ENCODED_ANGLE) * 2.0 * PI;
 }
