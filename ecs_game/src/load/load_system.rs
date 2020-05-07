@@ -121,6 +121,20 @@ fn init_demo_lights(lights: &mut Lights) {
         color: colors::BLUE,
     };
     lights.add_point_light(light);
+    let light = Point_Light {
+        position: v2!(250., 330.),
+        radius: 100.,
+        attenuation: 0.01,
+        color: colors::AQUA,
+    };
+    lights.add_point_light(light);
+    let light = Point_Light {
+        position: v2!(130., 290.),
+        radius: 100.,
+        attenuation: 0.01,
+        color: colors::FUCHSIA,
+    };
+    lights.add_point_light(light);
 }
 
 // @Temporary

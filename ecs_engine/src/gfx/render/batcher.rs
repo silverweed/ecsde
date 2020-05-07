@@ -2,7 +2,7 @@ use crate::alloc::temp;
 use crate::cfg::{self, Cfg_Var};
 use crate::common::angle::Angle;
 use crate::common::colors::{self, Color};
-use crate::common::math::lerp;
+use crate::common::math::{lerp, lerp_clamped};
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
@@ -283,15 +283,18 @@ pub fn draw_batches(
 
             let cast_shadows = material.cast_shadows;
             // @Temporary
-            let mut shadows = vec![]; // @Speed!
+            // @Speed! We can't use the temp array as it's not Send! Maybe we should make it Send (at least a read-only version of it)?
+            let mut shadows = vec![];
             if cast_shadows {
                 for tex in tex_props.iter() {
                     let mut nearby_point_lights = Vec::with_capacity(4); // @Speed!
-                                                                         // @Speed: should lights be spatially accelerated?
-                    lights.get_all_point_lights_within(
+
+                    // @Speed: should lights be spatially accelerated?
+                    lights.get_all_point_lights_sorted_by_distance_within(
                         tex.transform.position(),
                         10000.,
                         &mut nearby_point_lights,
+                        4,
                     );
                     nearby_point_lights.resize(4, crate::gfx::light::Point_Light::default());
                     shadows.push(nearby_point_lights);
@@ -389,10 +392,10 @@ pub fn draw_batches(
                                     debug_assert!(light_idx < 4);
                                     let light_pos = light.position;
                                     let recp_radius2 = 1.0 / (light.radius * light.radius);
-                                    let mut v1 = v1.clone();
-                                    let mut v2 = v2.clone();
-                                    let mut v3 = v3.clone();
-                                    let mut v4 = v4.clone();
+                                    let mut v1 = v1;
+                                    let mut v2 = v2;
+                                    let mut v3 = v3;
+                                    let mut v4 = v4;
                                     let d1 = light_pos - p1;
                                     let d2 = light_pos - p2;
                                     let d3 = light_pos - p3;
@@ -410,28 +413,32 @@ pub fn draw_batches(
                                         .unwrap();
 
                                     v1.position -=
-                                        (lerp(0.0, 1.0, dist2[0] / min_d_sqr - 1.0) * d1).into();
+                                        (lerp_clamped(0.0, 1.0, dist2[0] / min_d_sqr - 1.0) * d1)
+                                            .into();
                                     let t = (1.0 - dist2[0] * recp_radius2).max(0.0);
                                     v1.color =
-                                        colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
+                                        colors::rgba(0, 0, 0, lerp(0.0, 170.0, t * t) as u8).into();
 
                                     v2.position -=
-                                        (lerp(0.0, 1.0, dist2[1] / min_d_sqr - 1.0) * d2).into();
+                                        (lerp_clamped(0.0, 1.0, dist2[1] / min_d_sqr - 1.0) * d2)
+                                            .into();
                                     let t = (1.0 - dist2[1] * recp_radius2).max(0.0);
                                     v2.color =
-                                        colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
+                                        colors::rgba(0, 0, 0, lerp(0.0, 170.0, t * t) as u8).into();
 
                                     v3.position -=
-                                        (lerp(0.0, 1.0, dist2[2] / min_d_sqr - 1.0) * d3).into();
+                                        (lerp_clamped(0.0, 1.0, dist2[2] / min_d_sqr - 1.0) * d3)
+                                            .into();
                                     let t = (1.0 - dist2[2] * recp_radius2).max(0.0);
                                     v3.color =
-                                        colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
+                                        colors::rgba(0, 0, 0, lerp(0.0, 170.0, t * t) as u8).into();
 
                                     v4.position -=
-                                        (lerp(0.0, 1.0, dist2[3] / min_d_sqr - 1.0) * d4).into();
+                                        (lerp_clamped(0.0, 1.0, dist2[3] / min_d_sqr - 1.0) * d4)
+                                            .into();
                                     let t = (1.0 - dist2[3] * recp_radius2).max(0.0);
                                     v4.color =
-                                        colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
+                                        colors::rgba(0, 0, 0, lerp(0.0, 170.0, t * t) as u8).into();
 
                                     *shadow_chunk[4 * light_idx] = v1;
                                     *shadow_chunk[4 * light_idx + 1] = v2;

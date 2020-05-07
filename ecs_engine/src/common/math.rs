@@ -37,7 +37,14 @@ where
     }
 }
 
+#[inline]
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a * (1.0 - t) + b * t
+}
+
+#[inline]
+pub fn lerp_clamped(a: f32, b: f32, t: f32) -> f32 {
+    let t = clamp(t, 0., 1.);
     a * (1.0 - t) + b * t
 }
 

@@ -238,7 +238,8 @@ impl<T> Drop for Read_Only_Temp_Array<T> {
         #[cfg(debug_assertions)]
         {
             assert_eq!(
-                unsafe { (*self.parent_allocator).gen }, self.gen,
+                unsafe { (*self.parent_allocator).gen },
+                self.gen,
                 "Exclusive_Temp_Array accessed after free!"
             );
         }

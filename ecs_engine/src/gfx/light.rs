@@ -77,8 +77,27 @@ impl Lights {
         nearest
     }
 
-    pub fn get_all_point_lights_within<E: Extend<Point_Light>>(&self, pos: Vec2f, radius: f32, result: &mut E) {
+    pub fn get_all_point_lights_sorted_by_distance_within<E: Extend<Point_Light>>(
+        &self,
+        pos: Vec2f,
+        radius: f32,
+        result: &mut E,
+        at_most: usize,
+    ) {
         let radius2 = radius * radius;
-        result.extend(self.point_lights[..self.n_actual_point_lights].iter().filter(|pl| pl.position.distance2(pos) < radius2).cloned());
+        // @Speed
+        let mut sorted = self.point_lights[..self.n_actual_point_lights].to_vec();
+        sorted.sort_by(|a, b| {
+            a.position
+                .distance2(pos)
+                .partial_cmp(&b.position.distance2(pos))
+                .unwrap()
+        });
+        result.extend(
+            sorted
+                .into_iter()
+                .filter(|pl| pl.position.distance2(pos) < radius2)
+                .take(at_most),
+        );
     }
 }
