@@ -398,7 +398,7 @@ pub fn draw_batches(
                                     let d3 = light_pos - p3;
                                     let d4 = light_pos - p4;
 
-                                    let distances2: [f32; 4] = [
+                                    let dist2: [f32; 4] = [
                                         d1.magnitude2(),
                                         d2.magnitude2(),
                                         d3.magnitude2(),
