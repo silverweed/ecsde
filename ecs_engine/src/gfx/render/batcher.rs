@@ -21,10 +21,15 @@ use sfml::graphics::PrimitiveType;
 use sfml::graphics::RenderTarget;
 use sfml::graphics::VertexBufferUsage;
 
+struct Texture_Batch {
+    pub vbuffer: Vertex_Buffer_Holder,
+    pub shadow_vbuffer: Option<Vertex_Buffer_Holder>,
+    pub tex_props: Vec<Texture_Props_Ws>,
+}
+
 #[derive(Default)]
 pub struct Batches {
-    textures_ws:
-        BTreeMap<render::Z_Index, HashMap<Material, (Vertex_Buffer_Holder, Vec<Texture_Props_Ws>)>>,
+    textures_ws: BTreeMap<render::Z_Index, HashMap<Material, Texture_Batch>>,
 }
 
 struct Vertex_Buffer_Holder {
@@ -95,18 +100,6 @@ impl Vertex_Buffer_Holder {
 
         self.vbuf = new_vbuf;
     }
-
-    pub fn clear_from(&mut self, from: u32) {
-        if from >= self.vbuf.vertex_count() {
-            return;
-        }
-        // @Speed
-        let null_vertex: Vertex =
-            Vertex::new(v2!(0., 0.), colors::TRANSPARENT.into(), v2!(0., 0.).into());
-        let vertices = vec![null_vertex; (self.vbuf.vertex_count() - from) as usize];
-        ldebug!("cleared {}", vertices.len());
-        self.vbuf.update(&vertices, from);
-    }
 }
 
 struct Texture_Props_Ws {
@@ -137,16 +130,25 @@ pub(super) fn add_texture_ws(
             .entry(material)
             .or_insert_with(|| {
                 ldebug!("creating buffer for material {:?}", material,);
-                (
-                    Vertex_Buffer_Holder::with_initial_vertex_count(
+                Texture_Batch {
+                    vbuffer: Vertex_Buffer_Holder::with_initial_vertex_count(
                         48,
                         #[cfg(debug_assertions)]
                         material,
                     ),
-                    vec![],
-                )
+                    shadow_vbuffer: if material.cast_shadows {
+                        Some(Vertex_Buffer_Holder::with_initial_vertex_count(
+                            48 * 4,
+                            #[cfg(debug_assertions)]
+                            material,
+                        ))
+                    } else {
+                        None
+                    },
+                    tex_props: vec![],
+                }
             })
-            .1
+            .tex_props
     };
 
     {
@@ -164,7 +166,7 @@ pub fn clear_batches(batches: &mut Batches) {
     batches
         .textures_ws
         .values_mut()
-        .for_each(|m| m.values_mut().for_each(|(_, v)| v.clear()));
+        .for_each(|m| m.values_mut().for_each(|batch| batch.tex_props.clear()));
 }
 
 // !!! @Hack !!! to make set_uniform_texture work until https://github.com/jeremyletang/rust-sfml/issues/213 is solved
@@ -212,7 +214,11 @@ pub fn draw_batches(
     // for each Z-index...
     for tex_map in batches.textures_ws.values_mut() {
         // for each texture/shader...
-        for (material, (vbuffer, tex_props)) in tex_map {
+        for (material, batch) in tex_map {
+            let vbuffer = &mut batch.vbuffer;
+            let shadow_vbuffer = &mut batch.shadow_vbuffer;
+            let tex_props = &mut batch.tex_props;
+
             let n_texs = tex_props.len();
             if n_texs == 0 {
                 // @Speed: right now we don't delete this batch from the tex_map, but it may be worth doing so.
@@ -279,16 +285,16 @@ pub fn draw_batches(
             // @Temporary
             let mut shadows = vec![]; // @Speed!
             if cast_shadows {
-                let mut tot_lights_pushed = 0;
                 for tex in tex_props.iter() {
                     let mut nearby_point_lights = Vec::with_capacity(4); // @Speed!
-                    // @Speed: should lights be spatially accelerated?
-                    lights.get_all_point_lights_within(tex.transform.position(), 10000., &mut nearby_point_lights);
+                                                                         // @Speed: should lights be spatially accelerated?
+                    lights.get_all_point_lights_within(
+                        tex.transform.position(),
+                        10000.,
+                        &mut nearby_point_lights,
+                    );
                     nearby_point_lights.resize(4, crate::gfx::light::Point_Light::default());
-                    // @Speed: is cloning a good idea? We have little data right now, so it seems ok to do.
-                    let n_lights = nearby_point_lights.len();
-                    shadows.push((tot_lights_pushed, nearby_point_lights));
-                    tot_lights_pushed += n_lights;
+                    shadows.push(nearby_point_lights);
                 }
             }
 
@@ -296,9 +302,12 @@ pub fn draw_batches(
             let n_texs_per_chunk = cmp::min(n_texs, n_texs / n_threads + 1);
 
             let n_vertices_without_shadows = (n_texs * 4) as u32;
-            debug_assert!(n_vertices_without_shadows as usize + (shadows.len() * 4 * 4) <= std::u32::MAX as usize);
-            let n_vertices = n_vertices_without_shadows + (shadows.len() * 4 * 4) as u32;
-            ldebug!("shadows.len = {}. n_vertices = {}", shadows.len(), n_vertices);
+            debug_assert!(
+                n_vertices_without_shadows as usize + (shadows.len() * 4 * 4)
+                    <= std::u32::MAX as usize
+            );
+            let n_shadow_vertices = (shadows.len() * 4 * 4) as u32;
+            let n_vertices = n_vertices_without_shadows + n_shadow_vertices;
 
             let mut vertices = temp::excl_temp_array(frame_alloc);
             unsafe {
@@ -313,17 +322,18 @@ pub fn draw_batches(
                 .par_iter_mut()
                 .chunks(n_texs_per_chunk * 4);
 
-            if n_vertices > vbuffer.vbuf.vertex_count() {
-                vbuffer.grow(n_vertices);
+            if n_vertices_without_shadows > vbuffer.vbuf.vertex_count() {
+                vbuffer.grow(n_vertices_without_shadows);
             }
-            ldebug!("vbuf size = {} / vcount = {}", vbuffer.n_elems, vbuffer.vbuf.vertex_count());
-            vbuffer.clear_from(n_vertices_without_shadows);
-            debug_assert!(n_vertices <= vbuffer.vbuf.vertex_count());
+            debug_assert!(n_vertices_without_shadows <= vbuffer.vbuf.vertex_count());
 
             let has_shader = shader.is_some();
             {
                 trace!("tex_batch_ws");
+
                 if cast_shadows {
+                    let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
+                    debug_assert!(n_shadow_vertices <= shadow_vbuffer.vbuf.vertex_count());
                     let shadows_per_chunk = n_texs_per_chunk * 4 * 4;
                     let shadow_chunks = shadow_vertices
                         [..(n_vertices - n_vertices_without_shadows) as usize]
@@ -362,27 +372,20 @@ pub fn draw_batches(
                                 let p4 = render_transform * (tex_size * v2!(-0.5, 0.5));
 
                                 let v1 = render::new_vertex(p1, color, v2!(uv.x, uv.y));
-                                let v2 =
-                                    render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
+                                let v2 = render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
                                 let v3 = render::new_vertex(
                                     p3,
                                     color,
                                     v2!(uv.x + uv.width, uv.y + uv.height),
                                 );
-                                let v4 =
-                                    render::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
+                                let v4 = render::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
 
                                 *vert_chunk[i * 4] = v1;
                                 *vert_chunk[i * 4 + 1] = v2;
                                 *vert_chunk[i * 4 + 2] = v3;
                                 *vert_chunk[i * 4 + 3] = v4;
 
-                                // @Incomplete:
-                                // Should we support multiple shadows per entity? In that case, they should be
-                                // probably calculated beforehand
-                                let (offset_into_shadow_buffer, point_lights) = &shadows[i];
-                                let offset_into_shadow_chunk = offset_into_shadow_buffer % shadows_per_chunk;
-                                for (light_idx, light) in point_lights.iter().enumerate() {
+                                for (light_idx, light) in shadows[i].iter().enumerate() {
                                     debug_assert!(light_idx < 4);
                                     let light_pos = light.position;
                                     let recp_radius2 = 1.0 / (light.radius * light.radius);
@@ -401,36 +404,32 @@ pub fn draw_batches(
                                         d3.magnitude2(),
                                         d4.magnitude2(),
                                     ];
-                                    let min_d_sqr = distances2
+                                    let min_d_sqr = dist2
                                         .iter()
                                         .min_by(|a, b| a.partial_cmp(b).unwrap())
                                         .unwrap();
 
                                     v1.position -=
-                                        (lerp(0.0, 1.0, distances2[0] / min_d_sqr - 1.0) * d1)
-                                            .into();
-                                    let t = (1.0 - distances2[0] * recp_radius2).max(0.0);
+                                        (lerp(0.0, 1.0, dist2[0] / min_d_sqr - 1.0) * d1).into();
+                                    let t = (1.0 - dist2[0] * recp_radius2).max(0.0);
                                     v1.color =
                                         colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
 
                                     v2.position -=
-                                        (lerp(0.0, 1.0, distances2[1] / min_d_sqr - 1.0) * d2)
-                                            .into();
-                                    let t = (1.0 - distances2[1] * recp_radius2).max(0.0);
+                                        (lerp(0.0, 1.0, dist2[1] / min_d_sqr - 1.0) * d2).into();
+                                    let t = (1.0 - dist2[1] * recp_radius2).max(0.0);
                                     v2.color =
                                         colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
 
                                     v3.position -=
-                                        (lerp(0.0, 1.0, distances2[2] / min_d_sqr - 1.0) * d3)
-                                            .into();
-                                    let t = (1.0 - distances2[2] * recp_radius2).max(0.0);
+                                        (lerp(0.0, 1.0, dist2[2] / min_d_sqr - 1.0) * d3).into();
+                                    let t = (1.0 - dist2[2] * recp_radius2).max(0.0);
                                     v3.color =
                                         colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
 
                                     v4.position -=
-                                        (lerp(0.0, 1.0, distances2[3] / min_d_sqr - 1.0) * d4)
-                                            .into();
-                                    let t = (1.0 - distances2[3] * recp_radius2).max(0.0);
+                                        (lerp(0.0, 1.0, dist2[3] / min_d_sqr - 1.0) * d4).into();
+                                    let t = (1.0 - dist2[3] * recp_radius2).max(0.0);
                                     v4.color =
                                         colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
 
@@ -492,18 +491,19 @@ pub fn draw_batches(
             }
 
             if cast_shadows {
-                vbuffer.update(shadow_vertices, n_vertices - n_vertices_without_shadows);
+                let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
+                shadow_vbuffer.update(shadow_vertices, n_shadow_vertices);
 
                 // @Temporary
                 window.raw_handle_mut().draw_vertex_buffer(
-                    &vbuffer.vbuf,
+                    &shadow_vbuffer.vbuf,
                     sfml::graphics::RenderStates {
                         texture: Some(texture),
                         transform: camera.get_matrix_sfml().inverse(),
                         ..sfml::graphics::RenderStates::default()
                     },
                 );
-            } 
+            }
 
             vbuffer.update(vertices, n_vertices_without_shadows);
 
