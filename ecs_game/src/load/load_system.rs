@@ -213,6 +213,7 @@ fn init_demo_entities(
                     shininess: Material::encode_shininess(0.2),
                     ..Default::default()
                 },
+                z_index: 1,
                 ..Default::default()
             },
         );

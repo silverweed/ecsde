@@ -340,36 +340,40 @@ pub fn draw_batches(
                                 *vert_chunk[i * 4 + 3] = v4;
 
                                 // @Incomplete:
-                                // we should be retrieving the nearest light position by querying the world.
                                 // Should we support multiple shadows per entity? In that case, they should be
                                 // probably calculated beforehand
-                                let light_pos = v2!(0., 0.);
-                                let d1 = light_pos - p1;
-                                let d2 = light_pos - p2;
-                                let d3 = light_pos - p3;
-                                let d4 = light_pos - p4;
+                                if let Some(light) = lights.get_nearest_point_light(transform.position()) {
+                                    let light_pos = light.position;
+                                    let recp_radius2 = 1.0 / (light.radius * light.radius);
+                                    let d1 = light_pos - p1;
+                                    let d2 = light_pos - p2;
+                                    let d3 = light_pos - p3;
+                                    let d4 = light_pos - p4;
 
-                                let v = [d1, d2, d3, d4];
+                                    let distances2: [f32; 4] = [d1.magnitude2(), d2.magnitude2(), d3.magnitude2(), d4.magnitude2()];
+                                    let min_d_sqr = distances2.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
 
-                                let max_d_sqr = v.iter().map(|d| 
-                                    d.magnitude2()
-                                ).min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+                                    v1.position -= (lerp(0.0, 1.0, distances2[0] / min_d_sqr - 1.0) * d1).into();
+                                    let t = (1.0 - distances2[0] * recp_radius2).max(0.0);
+                                    v1.color = colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
 
-                                const SHADOW_COLOR: sfml::graphics::Color = sfml::graphics::Color { r: 0, g: 0, b: 0, a: 150 };
+                                    v2.position -= (lerp(0.0, 1.0, distances2[1] / min_d_sqr - 1.0) * d2).into();
+                                    let t = (1.0 - distances2[1] * recp_radius2).max(0.0);
+                                    v2.color = colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
 
-                                v1.position -= (lerp(0.0, 1.0, d1.magnitude2() / max_d_sqr - 1.0) * d1).into();
-                                v1.color = SHADOW_COLOR;
-                                v2.position -= (lerp(0.0, 1.0, d2.magnitude2() / max_d_sqr - 1.0) * d2).into();
-                                v2.color = SHADOW_COLOR;
-                                v3.position -= (lerp(0.0, 1.0, d3.magnitude2() / max_d_sqr - 1.0) * d3).into();
-                                v3.color = SHADOW_COLOR;
-                                v4.position -= (lerp(0.0, 1.0, d4.magnitude2() / max_d_sqr - 1.0) * d4).into();
-                                v4.color = SHADOW_COLOR;
+                                    v3.position -= (lerp(0.0, 1.0, distances2[2] / min_d_sqr - 1.0) * d3).into();
+                                    let t = (1.0 - distances2[2] * recp_radius2).max(0.0);
+                                    v3.color = colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
 
-                                *shad_chunk[i * 4] = v1;
-                                *shad_chunk[i * 4 + 1] = v2;
-                                *shad_chunk[i * 4 + 2] = v3;
-                                *shad_chunk[i * 4 + 3] = v4;
+                                    v4.position -= (lerp(0.0, 1.0, distances2[3] / min_d_sqr - 1.0) * d4).into();
+                                    let t = (1.0 - distances2[3] * recp_radius2).max(0.0);
+                                    v4.color = colors::rgba(0, 0, 0, lerp(0.0, 200.0, t * t) as u8).into();
+
+                                    *shad_chunk[i * 4] = v1;
+                                    *shad_chunk[i * 4 + 1] = v2;
+                                    *shad_chunk[i * 4 + 2] = v3;
+                                    *shad_chunk[i * 4 + 3] = v4;
+                                }
                             }
                         });
                 } else {

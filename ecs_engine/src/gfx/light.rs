@@ -63,4 +63,17 @@ impl Lights {
         self.point_lights[self.n_actual_point_lights] = light;
         self.n_actual_point_lights += 1;
     }
+
+    pub fn get_nearest_point_light(&self, pos: Vec2f) -> Option<&Point_Light> {
+        let mut nearest = None;
+        let mut nearest_dist2 = -1.;
+        for pl in &self.point_lights[..self.n_actual_point_lights] {
+            let dist2 = pl.position.distance2(pos);
+            if nearest_dist2 < 0. || dist2 <= nearest_dist2 {
+                nearest = Some(pl);
+                nearest_dist2 = dist2;
+            }
+        }
+        nearest
+    }
 }
