@@ -144,6 +144,7 @@ fn fill_color_circle_internal(
     render_states: RenderStates,
 ) {
     let mut circle_shape = CircleShape::new(circle.radius, paint_props.point_count);
+    circle_shape.set_origin(Vector2f::new(circle.radius, circle.radius));
     circle_shape.set_position(Vector2f::new(circle.center.x, circle.center.y));
     circle_shape.set_fill_color(paint_props.color.into());
     circle_shape.set_outline_thickness(paint_props.border_thick);
