@@ -131,10 +131,7 @@ impl<T> Exclusive_Temp_Array<'_, T> {
     }
 }
 
-impl<T> Exclusive_Temp_Array<'_, T>
-where
-    T: Copy,
-{
+impl<T> Exclusive_Temp_Array<'_, T> {
     /// Transforms this Exclusive_Temp_Array into a read-only version of itself.
     /// This is used to relinquish the mutable borrow and allow the Temp_Allocator
     /// to be used again while keeping this data.
@@ -227,13 +224,33 @@ where
 }
 
 pub struct Read_Only_Temp_Array<T> {
-    ptr: *const T,
+    ptr: *mut T,
     n_elems: usize,
 
     #[cfg(debug_assertions)]
     parent_allocator: *const Temp_Allocator,
     #[cfg(debug_assertions)]
     gen: Gen_Type,
+}
+
+impl<T> Drop for Read_Only_Temp_Array<T> {
+    fn drop(&mut self) {
+        #[cfg(debug_assertions)]
+        {
+            assert_eq!(
+                unsafe { (*self.parent_allocator).gen }, self.gen,
+                "Exclusive_Temp_Array accessed after free!"
+            );
+        }
+
+        if std::mem::needs_drop::<T>() {
+            for i in 0..self.n_elems {
+                unsafe {
+                    self.ptr.add(i).drop_in_place();
+                }
+            }
+        }
+    }
 }
 
 impl<T> Read_Only_Temp_Array<T> {

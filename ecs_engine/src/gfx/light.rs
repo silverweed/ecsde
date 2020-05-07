@@ -76,4 +76,9 @@ impl Lights {
         }
         nearest
     }
+
+    pub fn get_all_point_lights_within<E: Extend<Point_Light>>(&self, pos: Vec2f, radius: f32, result: &mut E) {
+        let radius2 = radius * radius;
+        result.extend(self.point_lights[..self.n_actual_point_lights].iter().filter(|pl| pl.position.distance2(pos) < radius2).cloned());
+    }
 }
