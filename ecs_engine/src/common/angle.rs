@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct Angle(f32); // The wrapped angle is in radians.
 
 const PI: f32 = std::f32::consts::PI;

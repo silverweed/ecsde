@@ -17,9 +17,16 @@ use std::time::Duration;
 #[cfg(debug_assertions)]
 use {
     ecs_engine::{
-        common::angle::rad, common::stringid::String_Id, common::vector::Vec2f, debug,
-        debug::painter::Debug_Painter, ecs::ecs_world::Ecs_World,
-        gfx::paint_props::Paint_Properties, gfx::window,
+        common::angle::rad,
+        common::shapes::{Arrow, Circle},
+        common::stringid::String_Id,
+        common::vector::Vec2f,
+        debug,
+        debug::painter::Debug_Painter,
+        ecs::components::base::C_Spatial2D,
+        ecs::ecs_world::Ecs_World,
+        gfx::paint_props::Paint_Properties,
+        gfx::window,
     },
     std::collections::HashMap,
 };
@@ -660,6 +667,7 @@ fn update_debug(
     let square_size = cvars.debug_grid_square_size.read(&engine_state.config);
     let opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
     let draw_world_chunks = cvars.draw_world_chunks.read(&engine_state.config);
+    let draw_lights = cvars.draw_lights.read(&engine_state.config);
     let lv_batches = &mut game_state.level_batches;
 
     game_state
@@ -695,6 +703,10 @@ fn update_debug(
 
             if draw_colliders {
                 debug_draw_colliders(debug_painter, &level.world);
+            }
+
+            if draw_lights {
+                debug_draw_lights(debug_painter, &level.lights);
             }
 
             // Debug grid
@@ -899,9 +911,6 @@ fn update_physics_debug_overlay(
 #[cfg(debug_assertions)]
 fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
     use ecs_engine::collisions::collider::{Collider, Collision_Shape};
-    use ecs_engine::common::shapes;
-    use ecs_engine::ecs::components::base::C_Spatial2D;
-
     foreach_entity!(ecs_world, +Collider, +C_Spatial2D, |entity| {
         let collider = ecs_world.get_component::<Collider>(entity).unwrap();
         // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
@@ -922,7 +931,7 @@ fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World
             Collision_Shape::Circle { radius } => {
                 transform.translate(-radius * 0.5, -radius * 0.5);
                 debug_painter.add_circle(
-                    shapes::Circle {
+                    Circle {
                         center: transform.position(),
                         radius,
                     },
@@ -936,9 +945,6 @@ fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World
 
 #[cfg(debug_assertions)]
 fn debug_draw_transforms(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
-    use ecs_engine::common::shapes::Circle;
-    use ecs_engine::ecs::components::base::C_Spatial2D;
-
     foreach_entity!(ecs_world, +C_Spatial2D, |entity| {
         let spatial = ecs_world.get_component::<C_Spatial2D>(entity).unwrap();
         let transform = &spatial.transform;
@@ -970,9 +976,6 @@ fn debug_draw_transforms(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 
 #[cfg(debug_assertions)]
 fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
-    use ecs_engine::common::shapes::Arrow;
-    use ecs_engine::ecs::components::base::C_Spatial2D;
-
     const COLOR: colors::Color = colors::rgb(100, 0, 120);
 
     foreach_entity!(ecs_world, +C_Spatial2D, |entity| {
@@ -1003,12 +1006,52 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 }
 
 #[cfg(debug_assertions)]
+fn debug_draw_lights(debug_painter: &mut Debug_Painter, lights: &ecs_engine::gfx::light::Lights) {
+    for pl in &lights.point_lights[..lights.n_actual_point_lights] {
+        debug_painter.add_circle(
+            Circle {
+                center: pl.position,
+                radius: pl.radius,
+            },
+            Paint_Properties {
+                color: colors::TRANSPARENT,
+                border_color: pl.color,
+                border_thick: 2.,
+                ..Default::default()
+            },
+        );
+        debug_painter.add_circle(
+            Circle {
+                center: pl.position,
+                radius: 2.,
+            },
+            pl.color,
+        );
+        debug_painter.add_text(
+            &format!("radius: {}\natten: {}", pl.radius, pl.attenuation),
+            pl.position + v2!(1., 1.),
+            10,
+            if colors::to_hsv(pl.color).v > 0.5 {
+                colors::BLACK
+            } else {
+                colors::WHITE
+            },
+        );
+        debug_painter.add_text(
+            &format!("radius: {}\natten: {}", pl.radius, pl.attenuation),
+            pl.position,
+            10,
+            pl.color,
+        );
+    }
+}
+
+#[cfg(debug_assertions)]
 fn debug_draw_entities_prev_frame_ghost(
     batches: &mut gfx::render::batcher::Batches,
     ecs_world: &mut Ecs_World,
 ) {
     use crate::debug::entity_debug::C_Debug_Data;
-    use ecs_engine::ecs::components::base::C_Spatial2D;
     use ecs_engine::ecs::components::gfx::C_Renderable;
     use ecs_engine::gfx::render;
 

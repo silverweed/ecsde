@@ -1,6 +1,7 @@
 #[cfg(feature = "use-sfml")]
 mod sfml;
 
+use crate::common::angle::{rad, Angle};
 use std::f32::consts::{FRAC_PI_3, PI};
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
@@ -9,6 +10,13 @@ pub struct Color {
     pub g: u8,
     pub b: u8,
     pub a: u8,
+}
+
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
+pub struct Color_Hsv {
+    pub h: Angle,
+    pub s: f32,
+    pub v: f32,
 }
 
 pub const TRANSPARENT: Color = rgba(0, 0, 0, 0);
@@ -56,8 +64,12 @@ pub fn lerp_col(a: Color, b: Color, t: f32) -> Color {
     )
 }
 
+pub fn hsv(h: Angle, s: f32, v: f32) -> Color_Hsv {
+    Color_Hsv { h, s, v }
+}
+
 #[allow(clippy::many_single_char_names, clippy::float_cmp)]
-pub fn to_hsv(c: Color) -> (f32, f32, f32) {
+pub fn to_hsv(c: Color) -> Color_Hsv {
     let r = c.r as f32 / 255.0;
     let g = c.g as f32 / 255.0;
     let b = c.b as f32 / 255.0;
@@ -79,11 +91,12 @@ pub fn to_hsv(c: Color) -> (f32, f32, f32) {
     let s = if cmax == 0. { 0. } else { delta / cmax };
     let v = cmax;
 
-    (h, s, v)
+    Color_Hsv { h: rad(h), s, v }
 }
 
 #[allow(clippy::many_single_char_names)]
-pub fn from_hsv((h, s, v): (f32, f32, f32)) -> Color {
+pub fn from_hsv(Color_Hsv { h, s, v }: Color_Hsv) -> Color {
+    let h = h.as_rad();
     let c = v * s;
     let x = c * (1. - (h / FRAC_PI_3 % 2. - 1.).abs());
     let m = v - c;
@@ -111,8 +124,12 @@ pub fn from_hsv((h, s, v): (f32, f32, f32)) -> Color {
 
 /// Heuristic "darken" function that multiplies the value of `c` by `1 - amount`.
 pub fn darken(c: Color, amount: f32) -> Color {
-    let (h, s, v) = to_hsv(c);
-    from_hsv((h, s, v * (1. - amount)))
+    let Color_Hsv { h, s, v } = to_hsv(c);
+    from_hsv(Color_Hsv {
+        h,
+        s,
+        v: v * (1. - amount),
+    })
 }
 
 #[cfg(test)]
@@ -120,9 +137,9 @@ mod tests {
     use super::*;
     use crate::test_common::*;
 
-    impl Approx_Eq_Testable for (f32, f32, f32) {
+    impl Approx_Eq_Testable for Color_Hsv {
         fn cmp_list(&self) -> Vec<f32> {
-            vec![self.0, self.1, self.2]
+            vec![self.h.as_rad(), self.s, self.v]
         }
     }
 
@@ -176,15 +193,19 @@ mod tests {
 
     #[test]
     fn test_to_hsv() {
-        assert_approx_eq!(to_hsv(BLACK), (0., 0., 0.));
-        assert_approx_eq!(to_hsv(WHITE), (0., 0., 1.));
-        assert_approx_eq!(to_hsv(RED), (0., 1., 1.));
-        assert_approx_eq!(to_hsv(GREEN), (2. * FRAC_PI_3, 1., 1.));
-        assert_approx_eq!(to_hsv(BLUE), (4. * FRAC_PI_3, 1., 1.));
-        assert_approx_eq!(to_hsv(YELLOW), (FRAC_PI_3, 1., 1.));
-        assert_approx_eq!(to_hsv(rgb(128, 0, 0)), (0., 1., 0.5), eps = 0.1);
-        assert_approx_eq!(to_hsv(rgb(191, 191, 191)), (0., 0., 0.75), eps = 0.1);
-        assert_approx_eq!(to_hsv(rgb(0, 128, 128)), (PI, 1., 0.5), eps = 0.1);
+        assert_approx_eq!(to_hsv(BLACK), hsv(rad(0.), 0., 0.));
+        assert_approx_eq!(to_hsv(WHITE), hsv(rad(0.), 0., 1.));
+        assert_approx_eq!(to_hsv(RED), hsv(rad(0.), 1., 1.));
+        assert_approx_eq!(to_hsv(GREEN), hsv(rad(2. * FRAC_PI_3), 1., 1.));
+        assert_approx_eq!(to_hsv(BLUE), hsv(rad(4. * FRAC_PI_3), 1., 1.));
+        assert_approx_eq!(to_hsv(YELLOW), hsv(rad(FRAC_PI_3), 1., 1.));
+        assert_approx_eq!(to_hsv(rgb(128, 0, 0)), hsv(rad(0.), 1., 0.5), eps = 0.1);
+        assert_approx_eq!(
+            to_hsv(rgb(191, 191, 191)),
+            hsv(rad(0.), 0., 0.75),
+            eps = 0.1
+        );
+        assert_approx_eq!(to_hsv(rgb(0, 128, 128)), hsv(rad(PI), 1., 0.5), eps = 0.1);
 
         assert_eq!(from_hsv(to_hsv(BLACK)), BLACK);
         assert_eq!(from_hsv(to_hsv(WHITE)), WHITE);
@@ -198,10 +219,10 @@ mod tests {
         let red_hsv = to_hsv(RED);
         assert_eq!(
             darken(RED, 0.3),
-            from_hsv((red_hsv.0, red_hsv.1, red_hsv.2 * 0.7))
+            from_hsv(hsv(red_hsv.h, red_hsv.s, red_hsv.v * 0.7))
         );
         let blue_hsv = to_hsv(BLUE);
-        assert_eq!(darken(BLUE, 1.0), from_hsv((blue_hsv.0, blue_hsv.1, 0.)));
+        assert_eq!(darken(BLUE, 1.0), from_hsv(hsv(blue_hsv.h, blue_hsv.s, 0.)));
         assert_eq!(darken(GREEN, 0.0), GREEN);
     }
 }
