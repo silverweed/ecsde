@@ -10,13 +10,16 @@ use crate::gfx::light::Lights;
 use crate::gfx::render::{self, Shader, Texture, Vertex};
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Gfx_Resources, Shader_Cache, Texture_Handle};
+use crate::common::math::lerp;
 use rayon::prelude::*;
 use std::cmp;
 use std::collections::{BTreeMap, HashMap};
 
+// @Cleanup
 type Vertex_Buffer = sfml::graphics::VertexBuffer;
 use sfml::graphics::PrimitiveType;
 use sfml::graphics::VertexBufferUsage;
+use sfml::graphics::RenderTarget;
 
 #[derive(Default)]
 pub struct Batches {
@@ -199,73 +202,13 @@ pub fn draw_batches(
     for (z_index, tex_map) in &mut batches.textures_ws {
         // for each texture/shader...
         for (material, (vbuffer, tex_props)) in tex_map {
-            let n_texs = tex_props.len();
+            let n_texs = tex_props.len(); 
             if n_texs == 0 {
                 // @Speed: right now we don't delete this batch from the tex_map, but it may be worth doing so.
                 continue;
             }
 
             let texture = gres.get_texture(material.texture);
-
-            // @Temporary
-            if *z_index >= 0 {
-                if let Some(shad) = shadows.get(&material.texture) {
-                    let mut vbuf = render::start_draw_quads(shad.len());
-                    for (transform, tex_rect) in shad {
-                        let uv: Rect<f32> = (*tex_rect).into();
-                        let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
-                        let render_transform = *transform;
-
-                        let color = colors::rgba(0, 0, 0, 155);
-
-                        // Note: beware of the order of multiplications!
-                        // Scaling the local positions must be done BEFORE multiplying the matrix!
-                        let p1 = render_transform * (tex_size * v2!(-0.5, -0.5));
-                        let p2 = render_transform * (tex_size * v2!(0.5, -0.5));
-                        let p3 = render_transform * (tex_size * v2!(0.5, 0.5));
-                        let p4 = render_transform * (tex_size * v2!(-0.5, 0.5));
-
-                        let mut v1 = render::new_vertex(p1, color, v2!(uv.x, uv.y));
-                        let mut v2 = render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
-                        let mut v3 =
-                            render::new_vertex(p3, color, v2!(uv.x + uv.width, uv.y + uv.height));
-                        let mut v4 = render::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
-
-                        // TODO
-                        let light_pos = v2!(0., 0.);
-                        let d1 = light_pos - p1.into();
-                        let d2 = light_pos - p2.into();
-                        let d3 = light_pos - p3.into();
-                        let d4 = light_pos - p4.into();
-
-                        let mut v =
-                            vec![(d1, &mut v1), (d2, &mut v2), (d3, &mut v3), (d4, &mut v4)];
-
-                        v.sort_by(|(d1, _), (d2, _)| {
-                            d1.magnitude2().partial_cmp(&d2.magnitude2()).unwrap()
-                        });
-                        let max_d_sqr = v[0].0.magnitude2();
-                        use crate::common::math::lerp;
-
-                        for (d, v) in v.into_iter() {
-                            v.position -=
-                                (lerp(0.0, 1.0, d.magnitude2() / max_d_sqr - 1.0) * d).into();
-                        }
-
-                        //v1.position -= d1.into();
-                        //v2.position -= d2.into();
-
-                        render::add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
-                    }
-                    render::backend::render_vbuf_ws_texture(
-                        window,
-                        &vbuf,
-                        &Transform2D::default(),
-                        camera,
-                        texture,
-                    );
-                }
-            }
 
             // @Temporary
             let shader = if enable_shaders {
@@ -321,11 +264,13 @@ pub fn draw_batches(
                 None
             };
 
+            let cast_shadows = *z_index >= 0; // @Temporary
             let n_threads = rayon::current_num_threads();
             let n_texs_per_chunk = cmp::min(n_texs, n_texs / n_threads + 1);
 
-            debug_assert!(n_texs * 4 <= std::u32::MAX as usize);
-            let n_vertices = (n_texs * 4) as u32;
+            debug_assert!(n_texs * 4 * if cast_shadows { 2 } else { 1 }<= std::u32::MAX as usize);
+            let n_vertices_without_shadows = (n_texs * 4) as u32;
+            let n_vertices = n_vertices_without_shadows * if cast_shadows { 2 } else { 1 };
 
             let mut vertices = temp::excl_temp_array(frame_alloc);
             unsafe {
@@ -334,8 +279,8 @@ pub fn draw_batches(
                 // current buffer with "null" vertices.
                 vertices.alloc_additional_uninit(n_vertices.max(vbuffer.n_elems) as usize);
             }
-            let vertices = vertices.as_slice_mut();
-            let vert_chunks = vertices[..n_vertices as usize]
+            let (vertices, shadow_vertices) = vertices.split_at_mut(n_vertices_without_shadows as usize);
+            let vert_chunks = vertices[..n_vertices_without_shadows as usize]
                 .par_iter_mut()
                 .chunks(n_texs_per_chunk * 4);
 
@@ -347,62 +292,158 @@ pub fn draw_batches(
             let has_shader = shader.is_some();
             {
                 trace!("tex_batch_ws");
-                tex_props
-                    .par_iter()
-                    .chunks(n_texs_per_chunk)
-                    .zip(vert_chunks)
-                    .for_each(|(tex_chunk, mut vert_chunk)| {
-                        for (i, tex_prop) in tex_chunk.iter().enumerate() {
-                            let Texture_Props_Ws {
-                                tex_rect,
-                                transform,
-                                color,
-                            } = tex_prop;
+                if cast_shadows {
+                    let shadow_chunks = shadow_vertices[..(n_vertices - n_vertices_without_shadows) as usize].par_iter_mut().chunks(n_texs_per_chunk * 4);
+                    tex_props
+                        .par_iter()
+                        .chunks(n_texs_per_chunk)
+                        .zip(vert_chunks)
+                        .zip(shadow_chunks)
+                        .for_each(|((tex_chunk, mut vert_chunk), mut shad_chunk)| {
+                            for (i, tex_prop) in tex_chunk.iter().enumerate() {
+                                let Texture_Props_Ws {
+                                    tex_rect,
+                                    transform,
+                                    color,
+                                } = tex_prop;
 
-                            let uv: Rect<f32> = (*tex_rect).into();
-                            let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
-                            let render_transform = *transform;
+                                let uv: Rect<f32> = (*tex_rect).into();
+                                let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
+                                let render_transform = *transform;
 
-                            // Encode rotation in color
-                            let color = if has_shader {
-                                encode_rot_as_color(transform.rotation())
-                            } else {
-                                *color
-                            };
+                                // Encode rotation in color
+                                let color = if has_shader {
+                                    encode_rot_as_color(transform.rotation())
+                                } else {
+                                    *color
+                                };
 
-                            // Note: beware of the order of multiplications!
-                            // Scaling the local positions must be done BEFORE multiplying the matrix!
-                            let p1 = render_transform * (tex_size * v2!(-0.5, -0.5));
-                            let p2 = render_transform * (tex_size * v2!(0.5, -0.5));
-                            let p3 = render_transform * (tex_size * v2!(0.5, 0.5));
-                            let p4 = render_transform * (tex_size * v2!(-0.5, 0.5));
+                                // Note: beware of the order of multiplications!
+                                // Scaling the local positions must be done BEFORE multiplying the matrix!
+                                let p1 = render_transform * (tex_size * v2!(-0.5, -0.5));
+                                let p2 = render_transform * (tex_size * v2!(0.5, -0.5));
+                                let p3 = render_transform * (tex_size * v2!(0.5, 0.5));
+                                let p4 = render_transform * (tex_size * v2!(-0.5, 0.5));
 
-                            let v1 = render::new_vertex(p1, color, v2!(uv.x, uv.y));
-                            let v2 = render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
-                            let v3 = render::new_vertex(
-                                p3,
-                                color,
-                                v2!(uv.x + uv.width, uv.y + uv.height),
-                            );
-                            let v4 = render::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
+                                let mut v1 = render::new_vertex(p1, color, v2!(uv.x, uv.y));
+                                let mut v2 = render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
+                                let mut v3 = render::new_vertex(
+                                    p3,
+                                    color,
+                                    v2!(uv.x + uv.width, uv.y + uv.height),
+                                );
+                                let mut v4 = render::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
 
-                            *vert_chunk[i * 4] = v1;
-                            *vert_chunk[i * 4 + 1] = v2;
-                            *vert_chunk[i * 4 + 2] = v3;
-                            *vert_chunk[i * 4 + 3] = v4;
-                        }
-                    });
+                                *vert_chunk[i * 4] = v1;
+                                *vert_chunk[i * 4 + 1] = v2;
+                                *vert_chunk[i * 4 + 2] = v3;
+                                *vert_chunk[i * 4 + 3] = v4;
+
+                                // @Incomplete:
+                                // we should be retrieving the nearest light position by querying the world.
+                                // Should we support multiple shadows per entity? In that case, they should be
+                                // probably calculated beforehand
+                                let light_pos = v2!(0., 0.);
+                                let d1 = light_pos - p1;
+                                let d2 = light_pos - p2;
+                                let d3 = light_pos - p3;
+                                let d4 = light_pos - p4;
+
+                                let v = [d1, d2, d3, d4];
+
+                                let max_d_sqr = v.iter().map(|d| 
+                                    d.magnitude2()
+                                ).min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+
+                                const SHADOW_COLOR: sfml::graphics::Color = sfml::graphics::Color { r: 0, g: 0, b: 0, a: 150 };
+
+                                v1.position -= (lerp(0.0, 1.0, d1.magnitude2() / max_d_sqr - 1.0) * d1).into();
+                                v1.color = SHADOW_COLOR;
+                                v2.position -= (lerp(0.0, 1.0, d2.magnitude2() / max_d_sqr - 1.0) * d2).into();
+                                v2.color = SHADOW_COLOR;
+                                v3.position -= (lerp(0.0, 1.0, d3.magnitude2() / max_d_sqr - 1.0) * d3).into();
+                                v3.color = SHADOW_COLOR;
+                                v4.position -= (lerp(0.0, 1.0, d4.magnitude2() / max_d_sqr - 1.0) * d4).into();
+                                v4.color = SHADOW_COLOR;
+
+                                *shad_chunk[i * 4] = v1;
+                                *shad_chunk[i * 4 + 1] = v2;
+                                *shad_chunk[i * 4 + 2] = v3;
+                                *shad_chunk[i * 4 + 3] = v4;
+                            }
+                        });
+                } else {
+                    tex_props
+                        .par_iter()
+                        .chunks(n_texs_per_chunk)
+                        .zip(vert_chunks)
+                        .for_each(|(tex_chunk, mut vert_chunk)| {
+                            for (i, tex_prop) in tex_chunk.iter().enumerate() {
+                                let Texture_Props_Ws {
+                                    tex_rect,
+                                    transform,
+                                    color,
+                                } = tex_prop;
+
+                                let uv: Rect<f32> = (*tex_rect).into();
+                                let tex_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
+                                let render_transform = *transform;
+
+                                // Encode rotation in color
+                                let color = if has_shader {
+                                    encode_rot_as_color(transform.rotation())
+                                } else {
+                                    *color
+                                };
+
+                                // Note: beware of the order of multiplications!
+                                // Scaling the local positions must be done BEFORE multiplying the matrix!
+                                let p1 = render_transform * (tex_size * v2!(-0.5, -0.5));
+                                let p2 = render_transform * (tex_size * v2!(0.5, -0.5));
+                                let p3 = render_transform * (tex_size * v2!(0.5, 0.5));
+                                let p4 = render_transform * (tex_size * v2!(-0.5, 0.5));
+
+                                let v1 = render::new_vertex(p1, color, v2!(uv.x, uv.y));
+                                let v2 = render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
+                                let v3 = render::new_vertex(
+                                    p3,
+                                    color,
+                                    v2!(uv.x + uv.width, uv.y + uv.height),
+                                );
+                                let v4 = render::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
+
+                                *vert_chunk[i * 4] = v1;
+                                *vert_chunk[i * 4 + 1] = v2;
+                                *vert_chunk[i * 4 + 2] = v3;
+                                *vert_chunk[i * 4 + 3] = v4;
+                            }
+                        });
+                }
             }
 
-            vbuffer.update(vertices, n_vertices as u32);
+            if cast_shadows {
+                vbuffer.update(shadow_vertices, n_vertices - n_vertices_without_shadows);
+
+                // @Temporary
+                window.raw_handle_mut().draw_vertex_buffer(
+                    &vbuffer.vbuf,
+                    sfml::graphics::RenderStates {
+                        texture: Some(texture),
+                        transform: camera.get_matrix_sfml().inverse(),
+                        ..sfml::graphics::RenderStates::default()
+                    },
+                );
+            }
+
+            vbuffer.update(vertices, n_vertices);
 
             // @Temporary
-            use sfml::graphics::RenderTarget;
+            let shader = shader.map(|s| s as &_);
             window.raw_handle_mut().draw_vertex_buffer(
                 &vbuffer.vbuf,
                 sfml::graphics::RenderStates {
                     texture: Some(texture),
-                    shader: shader.map(|s| &*s),
+                    shader,
                     transform: camera.get_matrix_sfml().inverse(),
                     ..sfml::graphics::RenderStates::default()
                 },
