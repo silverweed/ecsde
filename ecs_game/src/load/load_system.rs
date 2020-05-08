@@ -299,7 +299,7 @@ fn init_demo_entities(
                 entity,
                 C_Phys_Data {
                     inv_mass: 1.,
-                    restitution: 1.0,
+                    restitution: 0.9,
                     static_friction: 0.5,
                     dyn_friction: 0.3,
                 },

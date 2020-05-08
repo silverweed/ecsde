@@ -273,6 +273,9 @@ where
             }
             if let Some(b) = colliders.get_component(ent_b) {
                 let b_shape = collision_shape_type_index(&b.shape);
+                if stored.contains(&(ent_b, ent_a)) {
+                    continue;
+                }
 
                 let info = a_part_cb[b_shape](ent_a, ent_b, a, b);
 
@@ -282,10 +285,8 @@ where
                 }
 
                 if let Some(info) = info {
-                    if !stored.contains(&(ent_b, ent_a)) {
-                        collision_infos.push(info);
-                        stored.insert((ent_a, ent_b));
-                    }
+                    collision_infos.push(info);
+                    stored.insert((ent_a, ent_b));
                 }
             }
         }

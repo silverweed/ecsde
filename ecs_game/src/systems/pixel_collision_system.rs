@@ -1,5 +1,5 @@
 use ecs_engine::alloc::temp::*;
-use ecs_engine::collisions::collider::Collider;
+use ecs_engine::collisions::collider::{C_Phys_Data, Collider};
 use ecs_engine::common::colors::Color;
 use ecs_engine::common::math::clamp;
 use ecs_engine::common::rect::Rect;
@@ -20,6 +20,7 @@ struct Collision_Info {
     pub entity_nonpixel: Entity,
     pub entity_pixel: Entity,
     pub normal: Vec2f,
+    pub restitution: f32,
 }
 
 #[derive(Default)]
@@ -143,11 +144,23 @@ impl Pixel_Collision_System {
 
         let mut colliding_positions = excl_temp_array(temp_alloc);
 
+        struct Potential_Colliding_Entity_Info {
+            pub entity: Entity,
+            pub pos: Vec2f,
+            pub velocity: Vec2f,
+            pub extent: Vec2f,
+        }
+
         foreach_entity!(world, +Collider, +C_Spatial2D, |entity| {
             let s = world.get_component::<C_Spatial2D>(entity).unwrap();
             let c = world.get_component::<Collider>(entity).unwrap();
             if !c.is_static {
-                colliding_positions.push((entity, s.transform.position(), c.shape.extent()));
+                colliding_positions.push(Potential_Colliding_Entity_Info {
+                    entity,
+                    pos: s.transform.position(),
+                    extent: c.shape.extent(),
+                    velocity: s.velocity
+                });
             }
         });
 
@@ -163,8 +176,15 @@ impl Pixel_Collision_System {
             let iw = iw as i32;
             let ih = ih as i32;
 
-            for (e, pos, extent) in &colliding_positions {
+            for info in &colliding_positions {
                 trace!("pixel_collision::narrow");
+
+                let Potential_Colliding_Entity_Info {
+                    entity: e,
+                    pos,
+                    extent,
+                    velocity,
+                } = info;
 
                 let x_range = ((pos.x - extent.x * 0.5).floor() as i32 + iw / 2).max(0) ..
                                 ((pos.x + extent.x * 0.5).floor() as i32 + iw / 2).min(iw);
@@ -174,13 +194,18 @@ impl Pixel_Collision_System {
                     for y in y_range.clone() {
                         debug_assert!(x >= 0 && x < iw);
                         debug_assert!(y >= 0 && y < ih);
-                        let pixel = render::get_pixel(img, x as u32, y as u32);
-                        if pixel.a > 0 {
-                            self.collided_entities.push(Collision_Info {
-                                entity_nonpixel: *e,
-                                entity_pixel: entity,
-                                normal: approx_normal(img, x as u32, y as u32, 6),
-                            });
+                        let dir_to_pixel = v2!((x - iw / 2) as f32, (y - ih / 2) as f32) - *pos;
+                        if dir_to_pixel.dot(*velocity) >= 0. {
+                            let pixel = render::get_pixel(img, x as u32, y as u32);
+                            if pixel.a > 0 {
+                                self.collided_entities.push(Collision_Info {
+                                    entity_nonpixel: *e,
+                                    entity_pixel: entity,
+                                    normal: approx_normal(img, x as u32, y as u32, 6),
+                                    restitution: world.get_component::<C_Phys_Data>(*e)
+                                                    .map(|pd| pd.restitution).unwrap_or(1.),
+                                });
+                            }
                         }
                     }
                 }
@@ -196,7 +221,7 @@ impl Pixel_Collision_System {
                 .get_component_mut::<C_Spatial2D>(info.entity_nonpixel)
                 .unwrap();
             let speed = spat.velocity.magnitude();
-            spat.velocity = speed * info.normal;
+            spat.velocity = speed * info.normal * info.restitution;
         }
     }
 }

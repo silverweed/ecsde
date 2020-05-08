@@ -13,6 +13,8 @@ pub struct Moved_Entity {
     pub extent: Vec2f,
 }
 
+const MIN_SPEED: f32 = 0.001;
+
 pub fn update(
     dt: &Duration,
     ecs_world: &mut Ecs_World,
@@ -22,6 +24,9 @@ pub fn update(
 
     foreach_entity!(ecs_world, +C_Spatial2D, |entity| {
         let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
+        if spatial.velocity.magnitude() < MIN_SPEED {
+            spatial.velocity = v2!(0., 0.);
+        }
         let translation = spatial.velocity * dt_secs;
         spatial.transform.translate_v(translation);
 

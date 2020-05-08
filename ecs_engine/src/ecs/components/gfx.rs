@@ -25,7 +25,11 @@ impl Material {
 
     pub fn encode_shininess(sh: f32) -> u16 {
         if sh > Self::MAX_SHININESS {
-            lwarn!("value {} passed to encode_shininess is greater than max {} and will be capped.", sh, Self::MAX_SHININESS);
+            lwarn!(
+                "value {} passed to encode_shininess is greater than max {} and will be capped.",
+                sh,
+                Self::MAX_SHININESS
+            );
         }
         (sh.min(Self::MAX_SHININESS) / Self::MAX_SHININESS * std::u16::MAX as f32) as _
     }
