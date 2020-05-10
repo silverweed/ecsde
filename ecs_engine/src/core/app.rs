@@ -453,12 +453,14 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
             .get_overlay(sid_trace)
             .hover_data
             .clone();
-        if let Some(tracer_selected_idx) = trace_hover_data.selected_line {
-            if trace_hover_data.just_selected {
+        if trace_hover_data.just_selected {
+            if let Some(tracer_selected_idx) = trace_hover_data.selected_line {
                 let line_text =
                     &debug_systems.debug_ui.get_overlay(sid_trace).lines[tracer_selected_idx].text;
                 let fn_name = String::from(line_text.split(": ").next().unwrap().trim());
                 set_traced_fn(debug_systems, fn_name);
+            } else {
+                set_traced_fn(debug_systems, String::default());
             }
         }
 
