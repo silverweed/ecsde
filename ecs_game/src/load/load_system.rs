@@ -94,15 +94,29 @@ fn init_demo_lights(lights: &mut Lights) {
     lights.ambient_light.intensity = 1.;
 
     let light = Point_Light {
-        position: v2!(0., 0.),
-        radius: 100.,
+        position: v2!(-100., 0.),
+        radius: 250.,
         attenuation: 0.0,
         color: colors::YELLOW,
     };
     lights.add_point_light(light);
     let light = Point_Light {
-        position: v2!(100., 120.),
-        radius: 50.,
+        position: v2!(100., 0.),
+        radius: 250.,
+        attenuation: 0.0,
+        color: colors::YELLOW,
+    };
+    lights.add_point_light(light);
+    let light = Point_Light {
+        position: v2!(0., 100.),
+        radius: 250.,
+        attenuation: 0.2,
+        color: colors::RED,
+    };
+    lights.add_point_light(light);
+    let light = Point_Light {
+        position: v2!(0., -100.),
+        radius: 250.,
         attenuation: 0.2,
         color: colors::RED,
     };
@@ -157,6 +171,9 @@ fn init_demo_entities(
 
     const SPRITE_FLAT_SHADER_NAME: &str = "sprite_flat";
     let sprite_flat_shader = shader_cache.load_shader(&shader_path(&env, SPRITE_FLAT_SHADER_NAME));
+
+    const TERRAIN_SHADER_NAME: &str = "terrain";
+    let terrain_shader = shader_cache.load_shader(&shader_path(&env, TERRAIN_SHADER_NAME));
 
     let camera = level.world.new_entity();
     {
@@ -223,7 +240,7 @@ fn init_demo_entities(
             C_Renderable {
                 material: Material {
                     texture: rsrc.load_texture(&tex_path(&env, "ground2.png")),
-                    shader: sprite_flat_shader,
+                    shader: terrain_shader,
                     shininess: Material::encode_shininess(0.2),
                     ..Default::default()
                 },
