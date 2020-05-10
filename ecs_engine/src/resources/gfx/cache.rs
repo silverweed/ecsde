@@ -52,8 +52,8 @@ impl<'l> Shader_Cache<'l> {
         match self.cache.entry(id) {
             Entry::Occupied(_) => Some(id),
             Entry::Vacant(v) => {
-                let vs_name = format!("{}.vs", shader_name);
-                let fs_name = format!("{}.fs", shader_name);
+                let vs_name = format!("{}.vert", shader_name);
+                let fs_name = format!("{}.frag", shader_name);
                 match self.loader.load(&(vs_name, fs_name)) {
                     Ok(res) => {
                         v.insert(res);
