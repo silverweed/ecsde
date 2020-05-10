@@ -249,6 +249,25 @@ pub fn render_vbuf_ws(
     render_vbuf_internal(window, vbuf, render_states);
 }
 
+pub fn render_vbuf_ws_texture(
+    window: &mut Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
+    camera: &Transform2D,
+    texture: &Texture,
+) {
+    let mut render_transform = camera.get_matrix_sfml().inverse();
+    render_transform.combine(&transform.get_matrix_sfml());
+
+    let render_states = RenderStates {
+        transform: render_transform,
+        blend_mode: get_blend_mode(window),
+        texture: Some(texture),
+        ..Default::default()
+    };
+    render_vbuf_internal(window, vbuf, render_states);
+}
+
 pub fn render_vbuf_texture(window: &mut Window_Handle, vbuf: &Vertex_Buffer, texture: &Texture) {
     let render_states = RenderStates {
         blend_mode: get_blend_mode(window),

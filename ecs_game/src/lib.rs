@@ -142,12 +142,15 @@ where
 
     #[cfg(debug_assertions)]
     {
-        let game_state = &mut *game_state;
         app::update_traces(
             &mut game_state.engine_state,
             game_state.debug_cvars.trace_overlay_refresh_rate,
         );
     }
+
+    game_state.engine_state.frame_alloc.dealloc_all();
+
+    ///// !!! Must not use frame_alloc after this !!! /////
 
     if !gfx::window::has_vsync(&game_state.window) {
         let mut t_elapsed_for_work = t_before_work.elapsed();

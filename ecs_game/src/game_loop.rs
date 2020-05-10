@@ -457,6 +457,7 @@ where
         let lv_batches = &mut game_state.level_batches;
         let window = &mut game_state.window;
         let shader_cache = &mut game_state.engine_state.shader_cache;
+
         game_state
             .gameplay_system
             .levels

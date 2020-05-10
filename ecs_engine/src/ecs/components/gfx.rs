@@ -11,6 +11,7 @@ pub struct Material {
     pub shader: Shader_Handle,
     pub specular_color: colors::Color,
     pub shininess: u16, // This gets normalized to obtain a value [0.0, MAX_SHININESS].
+    pub cast_shadows: bool,
 }
 
 impl Material {
@@ -43,7 +44,7 @@ impl Material {
 pub struct C_Renderable {
     pub material: Material,
     pub rect: Rect<i32>,
-    pub modulate: colors::Color,
+    pub modulate: colors::Color, // @Redundant: we're already passing color to render_texture_ws! Do we care about this?
     pub z_index: render::Z_Index,
 }
 
@@ -51,11 +52,8 @@ impl Default for C_Renderable {
     fn default() -> Self {
         C_Renderable {
             material: Material {
-                texture: Texture_Handle::default(),
-                normals: Texture_Handle::default(),
-                shader: Shader_Handle::default(),
-                shininess: 0,
                 specular_color: colors::WHITE,
+                ..Default::default()
             },
             rect: Rect::new(0, 0, 0, 0),
             modulate: colors::WHITE,

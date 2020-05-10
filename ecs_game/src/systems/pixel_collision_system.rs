@@ -50,7 +50,7 @@ fn approx_normal(image: &Image, x: u32, y: u32, step: i32) -> Vec2f {
         }
     }
 
-    avg.normalized()
+    avg.normalized_or_zero()
 }
 
 impl Pixel_Collision_System {
