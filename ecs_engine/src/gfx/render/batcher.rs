@@ -7,7 +7,7 @@ use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::ecs::components::gfx::Material;
-use crate::gfx::light::Lights;
+use crate::gfx::light::{Lights, Point_Light};
 use crate::gfx::render::{self, Shader, Texture, Vertex};
 use crate::gfx::window::Window_Handle;
 use crate::resources::gfx::{Gfx_Resources, Shader_Cache, Texture_Handle};
@@ -48,7 +48,7 @@ fn null_vertex() -> Vertex {
 #[cfg(debug_assertions)]
 fn invalid_vertex() -> Vertex {
     Vertex::new(
-        v2!(-12345.6789, 9876.54321),
+        v2!(-12_345.67, 9_876.543),
         colors::rgba(42, 42, 42, 42).into(),
         v2!(42., 42.).into(),
     )
@@ -245,6 +245,7 @@ fn set_shader_uniforms(
     shader.set_uniform_vec3("specular_color", col2v3(material.specular_color));
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn draw_batches(
     window: &mut Window_Handle,
     gres: &Gfx_Resources,
@@ -260,6 +261,7 @@ pub fn draw_batches(
     const SHADOWS_PER_ENTITY: usize = 4;
 
     let enable_shaders = Cfg_Var::<bool>::new("engine/rendering/enable_shaders", cfg).read(cfg);
+    let n_threads = rayon::current_num_threads();
 
     // for each Z-index...
     for tex_map in batches.textures_ws.values_mut() {
@@ -286,6 +288,7 @@ pub fn draw_batches(
             } else {
                 None
             };
+            let has_shader = shader.is_some();
 
             let cast_shadows = material.cast_shadows;
             // @Temporary
@@ -302,12 +305,11 @@ pub fn draw_batches(
                         &mut nearby_point_lights,
                         SHADOWS_PER_ENTITY,
                     );
-                    nearby_point_lights.resize(4, crate::gfx::light::Point_Light::default());
+                    nearby_point_lights.resize(4, Point_Light::default());
                     shadows.push(nearby_point_lights);
                 }
             }
 
-            let n_threads = rayon::current_num_threads();
             let n_texs_per_chunk = cmp::min(n_texs, n_texs / n_threads + 1);
 
             let n_vertices_without_shadows = (n_texs * 4) as u32;
@@ -342,7 +344,6 @@ pub fn draw_batches(
             }
             debug_assert!(n_vertices_without_shadows <= vbuffer.vbuf.vertex_count());
 
-            let has_shader = shader.is_some();
             {
                 trace!("tex_batch_ws");
 
@@ -420,20 +421,18 @@ pub fn draw_batches(
                                     debug_assert!(light_idx < 4);
                                     let light_pos = light.position;
                                     let recp_radius2 = 1.0 / (light.radius * light.radius);
-                                    let mut v1 = v1;
-                                    let mut v2 = v2;
-                                    let mut v3 = v3;
-                                    let mut v4 = v4;
-                                    let d1 = light_pos - p1;
-                                    let d2 = light_pos - p2;
-                                    let d3 = light_pos - p3;
-                                    let d4 = light_pos - p4;
-
-                                    let dist2: [f32; 4] = [
-                                        d1.magnitude2(),
-                                        d2.magnitude2(),
-                                        d3.magnitude2(),
-                                        d4.magnitude2(),
+                                    let mut v = [v1, v2, v3, v4];
+                                    let diff = [
+                                        light_pos - p1,
+                                        light_pos - p2,
+                                        light_pos - p3,
+                                        light_pos - p4,
+                                    ];
+                                    let dist2 = [
+                                        diff[0].magnitude2(),
+                                        diff[1].magnitude2(),
+                                        diff[2].magnitude2(),
+                                        diff[3].magnitude2(),
                                     ];
                                     let min_d_sqr = dist2
                                         .iter()
@@ -441,76 +440,37 @@ pub fn draw_batches(
                                         .unwrap();
 
                                     const SHADOW_MAX_VALUE: f32 = 50.0;
-                                    v1.position -=
-                                        (lerp_clamped(0.0, 1.0, dist2[0] / min_d_sqr - 1.0) * d1)
-                                            .into();
-                                    let t = (1.0 - dist2[0] * recp_radius2).max(0.0);
-                                    v1.color = colors::rgba(
-                                        0,
-                                        0,
-                                        0,
-                                        lerp(0.0, SHADOW_MAX_VALUE, t * t) as u8,
-                                    )
-                                    .into();
 
-                                    v2.position -=
-                                        (lerp_clamped(0.0, 1.0, dist2[1] / min_d_sqr - 1.0) * d2)
+                                    for v_idx in 0..4 {
+                                        v[v_idx].position -= (lerp_clamped(
+                                            0.0,
+                                            1.0,
+                                            dist2[v_idx] / min_d_sqr - 1.0,
+                                        ) * diff[v_idx])
                                             .into();
-                                    let t = (1.0 - dist2[1] * recp_radius2).max(0.0);
-                                    v2.color = colors::rgba(
-                                        0,
-                                        0,
-                                        0,
-                                        lerp(0.0, SHADOW_MAX_VALUE, t * t) as u8,
-                                    )
-                                    .into();
+                                        let t = (1.0 - dist2[v_idx] * recp_radius2).max(0.0);
+                                        v[v_idx].color = colors::rgba(
+                                            0,
+                                            0,
+                                            0,
+                                            lerp(0.0, SHADOW_MAX_VALUE, t * t) as u8,
+                                        )
+                                        .into();
 
-                                    v3.position -=
-                                        (lerp_clamped(0.0, 1.0, dist2[2] / min_d_sqr - 1.0) * d3)
-                                            .into();
-                                    let t = (1.0 - dist2[2] * recp_radius2).max(0.0);
-                                    v3.color = colors::rgba(
-                                        0,
-                                        0,
-                                        0,
-                                        lerp(0.0, SHADOW_MAX_VALUE, t * t) as u8,
-                                    )
-                                    .into();
-
-                                    v4.position -=
-                                        (lerp_clamped(0.0, 1.0, dist2[3] / min_d_sqr - 1.0) * d4)
-                                            .into();
-                                    let t = (1.0 - dist2[3] * recp_radius2).max(0.0);
-                                    v4.color = colors::rgba(
-                                        0,
-                                        0,
-                                        0,
-                                        lerp(0.0, SHADOW_MAX_VALUE, t * t) as u8,
-                                    )
-                                    .into();
-
-                                    *shadow_chunk[4 * (SHADOWS_PER_ENTITY * i + light_idx)] = v1;
-                                    *shadow_chunk[4 * (SHADOWS_PER_ENTITY * i + light_idx) + 1] =
-                                        v2;
-                                    *shadow_chunk[4 * (SHADOWS_PER_ENTITY * i + light_idx) + 2] =
-                                        v3;
-                                    *shadow_chunk[4 * (SHADOWS_PER_ENTITY * i + light_idx) + 3] =
-                                        v4;
+                                        *shadow_chunk
+                                            [4 * (SHADOWS_PER_ENTITY * i + light_idx) + v_idx] =
+                                            v[v_idx];
+                                    }
                                 }
+
                                 #[cfg(debug_assertions)]
                                 {
                                     for light_idx in shadows[i].len()..4 {
-                                        *shadow_chunk[4 * (SHADOWS_PER_ENTITY * i + light_idx)] =
-                                            null_vertex();
-                                        *shadow_chunk
-                                            [4 * (SHADOWS_PER_ENTITY * i + light_idx) + 1] =
-                                            null_vertex();
-                                        *shadow_chunk
-                                            [4 * (SHADOWS_PER_ENTITY * i + light_idx) + 2] =
-                                            null_vertex();
-                                        *shadow_chunk
-                                            [4 * (SHADOWS_PER_ENTITY * i + light_idx) + 3] =
-                                            null_vertex();
+                                        for v_idx in 0..4 {
+                                            *shadow_chunk[4
+                                                * (SHADOWS_PER_ENTITY * v_idx + light_idx)
+                                                + v_idx] = null_vertex();
+                                        }
                                     }
                                 }
                             }
@@ -568,6 +528,7 @@ pub fn draw_batches(
 
             #[cfg(debug_assertions)]
             {
+                // Sanity check: verify we wrote all the vertices
                 // @Robustness: should be asserting equality, but Vertex has no PartialEq impl.
                 fn is_invalid_vertex(v: &Vertex) -> bool {
                     let nv = invalid_vertex();
@@ -581,14 +542,6 @@ pub fn draw_batches(
                 }
 
                 if cast_shadows {
-                    //ldebug!(
-                    //"shadow_vertices.len() = {}. Non-null = {}",
-                    //shadow_vertices.len(),
-                    //shadow_vertices.iter().filter(|v| v.color.a != 0).count()
-                    //);
-                    //for (i, vert) in shadow_vertices.iter().enumerate() {
-                    //ldebug!("shadow_vert[{}] = {:?}", i, vert.color);
-                    //}
                     for (i, vert) in shadow_vertices.iter().enumerate() {
                         debug_assert!(!is_invalid_vertex(vert), "Shadow vertex {} is invalid!", i);
                     }
