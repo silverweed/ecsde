@@ -16,11 +16,9 @@ pub struct Gfx_Resources<'l> {
 
 impl<'l> Gfx_Resources<'l> {
     pub fn new() -> Self {
-        // @Robustness: do we want to support missing shaders?
-        assert!(
-            render::shaders_are_available(),
-            "This platform does not support shaders!"
-        );
+        if !render::shaders_are_available() {
+            lwarn!("This platform does not support shaders.");
+        }
 
         Gfx_Resources {
             textures: cache::Texture_Cache::new(),
@@ -61,10 +59,15 @@ impl<'l> Shader_Cache<'l> {
     }
 
     pub fn load_shader(&mut self, fname: &str) -> Shader_Handle {
-        self.0.load(fname)
+        if render::shaders_are_available() {
+            self.0.load(fname)
+        } else {
+            None
+        }
     }
 
     pub fn get_shader(&self, handle: Shader_Handle) -> &Shader<'_> {
+        debug_assert!(render::shaders_are_available());
         self.0.must_get(handle)
     }
 
@@ -72,6 +75,7 @@ impl<'l> Shader_Cache<'l> {
     where
         'l: 'a,
     {
+        debug_assert!(render::shaders_are_available());
         self.0.must_get_mut(handle)
     }
 }
