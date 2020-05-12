@@ -4,6 +4,7 @@ use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::common::colors;
 use ecs_engine::common::rect::Rect;
 use ecs_engine::common::stringid::String_Id;
+use ecs_engine::common::math;
 use ecs_engine::common::vector::{Vec2f, Vec2i};
 use ecs_engine::gfx::render;
 use ecs_engine::gfx::window;
@@ -70,19 +71,19 @@ impl Persistent_Game_State for Debug_Base_State {
                 (name, Action_Kind::Pressed)
                     if *name == self.sid_game_speed_up || *name == self.sid_game_speed_down =>
                 {
-                    let ts = engine_state.time.time_scale
-                        + CHANGE_SPEED_DELTA
-                            * if action.0 == self.sid_game_speed_up {
-                                1.0
-                            } else {
-                                -1.0
-                            };
+                    let mut ts = engine_state.time.time_scale;
+                    if action.0 == self.sid_game_speed_up {
+                        ts *= 2.0;
+                    } else {
+                        ts *= 0.5;
+                    }
+                    ts = math::clamp(ts, 0.001, 32.0);
                     if ts > 0.0 {
                         engine_state.time.time_scale = ts;
                     }
                     add_msg!(
                         engine_state,
-                        &format!("Time scale: {:.2}", engine_state.time.time_scale)
+                        &format!("Time scale: {:.3}", engine_state.time.time_scale)
                     );
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_pause_toggle => {
