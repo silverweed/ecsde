@@ -385,6 +385,8 @@ where
         game_state.fps_debug.tick(&real_dt);
     }
 
+    input::input_system::late_update_input(&mut game_state.engine_state.input_state);
+
     {
         trace!("display");
         gfx::window::display(&mut game_state.window);

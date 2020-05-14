@@ -1,5 +1,6 @@
 use super::axes;
 use super::bindings::joystick;
+use super::bindings::mouse::{self, Mouse_State};
 use super::bindings::{Axis_Emulation_Type, Input_Bindings};
 use super::core_actions::Core_Action;
 use super::joystick_state::{self, Joystick_State};
@@ -25,6 +26,7 @@ pub type Game_Action = (String_Id, Action_Kind);
 
 pub struct Input_State {
     pub joy_state: Joystick_State,
+    pub mouse_state: Mouse_State,
 
     // Input configuration
     pub bindings: Input_Bindings,
@@ -42,6 +44,7 @@ pub fn create_input_state(env: &Env_Info) -> Input_State {
     let axes = axes::Virtual_Axes::with_axes(&bindings.axis_bindings.axes_names);
     Input_State {
         joy_state: Joystick_State::default(),
+        mouse_state: Mouse_State::default(),
         bindings,
         core_actions: vec![],
         game_actions: vec![],
@@ -65,6 +68,10 @@ pub fn update_input(
 
     let events = provider.get_events();
     read_events_to_actions(input_state, events, process_game_actions);
+}
+
+pub fn late_update_input(input_state: &mut Input_State) {
+    mouse::update_mouse_state(&mut input_state.mouse_state);
 }
 
 fn handle_actions(actions: &mut Vec<Game_Action>, kind: Action_Kind, names: &[String_Id]) {
