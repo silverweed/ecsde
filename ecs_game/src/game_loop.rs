@@ -1,6 +1,8 @@
 use super::{Game_Resources, Game_State};
 use crate::states::state::Game_State_Args;
+use ecs_engine::ui;
 use ecs_engine::alloc::temp::*;
+use ecs_engine::common::rect::Rect;
 use ecs_engine::collisions::physics;
 use ecs_engine::common::colors;
 use ecs_engine::common::transform::Transform2D;
@@ -378,6 +380,7 @@ where
     update_debug(game_state, collision_debug_data);
 
     update_graphics(game_state, &mut game_resources.gfx, real_dt)?;
+    update_ui(game_state, &game_resources.gfx);
 
     #[cfg(debug_assertions)]
     {
@@ -393,6 +396,19 @@ where
     }
 
     Ok(())
+}
+
+fn update_ui(game_state: &mut Game_State, gres: &Gfx_Resources) {
+    let window = &mut game_state.window;
+    let ui_ctx = &mut game_state.engine_state.systems.ui;
+    let input_state = &game_state.engine_state.input_state;
+
+    if ui::button(window, gres, input_state, ui_ctx, 1, "Say hello", Rect::new(10., 10., 100., 50.)) {
+        println!("Hello UI!");
+    }
+    if ui::button(window, gres, input_state, ui_ctx, 2, "Say hello", Rect::new(10., 60., 100., 50.)) {
+        println!("Hello Sailor!");
+    }
 }
 
 fn update_graphics<'a, 's, 'r>(

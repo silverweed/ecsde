@@ -201,7 +201,7 @@ fn create_game_state<'a>(
     linfo!("Working dir = {:?}", engine_state.env.working_dir);
     linfo!("Exe = {:?}", engine_state.env.full_exe_path);
 
-    app::init_engine_systems(&mut engine_state)?;
+    app::init_engine_systems(&mut engine_state, &mut game_resources.gfx)?;
 
     #[cfg(debug_assertions)]
     {

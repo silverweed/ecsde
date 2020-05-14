@@ -1,4 +1,5 @@
 use crate::audio::audio_system;
+use crate::ui;
 use crate::events::evt_register;
 
 #[cfg(debug_assertions)]
@@ -15,6 +16,7 @@ use {
 pub struct Core_Systems<'r> {
     pub audio_system: audio_system::Audio_System<'r>,
     pub evt_register: evt_register::Event_Register,
+    pub ui: ui::UI_Context,
 }
 
 #[cfg(debug_assertions)]
@@ -41,6 +43,7 @@ impl Core_Systems<'_> {
                 max_concurrent_sounds: 10,
             }),
             evt_register: evt_register::Event_Register::new(),
+            ui: ui::UI_Context::default()
         }
     }
 }

@@ -1,5 +1,6 @@
 use super::app_config::App_Config;
 use super::env::Env_Info;
+use crate::ui;
 use super::time;
 use crate::alloc::temp::Temp_Allocator;
 use crate::cfg;
@@ -121,8 +122,9 @@ pub fn start_config_watch(env: &Env_Info, config: &mut cfg::Config) -> Maybe_Err
     Ok(())
 }
 
-pub fn init_engine_systems(engine_state: &mut Engine_State) -> Maybe_Error {
+pub fn init_engine_systems(engine_state: &mut Engine_State, gres: &mut Gfx_Resources) -> Maybe_Error {
     input::joystick_state::init_joysticks(&mut engine_state.input_state.joy_state);
+    ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
 
     linfo!("Number of Rayon threads: {}", rayon::current_num_threads());
 
