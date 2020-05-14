@@ -38,6 +38,14 @@ pub fn color_to_hex(c: Color) -> u32 {
     h
 }
 
+pub fn color_to_hex_no_alpha(c: Color) -> u32 {
+    let mut h = 0u32;
+    h |= u32::from(c.b);
+    h |= u32::from(c.g) << 8;
+    h |= u32::from(c.r) << 16;
+    h
+}
+
 pub fn color_from_hex(hex: u32) -> Color {
     let a = (hex & 0x00_00_00_FF) as u8;
     let b = ((hex & 0x00_00_FF_00) >> 8) as u8;

@@ -91,13 +91,14 @@ fn register_all_components(world: &mut Ecs_World) {
 // @Temporary
 fn init_demo_lights(lights: &mut Lights) {
     lights.ambient_light.color = colors::rgb(200, 140, 180);
-    lights.ambient_light.intensity = 1.;
+    lights.ambient_light.intensity = 0.1;
 
     let light = Point_Light {
         position: v2!(-100., 0.),
         radius: 250.,
         attenuation: 0.0,
         color: colors::YELLOW,
+        intensity: 1.0,
     };
     lights.add_point_light(light);
     let light = Point_Light {
@@ -105,6 +106,7 @@ fn init_demo_lights(lights: &mut Lights) {
         radius: 250.,
         attenuation: 0.0,
         color: colors::YELLOW,
+        intensity: 2.0,
     };
     lights.add_point_light(light);
     let light = Point_Light {
@@ -112,6 +114,7 @@ fn init_demo_lights(lights: &mut Lights) {
         radius: 250.,
         attenuation: 0.2,
         color: colors::RED,
+        intensity: 1.0,
     };
     lights.add_point_light(light);
     let light = Point_Light {
@@ -119,6 +122,7 @@ fn init_demo_lights(lights: &mut Lights) {
         radius: 250.,
         attenuation: 0.2,
         color: colors::RED,
+        intensity: 1.0,
     };
     lights.add_point_light(light);
     let light = Point_Light {
@@ -126,6 +130,7 @@ fn init_demo_lights(lights: &mut Lights) {
         radius: 200.,
         attenuation: 0.1,
         color: colors::GREEN,
+        intensity: 1.0,
     };
     lights.add_point_light(light);
     let light = Point_Light {
@@ -133,6 +138,7 @@ fn init_demo_lights(lights: &mut Lights) {
         radius: 300.,
         attenuation: 0.01,
         color: colors::BLUE,
+        intensity: 1.0,
     };
     lights.add_point_light(light);
     let light = Point_Light {
@@ -140,6 +146,7 @@ fn init_demo_lights(lights: &mut Lights) {
         radius: 100.,
         attenuation: 0.01,
         color: colors::AQUA,
+        intensity: 1.0,
     };
     lights.add_point_light(light);
     let light = Point_Light {
@@ -147,6 +154,15 @@ fn init_demo_lights(lights: &mut Lights) {
         radius: 100.,
         attenuation: 0.01,
         color: colors::FUCHSIA,
+        intensity: 1.0,
+    };
+    lights.add_point_light(light);
+    let light = Point_Light {
+        position: v2!(430., 290.),
+        radius: 50.,
+        attenuation: 0.01,
+        color: colors::FUCHSIA,
+        intensity: 0.3,
     };
     lights.add_point_light(light);
 }
@@ -187,7 +203,7 @@ fn init_demo_entities(
         let mut ctrl = level.world.add_component(
             camera,
             C_Controllable {
-                speed: Cfg_Var::new("game/gameplay/player/player_speed", cfg),
+                speed: Cfg_Var::new("game/gameplay/camera_speed", cfg),
                 ..Default::default()
             },
         );
@@ -293,7 +309,7 @@ fn init_demo_entities(
             let ctr = level.world.add_component(
                 entity,
                 C_Controllable {
-                    speed: Cfg_Var::new("game/gameplay/player/player_speed", cfg),
+                    speed: Cfg_Var::new("game/gameplay/player_speed", cfg),
                     ..Default::default()
                 },
             );

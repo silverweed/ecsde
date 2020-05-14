@@ -8,7 +8,6 @@ struct Point_Light {
     vec3 color;
     float radius;
     float attenuation;
-    float intensity;
 };
 
 #define MAX_POINT_LIGHTS 64
@@ -23,8 +22,8 @@ varying vec2 world_pos;
 void main() {
     vec4 pixel = texture2D(texture, gl_TexCoord[0].xy);
 
-    vec3 color = vec3(1.0);
-    color *= ambient_light.color * ambient_light.intensity;
+    vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
+    color *= vec4(ambient_light.color, 1.0) * ambient_light.intensity;
 
     float avg_transparency = 0.0;
     const int EDGE_RADIUS = 7;
@@ -43,7 +42,7 @@ void main() {
         Point_Light light = point_lights[i];
         vec2 frag_to_light = light.position - world_pos;
         vec2 light_dir = normalize(frag_to_light);
-        vec3 diffuse = light.intensity * light.color;
+        vec3 diffuse = light.color;
 
         float dist = length(frag_to_light);
         //float atten = float(dist < light.radius) * 1.0 / (1.0 + dist * light.attenuation);
@@ -52,5 +51,5 @@ void main() {
         color += light_weight * (vec4(diffuse * (1.0 + glow), 0.0) * atten);
     }
 
-    gl_FragColor = vec4(color.rgb * pixel.rgb, pixel.a);
+    gl_FragColor = color * pixel;
 }

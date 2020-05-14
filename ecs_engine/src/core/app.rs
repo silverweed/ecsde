@@ -158,7 +158,7 @@ pub fn init_engine_debug(
 
     engine_state
         .debug_systems
-        .global_painter()
+        .global_painter
         .init(gfx_resources, &engine_state.env);
 
     let (win_w, win_h) = (

@@ -22,8 +22,9 @@ pub struct Debug_Systems {
     pub debug_ui: debug_ui::Debug_Ui_System,
 
     pub replay_recording_system: recording_system::Replay_Recording_System,
-    // Note: we have one painter per level plus the "global" painter (with empty Id)
+    // Note: we have one painter per level
     pub painters: HashMap<String_Id, Debug_Painter>,
+    pub global_painter: Debug_Painter,
     pub console: console::Console,
     pub log: log::Debug_Log,
     pub calipers: calipers::Debug_Calipers,
@@ -47,19 +48,18 @@ impl Core_Systems<'_> {
 #[cfg(debug_assertions)]
 impl Debug_Systems {
     pub fn new(cfg: &cfg::Config) -> Debug_Systems {
-        let mut painters = HashMap::new();
         let ms_per_frame =
             cfg::Cfg_Var::<f32>::new("engine/gameplay/gameplay_update_tick_ms", cfg).read(cfg);
         let debug_log_size =
             cfg::Cfg_Var::<i32>::new("engine/debug/log/hist_size_seconds", cfg).read(cfg);
         let fps = (1000. / ms_per_frame + 0.5) as i32;
-        painters.insert(String_Id::from(""), Debug_Painter::new());
         Debug_Systems {
             debug_ui: debug_ui::Debug_Ui_System::new(),
             replay_recording_system: recording_system::Replay_Recording_System::new(
                 recording_system::Replay_Recording_System_Config { ms_per_frame },
             ),
-            painters,
+            painters: HashMap::default(),
+            global_painter: Debug_Painter::new(),
             show_trace_overlay: false,
             trace_overlay_update_t: 0.0,
             console: console::Console::new(),
@@ -67,10 +67,6 @@ impl Debug_Systems {
             calipers: calipers::Debug_Calipers::default(),
             traced_fn: String::default(),
         }
-    }
-
-    pub fn global_painter(&mut self) -> &mut Debug_Painter {
-        self.painters.get_mut(&String_Id::from("")).unwrap()
     }
 
     pub fn new_debug_painter_for_level(

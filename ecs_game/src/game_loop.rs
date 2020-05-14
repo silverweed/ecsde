@@ -519,7 +519,7 @@ where
             });
 
         // Global painter
-        let painter = game_state.engine_state.debug_systems.global_painter();
+        let painter = &mut game_state.engine_state.debug_systems.global_painter;
         painter.draw(&mut game_state.window, gres, &Transform2D::default());
         painter.clear();
 
@@ -604,10 +604,7 @@ fn update_debug(
         .draw_mouse_rulers
         .read(&engine_state.config);
     if draw_mouse_rulers {
-        let painter = debug_systems
-            .painters
-            .get_mut(&String_Id::from(""))
-            .unwrap();
+        let painter = &mut debug_systems.global_painter;
         update_mouse_debug_overlay(
             debug_systems.debug_ui.get_overlay(sid_mouse),
             painter,
@@ -669,6 +666,7 @@ fn update_debug(
     let draw_world_chunks = cvars.draw_world_chunks.read(&engine_state.config);
     let draw_lights = cvars.draw_lights.read(&engine_state.config);
     let lv_batches = &mut game_state.level_batches;
+    let global_painter = &mut debug_systems.global_painter;
 
     game_state
         .gameplay_system
@@ -706,7 +704,7 @@ fn update_debug(
             }
 
             if draw_lights {
-                debug_draw_lights(debug_painter, &level.lights);
+                debug_draw_lights(global_painter, debug_painter, &level.lights);
             }
 
             // Debug grid
@@ -728,7 +726,7 @@ fn update_debug(
                 use ecs_engine::collisions::collider::Collider;
                 ecs_engine::ecs::ecs_world::draw_comp_alloc::<Collider>(
                     &level.world,
-                    painters.get_mut(&String_Id::from("")).unwrap(),
+                    global_painter,
                 );
             }
         });
@@ -1006,7 +1004,21 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 }
 
 #[cfg(debug_assertions)]
-fn debug_draw_lights(debug_painter: &mut Debug_Painter, lights: &ecs_engine::gfx::light::Lights) {
+fn debug_draw_lights(
+    screenspace_debug_painter: &mut Debug_Painter,
+    debug_painter: &mut Debug_Painter,
+    lights: &ecs_engine::gfx::light::Lights,
+) {
+    screenspace_debug_painter.add_text(
+        &format!(
+            "Ambient Light: color: #{:X}, intensity: {}",
+            colors::color_to_hex_no_alpha(lights.ambient_light.color),
+            lights.ambient_light.intensity
+        ),
+        v2!(5., 300.),
+        15,
+        lights.ambient_light.color,
+    );
     for pl in &lights.point_lights[..lights.n_actual_point_lights] {
         debug_painter.add_circle(
             Circle {
@@ -1028,7 +1040,10 @@ fn debug_draw_lights(debug_painter: &mut Debug_Painter, lights: &ecs_engine::gfx
             pl.color,
         );
         debug_painter.add_text(
-            &format!("radius: {}\natten: {}", pl.radius, pl.attenuation),
+            &format!(
+                "radius: {}\natten: {}\nintens: {}",
+                pl.radius, pl.attenuation, pl.intensity
+            ),
             pl.position + v2!(1., 1.),
             10,
             if colors::to_hsv(pl.color).v > 0.5 {
@@ -1038,7 +1053,10 @@ fn debug_draw_lights(debug_painter: &mut Debug_Painter, lights: &ecs_engine::gfx
             },
         );
         debug_painter.add_text(
-            &format!("radius: {}\natten: {}", pl.radius, pl.attenuation),
+            &format!(
+                "radius: {}\natten: {}\nintens: {}",
+                pl.radius, pl.attenuation, pl.intensity
+            ),
             pl.position,
             10,
             pl.color,

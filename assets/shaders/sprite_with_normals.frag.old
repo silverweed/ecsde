@@ -10,7 +10,6 @@ struct Point_Light {
     vec3 color;
     float radius;
     float attenuation;
-    float intensity;
 };
 
 #define MAX_POINT_LIGHTS 64
@@ -41,9 +40,9 @@ void main() {
 
     // Note: gl_Color contains the sprite's rotation
     float sprite_rot = decode_rot(gl_Color);
-    vec3 color = vec3(1.0);
+    vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
 
-    color *= ambient_light.color * ambient_light.intensity;
+    color *= vec4(ambient_light.color, 1.0) * ambient_light.intensity;
 
     vec3 normal = 2.0 * (texture2D(normals, gl_TexCoord[0].xy).xyz - 0.5);
     float cos_a = cos(sprite_rot);
@@ -71,14 +70,14 @@ void main() {
         float spec = pow(max(dot(half_dir, normal), 0.0), max(1.0, shininess));
         vec3 specular = specular_color * spec * light.color;
 
-        vec3 result = light.intensity * (diffuse + specular);
+        vec3 result = diffuse + specular;
 
         float dist = length(frag_to_light);
         //float atten = float(dist < light.radius) * 1.0 / (1.0 + dist * light.attenuation);
         float atten = max(0.0, mix(1.0, 0.0, dist / light.radius));
 
-        color += result * atten;
+        color += vec4(result, 0.0) * atten;
     }
 
-    gl_FragColor = vec4(color.rgb * pixel.rgb, pixel.a);
+    gl_FragColor = color * pixel;
 }

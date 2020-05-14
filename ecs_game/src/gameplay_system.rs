@@ -251,7 +251,11 @@ impl Gameplay_System {
             camera.transform.translate_v(v);
 
             // DEBUG: center camera on player
-            //return;
+            let camera_on_player =
+                Cfg_Var::<bool>::new("engine/debug/gameplay/camera_on_player", &cfg).read(&cfg);
+            if !camera_on_player {
+                return;
+            }
 
             foreach_entity!(&level.world, +C_Controllable, ~C_Camera2D, |moved| {
                 let pos = level

@@ -240,6 +240,7 @@ fn set_shader_uniforms(
         shader.set_uniform_vec3(&format!("point_lights[{}].color", i), col2v3(pl.color));
         shader.set_uniform_float(&format!("point_lights[{}].radius", i), pl.radius);
         shader.set_uniform_float(&format!("point_lights[{}].attenuation", i), pl.attenuation);
+        shader.set_uniform_float(&format!("point_lights[{}].intensity", i), pl.intensity);
     }
     shader.set_uniform_float("shininess", Material::decode_shininess(material.shininess));
     shader.set_uniform_vec3("specular_color", col2v3(material.specular_color));

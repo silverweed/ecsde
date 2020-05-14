@@ -8,6 +8,7 @@ pub struct Point_Light {
     pub radius: f32,
     // Exponent used in 1/d^x
     pub attenuation: f32,
+    pub intensity: f32,
 }
 
 impl Default for Point_Light {
@@ -17,6 +18,7 @@ impl Default for Point_Light {
             radius: 0.,
             attenuation: 1.,
             color: colors::WHITE,
+            intensity: 1.,
         }
     }
 }
