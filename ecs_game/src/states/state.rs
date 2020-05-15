@@ -24,7 +24,12 @@ pub trait Game_State {
     fn on_pause(&mut self, _args: &mut Game_State_Args) {}
     fn on_resume(&mut self, _args: &mut Game_State_Args) {}
     fn on_end(&mut self, _args: &mut Game_State_Args) {}
-    fn update(&mut self, _args: &mut Game_State_Args, _dt: &Duration, _real_dt: &Duration) -> State_Transition {
+    fn update(
+        &mut self,
+        _args: &mut Game_State_Args,
+        _dt: &Duration,
+        _real_dt: &Duration,
+    ) -> State_Transition {
         State_Transition::None
     }
     /// Returns true if should quit

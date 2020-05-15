@@ -3,11 +3,11 @@ use crate::common::colors;
 //use crate::gfx::align::Align;
 use super::widgets::*;
 use crate::common::rect::Rectf;
+use crate::common::vector::Vec2f;
+use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
 use crate::gfx::window::Window_Handle;
-use crate::common::vector::Vec2f;
 use crate::resources::gfx::Gfx_Resources;
-use crate::gfx::paint_props::Paint_Properties;
 
 fn select_ac<T>(by_ac: &By_Activeness<T>, active: bool, hot: bool) -> &T {
     if active {
@@ -34,16 +34,13 @@ pub enum Draw_Command {
         props: Paint_Properties,
         font_size: u16,
         pos: Vec2f,
-    }
+    },
 }
 
 pub fn draw_all_ui(window: &mut Window_Handle, gres: &Gfx_Resources, ui: &mut UI_Context) {
     for cmd in &ui.draw_cmd_queue {
         match cmd {
-            Draw_Command::Rect {
-                rect,
-                props,
-            } => {
+            Draw_Command::Rect { rect, props } => {
                 render::render_rect(window, *rect, *props);
             }
             Draw_Command::Text {
@@ -79,7 +76,7 @@ pub fn draw_button(
 
     draw_cmds.push(Draw_Command::Rect {
         rect,
-        props: bg_col.into()
+        props: bg_col.into(),
     });
 
     // @Speed: we're creating a Text just to get its size.
@@ -92,7 +89,7 @@ pub fn draw_button(
         text: String::from(text),
         pos,
         font_size: props.font_size,
-        props: text_col.into()
+        props: text_col.into(),
     });
 
     draw_cmds

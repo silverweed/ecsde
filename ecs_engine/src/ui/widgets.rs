@@ -107,12 +107,5 @@ pub fn button(
     );
     add_draw_commands(ui, cmds);
 
-    if id == 1 {
-        //ldebug!("{}: hot {}, active {}", id, is_hot(ui, id), is_active(ui, id));
-        if mouse_went_up(&input_state.mouse_state, Mouse_Button::Left) {
-            ldebug!("mouse went up");
-        }
-    }
-
     result
 }

@@ -1,6 +1,6 @@
+use super::drawing::Draw_Command;
 use crate::core::env::Env_Info;
 use crate::resources::gfx::{font_path, Font_Handle, Gfx_Resources};
-use super::drawing::Draw_Command;
 use std::collections::VecDeque;
 
 // in game code:
@@ -24,7 +24,8 @@ pub struct UI_Context {
 pub(super) const UI_ID_INVALID: UI_Id = 0;
 
 pub(super) fn add_draw_commands<T>(ui: &mut UI_Context, commands: T)
-    where T: std::iter::IntoIterator<Item=Draw_Command>
+where
+    T: std::iter::IntoIterator<Item = Draw_Command>,
 {
     ui.draw_cmd_queue.extend(commands.into_iter());
 }

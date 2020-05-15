@@ -279,7 +279,7 @@ where
                 &game_state.engine_state.config,
             );
 
-            // @Cleanup: where do we put this? Do we want this inside gameplay_system? 
+            // @Cleanup: where do we put this? Do we want this inside gameplay_system?
             {
                 trace!("state_mgr::update");
 

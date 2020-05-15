@@ -1,12 +1,12 @@
 use super::element::Debug_Element;
 use crate::alloc::temp;
-use crate::input::input_system::Input_State;
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
 use crate::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
 use crate::gfx::window::Window_Handle;
+use crate::input::input_system::Input_State;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
 pub struct Debug_Line {
@@ -167,7 +167,12 @@ impl Debug_Element for Debug_Overlay {
         }
     }
 
-    fn update(&mut self, _dt: &std::time::Duration, window: &Window_Handle, input_state: &Input_State) {
+    fn update(
+        &mut self,
+        _dt: &std::time::Duration,
+        window: &Window_Handle,
+        input_state: &Input_State,
+    ) {
         use crate::gfx::window;
         use crate::input::bindings::mouse;
 

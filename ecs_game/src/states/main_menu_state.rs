@@ -1,9 +1,9 @@
-use super::state::{State_Transition, Game_State, Game_State_Args};
-use std::time::Duration;
-use ecs_engine::gfx::window::{self, Window_Handle};
+use super::state::{Game_State, Game_State_Args, State_Transition};
 use ecs_engine::common::rect::Rect;
 use ecs_engine::common::vector::{lerp_v, Vec2f};
+use ecs_engine::gfx::window::{self, Window_Handle};
 use ecs_engine::ui;
+use std::time::Duration;
 
 #[derive(Default)]
 struct Menu_Button {
@@ -13,7 +13,7 @@ struct Menu_Button {
     pub size: Vec2f,
     pub start_pos: Vec2f,
     pub target_pos: Vec2f,
-    pub ease_t: f32
+    pub ease_t: f32,
 }
 
 #[derive(Default)]
@@ -34,7 +34,7 @@ impl Main_Menu_State {
             target_pos: v2!(ww * 0.5, wh * 0.5),
             text: "Start Game",
             size: v2!(200., 120.),
-            ease_t: 0.
+            ease_t: 0.,
         });
         buttons.push(Menu_Button {
             id: 2,
@@ -43,7 +43,7 @@ impl Main_Menu_State {
             target_pos: v2!(ww * 0.5, wh * 0.5 + 100.),
             text: "Quit",
             size: v2!(200., 120.),
-            ease_t: 0.
+            ease_t: 0.,
         });
         buttons
     }
@@ -54,11 +54,16 @@ impl Game_State for Main_Menu_State {
         self.buttons = Self::create_buttons(args.window);
     }
 
-    fn update(&mut self, args: &mut Game_State_Args, dt: &Duration, _real_dt: &Duration) -> State_Transition {
+    fn update(
+        &mut self,
+        args: &mut Game_State_Args,
+        dt: &Duration,
+        _real_dt: &Duration,
+    ) -> State_Transition {
         for button in &mut self.buttons {
             button.ease_t = (button.ease_t + dt.as_secs_f32()).min(1.);
         }
-            
+
         let window = &mut args.window;
         let gres = &args.game_resources.gfx;
         let ui_ctx = &mut args.engine_state.systems.ui;
@@ -68,9 +73,7 @@ impl Game_State for Main_Menu_State {
         let pos = lerp_v(b.start_pos, b.target_pos, b.ease_t);
         let rect = Rect::new(pos.x, pos.y, b.size.x, b.size.y);
         // Start game
-        if ui::button(window, gres, istate, ui_ctx, b.id, b.text, rect, &b.props) {
-
-        }
+        if ui::button(window, gres, istate, ui_ctx, b.id, b.text, rect, &b.props) {}
 
         let b = &self.buttons[1];
         let pos = lerp_v(b.start_pos, b.target_pos, b.ease_t);

@@ -1,7 +1,6 @@
 use crate::states::state::{Game_State_Args, Persistent_Game_State};
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use ecs_engine::cfg::{self, Cfg_Var};
-use std::time::Duration;
 use ecs_engine::common::colors;
 use ecs_engine::common::math;
 use ecs_engine::common::rect::Rect;
@@ -11,6 +10,7 @@ use ecs_engine::gfx::render;
 use ecs_engine::gfx::window;
 use ecs_engine::input::bindings::mouse;
 use ecs_engine::input::input_system::{Action_Kind, Game_Action};
+use std::time::Duration;
 
 pub struct Debug_Base_State {
     sid_game_speed_up: String_Id,

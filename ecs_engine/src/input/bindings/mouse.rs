@@ -21,13 +21,14 @@ pub enum Mouse_Button {
 pub struct Mouse_State {
     // indexed by Mouse_Button
     was_pressed_latest_frame: [bool; 3],
-    is_pressed: [bool; 3]
+    is_pressed: [bool; 3],
 }
 
 pub fn update_mouse_state(state: &mut Mouse_State) {
     for i in 0..state.was_pressed_latest_frame.len() {
         state.was_pressed_latest_frame[i] = state.is_pressed[i];
-        state.is_pressed[i] = backend::is_mouse_btn_pressed(Mouse_Button::try_from(i as u8).unwrap());
+        state.is_pressed[i] =
+            backend::is_mouse_btn_pressed(Mouse_Button::try_from(i as u8).unwrap());
     }
 }
 

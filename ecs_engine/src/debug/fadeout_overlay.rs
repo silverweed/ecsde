@@ -1,5 +1,4 @@
 use super::element::Debug_Element;
-use crate::input::input_system::Input_State;
 use crate::alloc::temp;
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
@@ -8,6 +7,7 @@ use crate::core;
 use crate::gfx;
 use crate::gfx::align::Align;
 use crate::gfx::window::Window_Handle;
+use crate::input::input_system::Input_State;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
 use std::time::Duration;
