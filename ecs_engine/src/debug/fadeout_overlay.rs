@@ -1,4 +1,5 @@
 use super::element::Debug_Element;
+use crate::input::input_system::Input_State;
 use crate::alloc::temp;
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
@@ -40,7 +41,7 @@ pub struct Fadeout_Debug_Overlay {
 }
 
 impl Debug_Element for Fadeout_Debug_Overlay {
-    fn update(&mut self, dt: &Duration, _window: &Window_Handle) {
+    fn update(&mut self, dt: &Duration, _window: &Window_Handle, _input_state: &Input_State) {
         let fadeout_time = self.config.fadeout_time;
         let mut n_drained = 0;
         for (i, text) in self.fadeout_texts.iter_mut().enumerate().rev() {

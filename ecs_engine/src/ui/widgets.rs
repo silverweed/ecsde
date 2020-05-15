@@ -109,8 +109,6 @@ pub fn button(
 
     if id == 1 {
         //ldebug!("{}: hot {}, active {}", id, is_hot(ui, id), is_active(ui, id));
-        ldebug!("was_pressed: {}, is_pressed: {}", input_state.mouse_state.was_pressed_latest_frame[
-                Mouse_Button::Left as usize], crate::input::bindings::mouse::is_mouse_btn_pressed(Mouse_Button::Left));
         if mouse_went_up(&input_state.mouse_state, Mouse_Button::Left) {
             ldebug!("mouse went up");
         }

@@ -1,5 +1,6 @@
 use super::element::Debug_Element;
 use crate::alloc::temp;
+use crate::input::input_system::Input_State;
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
 use crate::common::vector::Vec2f;
@@ -166,7 +167,7 @@ impl Debug_Element for Debug_Overlay {
         }
     }
 
-    fn update(&mut self, _dt: &std::time::Duration, window: &Window_Handle) {
+    fn update(&mut self, _dt: &std::time::Duration, window: &Window_Handle, input_state: &Input_State) {
         use crate::gfx::window;
         use crate::input::bindings::mouse;
 
@@ -183,7 +184,7 @@ impl Debug_Element for Debug_Overlay {
             );
         let mpos = Vec2f::from(window::mouse_pos_in_window(window));
 
-        if mouse::is_mouse_btn_pressed(mouse::Mouse_Button::Left) {
+        if mouse::is_mouse_btn_pressed(&input_state.mouse_state, mouse::Mouse_Button::Left) {
             self.hover_data.selected_line = self.hover_data.hovered_line;
             self.hover_data.just_selected = true;
         } else {

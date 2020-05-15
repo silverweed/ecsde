@@ -20,22 +20,23 @@ pub enum Mouse_Button {
 #[derive(Default)]
 pub struct Mouse_State {
     // indexed by Mouse_Button
-    pub was_pressed_latest_frame: [bool; 3],
+    was_pressed_latest_frame: [bool; 3],
+    is_pressed: [bool; 3]
 }
 
 pub fn update_mouse_state(state: &mut Mouse_State) {
     for i in 0..state.was_pressed_latest_frame.len() {
-        state.was_pressed_latest_frame[i] =
-            is_mouse_btn_pressed(Mouse_Button::try_from(i as u8).unwrap())
+        state.was_pressed_latest_frame[i] = state.is_pressed[i];
+        state.is_pressed[i] = backend::is_mouse_btn_pressed(Mouse_Button::try_from(i as u8).unwrap());
     }
 }
 
 pub fn mouse_went_up(state: &Mouse_State, button: Mouse_Button) -> bool {
-    state.was_pressed_latest_frame[button as usize] && !is_mouse_btn_pressed(button)
+    state.was_pressed_latest_frame[button as usize] && !is_mouse_btn_pressed(state, button)
 }
 
 pub fn mouse_went_down(state: &Mouse_State, button: Mouse_Button) -> bool {
-    !state.was_pressed_latest_frame[button as usize] && is_mouse_btn_pressed(button)
+    !state.was_pressed_latest_frame[button as usize] && is_mouse_btn_pressed(state, button)
 }
 
 pub fn string_to_mouse_btn(s: &str) -> Option<Mouse_Button> {
@@ -55,6 +56,7 @@ pub fn get_mouse_btn(button: backend::Button) -> Option<Mouse_Button> {
     backend::get_mouse_btn(button)
 }
 
-pub fn is_mouse_btn_pressed(button: Mouse_Button) -> bool {
-    backend::is_mouse_btn_pressed(button)
+#[inline(always)]
+pub fn is_mouse_btn_pressed(state: &Mouse_State, button: Mouse_Button) -> bool {
+    state.is_pressed[button as usize]
 }

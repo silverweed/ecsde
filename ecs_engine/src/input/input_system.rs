@@ -61,6 +61,7 @@ pub fn update_input(
     process_game_actions: bool,
 ) {
     joystick::update_joysticks();
+    mouse::update_mouse_state(&mut input_state.mouse_state);
     provider.update(window, Some(&input_state.joy_state), cfg);
 
     provider.get_axes(&mut input_state.joy_state.values);
@@ -68,10 +69,6 @@ pub fn update_input(
 
     let events = provider.get_events();
     read_events_to_actions(input_state, events, process_game_actions);
-}
-
-pub fn late_update_input(input_state: &mut Input_State) {
-    mouse::update_mouse_state(&mut input_state.mouse_state);
 }
 
 fn handle_actions(actions: &mut Vec<Game_Action>, kind: Action_Kind, names: &[String_Id]) {

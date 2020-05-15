@@ -162,8 +162,9 @@ impl Persistent_Game_State for Debug_Base_State {
             return;
         }
 
-        let mleft = mouse::is_mouse_btn_pressed(mouse::Mouse_Button::Left);
-        let mright = mouse::is_mouse_btn_pressed(mouse::Mouse_Button::Right);
+        let mouse_state = &args.engine_state.input_state.mouse_state;
+        let mleft = mouse::is_mouse_btn_pressed(mouse_state, mouse::Mouse_Button::Left);
+        let mright = mouse::is_mouse_btn_pressed(mouse_state, mouse::Mouse_Button::Right);
         if mleft || mright {
             let mpos = window::mouse_pos_in_world(
                 args.window,
