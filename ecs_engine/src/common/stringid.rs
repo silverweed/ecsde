@@ -64,7 +64,9 @@ impl std::fmt::Display for String_Id {
             "{}",
             STRING_ID_MAP
                 .read()
-                .expect("[ ERROR ] Failed to lock STRING_ID_MAP")[self]
+                .expect("[ ERROR ] Failed to lock STRING_ID_MAP")
+                .get(self) // this may fail if we created the String_Id from an integer directly
+                .unwrap_or(&format!("{}", self.0))
         )
     }
 }
