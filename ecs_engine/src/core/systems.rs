@@ -1,6 +1,6 @@
 use crate::audio::audio_system;
-use crate::ui;
 use crate::events::evt_register;
+use crate::ui;
 
 #[cfg(debug_assertions)]
 use {
@@ -43,7 +43,7 @@ impl Core_Systems<'_> {
                 max_concurrent_sounds: 10,
             }),
             evt_register: evt_register::Event_Register::new(),
-            ui: ui::UI_Context::default()
+            ui: ui::UI_Context::default(),
         }
     }
 }

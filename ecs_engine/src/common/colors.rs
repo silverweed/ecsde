@@ -140,6 +140,11 @@ pub fn darken(c: Color, amount: f32) -> Color {
     })
 }
 
+pub fn to_gray_scale(c: Color) -> Color {
+    let avg = ((c.r as f32 * 0.3) + (c.g as f32 * 0.59) + (c.b as f32 * 0.11)) as u8;
+    rgba(avg, avg, avg, c.a)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

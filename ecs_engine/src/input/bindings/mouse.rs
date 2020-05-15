@@ -25,7 +25,8 @@ pub struct Mouse_State {
 
 pub fn update_mouse_state(state: &mut Mouse_State) {
     for i in 0..state.was_pressed_latest_frame.len() {
-        state.was_pressed_latest_frame[i] = is_mouse_btn_pressed(Mouse_Button::try_from(i as u8).unwrap())
+        state.was_pressed_latest_frame[i] =
+            is_mouse_btn_pressed(Mouse_Button::try_from(i as u8).unwrap())
     }
 }
 

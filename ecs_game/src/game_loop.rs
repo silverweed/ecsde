@@ -1,10 +1,9 @@
 use super::{Game_Resources, Game_State};
 use crate::states::state::Game_State_Args;
-use ecs_engine::ui;
 use ecs_engine::alloc::temp::*;
-use ecs_engine::common::rect::Rect;
 use ecs_engine::collisions::physics;
 use ecs_engine::common::colors;
+use ecs_engine::common::rect::Rect;
 use ecs_engine::common::transform::Transform2D;
 use ecs_engine::common::Maybe_Error;
 use ecs_engine::core::app;
@@ -13,6 +12,7 @@ use ecs_engine::gfx;
 use ecs_engine::gfx::render_system;
 use ecs_engine::input;
 use ecs_engine::resources::gfx::Gfx_Resources;
+use ecs_engine::ui;
 use std::convert::TryInto;
 use std::time::Duration;
 
@@ -399,14 +399,39 @@ where
 }
 
 fn update_ui(game_state: &mut Game_State, gres: &Gfx_Resources) {
+    trace!("update_ui");
+
+    use ecs_engine::ui::Button_Props;
+
     let window = &mut game_state.window;
     let ui_ctx = &mut game_state.engine_state.systems.ui;
     let input_state = &game_state.engine_state.input_state;
 
-    if ui::button(window, gres, input_state, ui_ctx, 1, "Say hello", Rect::new(10., 10., 100., 50.)) {
+    if ui::button(
+        window,
+        gres,
+        input_state,
+        ui_ctx,
+        1,
+        "Say hello",
+        Rect::new(10., 10., 100., 50.),
+        &Button_Props::default(),
+    ) {
         println!("Hello UI!");
     }
-    if ui::button(window, gres, input_state, ui_ctx, 2, "Say hello", Rect::new(10., 60., 100., 50.)) {
+    if ui::button(
+        window,
+        gres,
+        input_state,
+        ui_ctx,
+        2,
+        "Say hello",
+        Rect::new(10., 60., 100., 50.),
+        &Button_Props {
+            enabled: false,
+            ..Default::default()
+        },
+    ) {
         println!("Hello Sailor!");
     }
 }

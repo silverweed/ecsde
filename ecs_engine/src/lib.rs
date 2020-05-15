@@ -28,11 +28,11 @@ pub mod core;
 pub mod ecs;
 pub mod events;
 pub mod fs;
-pub mod ui;
 pub mod gfx;
 pub mod input;
 pub mod replay;
 pub mod resources;
+pub mod ui;
 
 #[cfg(debug_assertions)]
 pub mod debug;
