@@ -23,6 +23,11 @@ impl<T: Hash> Hash for Vector2<T> {
     }
 }
 
+#[inline(always)]
+pub fn lerp_v(v1: Vec2f, v2: Vec2f, t: f32) -> Vec2f {
+    v2!(math::lerp(v1.x, v2.x, t), math::lerp(v1.y, v2.y, t))
+}
+
 #[cfg(feature = "use-sfml")]
 impl From<Vec2f> for sfml::system::Vector2f {
     fn from(v: Vec2f) -> sfml::system::Vector2f {

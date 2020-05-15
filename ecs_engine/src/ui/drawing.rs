@@ -5,7 +5,9 @@ use super::widgets::*;
 use crate::common::rect::Rectf;
 use crate::gfx::render;
 use crate::gfx::window::Window_Handle;
+use crate::common::vector::Vec2f;
 use crate::resources::gfx::Gfx_Resources;
+use crate::gfx::paint_props::Paint_Properties;
 
 fn select_ac<T>(by_ac: &By_Activeness<T>, active: bool, hot: bool) -> &T {
     if active {
@@ -22,8 +24,43 @@ fn disabled_col(c: colors::Color) -> colors::Color {
     colors::darken(colors::to_gray_scale(c), 0.5)
 }
 
+pub enum Draw_Command {
+    Rect {
+        rect: Rectf,
+        props: Paint_Properties,
+    },
+    Text {
+        text: String,
+        props: Paint_Properties,
+        font_size: u16,
+        pos: Vec2f,
+    }
+}
+
+pub fn draw_all_ui(window: &mut Window_Handle, gres: &Gfx_Resources, ui: &mut UI_Context) {
+    for cmd in &ui.draw_cmd_queue {
+        match cmd {
+            Draw_Command::Rect {
+                rect,
+                props,
+            } => {
+                render::render_rect(window, *rect, *props);
+            }
+            Draw_Command::Text {
+                text,
+                pos,
+                font_size,
+                props,
+            } => {
+                let mut text = render::create_text(&text, gres.get_font(ui.font), *font_size);
+                render::render_text(window, &mut text, *props, *pos);
+            }
+        }
+    }
+    ui.draw_cmd_queue.clear();
+}
+
 pub fn draw_button(
-    window: &mut Window_Handle,
     gres: &Gfx_Resources,
     ui: &UI_Context,
     text: &str,
@@ -31,7 +68,8 @@ pub fn draw_button(
     active: bool,
     hot: bool,
     props: &Button_Props,
-) {
+) -> Vec<Draw_Command> {
+    let mut draw_cmds = Vec::with_capacity(2);
     let mut bg_col = *select_ac(&props.bg_color, active, hot);
     let mut text_col = *select_ac(&props.text_color, active, hot);
     if !props.enabled {
@@ -39,10 +77,23 @@ pub fn draw_button(
         text_col = disabled_col(text_col);
     }
 
-    render::render_rect(window, rect, bg_col);
-    let mut text = render::create_text(text, gres.get_font(ui.font), props.font_size);
-    let text_size = render::get_text_size(&text);
+    draw_cmds.push(Draw_Command::Rect {
+        rect,
+        props: bg_col.into()
+    });
+
+    // @Speed: we're creating a Text just to get its size.
+    let txt = render::create_text(text, gres.get_font(ui.font), props.font_size);
+    let text_size = render::get_text_size(&txt);
     // @Incomplete: consider Align
     let pos = v2!(rect.x, rect.y) + v2!(rect.width * 0.5, rect.height * 0.5) - text_size * 0.5;
-    render::render_text(window, &mut text, text_col, pos);
+
+    draw_cmds.push(Draw_Command::Text {
+        text: String::from(text),
+        pos,
+        font_size: props.font_size,
+        props: text_col.into()
+    });
+
+    draw_cmds
 }

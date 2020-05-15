@@ -1,6 +1,6 @@
 use super::state::{Game_State, Game_State_Args, Persistent_Game_State, State_Transition};
 use ecs_engine::input::input_system::Game_Action;
-use std::vec::Vec;
+use std::time::Duration;
 
 /// Manages a PDA of Game_States.
 pub struct State_Manager {
@@ -21,13 +21,13 @@ impl State_Manager {
         }
     }
 
-    pub fn update(&mut self, args: &mut Game_State_Args) {
+    pub fn update(&mut self, args: &mut Game_State_Args, dt: &Duration, real_dt: &Duration) {
         for state in &mut self.persistent_states {
-            state.update(args);
+            state.update(args, dt, real_dt);
         }
 
         if let Some(state) = self.current_state() {
-            match state.update(args) {
+            match state.update(args, dt, real_dt) {
                 State_Transition::None => {}
                 State_Transition::Push(new_state) => self.push_state(new_state, args),
                 State_Transition::Replace(new_state) => self.replace_state(new_state, args),
@@ -70,7 +70,7 @@ impl State_Manager {
         }
     }
 
-    fn push_state(&mut self, mut state: Box<dyn Game_State>, args: &mut Game_State_Args) {
+    pub fn push_state(&mut self, mut state: Box<dyn Game_State>, args: &mut Game_State_Args) {
         if let Some(s) = self.current_state() {
             s.on_pause(args);
         }

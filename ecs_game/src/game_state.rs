@@ -359,6 +359,14 @@ fn init_states(
         };
         state_mgr.add_persistent_state(debug_base_state, &mut args);
     }
+    let menu_state= Box::new(states::main_menu_state::Main_Menu_State::default());
+    let mut args = states::state::Game_State_Args {
+        engine_state,
+        gameplay_system: gs,
+        window,
+        game_resources,
+    };
+    state_mgr.push_state(menu_state, &mut args);
 }
 
 #[cfg(debug_assertions)]

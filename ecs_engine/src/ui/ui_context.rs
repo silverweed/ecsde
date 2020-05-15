@@ -1,5 +1,7 @@
 use crate::core::env::Env_Info;
 use crate::resources::gfx::{font_path, Font_Handle, Gfx_Resources};
+use super::drawing::Draw_Command;
+use std::collections::VecDeque;
 
 // in game code:
 // for menus
@@ -15,14 +17,23 @@ pub struct UI_Context {
     hot: UI_Id,
     active: UI_Id,
     pub font: Font_Handle,
+
+    pub(super) draw_cmd_queue: VecDeque<Draw_Command>,
 }
 
 pub(super) const UI_ID_INVALID: UI_Id = 0;
+
+pub(super) fn add_draw_commands<T>(ui: &mut UI_Context, commands: T)
+    where T: std::iter::IntoIterator<Item=Draw_Command>
+{
+    ui.draw_cmd_queue.extend(commands.into_iter());
+}
 
 #[inline]
 pub(super) fn set_hot(ui: &mut UI_Context, id: UI_Id) {
     if ui.active == UI_ID_INVALID {
         ui.hot = id;
+        //ldebug!("UI: set {} hot", id);
     }
 }
 
@@ -30,6 +41,7 @@ pub(super) fn set_hot(ui: &mut UI_Context, id: UI_Id) {
 pub(super) fn set_nonhot(ui: &mut UI_Context, id: UI_Id) {
     if ui.hot == id {
         ui.hot = UI_ID_INVALID;
+        //ldebug!("UI: set {} nonhot", id);
     }
 }
 
@@ -41,12 +53,14 @@ pub(super) fn is_hot(ui: &UI_Context, id: UI_Id) -> bool {
 #[inline]
 pub(super) fn set_active(ui: &mut UI_Context, id: UI_Id) {
     ui.active = id;
+    //ldebug!("UI: set {} active", id);
 }
 
 #[inline]
 pub(super) fn set_inactive(ui: &mut UI_Context, id: UI_Id) {
     debug_assert!(is_active(ui, id));
     ui.active = UI_ID_INVALID;
+    //ldebug!("UI: set {} inactive", id);
 }
 
 #[inline]

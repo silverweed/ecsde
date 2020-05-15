@@ -1,6 +1,7 @@
 use crate::states::state::{Game_State_Args, Persistent_Game_State};
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use ecs_engine::cfg::{self, Cfg_Var};
+use std::time::Duration;
 use ecs_engine::common::colors;
 use ecs_engine::common::math;
 use ecs_engine::common::rect::Rect;
@@ -156,7 +157,7 @@ impl Persistent_Game_State for Debug_Base_State {
         false
     }
 
-    fn update(&mut self, args: &mut Game_State_Args) {
+    fn update(&mut self, args: &mut Game_State_Args, _dt: &Duration, _real_dt: &Duration) {
         if !self.digging {
             return;
         }

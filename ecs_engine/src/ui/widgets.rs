@@ -96,8 +96,7 @@ pub fn button(
     }
 
     // draw stuff
-    draw_button(
-        window,
+    let cmds = draw_button(
         gres,
         ui,
         text,
@@ -106,6 +105,16 @@ pub fn button(
         is_hot(ui, id),
         props,
     );
+    add_draw_commands(ui, cmds);
+
+    if id == 1 {
+        //ldebug!("{}: hot {}, active {}", id, is_hot(ui, id), is_active(ui, id));
+        ldebug!("was_pressed: {}, is_pressed: {}", input_state.mouse_state.was_pressed_latest_frame[
+                Mouse_Button::Left as usize], crate::input::bindings::mouse::is_mouse_btn_pressed(Mouse_Button::Left));
+        if mouse_went_up(&input_state.mouse_state, Mouse_Button::Left) {
+            ldebug!("mouse went up");
+        }
+    }
 
     result
 }

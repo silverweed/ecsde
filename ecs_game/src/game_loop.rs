@@ -3,7 +3,6 @@ use crate::states::state::Game_State_Args;
 use ecs_engine::alloc::temp::*;
 use ecs_engine::collisions::physics;
 use ecs_engine::common::colors;
-use ecs_engine::common::rect::Rect;
 use ecs_engine::common::transform::Transform2D;
 use ecs_engine::common::Maybe_Error;
 use ecs_engine::core::app;
@@ -45,6 +44,7 @@ where
 
     game_state.engine_state.cur_frame += 1;
     game_state.engine_state.time.update();
+    let dt = game_state.engine_state.time.dt();
     let real_dt = game_state.engine_state.time.real_dt();
 
     let target_time_per_frame = Duration::from_micros(
@@ -279,7 +279,7 @@ where
                 &game_state.engine_state.config,
             );
 
-            // @Cleanup: where do we put this? Do we want this inside gameplay_system? Or at all?
+            // @Cleanup: where do we put this? Do we want this inside gameplay_system? 
             {
                 trace!("state_mgr::update");
 
@@ -289,7 +289,7 @@ where
                     window: &mut game_state.window,
                     game_resources,
                 };
-                game_state.state_mgr.update(&mut args);
+                game_state.state_mgr.update(&mut args, &dt, &real_dt);
             }
 
             let time = &game_state.engine_state.time;
@@ -401,39 +401,10 @@ where
 fn update_ui(game_state: &mut Game_State, gres: &Gfx_Resources) {
     trace!("update_ui");
 
-    use ecs_engine::ui::Button_Props;
-
     let window = &mut game_state.window;
     let ui_ctx = &mut game_state.engine_state.systems.ui;
-    let input_state = &game_state.engine_state.input_state;
 
-    if ui::button(
-        window,
-        gres,
-        input_state,
-        ui_ctx,
-        1,
-        "Say hello",
-        Rect::new(10., 10., 100., 50.),
-        &Button_Props::default(),
-    ) {
-        println!("Hello UI!");
-    }
-    if ui::button(
-        window,
-        gres,
-        input_state,
-        ui_ctx,
-        2,
-        "Say hello",
-        Rect::new(10., 60., 100., 50.),
-        &Button_Props {
-            enabled: false,
-            ..Default::default()
-        },
-    ) {
-        println!("Hello Sailor!");
-    }
+    ui::draw_all_ui(window, gres, ui_ctx);
 }
 
 fn update_graphics<'a, 's, 'r>(
