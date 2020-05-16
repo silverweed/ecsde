@@ -23,17 +23,26 @@ pub struct Debug_Frame_Scroller_Config {
 #[derive(Default)]
 pub struct Debug_Frame_Scroller {
     pub cfg: Debug_Frame_Scroller_Config,
-    pub tot_scroller_frames: u32, // in terms of n_frames * cur_second + cur_frame
-    real_cur_frame: u64,
-    // Note: 'cur_frame' is not an absolute value, but it always goes from 0 to n_frames - 1
-    // (so it does not map directly to Debug_Log's 'cur_frame', but it must be shifted)
-    pub cur_frame: u16,
-    pub cur_second: u16,
     pub pos: Vec2u,
     pub size: Vec2u,
+    /// How many frames are currently filled, in terms of n_frames * cur_second + cur_frame
+    pub tot_scroller_filled_frames: u32,
+    /// The current frame according to Debug_Log.
+    real_cur_frame: u64,
+    /// The currently latest filled frame in the Frame row.
+    /// Note: 'cur_frame' is not an absolute value, but it always goes from 0 to n_frames - 1
+    /// (so it does not map directly to Debug_Log's 'cur_frame', but it must be shifted)
+    pub cur_frame: u16,
+    /// The currently latest filled second in the Seconds row.
+    /// Like cur_frame, it belongs to [0, n_seconds)
+    pub cur_second: u16,
+    /// The number of subdivisions of the 'Frame' row.
     pub n_frames: u16,
+    /// The number of subdivisions of the 'Seconds' row.
     pub n_seconds: u16,
+    /// How many subdivs in the 'Frame' row are currently filled.
     pub n_filled_frames: u16,
+    /// How many subdivs in the 'Seconds' row are currently filled.
     pub n_filled_seconds: u16,
     pub manually_selected: bool,
     hovered: Option<(Row, u16)>,
@@ -49,7 +58,9 @@ struct Row_Props {
 
 impl Debug_Frame_Scroller {
     pub fn update(&mut self, window: &window::Window_Handle, log: &Debug_Log) {
-        self.update_frame(log);
+        if !self.manually_selected {
+            self.update_frame(log);
+        }
 
         let mpos = window::mouse_pos_in_window(window);
         self.hovered = None;
@@ -60,25 +71,21 @@ impl Debug_Frame_Scroller {
     }
 
     fn update_frame(&mut self, log: &Debug_Log) {
-        // @Fixme: make the frame bar continue to scroll even when log.hist_len is maxed
-        if !self.manually_selected {
-            self.cur_frame = ((log.hist_len - 1) % self.n_frames as u32) as u16;
-            self.n_filled_frames = self.cur_frame + 1;
+        self.cur_frame = ((log.hist_len - 1) % self.n_frames as u32) as u16;
+        self.n_filled_frames = self.cur_frame + 1;
 
-            self.n_filled_seconds = ((log.hist_len - 1) / self.n_frames as u32)
-                .min(self.n_seconds as u32 - 1) as u16
-                + 1;
-            self.cur_second = self.n_filled_seconds - 1;
+        self.n_filled_seconds =
+            ((log.hist_len - 1) / self.n_frames as u32).min(self.n_seconds as u32 - 1) as u16 + 1;
+        self.cur_second = self.n_filled_seconds - 1;
 
-            self.tot_scroller_frames =
-                self.cur_second as u32 * self.n_frames as u32 + self.cur_frame as u32 + 1;
-            self.real_cur_frame = log.cur_frame;
-        }
+        self.tot_scroller_filled_frames =
+            self.cur_second as u32 * self.n_frames as u32 + self.cur_frame as u32 + 1;
+        self.real_cur_frame = log.cur_frame;
     }
 
     pub fn handle_events(&mut self, events: &[Input_Raw_Event]) {
         fn calc_filled_frames(this: &Debug_Frame_Scroller) -> u16 {
-            (this.tot_scroller_frames - (this.cur_second as u32 * this.n_frames as u32))
+            (this.tot_scroller_filled_frames - (this.cur_second as u32 * this.n_frames as u32))
                 .min(this.n_frames as u32) as _
         };
 
@@ -115,7 +122,7 @@ impl Debug_Frame_Scroller {
                 } => {
                     if self.manually_selected {
                         if self.cur_second as u32 * self.n_frames as u32 + (self.cur_frame as u32)
-                            < self.tot_scroller_frames
+                            < self.tot_scroller_filled_frames
                         {
                             if self.cur_frame < self.n_filled_frames - 1 {
                                 self.cur_frame += 1;
@@ -290,7 +297,8 @@ impl Debug_Frame_Scroller {
                     // The very_first_frame is initially 1, but it can change if the game is paused and resumed
                     // (in which case the debug log will drop old history and restart from a later frame).
                     // It can also change simply due to the scroller filling up.
-                    let very_first_frame = self.real_cur_frame - self.tot_scroller_frames as u64;
+                    let very_first_frame =
+                        self.real_cur_frame - self.tot_scroller_filled_frames as u64;
                     let row_first_frame = (self.n_frames as u64 * i as u64) + very_first_frame;
                     let mut text = render::create_text(
                         &(row_first_frame + 1).to_string(),
@@ -304,7 +312,7 @@ impl Debug_Frame_Scroller {
     }
 
     pub fn get_real_selected_frame(&self) -> u64 {
-        let very_first_frame = self.real_cur_frame - self.tot_scroller_frames as u64;
+        let very_first_frame = self.real_cur_frame - self.tot_scroller_filled_frames as u64;
         let selected_scroller_frame =
             self.cur_second as u32 * self.n_frames as u32 + self.cur_frame as u32 + 1;
         very_first_frame + selected_scroller_frame as u64
