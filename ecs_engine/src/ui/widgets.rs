@@ -34,6 +34,17 @@ impl<T: Copy> By_Activeness<T> {
     }
 }
 
+impl<T: Clone> Clone for By_Activeness<T> {
+    fn clone(&self) -> Self {
+        Self {
+            normal: self.normal.clone(),
+            hot: self.hot.clone(),
+            active: self.active.clone(),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct Button_Props {
     pub bg_color: By_Activeness<Color>,
     pub text_color: By_Activeness<Color>,

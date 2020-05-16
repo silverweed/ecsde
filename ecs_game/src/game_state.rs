@@ -19,6 +19,8 @@ use ecs_engine::{
     debug as ngdebug
 };
 
+pub type Level_Batches = HashMap<String_Id, ngfx::render::batcher::Batches>;
+
 #[repr(C)]
 pub struct Game_State<'a> {
     pub window: window::Window_Handle,
@@ -36,7 +38,7 @@ pub struct Game_State<'a> {
 
     pub sleep_granularity: Option<Duration>,
 
-    pub level_batches: HashMap<String_Id, ngfx::render::batcher::Batches>,
+    pub level_batches: Level_Batches,
 
     //// Cfg vars
     pub cvars: CVars,
@@ -110,11 +112,11 @@ pub(super) fn internal_game_init<'a>(
         )?;
 
         // @Temporary
-        game_state.gameplay_system.load_test_level(
-            &mut game_state.engine_state,
-            &mut *game_resources,
-            &mut game_state.level_batches,
-        );
+        //game_state.gameplay_system.load_test_level(
+        //&mut game_state.engine_state,
+        //&mut *game_resources,
+        //&mut game_state.level_batches,
+        //);
 
         init_states(
             &mut game_state.state_mgr,
@@ -122,6 +124,7 @@ pub(super) fn internal_game_init<'a>(
             &mut game_state.gameplay_system,
             &mut game_state.window,
             &mut *game_resources,
+            &mut game_state.level_batches,
         );
 
         #[cfg(debug_assertions)]
@@ -337,12 +340,14 @@ fn init_states(
     gs: &mut gameplay_system::Gameplay_System,
     window: &mut window::Window_Handle,
     game_resources: &mut Game_Resources,
+    level_batches: &mut Level_Batches,
 ) {
     let mut args = states::state::Game_State_Args {
         engine_state,
         gameplay_system: gs,
         window,
         game_resources,
+        level_batches,
     };
     let base_state = Box::new(states::persistent::game_base_state::Game_Base_State::new());
     state_mgr.add_persistent_state(base_state, &mut args);
@@ -356,6 +361,7 @@ fn init_states(
             gameplay_system: gs,
             window,
             game_resources,
+            level_batches,
         };
         state_mgr.add_persistent_state(debug_base_state, &mut args);
     }
@@ -365,6 +371,7 @@ fn init_states(
         gameplay_system: gs,
         window,
         game_resources,
+        level_batches,
     };
     state_mgr.push_state(menu_state, &mut args);
 }

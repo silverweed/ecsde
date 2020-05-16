@@ -224,9 +224,10 @@ where
                 gameplay_system: &mut game_state.gameplay_system,
                 window: &mut game_state.window,
                 game_resources,
+                level_batches: &mut game_state.level_batches,
             };
-            if game_state.state_mgr.handle_actions(&actions, &mut args) {
-                game_state.engine_state.should_close = true;
+            game_state.state_mgr.handle_actions(&actions, &mut args);
+            if game_state.engine_state.should_close {
                 return Ok(());
             }
         }
@@ -288,6 +289,7 @@ where
                     gameplay_system: &mut game_state.gameplay_system,
                     window: &mut game_state.window,
                     game_resources,
+                    level_batches: &mut game_state.level_batches,
                 };
                 game_state.state_mgr.update(&mut args, &dt, &real_dt);
             }
@@ -504,16 +506,13 @@ where
             // @Incomplete @Robustness: first_active_level()?
             let calipers = &game_state.engine_state.debug_systems.calipers;
             let painters = &mut game_state.engine_state.debug_systems.painters;
-            let level = game_state
-                .gameplay_system
-                .levels
-                .first_active_level()
-                .unwrap();
-            calipers.draw(
-                &game_state.window,
-                painters.get_mut(&level.id).unwrap(),
-                &level.get_camera().transform,
-            );
+            if let Some(level) = game_state.gameplay_system.levels.first_active_level() {
+                calipers.draw(
+                    &game_state.window,
+                    painters.get_mut(&level.id).unwrap(),
+                    &level.get_camera().transform,
+                );
+            }
         }
 
         // Draw debug painter (one per active level)

@@ -88,6 +88,7 @@ impl Gameplay_System {
         Ok(())
     }
 
+    // @Temporary
     pub fn load_test_level(
         &mut self,
         engine_state: &mut Engine_State,
@@ -113,6 +114,16 @@ impl Gameplay_System {
                 &mut game_res.gfx,
                 &engine_state.env,
             );
+        }
+    }
+
+    // @Temporary
+    pub fn unload_test_level(&mut self, engine_state: &mut Engine_State) {
+        self.levels.loaded_levels.clear();
+        self.levels.active_levels.clear();
+        #[cfg(debug_assertions)]
+        {
+            engine_state.debug_systems.painters.clear();
         }
     }
 

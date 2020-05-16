@@ -57,7 +57,7 @@ macro_rules! add_msg {
 }
 
 impl Persistent_Game_State for Debug_Base_State {
-    fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Game_State_Args) -> bool {
+    fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Game_State_Args) {
         let Game_State_Args {
             engine_state,
             gameplay_system: gs,
@@ -154,7 +154,6 @@ impl Persistent_Game_State for Debug_Base_State {
                 _ => {}
             }
         }
-        false
     }
 
     fn update(&mut self, args: &mut Game_State_Args, _dt: &Duration, _real_dt: &Duration) {

@@ -4,6 +4,7 @@ game_speed_up: Num2, Equal, PageUp
 game_speed_down: Num1, Dash, PageDown
 pause_toggle: P
 step_sim: Slash
+open_pause_menu: Escape
 
 # Movement
 move_up: W, Joy_Dpad_Top

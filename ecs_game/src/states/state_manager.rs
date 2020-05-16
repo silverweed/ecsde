@@ -32,23 +32,22 @@ impl State_Manager {
                 State_Transition::Push(new_state) => self.push_state(new_state, args),
                 State_Transition::Replace(new_state) => self.replace_state(new_state, args),
                 State_Transition::Pop => self.pop_state(args),
+                State_Transition::Flush_All_And_Replace(new_state) => {
+                    self.flush_all_and_replace(new_state, args)
+                }
             }
         }
     }
 
     /// Returns true if should quit
-    pub fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Game_State_Args) -> bool {
-        let mut should_quit = false;
-
+    pub fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Game_State_Args) {
         if let Some(state) = self.current_state() {
-            should_quit |= state.handle_actions(actions, args);
+            state.handle_actions(actions, args);
         }
 
         for state in &mut self.persistent_states {
-            should_quit |= state.handle_actions(actions, args);
+            state.handle_actions(actions, args);
         }
-
-        should_quit
     }
 
     pub fn add_persistent_state(
@@ -92,6 +91,19 @@ impl State_Manager {
 
     fn replace_state(&mut self, mut state: Box<dyn Game_State>, args: &mut Game_State_Args) {
         if let Some(mut prev_state) = self.state_stack.pop() {
+            prev_state.on_end(args);
+        }
+
+        state.on_start(args);
+        self.state_stack.push(state);
+    }
+
+    fn flush_all_and_replace(
+        &mut self,
+        mut state: Box<dyn Game_State>,
+        args: &mut Game_State_Args,
+    ) {
+        while let Some(mut prev_state) = self.state_stack.pop() {
             prev_state.on_end(args);
         }
 
