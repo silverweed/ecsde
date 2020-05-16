@@ -9,6 +9,7 @@ use crate::core::rand;
 use crate::core::systems::Core_Systems;
 use crate::gfx;
 use crate::input;
+use crate::resources::gfx::Gfx_Resources;
 use crate::resources::gfx::Shader_Cache;
 use crate::ui;
 
@@ -22,7 +23,7 @@ use {
     crate::debug::tracer,
     crate::fs,
     crate::replay::{replay_data, replay_input_provider},
-    crate::resources::{self, gfx::Gfx_Resources},
+    crate::resources::{self},
     std::time::Duration,
 };
 
