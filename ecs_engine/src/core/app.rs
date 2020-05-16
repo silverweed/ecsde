@@ -423,10 +423,12 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
     if !scroller.manually_selected {
         debug_log.push_trace(&final_traces);
     }
+    let trace_realtime = Cfg_Var::<bool>::new("engine/debug/trace/realtime", &engine_state.config)
+        .read(&engine_state.config);
 
     if engine_state.debug_systems.show_trace_overlay {
         let t = &mut engine_state.debug_systems.trace_overlay_update_t;
-        if !engine_state.time.paused {
+        if trace_realtime || !engine_state.time.paused {
             *t -= engine_state.time.real_dt().as_secs_f32();
         }
 
@@ -442,7 +444,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
             engine_state.debug_systems.trace_overlay_update_t =
                 refresh_rate.read(&engine_state.config);
 
-            if engine_state.time.paused {
+            if !trace_realtime && engine_state.time.paused {
                 // Don't bother refreshing this the next frame: we're paused.
                 engine_state.debug_systems.trace_overlay_update_t = 0.1;
             }
@@ -450,7 +452,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
     }
 
     // Function trace graph
-    if !engine_state.time.paused {
+    if trace_realtime || !engine_state.time.paused {
         let sid_trace = String_Id::from("trace");
         let debug_systems = &mut engine_state.debug_systems;
         let trace_hover_data = debug_systems
@@ -482,7 +484,11 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
             tracer::drawing::update_graph_traced_fn(
                 &flattened_traces,
                 graph,
-                &engine_state.time,
+                if trace_realtime {
+                    engine_state.time.get_real_time()
+                } else {
+                    engine_state.time.get_game_time()
+                },
                 &debug_systems.traced_fn,
             );
         } else {

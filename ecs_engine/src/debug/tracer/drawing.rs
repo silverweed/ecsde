@@ -159,7 +159,7 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
 pub fn update_graph_traced_fn(
     traces: &[Tracer_Node_Final], // NOTE: these must be flattened!
     graph: &mut graph::Debug_Graph_View,
-    time: &time::Time,
+    time: Duration,
     traced_fn: &str,
 ) {
     // @Incomplete: make this configurable
@@ -176,6 +176,5 @@ pub fn update_graph_traced_fn(
         })
         .sum();
 
-    // Note: we use the game time here, not the real time, because we want to be able to pause/resume.
-    graph::add_point_and_scroll(graph, time.get_game_time(), TIME_LIMIT, fn_tot_time);
+    graph::add_point_and_scroll(graph, time, TIME_LIMIT, fn_tot_time);
 }
