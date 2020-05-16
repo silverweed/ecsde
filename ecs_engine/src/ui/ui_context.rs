@@ -3,14 +3,8 @@ use crate::core::env::Env_Info;
 use crate::resources::gfx::{font_path, Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
 
-// in game code:
-// for menus
-//   for items
-//      do items
-// for popups
-//   do popup
-
-pub type UI_Id = u32; // TEMP
+// @Temporary
+pub type UI_Id = u32;
 
 #[derive(Default)]
 pub struct UI_Context {
@@ -34,7 +28,6 @@ where
 pub(super) fn set_hot(ui: &mut UI_Context, id: UI_Id) {
     if ui.active == UI_ID_INVALID {
         ui.hot = id;
-        //ldebug!("UI: set {} hot", id);
     }
 }
 
@@ -42,7 +35,6 @@ pub(super) fn set_hot(ui: &mut UI_Context, id: UI_Id) {
 pub(super) fn set_nonhot(ui: &mut UI_Context, id: UI_Id) {
     if ui.hot == id {
         ui.hot = UI_ID_INVALID;
-        //ldebug!("UI: set {} nonhot", id);
     }
 }
 
@@ -54,14 +46,12 @@ pub(super) fn is_hot(ui: &UI_Context, id: UI_Id) -> bool {
 #[inline]
 pub(super) fn set_active(ui: &mut UI_Context, id: UI_Id) {
     ui.active = id;
-    //ldebug!("UI: set {} active", id);
 }
 
 #[inline]
 pub(super) fn set_inactive(ui: &mut UI_Context, id: UI_Id) {
     debug_assert!(is_active(ui, id));
     ui.active = UI_ID_INVALID;
-    //ldebug!("UI: set {} inactive", id);
 }
 
 #[inline]

@@ -4,7 +4,6 @@ use ecs_engine::alloc::temp::*;
 use ecs_engine::collisions::physics;
 use ecs_engine::common::colors;
 use ecs_engine::common::transform::Transform2D;
-use ecs_engine::common::Maybe_Error;
 use ecs_engine::core::app;
 use ecs_engine::core::time;
 use ecs_engine::gfx;
@@ -381,8 +380,9 @@ where
     #[cfg(debug_assertions)]
     update_debug(game_state, collision_debug_data);
 
-    update_graphics(game_state, &mut game_resources.gfx, real_dt)?;
+    update_graphics(game_state, &mut game_resources.gfx);
     update_ui(game_state, &game_resources.gfx);
+    update_debug_graphics(game_state, &mut game_resources.gfx, real_dt);
 
     #[cfg(debug_assertions)]
     {
@@ -407,11 +407,7 @@ fn update_ui(game_state: &mut Game_State, gres: &Gfx_Resources) {
     ui::draw_all_ui(window, gres, ui_ctx);
 }
 
-fn update_graphics<'a, 's, 'r>(
-    game_state: &'a mut Game_State<'s>,
-    gres: &'a mut Gfx_Resources<'r>,
-    real_dt: Duration,
-) -> Maybe_Error
+fn update_graphics<'a, 's, 'r>(game_state: &'a mut Game_State<'s>, gres: &'a mut Gfx_Resources<'r>)
 where
     'r: 's,
     's: 'a,
@@ -498,71 +494,73 @@ where
             frame_alloc,
         );
     }
+}
 
-    #[cfg(debug_assertions)]
+#[cfg(debug_assertions)]
+fn update_debug_graphics<'a, 's, 'r>(
+    game_state: &'a mut Game_State<'s>,
+    gres: &'a mut Gfx_Resources<'r>,
+    real_dt: Duration,
+) {
+    // Draw debug calipers
     {
-        // Draw debug calipers
-        {
-            // @Incomplete @Robustness: first_active_level()?
-            let calipers = &game_state.engine_state.debug_systems.calipers;
-            let painters = &mut game_state.engine_state.debug_systems.painters;
-            if let Some(level) = game_state.gameplay_system.levels.first_active_level() {
-                calipers.draw(
-                    &game_state.window,
-                    painters.get_mut(&level.id).unwrap(),
-                    &level.get_camera().transform,
-                );
-            }
-        }
-
-        // Draw debug painter (one per active level)
+        // @Incomplete @Robustness: first_active_level()?
+        let calipers = &game_state.engine_state.debug_systems.calipers;
         let painters = &mut game_state.engine_state.debug_systems.painters;
-        let window = &mut game_state.window;
-        game_state
-            .gameplay_system
-            .levels
-            .foreach_active_level(|level| {
-                let painter = painters
-                    .get_mut(&level.id)
-                    .unwrap_or_else(|| panic!("Debug painter not found for level {:?}", level.id));
-                painter.draw(window, gres, &level.get_camera().transform);
-                painter.clear();
-            });
-
-        // Global painter
-        let painter = &mut game_state.engine_state.debug_systems.global_painter;
-        painter.draw(&mut game_state.window, gres, &Transform2D::default());
-        painter.clear();
-
-        // Draw debug UI
-        {
-            trace!("debug_ui::update");
-            game_state
-                .engine_state
-                .debug_systems
-                .debug_ui
-                .update_and_draw(
-                    &real_dt,
-                    &mut game_state.window,
-                    gres,
-                    &game_state.engine_state.input_state,
-                    &game_state.engine_state.debug_systems.log,
-                    &mut game_state.engine_state.frame_alloc,
-                );
-        }
-
-        // Draw console
-        {
-            trace!("console::draw");
-            game_state
-                .engine_state
-                .debug_systems
-                .console
-                .draw(&mut game_state.window, gres);
+        if let Some(level) = game_state.gameplay_system.levels.first_active_level() {
+            calipers.draw(
+                &game_state.window,
+                painters.get_mut(&level.id).unwrap(),
+                &level.get_camera().transform,
+            );
         }
     }
 
-    Ok(())
+    // Draw debug painter (one per active level)
+    let painters = &mut game_state.engine_state.debug_systems.painters;
+    let window = &mut game_state.window;
+    game_state
+        .gameplay_system
+        .levels
+        .foreach_active_level(|level| {
+            let painter = painters
+                .get_mut(&level.id)
+                .unwrap_or_else(|| panic!("Debug painter not found for level {:?}", level.id));
+            painter.draw(window, gres, &level.get_camera().transform);
+            painter.clear();
+        });
+
+    // Global painter
+    let painter = &mut game_state.engine_state.debug_systems.global_painter;
+    painter.draw(&mut game_state.window, gres, &Transform2D::default());
+    painter.clear();
+
+    // Draw debug UI
+    {
+        trace!("debug_ui::update");
+        game_state
+            .engine_state
+            .debug_systems
+            .debug_ui
+            .update_and_draw(
+                &real_dt,
+                &mut game_state.window,
+                gres,
+                &game_state.engine_state.input_state,
+                &game_state.engine_state.debug_systems.log,
+                &mut game_state.engine_state.frame_alloc,
+            );
+    }
+
+    // Draw console
+    {
+        trace!("console::draw");
+        game_state
+            .engine_state
+            .debug_systems
+            .console
+            .draw(&mut game_state.window, gres);
+    }
 }
 
 #[cfg(debug_assertions)]
