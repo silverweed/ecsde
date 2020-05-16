@@ -29,24 +29,28 @@ impl Pause_Menu_State {
             font_size: 24,
             ..Default::default()
         };
+        let size = v2!(200., 120.);
+        let tgx = (ww - size.x) * 0.5;
+        let tgy = (wh - size.y) * 0.5;
+        let spacing = 5.;
         buttons.push(Menu_Button {
             id: 1,
             props: props.clone(),
-            pos: v2!(ww * 0.5, wh * 0.5),
+            pos: v2!(tgx, tgy - size.y - spacing),
             text: "Resume Game",
             size: v2!(200., 120.),
         });
         buttons.push(Menu_Button {
             id: 2,
             props: props.clone(),
-            pos: v2!(ww * 0.5, wh * 0.5 + 125.),
+            pos: v2!(tgx, tgy),
             text: "Quit To Menu",
             size: v2!(200., 120.),
         });
         buttons.push(Menu_Button {
             id: 3,
             props: props.clone(),
-            pos: v2!(ww * 0.5, wh * 0.5 + 250.),
+            pos: v2!(tgx, tgy + size.y + spacing),
             text: "Quit",
             size: v2!(200., 120.),
         });

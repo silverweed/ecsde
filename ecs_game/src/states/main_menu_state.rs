@@ -26,30 +26,33 @@ impl Main_Menu_State {
     fn create_buttons(window: &Window_Handle) -> Vec<Menu_Button> {
         let mut buttons = vec![];
         let (ww, wh) = window::get_window_target_size(window);
-        let ww = ww as f32;
-        let wh = wh as f32;
+        let (ww, wh) = (ww as f32, wh as f32);
         let props = ui::Button_Props {
             font_size: 24,
             ..Default::default()
         };
         let ease_duration = Duration::from_millis(400);
+        let size = v2!(200., 120.);
+        let tgx = (ww - size.x) * 0.5;
+        let tgy = (wh - size.y) * 0.5;
+        let spacing = 5.;
         buttons.push(Menu_Button {
             id: 1,
             props: props.clone(),
-            start_pos: v2!(ww * 0.5, 0.),
-            target_pos: v2!(ww * 0.5, wh * 0.5),
+            start_pos: v2!(tgx, 0.),
+            target_pos: v2!(tgx, tgy),
             text: "Start Game",
-            size: v2!(200., 120.),
+            size,
             ease_t: 0.,
             ease_duration,
         });
         buttons.push(Menu_Button {
             id: 2,
             props: props.clone(),
-            start_pos: v2!(ww * 0.5, 0.),
-            target_pos: v2!(ww * 0.5, wh * 0.5 + 125.),
+            start_pos: v2!(tgx, 0.),
+            target_pos: v2!(tgx, tgy + size.y + spacing),
             text: "Quit",
-            size: v2!(200., 120.),
+            size,
             ease_t: 0.,
             ease_duration,
         });
