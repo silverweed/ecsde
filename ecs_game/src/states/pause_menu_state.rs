@@ -1,7 +1,9 @@
 use super::state::{Game_State, Game_State_Args, State_Transition};
 use ecs_engine::common::rect::Rect;
+use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::vector::Vec2f;
 use ecs_engine::gfx::window::{self, Window_Handle};
+use ecs_engine::input::input_system::{Action_Kind, Game_Action};
 use ecs_engine::ui;
 use std::time::Duration;
 
@@ -17,6 +19,7 @@ struct Menu_Button {
 #[derive(Default)]
 pub struct Pause_Menu_State {
     buttons: Vec<Menu_Button>,
+    should_close: bool,
 }
 
 impl Pause_Menu_State {
@@ -74,6 +77,10 @@ impl Game_State for Pause_Menu_State {
         _dt: &Duration,
         _real_dt: &Duration,
     ) -> State_Transition {
+        if self.should_close {
+            return State_Transition::Pop;
+        }
+
         let window = &mut args.window;
         let gres = &args.game_resources.gfx;
         let ui_ctx = &mut args.engine_state.systems.ui;
@@ -103,5 +110,16 @@ impl Game_State for Pause_Menu_State {
         }
 
         State_Transition::None
+    }
+
+    fn handle_actions(&mut self, actions: &[Game_Action], _args: &mut Game_State_Args) {
+        for action in actions {
+            match action {
+                (name, Action_Kind::Pressed) if *name == String_Id::from("open_pause_menu") => {
+                    self.should_close = true;
+                }
+                _ => (),
+            }
+        }
     }
 }
