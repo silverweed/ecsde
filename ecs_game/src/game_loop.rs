@@ -428,7 +428,8 @@ where
     {
         trace!("clear_window");
 
-        gfx::window::set_clear_color(window, colors::rgb(0, 0, 0));
+        let clear_color = colors::color_from_hex(game_state.cvars.clear_color.read(&game_state.engine_state.config));
+        gfx::window::set_clear_color(window, clear_color);
         gfx::window::clear(window);
     }
 
