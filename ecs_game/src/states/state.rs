@@ -2,7 +2,7 @@ use crate::game_state::{Game_Resources, Level_Batches};
 use crate::gameplay_system::Gameplay_System;
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::gfx::window::Window_Handle;
-use ecs_engine::input::input_system::Game_Action;
+use ecs_engine::input::input_state::Game_Action;
 use std::time::Duration;
 
 pub enum State_Transition {

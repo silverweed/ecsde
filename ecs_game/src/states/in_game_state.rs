@@ -1,6 +1,6 @@
 use super::state::{Game_State, Game_State_Args, State_Transition};
 use ecs_engine::common::stringid::String_Id;
-use ecs_engine::input::input_system::{Action_Kind, Game_Action};
+use ecs_engine::input::input_state::{Action_Kind, Game_Action};
 use std::time::Duration;
 
 #[derive(Default)]

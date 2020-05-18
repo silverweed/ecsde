@@ -3,7 +3,7 @@ use ecs_engine::common::rect::Rect;
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::vector::Vec2f;
 use ecs_engine::gfx::window::{self, Window_Handle};
-use ecs_engine::input::input_system::{Action_Kind, Game_Action};
+use ecs_engine::input::input_state::{Action_Kind, Game_Action};
 use ecs_engine::ui;
 use std::time::Duration;
 

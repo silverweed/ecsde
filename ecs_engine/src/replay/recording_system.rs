@@ -3,7 +3,7 @@ use super::replay_data::{Replay_Data_Point, Replay_Joystick_Data};
 use crate::cfg::{self, Cfg_Var};
 use crate::common::Maybe_Error;
 use crate::input::bindings::joystick::{self, Joystick_Axis};
-use crate::input::input_system::Input_Raw_Event;
+use crate::input::input_state::Input_Raw_Event;
 use crate::input::joystick_state::Real_Axes_Values;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::JoinHandle;

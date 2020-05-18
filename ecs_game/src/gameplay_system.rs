@@ -31,7 +31,7 @@ use ecs_engine::gfx;
 use ecs_engine::gfx::render::batcher::Batches;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::bindings::keyboard;
-use ecs_engine::input::input_system::{Action_Kind, Game_Action};
+use ecs_engine::input::input_state::{Action_Kind, Game_Action};
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};

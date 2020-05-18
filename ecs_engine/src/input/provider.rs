@@ -1,5 +1,5 @@
 use super::bindings::joystick;
-use super::input_system::Input_Raw_Event;
+use super::input_state::Input_Raw_Event;
 use super::joystick_state::{Joystick_State, Real_Axes_Values};
 use crate::cfg;
 

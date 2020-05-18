@@ -5,7 +5,7 @@ use crate::common::vector::{Vec2f, Vec2i, Vec2u};
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
 use crate::gfx::window;
-use crate::input::input_system::Input_Raw_Event;
+use crate::input::input_state::Input_Raw_Event;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
 #[derive(Copy, Clone, PartialEq, Eq)]

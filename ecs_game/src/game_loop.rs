@@ -74,7 +74,7 @@ where
 
     // Update input
     {
-        trace!("input_system::update");
+        trace!("input_state::update");
 
         let process_game_actions;
         #[cfg(debug_assertions)]
@@ -87,7 +87,7 @@ where
             process_game_actions = true;
         }
 
-        input::input_system::update_input(
+        input::input_state::update_input(
             &mut game_state.engine_state.input_state,
             &mut game_state.window,
             &mut *game_state.input_provider,
@@ -234,7 +234,7 @@ where
         #[cfg(debug_assertions)]
         {
             use ecs_engine::debug::console::Console_Status;
-            use ecs_engine::input::input_system::Action_Kind;
+            use ecs_engine::input::input_state::Action_Kind;
 
             if actions.contains(&(String_Id::from("toggle_console"), Action_Kind::Pressed)) {
                 game_state.engine_state.debug_systems.console.toggle();

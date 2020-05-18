@@ -40,7 +40,7 @@ pub struct Engine_State<'r> {
 
     pub rng: rand::Default_Rng,
 
-    pub input_state: input::input_system::Input_State,
+    pub input_state: input::input_state::Input_State,
     pub systems: Core_Systems<'r>,
 
     pub frame_alloc: Temp_Allocator,
@@ -66,7 +66,7 @@ pub fn create_engine_state<'r>(
     app_config: App_Config,
 ) -> Result<Engine_State<'r>, Box<dyn std::error::Error>> {
     let systems = Core_Systems::new();
-    let input_state = input::input_system::create_input_state(&env);
+    let input_state = input::input_state::create_input_state(&env);
     let time = time::Time::default();
     #[cfg(debug_assertions)]
     let debug_systems = Debug_Systems::new(&config);

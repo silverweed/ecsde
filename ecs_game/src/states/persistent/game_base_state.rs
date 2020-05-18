@@ -1,6 +1,6 @@
 use crate::states::state::{Game_State_Args, Persistent_Game_State};
 use ecs_engine::common::stringid::String_Id;
-use ecs_engine::input::input_system::{Action_Kind, Game_Action};
+use ecs_engine::input::input_state::{Action_Kind, Game_Action};
 
 pub struct Game_Base_State {
     sid_quit: String_Id,

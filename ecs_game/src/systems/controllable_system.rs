@@ -4,7 +4,7 @@ use ecs_engine::common::vector::Vec2f;
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::ecs_world::Ecs_World;
 use ecs_engine::input::axes::Virtual_Axes;
-use ecs_engine::input::input_system::Game_Action;
+use ecs_engine::input::input_state::Game_Action;
 use std::time::Duration;
 
 #[derive(Copy, Clone, Debug)]

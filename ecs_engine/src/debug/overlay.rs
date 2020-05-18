@@ -6,7 +6,7 @@ use crate::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
 use crate::gfx::window::Window_Handle;
-use crate::input::input_system::Input_State;
+use crate::input::input_state::Input_State;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
 pub struct Debug_Line {

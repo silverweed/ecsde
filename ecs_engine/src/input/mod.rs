@@ -2,7 +2,7 @@ pub mod axes;
 pub mod bindings;
 pub mod core_actions;
 pub mod default_input_provider;
-pub mod input_system;
+pub mod input_state;
 pub mod joystick_state;
 pub mod provider;
 pub mod serialize;
