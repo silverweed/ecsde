@@ -61,15 +61,16 @@ impl Config {
             change_tx: Some(change_tx),
         }
     }
+}
 
-    #[cfg(debug_assertions)]
+#[cfg(debug_assertions)]
+impl Config {
     pub(super) fn get_change_interface(&mut self) -> Sender<Cfg_Entry> {
         self.change_tx
             .take()
             .expect("[ ERROR ] Called get_change_interface twice!")
     }
 
-    #[cfg(debug_assertions)]
     pub fn update(&mut self) {
         let changes = self.change_rx.try_iter().collect::<Vec<Cfg_Entry>>();
         for change in changes {
@@ -77,32 +78,31 @@ impl Config {
         }
     }
 
-    #[cfg(debug_assertions)]
     pub fn read_cfg(&self, id: String_Id) -> Option<&Cfg_Value> {
         self.cfg_var_table.get(&id)
     }
 
-    #[cfg(not(debug_assertions))]
-    pub(super) fn read_cfg(&self, id: String_Id) -> Option<&Cfg_Value> {
-        self.cfg_var_table.get(&id)
-    }
-
-    #[cfg(debug_assertions)]
     pub fn write_cfg(&mut self, id: String_Id, val: Cfg_Value) {
         self.cfg_var_table.insert(id, val);
     }
 
-    #[cfg(debug_assertions)]
     fn change_entry_value(&mut self, var_path: &str, value: Cfg_Value) {
         let id = String_Id::from(var_path);
         // @Incomplete: maybe give a warning if type changes?
         self.cfg_var_table.insert(id, value);
     }
 
-    #[cfg(debug_assertions)]
     pub fn get_all_pairs(&self) -> impl Iterator<Item = (String, Cfg_Value)> + '_ {
         self.cfg_var_table
             .iter()
             .map(|(key, val)| (key.to_string(), val.clone()))
     }
 }
+
+#[cfg(not(debug_assertions))]
+impl Config {
+    pub(super) fn read_cfg(&self, id: String_Id) -> Option<&Cfg_Value> {
+        self.cfg_var_table.get(&id)
+    }
+}
+

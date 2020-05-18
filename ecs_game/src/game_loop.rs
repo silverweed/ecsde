@@ -382,6 +382,8 @@ where
 
     update_graphics(game_state, &mut game_resources.gfx);
     update_ui(game_state, &game_resources.gfx);
+
+    #[cfg(debug_assertions)]
     update_debug_graphics(game_state, &mut game_resources.gfx, real_dt);
 
     #[cfg(debug_assertions)]
