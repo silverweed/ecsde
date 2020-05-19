@@ -283,6 +283,7 @@ pub fn init_engine_debug(
             low_threshold: Some((25.0, colors::RED)),
             high_threshold: Some((55.0, colors::GREEN)),
             fixed_y_range: Some(0. ..120.),
+            hoverable: false,
             font,
         };
 
@@ -315,6 +316,7 @@ pub fn init_engine_debug(
         graph_config.low_threshold = Some((0.01, colors::GREEN));
         graph_config.high_threshold = Some((10., colors::RED));
         graph_config.title = None;
+        graph_config.hoverable = true;
         let graph = engine_state
             .debug_systems
             .debug_ui

@@ -120,6 +120,19 @@ fn fill_color_rect_internal<T>(
         .draw_rectangle_shape(&rectangle_shape, render_states);
 }
 
+pub fn fill_color_circle(
+    window: &mut Window_Handle,
+    paint_props: &Paint_Properties,
+    circle: shapes::Circle,
+) {
+    let render_states = RenderStates {
+        blend_mode: get_blend_mode(window),
+        ..Default::default()
+    };
+
+    fill_color_circle_internal(window, paint_props, circle, render_states);
+}
+
 pub fn fill_color_circle_ws(
     window: &mut Window_Handle,
     paint_props: &Paint_Properties,

@@ -1,12 +1,15 @@
 use super::element::Debug_Element;
 use crate::alloc::temp;
+use crate::common::shapes::Circle;
 use crate::common::colors;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2u};
 use crate::gfx::render;
-use crate::gfx::window::Window_Handle;
+use crate::input::bindings::mouse;
+use crate::gfx::window::{self, Window_Handle};
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
+use crate::input::input_state::Input_State;
 use std::collections::VecDeque;
 use std::ops::Range;
 
@@ -30,6 +33,7 @@ pub struct Debug_Graph_View_Config {
     // If value is < than this, use this other color
     pub high_threshold: Option<(f32, colors::Color)>,
     pub fixed_y_range: Option<Range<f32>>,
+    pub hoverable: bool,
 }
 
 #[derive(Default)]
@@ -38,6 +42,9 @@ pub struct Debug_Graph_View {
     pub pos: Vec2u,
     pub size: Vec2u,
     pub config: Debug_Graph_View_Config,
+
+    // goes from 0 to data.points.len() - 1
+    hovered_x: Option<usize>,
 }
 
 /// Note: for simplicify, the graph assumes points are added in x-sorted order.
@@ -49,6 +56,38 @@ pub struct Debug_Graph {
 }
 
 impl Debug_Element for Debug_Graph_View {
+    fn update(&mut self,
+        _dt: &std::time::Duration,
+        window: &Window_Handle,
+        input_state: &Input_State,
+    ) {
+        if !self.config.hoverable {
+            return;
+        }
+
+        let mpos = Vec2f::from(window::mouse_pos_in_window(window));
+        let rect = Rect::new(self.pos.x, self.pos.y, self.size.x, self.size.y);
+        self.hovered_x = None;
+        if rect.contains(mpos) {
+            // Find out which point is being hovered
+            // @Speed!
+            let xr = &self.data.x_range;
+            let yr = self.y_range();
+            let drawn_points = self
+                .data
+                .points
+                .iter()
+                .filter(|Vec2f { x, y }| xr.contains(x) && yr.contains(y));
+            for (i, point) in drawn_points.enumerate() {
+                let point_pos = self.get_coords_for(*point);
+                if point_pos.x >= mpos.x as f32 {
+                    self.hovered_x = Some(i);
+                    break;
+                }
+            }
+        }
+    }
+
     fn draw(
         &self,
         window: &mut Window_Handle,
@@ -144,11 +183,26 @@ impl Debug_Element for Debug_Graph_View {
             .filter(|Vec2f { x, y }| xr.contains(x) && yr.contains(y))
             .collect::<Vec<_>>();
         let mut vbuf = render::start_draw_linestrip(drawn_points.len());
-        for &point in drawn_points {
+        for (i, &&point) in drawn_points.iter().enumerate() {
             let vpos = self.get_coords_for(point);
             let col = self.get_color_for(point);
             let vertex = render::new_vertex(vpos, col, Vec2f::default());
             render::add_vertex(&mut vbuf, &vertex);
+
+            // Draw hover line
+            if let Some(x) = self.hovered_x {
+                if i == x {
+                    let color = colors::WHITE;
+                    let mpos = Vec2f::from(window::mouse_pos_in_window(window));
+                    let v1 = render::new_vertex(pos + v2!(mpos.x, 0.0), color, Vec2f::default());
+                    let v2 = render::new_vertex(pos + v2!(mpos.x, self.size.y as f32), color, Vec2f::default());
+                    render::render_line(window, &v1, &v2);
+                    render::render_circle(window, Circle {
+                        center: pos + vpos,
+                        radius: 4.0
+                    }, colors::rgb(10, 255, 200));
+                }
+            }
         }
 
         render::render_vbuf(window, &vbuf, &Transform2D::from_pos(self.pos.into()));

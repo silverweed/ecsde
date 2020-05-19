@@ -74,7 +74,19 @@ impl From<Vec2u> for Vec2f {
     }
 }
 
+impl From<Vec2u> for Vec2i {
+    fn from(v: Vec2u) -> Self {
+        Self::new(v.x as _, v.y as _)
+    }
+}
+
 impl From<Vec2i> for Vec2f {
+    fn from(v: Vec2i) -> Self {
+        Self::new(v.x as _, v.y as _)
+    }
+}
+
+impl From<Vec2i> for Vec2u {
     fn from(v: Vec2i) -> Self {
         Self::new(v.x as _, v.y as _)
     }

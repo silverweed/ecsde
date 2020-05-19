@@ -56,6 +56,14 @@ pub fn render_rect_ws<R, P>(
     backend::fill_color_rect_ws(window, &paint_props, rect, transform, camera);
 }
 
+pub fn render_circle<P>(window: &mut Window_Handle, circle: Circle, paint_props: P) 
+where P: Into<Paint_Properties>
+{
+    trace!("render_circle");
+    let paint_props = paint_props.into();
+    backend::fill_color_circle(window, &paint_props, circle);
+}
+
 /// Draws a color-filled circle in world space
 pub fn render_circle_ws<P>(
     window: &mut Window_Handle,

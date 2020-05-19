@@ -105,10 +105,12 @@ where
 
 impl<T> Rect<T> {
     // @WaitForStable: make this const
-    pub fn contains(&self, pos: Vector2<T>) -> bool
+    pub fn contains<V>(&self, pos: V) -> bool
     where
         T: PartialOrd + Add<Output = T> + Copy,
+        V: Into<Vector2<T>>,
     {
+        let pos: Vector2<T> = pos.into();
         pos.x >= self.x
             && pos.x <= self.x + self.width
             && pos.y >= self.y
