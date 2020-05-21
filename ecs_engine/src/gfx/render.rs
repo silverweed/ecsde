@@ -56,8 +56,9 @@ pub fn render_rect_ws<R, P>(
     backend::fill_color_rect_ws(window, &paint_props, rect, transform, camera);
 }
 
-pub fn render_circle<P>(window: &mut Window_Handle, circle: Circle, paint_props: P) 
-where P: Into<Paint_Properties>
+pub fn render_circle<P>(window: &mut Window_Handle, circle: Circle, paint_props: P)
+where
+    P: Into<Paint_Properties>,
 {
     trace!("render_circle");
     let paint_props = paint_props.into();

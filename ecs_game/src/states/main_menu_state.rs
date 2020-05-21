@@ -48,7 +48,7 @@ impl Main_Menu_State {
         });
         buttons.push(Menu_Button {
             id: 2,
-            props: props.clone(),
+            props,
             start_pos: v2!(tgx, 0.),
             target_pos: v2!(tgx, tgy + size.y + spacing),
             text: "Quit",
@@ -72,7 +72,7 @@ impl Game_State for Main_Menu_State {
         _real_dt: &Duration,
     ) -> State_Transition {
         for button in &mut self.buttons {
-            button.ease_t = button.ease_t + dt.as_secs_f32();
+            button.ease_t += dt.as_secs_f32();
         }
 
         let window = &mut args.window;

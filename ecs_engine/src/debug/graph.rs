@@ -1,15 +1,15 @@
 use super::element::Debug_Element;
 use crate::alloc::temp;
-use crate::common::shapes::Circle;
 use crate::common::colors;
 use crate::common::rect::Rect;
+use crate::common::shapes::Circle;
 use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2u};
 use crate::gfx::render;
-use crate::input::bindings::mouse;
 use crate::gfx::window::{self, Window_Handle};
-use crate::resources::gfx::{Font_Handle, Gfx_Resources};
+use crate::input::bindings::mouse;
 use crate::input::input_state::Input_State;
+use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
 use std::ops::Range;
 
@@ -44,7 +44,8 @@ pub struct Debug_Graph_View {
     pub config: Debug_Graph_View_Config,
 
     // goes from 0 to data.points.len() - 1
-    hovered_x: Option<usize>,
+    hovered_point: Option<usize>,
+    selected_point: Option<usize>,
 }
 
 /// Note: for simplicify, the graph assumes points are added in x-sorted order.
@@ -56,7 +57,8 @@ pub struct Debug_Graph {
 }
 
 impl Debug_Element for Debug_Graph_View {
-    fn update(&mut self,
+    fn update(
+        &mut self,
         _dt: &std::time::Duration,
         window: &Window_Handle,
         input_state: &Input_State,
@@ -67,7 +69,7 @@ impl Debug_Element for Debug_Graph_View {
 
         let mpos = Vec2f::from(window::mouse_pos_in_window(window));
         let rect = Rect::new(self.pos.x, self.pos.y, self.size.x, self.size.y);
-        self.hovered_x = None;
+        self.hovered_point = None;
         if rect.contains(mpos) {
             // Find out which point is being hovered
             // @Speed!
@@ -81,10 +83,17 @@ impl Debug_Element for Debug_Graph_View {
             for (i, point) in drawn_points.enumerate() {
                 let point_pos = self.get_coords_for(*point);
                 if point_pos.x >= mpos.x as f32 {
-                    self.hovered_x = Some(i);
+                    self.hovered_point = Some(i);
                     break;
                 }
             }
+        }
+
+        if mouse::mouse_went_down(
+            &input_state.raw_state.mouse_state,
+            mouse::Mouse_Button::Left,
+        ) {
+            self.selected_point = self.hovered_point;
         }
     }
 
@@ -190,17 +199,25 @@ impl Debug_Element for Debug_Graph_View {
             render::add_vertex(&mut vbuf, &vertex);
 
             // Draw hover line
-            if let Some(x) = self.hovered_x {
+            if let Some(x) = self.hovered_point {
                 if i == x {
                     let color = colors::WHITE;
                     let mpos = Vec2f::from(window::mouse_pos_in_window(window));
                     let v1 = render::new_vertex(pos + v2!(mpos.x, 0.0), color, Vec2f::default());
-                    let v2 = render::new_vertex(pos + v2!(mpos.x, self.size.y as f32), color, Vec2f::default());
+                    let v2 = render::new_vertex(
+                        pos + v2!(mpos.x, self.size.y as f32),
+                        color,
+                        Vec2f::default(),
+                    );
                     render::render_line(window, &v1, &v2);
-                    render::render_circle(window, Circle {
-                        center: pos + vpos,
-                        radius: 4.0
-                    }, colors::rgb(10, 255, 200));
+                    render::render_circle(
+                        window,
+                        Circle {
+                            center: pos + vpos,
+                            radius: 4.0,
+                        },
+                        colors::rgb(10, 255, 200),
+                    );
                 }
             }
         }
@@ -215,6 +232,10 @@ impl Debug_Graph_View {
             config,
             ..Default::default()
         }
+    }
+
+    pub fn get_selected_point(&self) -> Option<Vec2f> {
+        self.selected_point.map(|i| self.data.points[i])
     }
 
     fn y_range(&self) -> Range<f32> {

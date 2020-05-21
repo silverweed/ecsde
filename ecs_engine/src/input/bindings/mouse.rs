@@ -17,7 +17,7 @@ pub enum Mouse_Button {
     Middle,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Mouse_State {
     // indexed by Mouse_Button
     was_pressed_latest_frame: [bool; 3],

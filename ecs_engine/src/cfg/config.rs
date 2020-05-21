@@ -105,4 +105,3 @@ impl Config {
         self.cfg_var_table.get(&id)
     }
 }
-

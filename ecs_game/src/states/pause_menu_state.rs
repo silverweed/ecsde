@@ -52,7 +52,7 @@ impl Pause_Menu_State {
         });
         buttons.push(Menu_Button {
             id: 3,
-            props: props.clone(),
+            props,
             pos: v2!(tgx, tgy + size.y + spacing),
             text: "Quit",
             size: v2!(200., 120.),

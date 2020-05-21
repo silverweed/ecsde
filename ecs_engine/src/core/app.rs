@@ -127,7 +127,7 @@ pub fn init_engine_systems(
     engine_state: &mut Engine_State,
     gres: &mut Gfx_Resources,
 ) -> Maybe_Error {
-    input::joystick_state::init_joysticks(&mut engine_state.input_state.joy_state);
+    input::joystick_state::init_joysticks(&mut engine_state.input_state.raw_state.joy_state);
     ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
 
     linfo!("Number of Rayon threads: {}", rayon::current_num_threads());

@@ -136,7 +136,7 @@ impl Gameplay_System {
     ) {
         trace!("gameplay_system::update");
 
-        let axes = &engine_state.input_state.axes;
+        let axes = &engine_state.input_state.processed.virtual_axes;
 
         #[cfg(debug_assertions)]
         {

@@ -161,7 +161,7 @@ impl Persistent_Game_State for Debug_Base_State {
             return;
         }
 
-        let mouse_state = &args.engine_state.input_state.mouse_state;
+        let mouse_state = &args.engine_state.input_state.raw_state.mouse_state;
         let mleft = mouse::is_mouse_btn_pressed(mouse_state, mouse::Mouse_Button::Left);
         let mright = mouse::is_mouse_btn_pressed(mouse_state, mouse::Mouse_Button::Right);
         if mleft || mright {

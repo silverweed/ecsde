@@ -87,11 +87,15 @@ where
             process_game_actions = true;
         }
 
-        input::input_state::update_input(
-            &mut game_state.engine_state.input_state,
+        // @Incomplete: allow this input to come from the replay; replace the Input_Provider stuff with something simpler.
+        input::input_state::update_raw_input(
             &mut game_state.window,
-            &mut *game_state.input_provider,
-            &game_state.engine_state.config,
+            &mut game_state.engine_state.input_state.raw_state,
+        );
+        input::input_state::process_raw_input(
+            &game_state.engine_state.input_state.raw_state,
+            &game_state.engine_state.input_state.bindings,
+            &mut game_state.engine_state.input_state.processed,
             process_game_actions,
         );
     }
@@ -104,7 +108,7 @@ where
         if debug_systems.console.status == debug::console::Console_Status::Open {
             debug_systems
                 .console
-                .update(&game_state.engine_state.input_state.raw_events);
+                .update(&game_state.engine_state.input_state.raw_state.events);
 
             let mut output = vec![];
             while let Some(cmd) = game_state
@@ -146,7 +150,7 @@ where
         let prev_selected_second = scroller.cur_second;
         let was_manually_selected = scroller.manually_selected;
 
-        scroller.handle_events(&game_state.engine_state.input_state.raw_events);
+        scroller.handle_events(&game_state.engine_state.input_state.raw_state.events);
 
         if scroller.cur_frame != prev_selected_frame
             || scroller.cur_second != prev_selected_second
@@ -164,6 +168,7 @@ where
             &game_state
                 .engine_state
                 .input_state
+                .processed
                 .core_actions
                 .split_off(0),
             &mut game_state.window,
@@ -177,16 +182,17 @@ where
         let actions = game_state
             .engine_state
             .input_state
+            .processed
             .game_actions
             .split_off(0);
 
         #[cfg(debug_assertions)]
         let input_state = &game_state.engine_state.input_state;
         #[cfg(debug_assertions)]
-        let raw_events = &input_state.raw_events;
+        let raw_events = &input_state.raw_state.events;
         #[cfg(debug_assertions)]
         let (real_axes, joy_mask) =
-            input::joystick_state::all_joysticks_values(&input_state.joy_state);
+            input::joystick_state::all_joysticks_values(&input_state.raw_state.joy_state);
 
         #[cfg(debug_assertions)]
         {
@@ -270,7 +276,7 @@ where
         {
             trace!("game_update");
 
-            let axes = &game_state.engine_state.input_state.axes;
+            let axes = &game_state.engine_state.input_state.processed.virtual_axes;
 
             game_state.gameplay_system.realtime_update(
                 &real_dt,
@@ -430,7 +436,12 @@ where
     {
         trace!("clear_window");
 
-        let clear_color = colors::color_from_hex(game_state.cvars.clear_color.read(&game_state.engine_state.config));
+        let clear_color = colors::color_from_hex(
+            game_state
+                .cvars
+                .clear_color
+                .read(&game_state.engine_state.config),
+        );
         gfx::window::set_clear_color(window, clear_color);
         gfx::window::clear(window);
     }
