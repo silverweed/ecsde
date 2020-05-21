@@ -1,6 +1,6 @@
 use crate::common::angle::{rad, Angle};
+use crate::common::matrix::Matrix3;
 use crate::common::vector::Vec2f;
-use cgmath::Matrix3;
 
 // Likely @Incomplete: we don't want to recalculate the matrix every time.
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -126,7 +126,7 @@ impl Transform2D {
 
         // R | T
         // 0 | 1
-        Matrix3::new(sxc, -sxs, 0.0, sys, syc, 0.0, tx, ty, 1.0)
+        Matrix3::new(sxc, sys, tx, -sxs, syc, ty, 0.0, 0.0, 1.0)
     }
 
     #[cfg(feature = "use-sfml")]

@@ -2,6 +2,7 @@ pub mod angle;
 pub mod bitset;
 pub mod colors;
 pub mod math;
+pub mod matrix;
 pub mod rect;
 pub mod serialize;
 pub mod shapes;

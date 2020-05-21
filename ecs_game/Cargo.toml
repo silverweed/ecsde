@@ -14,10 +14,6 @@ path = "../ecs_engine"
 [dependencies]
 rayon = "1.3"
 
-#[dependencies.cgmath]
-#git = "https://github.com/rustgd/cgmath"
-#rev = "50a345b"
-
 [features]
 prof_entities_update = []
 prof_scene_tree = []
