@@ -9,7 +9,6 @@ use-sfml = ["sfml"]
 default = ["use-sfml"]
 
 [dependencies]
-bitflags = "1.1.0"
 num_enum = "0.3.1"
 byteorder = "1.3.2"
 rayon = "1.3"
