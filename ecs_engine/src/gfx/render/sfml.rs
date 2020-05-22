@@ -1,3 +1,4 @@
+use super::Render_Extra_Params;
 use crate::common::colors::Color;
 use crate::common::rect::Rect;
 use crate::common::shapes;
@@ -6,12 +7,17 @@ use crate::common::vector::Vec2f;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::window::{get_blend_mode, Window_Handle};
 use sfml::graphics::{
-    CircleShape, PrimitiveType, RectangleShape, RenderStates, RenderTarget, Shape, Transformable,
+    glsl, CircleShape, PrimitiveType, RectangleShape, RenderStates, RenderTarget, Shape,
+    Transformable, VertexBuffer, VertexBufferUsage,
 };
 use sfml::system::Vector2f;
 
 // @Speed: probably replace this with a VertexBuffer
-pub type Vertex_Buffer = sfml::graphics::VertexArray;
+pub struct Vertex_Buffer {
+    buf: sfml::graphics::VertexBuffer,
+    cur_vertices: u32,
+}
+
 pub type Vertex = sfml::graphics::Vertex;
 pub type Image = sfml::graphics::Image;
 pub type Shader<'texture> = sfml::graphics::Shader<'texture>;
@@ -186,49 +192,100 @@ pub fn get_text_size(text: &sfml::graphics::Text<'_>) -> Vec2f {
 }
 
 #[inline(always)]
-pub fn start_draw_quads(_n_quads: usize) -> Vertex_Buffer {
-    sfml::graphics::VertexArray::new(PrimitiveType::Quads, 0)
+pub fn start_draw_quads(n_quads: u32) -> Vertex_Buffer {
+    Vertex_Buffer {
+        buf: VertexBuffer::new(PrimitiveType::Quads, n_quads * 4, VertexBufferUsage::Stream),
+        cur_vertices: 0,
+    }
 }
 
 #[inline(always)]
-pub fn start_draw_triangles(_n_tris: usize) -> Vertex_Buffer {
-    sfml::graphics::VertexArray::new(PrimitiveType::Triangles, 0)
+pub fn start_draw_triangles(n_tris: u32) -> Vertex_Buffer {
+    Vertex_Buffer {
+        buf: VertexBuffer::new(
+            PrimitiveType::Triangles,
+            n_tris * 3,
+            VertexBufferUsage::Stream,
+        ),
+        cur_vertices: 0,
+    }
 }
 
 #[inline(always)]
-pub fn start_draw_linestrip(_n_vertices: usize) -> Vertex_Buffer {
-    sfml::graphics::VertexArray::new(PrimitiveType::LineStrip, 0)
+pub fn start_draw_lines(n_lines: u32) -> Vertex_Buffer {
+    Vertex_Buffer {
+        buf: VertexBuffer::new(PrimitiveType::Lines, n_lines * 2, VertexBufferUsage::Stream),
+        cur_vertices: 0,
+    }
 }
 
 #[inline(always)]
-pub fn start_draw_lines(_n_lines: usize) -> Vertex_Buffer {
-    sfml::graphics::VertexArray::new(PrimitiveType::Lines, 0)
+pub fn start_draw_linestrip(n_vertices: u32) -> Vertex_Buffer {
+    Vertex_Buffer {
+        buf: VertexBuffer::new(
+            PrimitiveType::LineStrip,
+            n_vertices,
+            VertexBufferUsage::Stream,
+        ),
+        cur_vertices: 0,
+    }
 }
 
 #[inline(always)]
 pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
-    vbuf.append(v1);
-    vbuf.append(v2);
-    vbuf.append(v3);
-    vbuf.append(v4);
+    debug_assert!(vbuf.cur_vertices + 4 <= vbuf.buf.vertex_count());
+    vbuf.buf.update(&[*v1, *v2, *v3, *v4], vbuf.cur_vertices);
+    vbuf.cur_vertices += 4;
 }
 
 #[inline(always)]
 pub fn add_triangle(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
-    vbuf.append(v1);
-    vbuf.append(v2);
-    vbuf.append(v3);
-}
-
-#[inline(always)]
-pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {
-    vbuf.append(v);
+    debug_assert!(vbuf.cur_vertices + 3 <= vbuf.buf.vertex_count());
+    vbuf.buf.update(&[*v1, *v2, *v3], vbuf.cur_vertices);
+    vbuf.cur_vertices += 3;
 }
 
 #[inline(always)]
 pub fn add_line(vbuf: &mut Vertex_Buffer, from: &Vertex, to: &Vertex) {
-    vbuf.append(from);
-    vbuf.append(to);
+    debug_assert!(vbuf.cur_vertices + 2 <= vbuf.buf.vertex_count());
+    vbuf.buf.update(&[*from, *to], vbuf.cur_vertices);
+    vbuf.cur_vertices += 2;
+}
+
+#[inline(always)]
+pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {
+    debug_assert!(vbuf.cur_vertices < vbuf.buf.vertex_count());
+    vbuf.buf.update(&[*v], vbuf.cur_vertices);
+    vbuf.cur_vertices += 1;
+}
+
+#[inline(always)]
+pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
+    vbuf.buf.update(vertices, offset);
+}
+
+#[inline(always)]
+pub fn vbuf_cur_vertices(vbuf: &Vertex_Buffer) -> u32 {
+    vbuf.cur_vertices
+}
+
+#[inline(always)]
+pub fn vbuf_max_vertices(vbuf: &Vertex_Buffer) -> u32 {
+    vbuf.buf.vertex_count()
+}
+
+#[inline(always)]
+pub fn set_vbuf_cur_vertices(vbuf: &mut Vertex_Buffer, cur_vertices: u32) {
+    vbuf.cur_vertices = cur_vertices;
+}
+
+#[inline(always)]
+pub fn copy_vbuf_to_vbuf(dest: &mut Vertex_Buffer, src: &Vertex_Buffer) -> bool {
+    let ok = dest.buf.update_from_vertex_buffer(&src.buf);
+    if ok {
+        dest.cur_vertices = src.cur_vertices;
+    }
+    ok
 }
 
 #[inline(always)]
@@ -262,21 +319,23 @@ pub fn render_vbuf_ws(
     render_vbuf_internal(window, vbuf, render_states);
 }
 
-pub fn render_vbuf_ws_texture(
+pub fn render_vbuf_ws_ex(
     window: &mut Window_Handle,
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
     camera: &Transform2D,
-    texture: &Texture,
+    extra_params: Render_Extra_Params,
 ) {
     let mut render_transform = camera.get_matrix_sfml().inverse();
     render_transform.combine(&transform.get_matrix_sfml());
 
+    use std::borrow::Borrow;
+
     let render_states = RenderStates {
         transform: render_transform,
         blend_mode: get_blend_mode(window),
-        texture: Some(texture),
-        ..Default::default()
+        texture: extra_params.texture.map(|t| t.wrapped.borrow()),
+        shader: extra_params.shader,
     };
     render_vbuf_internal(window, vbuf, render_states);
 }
@@ -295,7 +354,7 @@ fn render_vbuf_internal(
     vbuf: &Vertex_Buffer,
     render_states: RenderStates,
 ) {
-    window.draw_vertex_array(vbuf, render_states);
+    window.draw_vertex_buffer(&vbuf.buf, render_states);
 }
 
 #[inline(always)]
@@ -316,7 +375,7 @@ pub fn copy_texture_to_image(texture: &Texture) -> Image {
 }
 
 #[inline(always)]
-pub fn get_pixel(image: &Image, x: u32, y: u32) -> Color {
+pub fn get_image_pixel(image: &Image, x: u32, y: u32) -> Color {
     image.pixel_at(x, y).into()
 }
 
@@ -326,7 +385,7 @@ pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {
 }
 
 #[inline(always)]
-pub fn get_pixels(image: &Image) -> &[Color] {
+pub fn get_image_pixels(image: &Image) -> &[Color] {
     let pixel_data = image.pixel_data();
     debug_assert_eq!(pixel_data.len() % 4, 0);
     let len = pixel_data.len() / 4;
@@ -345,4 +404,43 @@ pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[
 #[inline(always)]
 pub fn shaders_are_available() -> bool {
     Shader::is_available()
+}
+
+#[inline(always)]
+pub fn set_uniform_float(shader: &mut Shader, name: &str, val: f32) {
+    shader.set_uniform_float(name, val);
+}
+
+#[inline(always)]
+pub fn set_uniform_vec2(shader: &mut Shader, name: &str, val: Vec2f) {
+    shader.set_uniform_vec2(name, val.into());
+}
+
+#[inline(always)]
+pub fn set_uniform_color(shader: &mut Shader, name: &str, val: Color) {
+    shader.set_uniform_vec3(name, col2v3(val));
+}
+
+#[inline(always)]
+pub fn set_uniform_texture(shader: &mut Shader, name: &str, val: &Texture) {
+    unsafe {
+        set_uniform_texture_workaround(shader, name, val);
+    }
+}
+
+// !!! @Hack !!! to make set_uniform_texture work until https://github.com/jeremyletang/rust-sfml/issues/213 is solved
+#[allow(unused_unsafe)]
+unsafe fn set_uniform_texture_workaround(shader: &mut Shader, name: &str, texture: &Texture) {
+    let tex = unsafe { std::mem::transmute::<&Texture, *const Texture<'static>>(texture) };
+    shader.set_uniform_texture(name, unsafe { &*tex });
+}
+
+fn col2v3(color: Color) -> glsl::Vec3 {
+    let c = glsl::Vec4::from(sfml::graphics::Color::from(color));
+    glsl::Vec3::new(c.x, c.y, c.z)
+}
+
+#[inline(always)]
+pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
+    texture.set_repeated(repeated);
 }

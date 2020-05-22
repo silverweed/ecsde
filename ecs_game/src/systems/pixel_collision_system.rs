@@ -43,7 +43,7 @@ fn approx_normal(image: &Image, x: u32, y: u32, step: i32) -> Vec2f {
     let y_range = (y as i32 - step).max(0) as u32..(y as i32 + step).min(size.0 as i32) as u32;
     for (i, x) in x_range.enumerate() {
         for (j, y) in y_range.clone().enumerate() {
-            if is_solid(render::get_pixel(image, x, y)) {
+            if is_solid(render::get_image_pixel(image, x, y)) {
                 avg.x -= (i as i32 - step) as f32;
                 avg.y -= (j as i32 - step) as f32;
             }
@@ -115,7 +115,7 @@ impl Pixel_Collision_System {
                     pixels[(iy as i32 * 2 * r) as usize + ix] = new_val;
                 } else {
                     pixels[(iy as i32 * 2 * r) as usize + ix] =
-                        render::get_pixel(img, img_x, img_y);
+                        render::get_image_pixel(img, img_x, img_y);
                 }
             }
         }
@@ -196,7 +196,7 @@ impl Pixel_Collision_System {
                         debug_assert!(y >= 0 && y < ih);
                         let dir_to_pixel = v2!((x - iw / 2) as f32, (y - ih / 2) as f32) - *pos;
                         if dir_to_pixel.dot(*velocity) >= 0. {
-                            let pixel = render::get_pixel(img, x as u32, y as u32);
+                            let pixel = render::get_image_pixel(img, x as u32, y as u32);
                             if pixel.a > 0 {
                                 self.collided_entities.push(Collision_Info {
                                     entity_nonpixel: *e,

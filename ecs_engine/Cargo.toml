@@ -6,7 +6,9 @@ authors = ["silverweed <silverweed1991@gmail.com>"]
 
 [features]
 use-sfml = ["sfml"]
-default = ["use-sfml"]
+gfx-null = []
+gfx-sfml = []
+default = ["use-sfml", "gfx-sfml"]
 
 [dependencies]
 num_enum = "0.3.1"

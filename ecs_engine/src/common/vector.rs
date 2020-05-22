@@ -4,6 +4,9 @@ use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
+#[cfg(feature = "use-sfml")]
+mod sfml;
+
 pub struct Vector2<T> {
     pub x: T,
     pub y: T,
@@ -26,34 +29,6 @@ impl<T: Hash> Hash for Vector2<T> {
 #[inline(always)]
 pub fn lerp_v(v1: Vec2f, v2: Vec2f, t: f32) -> Vec2f {
     v2!(math::lerp(v1.x, v2.x, t), math::lerp(v1.y, v2.y, t))
-}
-
-#[cfg(feature = "use-sfml")]
-impl From<Vec2f> for sfml::system::Vector2f {
-    fn from(v: Vec2f) -> sfml::system::Vector2f {
-        sfml::system::Vector2f::new(v.x, v.y)
-    }
-}
-
-#[cfg(feature = "use-sfml")]
-impl From<sfml::system::Vector2f> for Vec2f {
-    fn from(v: sfml::system::Vector2f) -> Vec2f {
-        Vec2f::new(v.x, v.y)
-    }
-}
-
-#[cfg(feature = "use-sfml")]
-impl From<Vec2i> for sfml::system::Vector2i {
-    fn from(v: Vec2i) -> sfml::system::Vector2i {
-        sfml::system::Vector2i::new(v.x, v.y)
-    }
-}
-
-#[cfg(feature = "use-sfml")]
-impl From<sfml::system::Vector2i> for Vec2i {
-    fn from(v: sfml::system::Vector2i) -> Vec2i {
-        Vec2i::new(v.x, v.y)
-    }
 }
 
 impl<T: Copy> From<(T, T)> for Vector2<T> {

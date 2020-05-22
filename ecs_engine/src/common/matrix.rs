@@ -7,6 +7,7 @@ pub struct Matrix3<T> {
 
 impl<T> Matrix3<T> {
     #[rustfmt::skip]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         r1c1: T, r1c2: T, r1c3: T,
         r2c1: T, r2c2: T, r2c3: T,

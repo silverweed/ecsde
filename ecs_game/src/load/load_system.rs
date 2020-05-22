@@ -226,8 +226,7 @@ fn init_demo_entities(
         assert!(rend.material.texture.is_some(), "Could not load texture!");
         let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.material.texture));
         rend.rect = Rect::new(0, 0, sw as i32 * 100, sh as i32 * 100);
-        rsrc.get_texture_mut(rend.material.texture)
-            .set_repeated(true);
+        gfx::render::set_texture_repeated(rsrc.get_texture_mut(rend.material.texture), true);
 
         level.world.add_component(ground, C_Spatial2D::default());
     }

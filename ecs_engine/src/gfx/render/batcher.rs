@@ -1,3 +1,4 @@
+use super::backend;
 use crate::alloc::temp;
 use crate::cfg::{self, Cfg_Var};
 use crate::common::angle::Angle;
@@ -8,18 +9,12 @@ use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::ecs::components::gfx::Material;
 use crate::gfx::light::{Lights, Point_Light};
-use crate::gfx::render::{self, Shader, Texture, Vertex};
+use crate::gfx::render::{self, Shader, Texture, Vertex, Vertex_Buffer_Quads};
 use crate::gfx::window::Window_Handle;
-use crate::resources::gfx::{Gfx_Resources, Shader_Cache, Texture_Handle};
+use crate::resources::gfx::{Gfx_Resources, Shader_Cache};
 use rayon::prelude::*;
 use std::cmp;
 use std::collections::{BTreeMap, HashMap};
-
-// @Cleanup
-type Vertex_Buffer = sfml::graphics::VertexBuffer;
-use sfml::graphics::PrimitiveType;
-use sfml::graphics::RenderTarget;
-use sfml::graphics::VertexBufferUsage;
 
 struct Texture_Batch {
     pub vbuffer: Vertex_Buffer_Holder,
@@ -33,24 +28,23 @@ pub struct Batches {
 }
 
 struct Vertex_Buffer_Holder {
-    pub vbuf: Vertex_Buffer,
-    pub n_elems: u32,
+    pub vbuf: Vertex_Buffer_Quads,
     #[cfg(debug_assertions)]
     id: Material,
 }
 
 // @WaitForStable make this const
 fn null_vertex() -> Vertex {
-    Vertex::new(v2!(0., 0.), colors::TRANSPARENT.into(), v2!(0., 0.).into())
+    backend::new_vertex(v2!(0., 0.), colors::TRANSPARENT, v2!(0., 0.))
 }
 
 // @WaitForStable make this const
 #[cfg(debug_assertions)]
 fn invalid_vertex() -> Vertex {
-    Vertex::new(
+    backend::new_vertex(
         v2!(-12_345.67, 9_876.543),
-        colors::rgba(42, 42, 42, 42).into(),
-        v2!(42., 42.).into(),
+        colors::rgba(42, 42, 42, 42),
+        v2!(42., 42.),
     )
 }
 
@@ -60,8 +54,7 @@ impl Vertex_Buffer_Holder {
         #[cfg(debug_assertions)] id: Material,
     ) -> Self {
         Self {
-            vbuf: Vertex_Buffer::new(PrimitiveType::Quads, initial_cap, VertexBufferUsage::Stream),
-            n_elems: 0,
+            vbuf: render::start_draw_quads(initial_cap / 4),
             #[cfg(debug_assertions)]
             id,
         }
@@ -73,23 +66,23 @@ impl Vertex_Buffer_Holder {
         debug_assert!(vertices.len() <= std::u32::MAX as usize);
 
         debug_assert!(
-            n_vertices <= self.vbuf.vertex_count(),
+            n_vertices <= render::vbuf_max_vertices(&self.vbuf),
             "Can't hold all the vertices! {} / {}",
             n_vertices,
-            self.vbuf.vertex_count()
+            render::vbuf_max_vertices(&self.vbuf)
         );
 
         // Zero all the excess vertices
         for vertex in vertices
             .iter_mut()
-            .take(self.n_elems as usize)
+            .take(render::vbuf_cur_vertices(&self.vbuf) as usize)
             .skip(n_vertices as usize)
         {
             *vertex = null_vertex();
         }
 
-        self.vbuf.update(vertices, 0);
-        self.n_elems = vertices.len() as u32;
+        backend::update_vbuf(&mut self.vbuf, vertices, 0);
+        render::set_vbuf_cur_vertices(&mut self.vbuf, vertices.len() as u32);
     }
 
     pub fn grow(&mut self, vertices_to_hold_at_least: u32) {
@@ -101,9 +94,8 @@ impl Vertex_Buffer_Holder {
             vertices_to_hold_at_least
         );
 
-        let mut new_vbuf =
-            Vertex_Buffer::new(PrimitiveType::Quads, new_cap, VertexBufferUsage::Stream);
-        let _res = new_vbuf.update_from_vertex_buffer(&self.vbuf);
+        let mut new_vbuf = render::start_draw_quads(new_cap / 4);
+        let _res = render::copy_vbuf_to_vbuf(&mut new_vbuf, &self.vbuf);
         #[cfg(debug_assertions)]
         {
             debug_assert!(_res, "Vertex Buffer copying failed ({:?})!", self.id);
@@ -180,20 +172,6 @@ pub fn clear_batches(batches: &mut Batches) {
         .for_each(|m| m.values_mut().for_each(|batch| batch.tex_props.clear()));
 }
 
-// !!! @Hack !!! to make set_uniform_texture work until https://github.com/jeremyletang/rust-sfml/issues/213 is solved
-#[allow(unused_unsafe)]
-unsafe fn set_uniform_texture_workaround(
-    shader: &mut Shader,
-    gres: &Gfx_Resources,
-    name: &str,
-    texture: Texture_Handle,
-) {
-    let tex = unsafe {
-        std::mem::transmute::<&Texture, *const Texture<'static>>(gres.get_texture(texture))
-    };
-    shader.set_uniform_texture(name, unsafe { &*tex });
-}
-
 #[inline(always)]
 // NOTE: we're only using 2 bytes out of the 4 we have: we may fit more data in the future! (maybe an indexed color?)
 fn encode_rot_as_color(rot: Angle) -> Color {
@@ -215,35 +193,46 @@ fn set_shader_uniforms(
     lights: &Lights,
     texture: &Texture,
 ) {
-    use sfml::graphics::glsl;
-
-    fn col2v3(color: Color) -> glsl::Vec3 {
-        let c = glsl::Vec4::from(sfml::graphics::Color::from(color));
-        glsl::Vec3::new(c.x, c.y, c.z)
-    }
+    use render::{set_uniform_color, set_uniform_float, set_uniform_texture, set_uniform_vec2};
 
     if material.normals.is_some() {
-        unsafe {
-            set_uniform_texture_workaround(shader, gres, "normals", material.normals);
-        }
+        let normals = gres.get_texture(material.normals);
+        set_uniform_texture(shader, "normals", normals);
     }
-    shader.set_uniform_vec3("ambient_light.color", col2v3(lights.ambient_light.color));
-    shader.set_uniform_float("ambient_light.intensity", lights.ambient_light.intensity);
-    shader.set_uniform_current_texture("texture");
+    set_uniform_color(shader, "ambient_light.color", lights.ambient_light.color);
+    set_uniform_float(
+        shader,
+        "ambient_light.intensity",
+        lights.ambient_light.intensity,
+    );
+    set_uniform_texture(shader, "texture", texture);
     let (tex_w, tex_h) = render::get_texture_size(texture);
-    shader.set_uniform_vec2("texture_size", glsl::Vec2::new(tex_w as f32, tex_h as f32));
+    set_uniform_vec2(shader, "texture_size", v2!(tex_w as f32, tex_h as f32));
     for (i, pl) in lights.point_lights.iter().enumerate() {
-        shader.set_uniform_vec2(
+        set_uniform_vec2(
+            shader,
             &format!("point_lights[{}].position", i),
-            glsl::Vec2::new(pl.position.x, pl.position.y),
+            pl.position,
         );
-        shader.set_uniform_vec3(&format!("point_lights[{}].color", i), col2v3(pl.color));
-        shader.set_uniform_float(&format!("point_lights[{}].radius", i), pl.radius);
-        shader.set_uniform_float(&format!("point_lights[{}].attenuation", i), pl.attenuation);
-        shader.set_uniform_float(&format!("point_lights[{}].intensity", i), pl.intensity);
+        set_uniform_color(shader, &format!("point_lights[{}].color", i), pl.color);
+        set_uniform_float(shader, &format!("point_lights[{}].radius", i), pl.radius);
+        set_uniform_float(
+            shader,
+            &format!("point_lights[{}].attenuation", i),
+            pl.attenuation,
+        );
+        set_uniform_float(
+            shader,
+            &format!("point_lights[{}].intensity", i),
+            pl.intensity,
+        );
     }
-    shader.set_uniform_float("shininess", Material::decode_shininess(material.shininess));
-    shader.set_uniform_vec3("specular_color", col2v3(material.specular_color));
+    set_uniform_float(
+        shader,
+        "shininess",
+        Material::decode_shininess(material.shininess),
+    );
+    set_uniform_color(shader, "specular_color", material.specular_color);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -340,20 +329,22 @@ pub fn draw_batches(
             let vert_chunks = vertices.par_iter_mut().chunks(n_vert_per_chunk);
 
             // Ensure the vbuffer has enough room to write in
-            if n_vertices_without_shadows > vbuffer.vbuf.vertex_count() {
+            if n_vertices_without_shadows > render::vbuf_max_vertices(&vbuffer.vbuf) {
                 vbuffer.grow(n_vertices_without_shadows);
             }
-            debug_assert!(n_vertices_without_shadows <= vbuffer.vbuf.vertex_count());
+            debug_assert!(n_vertices_without_shadows <= render::vbuf_max_vertices(&vbuffer.vbuf));
 
             {
                 trace!("tex_batch_ws");
 
                 if cast_shadows {
                     let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
-                    if n_shadow_vertices > shadow_vbuffer.vbuf.vertex_count() {
+                    if n_shadow_vertices > render::vbuf_max_vertices(&shadow_vbuffer.vbuf) {
                         shadow_vbuffer.grow(n_shadow_vertices);
                     }
-                    debug_assert!(n_shadow_vertices <= shadow_vbuffer.vbuf.vertex_count());
+                    debug_assert!(
+                        n_shadow_vertices <= render::vbuf_max_vertices(&shadow_vbuffer.vbuf)
+                    );
 
                     #[cfg(debug_assertions)]
                     {
@@ -553,28 +544,29 @@ pub fn draw_batches(
                 let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
                 shadow_vbuffer.update(shadow_vertices, n_shadow_vertices);
 
-                // @Temporary
-                window.raw_handle_mut().draw_vertex_buffer(
+                backend::render_vbuf_ws_ex(
+                    window,
                     &shadow_vbuffer.vbuf,
-                    sfml::graphics::RenderStates {
+                    &Transform2D::default(),
+                    camera,
+                    render::Render_Extra_Params {
                         texture: Some(texture),
-                        transform: camera.get_matrix_sfml().inverse(),
-                        ..sfml::graphics::RenderStates::default()
+                        ..Default::default()
                     },
                 );
             }
 
             vbuffer.update(vertices, n_vertices_without_shadows);
 
-            // @Temporary
             let shader = shader.map(|s| s as &_);
-            window.raw_handle_mut().draw_vertex_buffer(
+            backend::render_vbuf_ws_ex(
+                window,
                 &vbuffer.vbuf,
-                sfml::graphics::RenderStates {
+                &Transform2D::default(),
+                camera,
+                render::Render_Extra_Params {
                     texture: Some(texture),
                     shader,
-                    transform: camera.get_matrix_sfml().inverse(),
-                    ..sfml::graphics::RenderStates::default()
                 },
             );
         }

@@ -10,11 +10,17 @@ use std::convert::Into;
 
 pub mod batcher;
 
-#[cfg(feature = "use-sfml")]
-mod sfml;
+#[cfg(feature = "gfx-sfml")]
+pub(self) mod sfml;
 
-#[cfg(feature = "use-sfml")]
-use self::sfml as backend;
+#[cfg(feature = "gfx-null")]
+pub(self) mod null;
+
+#[cfg(feature = "gfx-sfml")]
+pub(self) use self::sfml as backend;
+
+#[cfg(feature = "gfx-null")]
+pub(self) use self::null as backend;
 
 pub type Z_Index = i8;
 
@@ -26,6 +32,12 @@ pub type Image = backend::Image;
 
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
+
+#[derive(Default)]
+pub struct Render_Extra_Params<'t, 's> {
+    pub texture: Option<&'t Texture<'t>>,
+    pub shader: Option<&'s Shader<'s>>,
+}
 
 //////////////////////////// DRAWING //////////////////////////////////
 
@@ -131,6 +143,17 @@ pub fn render_vbuf_ws(
     backend::render_vbuf_ws(window, vbuf, transform, camera);
 }
 
+pub fn render_vbuf_ws_ex(
+    window: &mut Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
+    camera: &Transform2D,
+    extra_params: Render_Extra_Params,
+) {
+    trace!("render_vbuf_ws");
+    backend::render_vbuf_ws_ex(window, vbuf, transform, camera, extra_params);
+}
+
 // Note: this always renders a line with thickness = 1px
 pub fn render_line(window: &mut Window_Handle, start: &Vertex, end: &Vertex) {
     trace!("render_line");
@@ -146,16 +169,16 @@ pub fn copy_texture_to_image(texture: &Texture) -> Image {
     backend::copy_texture_to_image(texture)
 }
 
-pub fn get_pixel(image: &Image, x: u32, y: u32) -> Color {
-    backend::get_pixel(image, x, y)
+pub fn get_image_pixel(image: &Image, x: u32, y: u32) -> Color {
+    backend::get_image_pixel(image, x, y)
 }
 
 pub fn get_image_size(image: &Image) -> (u32, u32) {
     backend::get_image_size(image)
 }
 
-pub fn get_pixels(image: &Image) -> &[Color] {
-    backend::get_pixels(image)
+pub fn get_image_pixels(image: &Image) -> &[Color] {
+    backend::get_image_pixels(image)
 }
 
 pub fn get_text_size(text: &Text<'_>) -> Vec2f {
@@ -164,6 +187,14 @@ pub fn get_text_size(text: &Text<'_>) -> Vec2f {
 
 pub fn shaders_are_available() -> bool {
     backend::shaders_are_available()
+}
+
+pub fn vbuf_cur_vertices(vbuf: &Vertex_Buffer) -> u32 {
+    backend::vbuf_cur_vertices(vbuf)
+}
+
+pub fn vbuf_max_vertices(vbuf: &Vertex_Buffer) -> u32 {
+    backend::vbuf_max_vertices(vbuf)
 }
 
 ///////////////////////////////// CREATING ///////////////////////////////////
@@ -198,22 +229,22 @@ simple_wrap!(Vertex_Buffer_Triangles, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Linestrip, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Lines, Vertex_Buffer);
 
-pub fn start_draw_quads(n_quads: usize) -> Vertex_Buffer_Quads {
+pub fn start_draw_quads(n_quads: u32) -> Vertex_Buffer_Quads {
     trace!("start_draw_quads");
     Vertex_Buffer_Quads(backend::start_draw_quads(n_quads))
 }
 
-pub fn start_draw_triangles(n_triangles: usize) -> Vertex_Buffer_Triangles {
+pub fn start_draw_triangles(n_triangles: u32) -> Vertex_Buffer_Triangles {
     trace!("start_draw_triangles");
     Vertex_Buffer_Triangles(backend::start_draw_triangles(n_triangles))
 }
 
-pub fn start_draw_linestrip(n_vertices: usize) -> Vertex_Buffer_Linestrip {
+pub fn start_draw_linestrip(n_vertices: u32) -> Vertex_Buffer_Linestrip {
     trace!("start_draw_linestrip");
     Vertex_Buffer_Linestrip(backend::start_draw_linestrip(n_vertices))
 }
 
-pub fn start_draw_lines(n_vertices: usize) -> Vertex_Buffer_Lines {
+pub fn start_draw_lines(n_vertices: u32) -> Vertex_Buffer_Lines {
     trace!("start_draw_lines");
     Vertex_Buffer_Lines(backend::start_draw_lines(n_vertices))
 }
@@ -246,6 +277,14 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     backend::new_vertex(pos, col, tex_coords)
 }
 
+pub fn set_vbuf_cur_vertices(vbuf: &mut Vertex_Buffer, cur_vertices: u32) {
+    backend::set_vbuf_cur_vertices(vbuf, cur_vertices);
+}
+
+pub fn copy_vbuf_to_vbuf(dest: &mut Vertex_Buffer, src: &Vertex_Buffer) -> bool {
+    backend::copy_vbuf_to_vbuf(dest, src)
+}
+
 pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {
     trace!("set_image_pixels");
     backend::set_image_pixel(image, x, y, val);
@@ -254,4 +293,24 @@ pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {
 pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[Color]) {
     trace!("update_texture_pixels");
     backend::update_texture_pixels(texture, rect, pixels);
+}
+
+pub fn set_uniform_float(shader: &mut Shader, name: &str, val: f32) {
+    backend::set_uniform_float(shader, name, val);
+}
+
+pub fn set_uniform_vec2(shader: &mut Shader, name: &str, val: Vec2f) {
+    backend::set_uniform_vec2(shader, name, val);
+}
+
+pub fn set_uniform_color(shader: &mut Shader, name: &str, val: Color) {
+    backend::set_uniform_color(shader, name, val);
+}
+
+pub fn set_uniform_texture(shader: &mut Shader, name: &str, val: &Texture) {
+    backend::set_uniform_texture(shader, name, val);
+}
+
+pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
+    backend::set_texture_repeated(texture, repeated);
 }

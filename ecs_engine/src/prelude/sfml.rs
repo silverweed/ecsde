@@ -7,7 +7,7 @@
 macro_rules! sf_wrap {
     ($typename: ident, $sftypename: ty) => {
         pub struct $typename<'a> {
-            wrapped: ::sfml::system::SfBox<$sftypename>,
+            pub wrapped: ::sfml::system::SfBox<$sftypename>,
             _marker: &'a std::marker::PhantomData<()>,
         }
 

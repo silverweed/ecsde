@@ -191,7 +191,7 @@ impl Debug_Element for Debug_Graph_View {
             .iter()
             .filter(|Vec2f { x, y }| xr.contains(x) && yr.contains(y))
             .collect::<Vec<_>>();
-        let mut vbuf = render::start_draw_linestrip(drawn_points.len());
+        let mut vbuf = render::start_draw_linestrip(drawn_points.len() as _);
         for (i, &&point) in drawn_points.iter().enumerate() {
             let vpos = self.get_coords_for(point);
             let col = self.get_color_for(point);
