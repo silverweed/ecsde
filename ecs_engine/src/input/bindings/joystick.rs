@@ -1,4 +1,4 @@
-use num_enum::TryFromPrimitive;
+use std::convert::TryFrom;
 
 #[cfg(feature = "use-sfml")]
 mod sfml;
@@ -57,7 +57,7 @@ pub enum Joystick_Button {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum Joystick_Axis {
     Stick_Left_H,
     Stick_Left_V,
@@ -68,6 +68,17 @@ pub enum Joystick_Axis {
     Dpad_H,
     Dpad_V,
     _Count,
+}
+
+impl TryFrom<u8> for Joystick_Axis {
+    type Error = String;
+
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        if v >= Joystick_Axis::_Count as u8 {
+            return Err(format!("Invalid Joystick_Axis: {}", v));
+        }
+        Ok(unsafe { std::mem::transmute(v) })
+    }
 }
 
 pub fn string_to_joy_btn(s: &str) -> Option<Joystick_Button> {

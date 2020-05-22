@@ -1,4 +1,3 @@
-use num_enum::TryFromPrimitive;
 use std::convert::TryFrom;
 
 #[cfg(feature = "use-sfml")]
@@ -9,12 +8,26 @@ use self::sfml as backend;
 
 pub type Button = backend::Button;
 
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[repr(u8)]
 pub enum Mouse_Button {
     Left,
     Right,
     Middle,
+}
+
+impl TryFrom<u8> for Mouse_Button {
+    type Error = String;
+
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        use Mouse_Button::*;
+        match v {
+            0 => Ok(Left),
+            1 => Ok(Right),
+            2 => Ok(Middle),
+            _ => Err(format!("Invalid Mouse_Button: {}", v)),
+        }
+    }
 }
 
 #[derive(Clone, Default)]
