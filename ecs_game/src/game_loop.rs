@@ -248,17 +248,13 @@ where
             }
 
             if actions.contains(&(String_Id::from("calipers"), Action_Kind::Pressed)) {
-                // @Robustness
-                let level = game_state
-                    .gameplay_system
-                    .levels
-                    .first_active_level()
-                    .unwrap();
-                game_state
-                    .engine_state
-                    .debug_systems
-                    .calipers
-                    .start_measuring_dist(&game_state.window, &level.get_camera().transform);
+                if let Some(level) = game_state.gameplay_system.levels.first_active_level() {
+                    game_state
+                        .engine_state
+                        .debug_systems
+                        .calipers
+                        .start_measuring_dist(&game_state.window, &level.get_camera().transform);
+                }
             } else if actions.contains(&(String_Id::from("calipers"), Action_Kind::Released)) {
                 game_state
                     .engine_state
@@ -553,18 +549,36 @@ fn update_debug_graphics<'a, 's, 'r>(
     // Draw debug UI
     {
         trace!("debug_ui::update");
-        game_state
-            .engine_state
-            .debug_systems
-            .debug_ui
-            .update_and_draw(
-                &real_dt,
-                &mut game_state.window,
-                gres,
-                &game_state.engine_state.input_state,
-                &game_state.engine_state.debug_systems.log,
-                &mut game_state.engine_state.frame_alloc,
-            );
+        let debug_ui = &mut game_state.engine_state.debug_systems.debug_ui;
+        let prev_selected = debug_ui
+            .get_graph(String_Id::from("fn_profile"))
+            .get_selected_point();
+        debug_ui.update_and_draw(
+            &real_dt,
+            &mut game_state.window,
+            gres,
+            &game_state.engine_state.input_state,
+            &game_state.engine_state.debug_systems.log,
+            &mut game_state.engine_state.frame_alloc,
+        );
+
+        let profile_graph = debug_ui.get_graph(String_Id::from("fn_profile"));
+        let cur_selected = profile_graph.get_selected_point();
+        if cur_selected != prev_selected {
+            game_state.engine_state.time.paused = cur_selected.is_some();
+            debug_ui.frame_scroller.manually_selected = cur_selected.is_some();
+            if let Some(sel) = cur_selected {
+                let profile_graph = debug_ui.get_graph(String_Id::from("fn_profile"));
+                // @Robustness @Refactoring: this should be a u64
+                let real_frame: u32 = profile_graph
+                    .data
+                    .get_point_metadata(sel.index, String_Id::from("real_frame"))
+                    .expect("Failed to get point frame metadata!");
+                debug_ui
+                    .frame_scroller
+                    .set_real_selected_frame(real_frame as u64);
+            }
+        }
     }
 
     // Draw console

@@ -161,6 +161,7 @@ pub fn update_graph_traced_fn(
     graph: &mut graph::Debug_Graph_View,
     time: Duration,
     traced_fn: &str,
+    cur_frame: u64,
 ) {
     // @Incomplete: make this configurable
     const TIME_LIMIT: f32 = 20.0;
@@ -176,5 +177,13 @@ pub fn update_graph_traced_fn(
         })
         .sum();
 
-    graph::add_point_and_scroll(graph, time, TIME_LIMIT, fn_tot_time);
+    // @Robustness: we're demoting the u64 to a u32 just for laziness!
+    // If we refactor Cfg_Value to a Variant, make it support long integers!
+    graph::add_point_and_scroll_with_metadata(
+        graph,
+        time,
+        TIME_LIMIT,
+        fn_tot_time,
+        &[(String_Id::from("real_frame"), (cur_frame as u32).into())],
+    );
 }

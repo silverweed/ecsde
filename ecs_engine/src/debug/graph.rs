@@ -3,16 +3,22 @@ use crate::alloc::temp;
 use crate::common::colors;
 use crate::common::rect::Rect;
 use crate::common::shapes::Circle;
+use crate::common::stringid::String_Id;
 use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2u};
+use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
 use crate::gfx::render_window::Render_Window_Handle;
 use crate::gfx::window;
 use crate::input::bindings::mouse;
 use crate::input::input_state::Input_State;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
+use std::convert::TryFrom;
 use std::ops::Range;
+
+// @Refactoring: probably move Cfg_Value to common::Variant
+use crate::cfg::Cfg_Value;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Grid_Step {
@@ -53,6 +59,7 @@ pub struct Debug_Graph_View {
 pub struct Debug_Graph {
     pub points: VecDeque<Vec2f>,
     pub x_range: Range<f32>,
+    pub points_metadata: HashMap<String_Id, VecDeque<Option<Cfg_Value>>>,
     max_y_value: Option<f32>,
     min_y_value: Option<f32>,
 }
@@ -199,6 +206,32 @@ impl Debug_Element for Debug_Graph_View {
             let vertex = render::new_vertex(vpos, col, Vec2f::default());
             render::add_vertex(&mut vbuf, &vertex);
 
+            // Draw selection line
+            if let Some(x) = self.selected_point {
+                if i == x {
+                    let rpos = pos + v2!(vpos.x, 0.) + v2!(-1., -1.);
+                    let rect = Rect::new(rpos.x, rpos.y, 2., self.size.y as f32 + 2.);
+                    render::render_rect(
+                        window,
+                        rect,
+                        Paint_Properties {
+                            color: colors::WHITE,
+                            border_color: colors::WHITE,
+                            border_thick: 1.,
+                            ..Default::default()
+                        },
+                    );
+                    render::render_circle(
+                        window,
+                        Circle {
+                            center: pos + vpos,
+                            radius: 4.0,
+                        },
+                        colors::rgb(255, 50, 10),
+                    );
+                }
+            }
+
             // Draw hover line
             if let Some(x) = self.hovered_point {
                 if i == x {
@@ -227,6 +260,12 @@ impl Debug_Element for Debug_Graph_View {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Debug_Graph_Point {
+    pub value: Vec2f,
+    pub index: usize, // useful for retrieving metadata
+}
+
 impl Debug_Graph_View {
     pub fn new(config: Debug_Graph_View_Config) -> Self {
         Self {
@@ -235,8 +274,11 @@ impl Debug_Graph_View {
         }
     }
 
-    pub fn get_selected_point(&self) -> Option<Vec2f> {
-        self.selected_point.map(|i| self.data.points[i])
+    pub fn get_selected_point(&self) -> Option<Debug_Graph_Point> {
+        self.selected_point.map(|i| Debug_Graph_Point {
+            value: self.data.points[i],
+            index: i,
+        })
     }
 
     fn y_range(&self) -> Range<f32> {
@@ -284,6 +326,7 @@ impl Default for Debug_Graph {
     fn default() -> Self {
         Self {
             points: VecDeque::new(),
+            points_metadata: HashMap::new(),
             x_range: 0.0..0.0,
             max_y_value: None,
             min_y_value: None,
@@ -292,10 +335,21 @@ impl Default for Debug_Graph {
 }
 
 impl Debug_Graph {
-    pub fn add_point(&mut self, x: f32, y: f32) {
+    pub fn add_point(&mut self, x: f32, y: f32, metadata: &[(String_Id, Cfg_Value)]) {
         self.min_y_value = Some(self.min_y_value.unwrap_or(y).min(y));
         self.max_y_value = Some(self.max_y_value.unwrap_or(y).max(y));
         self.points.push_back(Vec2f::new(x, y));
+        let points_len = self.points.len();
+        for (key, val) in metadata {
+            self.points_metadata
+                .entry(*key)
+                .or_insert_with(|| {
+                    let mut vals = VecDeque::new();
+                    vals.resize(points_len - 1, None);
+                    vals
+                })
+                .push_back(Some(val.clone()));
+        }
     }
 
     pub fn remove_points_before_x_range(&mut self) {
@@ -306,6 +360,29 @@ impl Debug_Graph {
             self.points.pop_front();
         }
     }
+
+    pub fn get_point_metadata<T>(&self, point_index: usize, key: String_Id) -> Option<T>
+    where
+        T: TryFrom<Cfg_Value>,
+    {
+        self.points_metadata
+            .get(&key)
+            .map(|vals| {
+                let maybe_val = vals[point_index].as_ref();
+                maybe_val.map(|val| {
+                    T::try_from(val.clone()).unwrap_or_else(|_| {
+                        fatal!(
+                            "Failed to convert metadata {} for point {} into {:?} (was {:?})",
+                            key,
+                            point_index,
+                            std::any::type_name::<T>(),
+                            val
+                        )
+                    })
+                })
+            })
+            .flatten()
+    }
 }
 
 pub fn add_point_and_scroll(
@@ -314,10 +391,20 @@ pub fn add_point_and_scroll(
     time_limit: f32,
     point: f32,
 ) {
+    add_point_and_scroll_with_metadata(graph, now, time_limit, point, &[]);
+}
+
+pub fn add_point_and_scroll_with_metadata(
+    graph: &mut Debug_Graph_View,
+    now: std::time::Duration,
+    time_limit: f32,
+    point: f32,
+    metadata: &[(String_Id, Cfg_Value)],
+) {
     let now = now.as_secs_f32();
     graph.data.x_range.end = now;
     if graph.data.x_range.end - graph.data.x_range.start > time_limit {
         graph.data.x_range.start = graph.data.x_range.end - time_limit;
     }
-    graph.data.add_point(now, point);
+    graph.data.add_point(now, point, metadata);
 }
