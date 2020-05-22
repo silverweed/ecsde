@@ -49,7 +49,7 @@ void main() {
         //float atten = float(dist < light.radius) * 1.0 / (1.0 + dist * light.attenuation);
         float atten = max(0.0, mix(1.0, 0.0, dist / light.radius));
 
-        color += light_weight * (vec4(diffuse * (1.0 + glow), 0.0) * atten);
+        color += light_weight * (diffuse * (1.0 + glow) * atten);
     }
 
     gl_FragColor = vec4(color.rgb * pixel.rgb, pixel.a);
