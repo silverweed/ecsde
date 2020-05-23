@@ -2,6 +2,9 @@ use crate::common::angle::{rad, Angle};
 use crate::common::matrix::Matrix3;
 use crate::common::vector::Vec2f;
 
+#[cfg(feature = "gfx-sfml")]
+pub mod sfml;
+
 // Likely @Incomplete: we don't want to recalculate the matrix every time.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Transform2D {
@@ -127,24 +130,6 @@ impl Transform2D {
         // R | T
         // 0 | 1
         Matrix3::new(sxc, sys, tx, -sxs, syc, ty, 0.0, 0.0, 1.0)
-    }
-
-    #[cfg(feature = "use-sfml")]
-    pub fn get_matrix_sfml(&self) -> sfml::graphics::Transform {
-        let angle = self.rotation.as_rad();
-        let angle = -angle;
-        let cosine = angle.cos();
-        let sine = angle.sin();
-        let sxc = self.scale.x * cosine;
-        let syc = self.scale.y * cosine;
-        let sxs = self.scale.x * sine;
-        let sys = self.scale.y * sine;
-        let tx = self.position.x;
-        let ty = self.position.y;
-
-        // R | 0
-        // T | 1
-        sfml::graphics::Transform::new(sxc, sys, tx, -sxs, syc, ty, 0.0, 0.0, 1.0)
     }
 
     pub fn combine(&self, other: &Transform2D) -> Transform2D {

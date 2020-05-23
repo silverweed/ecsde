@@ -1,4 +1,4 @@
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "gfx-sfml")]
 mod sfml;
 
 use crate::common::angle::{rad, Angle};

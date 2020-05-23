@@ -1,13 +1,10 @@
 use crate::common::vector::Vector2;
-use std::cmp::{Eq, PartialEq};
+use std::cmp::{Eq, Ordering, PartialEq};
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};
 
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "gfx-sfml")]
 mod sfml;
-
-#[cfg(feature = "use-sfml")]
-use self::sfml as backend;
 
 #[repr(C)]
 pub struct Rect<T> {
@@ -96,11 +93,51 @@ impl Mul<f32> for Rect<f32> {
     }
 }
 
+fn min<T: PartialOrd + Copy>(a: T, b: T) -> T {
+    match a.partial_cmp(&b) {
+        Some(Ordering::Greater) => b,
+        _ => a,
+    }
+}
+
+fn max<T: PartialOrd + Copy>(a: T, b: T) -> T {
+    match a.partial_cmp(&b) {
+        Some(Ordering::Less) => b,
+        _ => a,
+    }
+}
+
+// Translated from SFML/Graphics/Rect.inl
 pub fn rects_intersection<T>(a: &Rect<T>, b: &Rect<T>) -> Option<Rect<T>>
 where
     T: PartialOrd + Add<Output = T> + Sub<Output = T> + Copy,
 {
-    backend::rects_intersection(a, b)
+    // Rectangles with negative dimensions are allowed, so we must handle them correctly
+
+    // Compute the min and max of the first rectangle on both axes
+    let r1_minx = min(a.x, a.x + a.width);
+    let r1_maxx = max(a.x, a.x + a.width);
+    let r1_miny = min(a.y, a.y + a.height);
+    let r1_maxy = max(a.y, a.y + a.height);
+
+    // Compute the min and max of the second rectangle on both axes
+    let r2_minx = min(b.x, b.x + b.width);
+    let r2_maxx = max(b.x, b.x + b.width);
+    let r2_miny = min(b.y, b.y + b.height);
+    let r2_maxy = max(b.y, b.y + b.height);
+
+    // Compute the intersection boundaries
+    let ileft = max(r1_minx, r2_minx);
+    let itop = max(r1_miny, r2_miny);
+    let iright = min(r1_maxx, r2_maxx);
+    let ibot = min(r1_maxy, r2_maxy);
+
+    // If the intersection is valid (positive non zero area), then there is an intersection
+    if (ileft < iright) && (itop < ibot) {
+        Some(Rect::new(ileft, itop, iright - ileft, ibot - itop))
+    } else {
+        None
+    }
 }
 
 impl<T> Rect<T> {

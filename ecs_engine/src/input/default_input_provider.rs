@@ -3,6 +3,7 @@ use super::input_state::Input_Raw_Event;
 use super::joystick_state::{Joystick_State, Real_Axes_Values};
 use super::provider::{Input_Provider, Input_Provider_Input};
 use crate::cfg;
+use crate::gfx::window;
 use std::convert::TryInto;
 use std::vec::Vec;
 
@@ -21,7 +22,7 @@ impl Input_Provider for Default_Input_Provider {
         _: &cfg::Config,
     ) {
         self.events.clear();
-        while let Some(evt) = window.poll_event() {
+        while let Some(evt) = window::poll_event(window) {
             self.events.push(evt);
         }
 

@@ -401,7 +401,7 @@ where
 
     {
         trace!("display");
-        gfx::render_window::display(&mut game_state.window);
+        gfx::window::display(&mut game_state.window);
     }
 
     Ok(())

@@ -1,5 +1,4 @@
 use super::Rect;
-use std::ops::{Add, Sub};
 
 impl<T> std::convert::From<Rect<T>> for sfml::graphics::Rect<T>
 where
@@ -37,13 +36,6 @@ where
         // Safe because we have the same repr as sfml Rect
         unsafe { &*(self as *const _ as *const sfml::graphics::Rect<T>) }
     }
-}
-
-pub fn rects_intersection<T>(a: &Rect<T>, b: &Rect<T>) -> Option<Rect<T>>
-where
-    T: PartialOrd + Add<Output = T> + Sub<Output = T> + Copy,
-{
-    a.as_ref().intersection(b.as_ref()).map(Into::into)
 }
 
 #[cfg(test)]

@@ -3,8 +3,7 @@ use super::input_state::Input_Raw_Event;
 use super::joystick_state::{Joystick_State, Real_Axes_Values};
 use crate::cfg;
 
-#[cfg(feature = "use-sfml")]
-pub type Input_Provider_Input = sfml::graphics::RenderWindow;
+pub type Input_Provider_Input = crate::gfx::window::Window_Handle;
 
 /// An Input_Provider provides event data for the Input_System.
 /// This can be e.g. the window event loop or some replay data.

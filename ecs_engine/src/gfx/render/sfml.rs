@@ -2,7 +2,7 @@ use super::Render_Extra_Params;
 use crate::common::colors::Color;
 use crate::common::rect::Rect;
 use crate::common::shapes;
-use crate::common::transform::Transform2D;
+use crate::common::transform::{sfml::to_matrix_sfml, Transform2D};
 use crate::common::vector::Vec2f;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render_window::Render_Window_Handle;
@@ -52,8 +52,8 @@ pub fn render_text_ws(
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
-    let mut render_transform = camera.get_matrix_sfml().inverse();
-    render_transform.combine(&transform.get_matrix_sfml());
+    let mut render_transform = to_matrix_sfml(camera).inverse();
+    render_transform.combine(&to_matrix_sfml(transform));
 
     let render_states = RenderStates {
         transform: render_transform,
@@ -95,8 +95,8 @@ pub fn fill_color_rect_ws<T>(
 ) where
     T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
-    let mut render_transform = camera.get_matrix_sfml().inverse();
-    render_transform.combine(&transform.get_matrix_sfml());
+    let mut render_transform = to_matrix_sfml(camera).inverse();
+    render_transform.combine(&to_matrix_sfml(transform));
 
     let render_states = RenderStates {
         transform: render_transform,
@@ -148,7 +148,7 @@ pub fn fill_color_circle_ws(
     circle: shapes::Circle,
     camera: &Transform2D,
 ) {
-    let render_transform = camera.get_matrix_sfml().inverse();
+    let render_transform = to_matrix_sfml(camera).inverse();
 
     let render_states = RenderStates {
         transform: render_transform,
@@ -302,7 +302,7 @@ pub fn render_vbuf(
     transform: &Transform2D,
 ) {
     let render_states = RenderStates {
-        transform: transform.get_matrix_sfml(),
+        transform: to_matrix_sfml(transform),
         blend_mode: BlendMode::ALPHA,
         ..Default::default()
     };
@@ -315,8 +315,8 @@ pub fn render_vbuf_ws(
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
-    let mut render_transform = camera.get_matrix_sfml().inverse();
-    render_transform.combine(&transform.get_matrix_sfml());
+    let mut render_transform = to_matrix_sfml(camera).inverse();
+    render_transform.combine(&to_matrix_sfml(transform));
 
     let render_states = RenderStates {
         transform: render_transform,
@@ -333,8 +333,8 @@ pub fn render_vbuf_ws_ex(
     camera: &Transform2D,
     extra_params: Render_Extra_Params,
 ) {
-    let mut render_transform = camera.get_matrix_sfml().inverse();
-    render_transform.combine(&transform.get_matrix_sfml());
+    let mut render_transform = to_matrix_sfml(camera).inverse();
+    render_transform.combine(&to_matrix_sfml(transform));
 
     use std::borrow::Borrow;
 

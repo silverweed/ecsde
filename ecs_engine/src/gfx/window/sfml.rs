@@ -15,20 +15,29 @@ impl Default for Create_Window_Args {
     }
 }
 
+#[cfg(not(feature = "gfx-sfml"))]
+type Window_Type = sfwin::Window;
+
+#[cfg(feature = "gfx-sfml")]
+type Window_Type = sfml::graphics::RenderWindow;
+
+#[cfg(feature = "gfx-sfml")]
+use sfml::graphics::RenderTarget;
+
 pub struct Window_Handle {
-    handle: sfwin::Window,
+    handle: Window_Type,
     target_size: (u32, u32),
     vsync: bool,
 }
 
 impl Window_Handle {
     #[inline(always)]
-    pub fn raw_handle(&self) -> &sfwin::Window {
+    pub fn raw_handle(&self) -> &Window_Type {
         &self.handle
     }
 
     #[inline(always)]
-    pub fn raw_handle_mut(&mut self) -> &mut sfwin::Window {
+    pub fn raw_handle_mut(&mut self) -> &mut Window_Type {
         &mut self.handle
     }
 }
@@ -38,7 +47,7 @@ pub fn create_window(
     target_size: (u32, u32),
     title: &str,
 ) -> Window_Handle {
-    let mut window = sfwin::Window::new(
+    let mut window = Window_Type::new(
         target_size,
         title,
         sfwin::Style::DEFAULT,
@@ -51,10 +60,6 @@ pub fn create_window(
         target_size,
         vsync: create_args.vsync,
     }
-}
-
-pub fn destroy_window(window: &mut Window_Handle) {
-    window.handle.close();
 }
 
 pub fn get_window_target_size(window: &Window_Handle) -> (u32, u32) {
@@ -85,4 +90,8 @@ pub fn set_key_repeat_enabled(window: &mut Window_Handle, enabled: bool) {
 
 pub fn poll_event(window: &mut Window_Handle) -> Option<Event> {
     window.handle.poll_event()
+}
+
+pub fn display(window: &mut Window_Handle) {
+    window.handle.display();
 }

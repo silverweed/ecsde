@@ -4,11 +4,17 @@ use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2i};
 
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "gfx-sfml")]
 mod sfml;
 
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "gfx-null")]
+mod null;
+
+#[cfg(feature = "gfx-sfml")]
 use self::sfml as backend;
+
+#[cfg(feature = "gfx-null")]
+use self::null as backend;
 
 pub type Render_Window_Handle = backend::Render_Window_Handle;
 
@@ -18,10 +24,6 @@ pub fn create_render_window(window: Window_Handle) -> Render_Window_Handle {
 
 pub fn clear(window: &mut Render_Window_Handle) {
     backend::clear(window);
-}
-
-pub fn display(window: &mut Render_Window_Handle) {
-    backend::display(window);
 }
 
 pub fn set_clear_color(window: &mut Render_Window_Handle, color: Color) {

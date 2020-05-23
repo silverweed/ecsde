@@ -24,12 +24,11 @@ libc = "0.2"
 
 [dependencies.sfml]
 version = "0.15.1"
-#git = "https://github.com/jeremyletang/rust-sfml"
-#rev = "f3bc9e73"
-path = "../../rust-sfml"
+git = "https://github.com/jeremyletang/rust-sfml"
+rev = "9199dc4"
 optional = true
 default-features = false
-features = ["audio", "window", "graphics"]
+features = ["audio", "window"]
 
 [dev-dependencies]
 float-cmp = "0.5.2"

@@ -31,16 +31,16 @@ pub fn create_window(
     backend::create_window(args, target_size, title)
 }
 
-pub fn destroy_window(window: &mut Window_Handle) {
-    backend::destroy_window(window);
-}
-
 pub fn has_vsync<W: AsRef<Window_Handle>>(window: &W) -> bool {
     backend::has_vsync(window.as_ref())
 }
 
 pub fn set_vsync<W: AsMut<Window_Handle>>(window: &mut W, vsync: bool) {
     backend::set_vsync(window.as_mut(), vsync);
+}
+
+pub fn display<W: AsMut<Window_Handle>>(window: &mut W) {
+    backend::display(window.as_mut());
 }
 
 pub fn get_window_target_size<W: AsRef<Window_Handle>>(window: &W) -> (u32, u32) {

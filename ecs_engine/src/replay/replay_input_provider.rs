@@ -1,5 +1,6 @@
 use super::replay_data::{Replay_Data, Replay_Data_Iter};
 use crate::cfg::{self, Cfg_Var};
+use crate::gfx::window::{self, Event};
 use crate::input::bindings::joystick;
 use crate::input::default_input_provider::Default_Input_Provider;
 use crate::input::input_state::Input_Raw_Event;
@@ -50,7 +51,7 @@ impl Input_Provider for Replay_Input_Provider {
             if self.config.disable_input_during_replay.read(cfg) {
                 self.update_core_events(window);
             } else {
-                while let Some(evt) = window.poll_event() {
+                while let Some(evt) = window::poll_event(window) {
                     self.dip.events.push(evt);
                 }
             }
@@ -103,11 +104,8 @@ impl Input_Provider for Replay_Input_Provider {
 }
 
 impl Replay_Input_Provider {
-    #[cfg(feature = "use-sfml")]
     fn update_core_events(&mut self, window: &mut Input_Provider_Input) {
-        use sfml::window::Event;
-
-        while let Some(evt) = window.poll_event() {
+        while let Some(evt) = window::poll_event(window) {
             match evt {
                 Event::Closed | Event::Resized { .. } => self.dip.events.push(evt),
                 _ => (),
