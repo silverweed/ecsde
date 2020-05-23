@@ -5,7 +5,7 @@ use crate::common::shapes::Circle;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::ecs::components::gfx::Material;
-use crate::gfx::window::Window_Handle;
+use crate::gfx::render_window::Render_Window_Handle;
 use std::convert::Into;
 
 pub mod batcher;
@@ -42,7 +42,7 @@ pub struct Render_Extra_Params<'t, 's> {
 //////////////////////////// DRAWING //////////////////////////////////
 
 /// Draws a color-filled rectangle in screen space
-pub fn render_rect<R, P>(window: &mut Window_Handle, rect: R, paint_props: P)
+pub fn render_rect<R, P>(window: &mut Render_Window_Handle, rect: R, paint_props: P)
 where
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
     P: Into<Paint_Properties>,
@@ -54,7 +54,7 @@ where
 
 /// Draws a color-filled rectangle in world space
 pub fn render_rect_ws<R, P>(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     rect: R,
     paint_props: P,
     transform: &Transform2D,
@@ -68,7 +68,7 @@ pub fn render_rect_ws<R, P>(
     backend::fill_color_rect_ws(window, &paint_props, rect, transform, camera);
 }
 
-pub fn render_circle<P>(window: &mut Window_Handle, circle: Circle, paint_props: P)
+pub fn render_circle<P>(window: &mut Render_Window_Handle, circle: Circle, paint_props: P)
 where
     P: Into<Paint_Properties>,
 {
@@ -79,7 +79,7 @@ where
 
 /// Draws a color-filled circle in world space
 pub fn render_circle_ws<P>(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     circle: Circle,
     paint_props: P,
     camera: &Transform2D,
@@ -104,7 +104,7 @@ pub fn render_texture_ws(
 }
 
 pub fn render_text<P>(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     text: &mut Text<'_>,
     paint_props: P,
     screen_pos: Vec2f,
@@ -116,7 +116,7 @@ pub fn render_text<P>(
 }
 
 pub fn render_text_ws<P>(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     text: &mut Text<'_>,
     paint_props: P,
     world_transform: &Transform2D,
@@ -128,13 +128,17 @@ pub fn render_text_ws<P>(
     backend::render_text_ws(window, text, &paint_props.into(), world_transform, camera);
 }
 
-pub fn render_vbuf(window: &mut Window_Handle, vbuf: &Vertex_Buffer, transform: &Transform2D) {
+pub fn render_vbuf(
+    window: &mut Render_Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
+) {
     trace!("render_vbuf");
     backend::render_vbuf(window, vbuf, transform);
 }
 
 pub fn render_vbuf_ws(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
     camera: &Transform2D,
@@ -144,7 +148,7 @@ pub fn render_vbuf_ws(
 }
 
 pub fn render_vbuf_ws_ex(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
     camera: &Transform2D,
@@ -155,7 +159,7 @@ pub fn render_vbuf_ws_ex(
 }
 
 // Note: this always renders a line with thickness = 1px
-pub fn render_line(window: &mut Window_Handle, start: &Vertex, end: &Vertex) {
+pub fn render_line(window: &mut Render_Window_Handle, start: &Vertex, end: &Vertex) {
     trace!("render_line");
     backend::render_line(window, start, end);
 }

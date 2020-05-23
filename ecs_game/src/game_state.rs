@@ -6,7 +6,7 @@ use ecs_engine::cfg::Cfg_Var;
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::{app, app_config};
-use ecs_engine::gfx::{self as ngfx, window};
+use ecs_engine::gfx::{self as ngfx, render_window::Render_Window_Handle};
 use ecs_engine::input;
 use ecs_engine::resources;
 use std::collections::HashMap;
@@ -23,7 +23,7 @@ pub type Level_Batches = HashMap<String_Id, ngfx::render::batcher::Batches>;
 
 #[repr(C)]
 pub struct Game_State<'a> {
-    pub window: window::Window_Handle,
+    pub window: Render_Window_Handle,
     pub engine_state: app::Engine_State<'a>,
 
     pub gameplay_system: gameplay_system::Gameplay_System,
@@ -184,14 +184,12 @@ fn create_game_state<'a>(
     let cfg = &engine_state.config;
     let cvars = create_cvars(cfg);
 
-    let window_create_args = ngfx::window::Create_Render_Window_Args {
+    let window_create_args = ngfx::window::Create_Window_Args {
         vsync: cvars.vsync.read(cfg),
     };
-    let window = ngfx::window::create_render_window(
-        &window_create_args,
-        appcfg.target_win_size,
-        &appcfg.title,
-    );
+    let window =
+        ngfx::window::create_window(&window_create_args, appcfg.target_win_size, &appcfg.title);
+    let window = ngfx::render_window::create_render_window(window);
 
     #[cfg(debug_assertions)]
     {
@@ -338,7 +336,7 @@ fn init_states(
     state_mgr: &mut states::state_manager::State_Manager,
     engine_state: &mut app::Engine_State,
     gs: &mut gameplay_system::Gameplay_System,
-    window: &mut window::Window_Handle,
+    window: &mut Render_Window_Handle,
     game_resources: &mut Game_Resources,
     level_batches: &mut Level_Batches,
 ) {

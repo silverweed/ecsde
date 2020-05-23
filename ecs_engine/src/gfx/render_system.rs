@@ -6,7 +6,7 @@ use crate::ecs::components::gfx::C_Renderable;
 use crate::ecs::ecs_world::Ecs_World;
 use crate::ecs::entity_stream::new_entity_stream;
 use crate::gfx::render;
-use crate::gfx::window::Window_Handle;
+use crate::gfx::render_window::Render_Window_Handle;
 
 #[derive(Copy, Clone)]
 pub struct Render_System_Config {
@@ -18,7 +18,7 @@ pub struct Render_System_Config {
 }
 
 pub struct Render_System_Update_Args<'a> {
-    pub window: &'a mut Window_Handle,
+    pub window: &'a mut Render_Window_Handle,
     pub batches: &'a mut render::batcher::Batches,
     pub ecs_world: &'a Ecs_World,
     pub frame_alloc: &'a mut temp::Temp_Allocator,

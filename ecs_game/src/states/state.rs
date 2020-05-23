@@ -1,7 +1,7 @@
 use crate::game_state::{Game_Resources, Level_Batches};
 use crate::gameplay_system::Gameplay_System;
 use ecs_engine::core::app::Engine_State;
-use ecs_engine::gfx::window::Window_Handle;
+use ecs_engine::gfx::render_window::Render_Window_Handle;
 use ecs_engine::input::input_state::Game_Action;
 use std::time::Duration;
 
@@ -16,7 +16,7 @@ pub enum State_Transition {
 pub struct Game_State_Args<'e, 'r, 'g, 'w, 'r1, 'r2> {
     pub engine_state: &'e mut Engine_State<'r>,
     pub gameplay_system: &'g mut Gameplay_System,
-    pub window: &'w mut Window_Handle,
+    pub window: &'w mut Render_Window_Handle,
     pub game_resources: &'r1 mut Game_Resources<'r2>,
     pub level_batches: &'g mut Level_Batches,
 }

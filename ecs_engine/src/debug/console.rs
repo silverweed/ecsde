@@ -3,7 +3,7 @@ use crate::common::rect::Rect;
 use crate::common::vector::{Vec2f, Vec2u};
 use crate::core::env::Env_Info;
 use crate::gfx::render;
-use crate::gfx::window::Window_Handle;
+use crate::gfx::render_window::Render_Window_Handle;
 use crate::input::bindings::keyboard;
 use crate::input::input_state::Input_Raw_Event;
 use crate::resources::gfx;
@@ -462,7 +462,7 @@ impl Console {
         }
     }
 
-    pub fn draw(&self, window: &mut Window_Handle, gres: &mut gfx::Gfx_Resources) {
+    pub fn draw(&self, window: &mut Render_Window_Handle, gres: &mut gfx::Gfx_Resources) {
         if self.status == Console_Status::Closed {
             return;
         }

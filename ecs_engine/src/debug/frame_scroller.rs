@@ -4,6 +4,7 @@ use crate::common::rect;
 use crate::common::vector::{Vec2f, Vec2i, Vec2u};
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
+use crate::gfx::render_window::Render_Window_Handle;
 use crate::gfx::window;
 use crate::input::input_state::Input_Raw_Event;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
@@ -57,7 +58,7 @@ struct Row_Props {
 }
 
 impl Debug_Frame_Scroller {
-    pub fn update(&mut self, window: &window::Window_Handle, log: &Debug_Log) {
+    pub fn update(&mut self, window: &Render_Window_Handle, log: &Debug_Log) {
         if !self.manually_selected {
             self.update_frame(log);
         }
@@ -203,14 +204,14 @@ impl Debug_Frame_Scroller {
         }
     }
 
-    pub fn draw(&self, window: &mut window::Window_Handle, gres: &mut Gfx_Resources) {
+    pub fn draw(&self, window: &mut Render_Window_Handle, gres: &mut Gfx_Resources) {
         trace!("frame_scroller::draw");
 
         self.draw_row(window, gres, Row::Seconds);
         self.draw_row(window, gres, Row::Frames);
     }
 
-    fn draw_row(&self, window: &mut window::Window_Handle, gres: &Gfx_Resources, row: Row) {
+    fn draw_row(&self, window: &mut Render_Window_Handle, gres: &Gfx_Resources, row: Row) {
         let Row_Props {
             y,
             height,

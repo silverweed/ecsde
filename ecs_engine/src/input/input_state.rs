@@ -6,11 +6,8 @@ use super::core_actions::Core_Action;
 use super::joystick_state::{self, Joystick_State};
 use crate::common::stringid::String_Id;
 use crate::core::env::Env_Info;
-use crate::gfx::window::Window_Handle;
+use crate::gfx::window::{self, Event, Window_Handle};
 use std::convert::TryInto;
-
-#[cfg(feature = "use-sfml")]
-use sfml::window::Event;
 
 #[cfg(feature = "use-sfml")]
 pub type Input_Raw_Event = sfml::window::Event;
@@ -60,18 +57,15 @@ pub fn create_input_state(env: &Env_Info) -> Input_State {
     }
 }
 
-#[cfg(feature = "use-sfml")]
-fn poll_event(window: &mut Window_Handle) -> Option<Event> {
-    window.poll_event()
-}
+pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut Input_Raw_State) {
+    let window = window.as_mut();
 
-pub fn update_raw_input(window: &mut Window_Handle, raw_state: &mut Input_Raw_State) {
     joystick::update_joysticks();
     mouse::update_mouse_state(&mut raw_state.mouse_state);
 
     raw_state.events.clear();
 
-    while let Some(evt) = poll_event(window) {
+    while let Some(evt) = window::poll_event(window) {
         match evt {
             Event::JoystickConnected { joystickid } => {
                 joystick_state::register_joystick(&mut raw_state.joy_state, joystickid);

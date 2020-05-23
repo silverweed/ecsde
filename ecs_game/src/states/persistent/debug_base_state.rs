@@ -6,8 +6,7 @@ use ecs_engine::common::math;
 use ecs_engine::common::rect::Rect;
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::vector::{Vec2f, Vec2i};
-use ecs_engine::gfx::render;
-use ecs_engine::gfx::window;
+use ecs_engine::gfx::{render, render_window, window};
 use ecs_engine::input::bindings::mouse;
 use ecs_engine::input::input_state::{Action_Kind, Game_Action};
 use std::time::Duration;
@@ -165,7 +164,7 @@ impl Persistent_Game_State for Debug_Base_State {
         let mleft = mouse::is_mouse_btn_pressed(mouse_state, mouse::Mouse_Button::Left);
         let mright = mouse::is_mouse_btn_pressed(mouse_state, mouse::Mouse_Button::Right);
         if mleft || mright {
-            let mpos = window::mouse_pos_in_world(
+            let mpos = render_window::mouse_pos_in_world(
                 args.window,
                 &args
                     .gameplay_system

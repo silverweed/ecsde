@@ -8,6 +8,7 @@ use ecs_engine::core::app;
 use ecs_engine::core::time;
 use ecs_engine::gfx;
 use ecs_engine::gfx::render_system;
+use ecs_engine::gfx::render_window::Render_Window_Handle;
 use ecs_engine::input;
 use ecs_engine::resources::gfx::Gfx_Resources;
 use ecs_engine::ui;
@@ -400,7 +401,7 @@ where
 
     {
         trace!("display");
-        gfx::window::display(&mut game_state.window);
+        gfx::render_window::display(&mut game_state.window);
     }
 
     Ok(())
@@ -442,8 +443,8 @@ where
                 .clear_color
                 .read(&game_state.engine_state.config),
         );
-        gfx::window::set_clear_color(window, clear_color);
-        gfx::window::clear(window);
+        gfx::render_window::set_clear_color(window, clear_color);
+        gfx::render_window::clear(window);
     }
 
     let cfg = &game_state.engine_state.config;
@@ -831,7 +832,7 @@ fn update_fps_debug_overlay(
 fn update_mouse_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
     painter: &mut Debug_Painter,
-    window: &window::Window_Handle,
+    window: &Render_Window_Handle,
 ) {
     use ecs_engine::common::shapes::Line;
 
@@ -870,7 +871,7 @@ fn update_mouse_debug_overlay(
 #[cfg(debug_assertions)]
 fn update_win_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
-    window: &window::Window_Handle,
+    window: &Render_Window_Handle,
 ) {
     let tsize = window::get_window_target_size(window);
     let rsize = window::get_window_real_size(window);

@@ -3,7 +3,8 @@ use crate::common::shapes::Arrow;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::debug::painter::Debug_Painter;
-use crate::gfx::window::{self, Window_Handle};
+use crate::gfx::render_window::{self, Render_Window_Handle};
+use crate::gfx::window;
 
 // Measures distances
 #[derive(Default)]
@@ -13,9 +14,9 @@ pub struct Debug_Calipers {
 }
 
 impl Debug_Calipers {
-    pub fn start_measuring_dist(&mut self, window: &Window_Handle, camera: &Transform2D) {
+    pub fn start_measuring_dist(&mut self, window: &Render_Window_Handle, camera: &Transform2D) {
         let pos = window::raw_mouse_pos_in_window(window);
-        let pos = window::unproject_screen_pos(pos, window, camera);
+        let pos = render_window::unproject_screen_pos(pos, window, camera);
         self.start_world_pos = pos;
         self.dragging = true;
     }
@@ -24,13 +25,18 @@ impl Debug_Calipers {
         self.dragging = false;
     }
 
-    pub fn draw(&self, window: &Window_Handle, painter: &mut Debug_Painter, camera: &Transform2D) {
+    pub fn draw(
+        &self,
+        window: &Render_Window_Handle,
+        painter: &mut Debug_Painter,
+        camera: &Transform2D,
+    ) {
         if !self.dragging {
             return;
         }
 
         let end_screen_pos = window::raw_mouse_pos_in_window(window);
-        let end_world_pos = window::unproject_screen_pos(end_screen_pos, window, camera);
+        let end_world_pos = render_window::unproject_screen_pos(end_screen_pos, window, camera);
         let delta = end_world_pos - self.start_world_pos;
         let scale = camera.scale().x;
         let arrow = Arrow {

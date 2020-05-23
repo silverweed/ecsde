@@ -7,7 +7,7 @@ authors = ["silverweed <silverweed1991@gmail.com>"]
 [features]
 use-sfml = ["sfml"]
 gfx-null = []
-gfx-sfml = []
+gfx-sfml = ["sfml/graphics"]
 default = ["use-sfml", "gfx-sfml"]
 
 [dependencies]
@@ -24,10 +24,12 @@ libc = "0.2"
 
 [dependencies.sfml]
 version = "0.15.1"
-git = "https://github.com/jeremyletang/rust-sfml"
-rev = "f3bc9e73"
+#git = "https://github.com/jeremyletang/rust-sfml"
+#rev = "f3bc9e73"
+path = "../../rust-sfml"
 optional = true
-features = ["graphics", "audio"]
+default-features = false
+features = ["audio", "window", "graphics"]
 
 [dev-dependencies]
 float-cmp = "0.5.2"

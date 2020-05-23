@@ -6,7 +6,8 @@ use crate::common::shapes::Circle;
 use crate::common::transform::Transform2D;
 use crate::common::vector::{Vec2f, Vec2u};
 use crate::gfx::render;
-use crate::gfx::window::{self, Window_Handle};
+use crate::gfx::render_window::Render_Window_Handle;
+use crate::gfx::window;
 use crate::input::bindings::mouse;
 use crate::input::input_state::Input_State;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
@@ -60,7 +61,7 @@ impl Debug_Element for Debug_Graph_View {
     fn update(
         &mut self,
         _dt: &std::time::Duration,
-        window: &Window_Handle,
+        window: &Render_Window_Handle,
         input_state: &Input_State,
     ) {
         if !self.config.hoverable {
@@ -99,7 +100,7 @@ impl Debug_Element for Debug_Graph_View {
 
     fn draw(
         &self,
-        window: &mut Window_Handle,
+        window: &mut Render_Window_Handle,
         gres: &mut Gfx_Resources,
         _frame_alloc: &mut temp::Temp_Allocator,
     ) {

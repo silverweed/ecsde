@@ -5,7 +5,7 @@ use crate::common::shapes;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::gfx::paint_props::Paint_Properties;
-use crate::gfx::window::Window_Handle;
+use crate::gfx::render_window::Render_Window_Handle;
 use std::marker::PhantomData;
 
 pub struct Vertex_Buffer {
@@ -52,14 +52,17 @@ impl Shader<'_> {
     }
 }
 
-pub fn fill_color_rect<R>(_window: &mut Window_Handle, _paint_props: &Paint_Properties, _rect: R)
-where
+pub fn fill_color_rect<R>(
+    _window: &mut Render_Window_Handle,
+    _paint_props: &Paint_Properties,
+    _rect: R,
+) where
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
 }
 
 pub fn fill_color_rect_ws<T>(
-    _window: &mut Window_Handle,
+    _window: &mut Render_Window_Handle,
     _paint_props: &Paint_Properties,
     _rect: T,
     _transform: &Transform2D,
@@ -70,14 +73,14 @@ pub fn fill_color_rect_ws<T>(
 }
 
 pub fn fill_color_circle(
-    _window: &mut Window_Handle,
+    _window: &mut Render_Window_Handle,
     _paint_props: &Paint_Properties,
     _circle: shapes::Circle,
 ) {
 }
 
 pub fn fill_color_circle_ws(
-    _window: &mut Window_Handle,
+    _window: &mut Render_Window_Handle,
     _paint_props: &Paint_Properties,
     _circle: shapes::Circle,
     _camera: &Transform2D,
@@ -85,7 +88,7 @@ pub fn fill_color_circle_ws(
 }
 
 pub fn render_text(
-    _window: &mut Window_Handle,
+    _window: &mut Render_Window_Handle,
     _text: &mut Text,
     _paint_props: &Paint_Properties,
     _screen_pos: Vec2f,
@@ -93,7 +96,7 @@ pub fn render_text(
 }
 
 pub fn render_text_ws(
-    _window: &mut Window_Handle,
+    _window: &mut Render_Window_Handle,
     _text: &mut Text,
     _paint_props: &Paint_Properties,
     _transform: &Transform2D,
@@ -184,10 +187,15 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     }
 }
 
-pub fn render_vbuf(_window: &mut Window_Handle, _vbuf: &Vertex_Buffer, _transform: &Transform2D) {}
+pub fn render_vbuf(
+    _window: &mut Render_Window_Handle,
+    _vbuf: &Vertex_Buffer,
+    _transform: &Transform2D,
+) {
+}
 
 pub fn render_vbuf_ws(
-    _window: &mut Window_Handle,
+    _window: &mut Render_Window_Handle,
     _vbuf: &Vertex_Buffer,
     _transform: &Transform2D,
     _camera: &Transform2D,
@@ -195,7 +203,7 @@ pub fn render_vbuf_ws(
 }
 
 pub fn render_vbuf_ws_ex(
-    _window: &mut Window_Handle,
+    _window: &mut Render_Window_Handle,
     _vbuf: &Vertex_Buffer,
     _transform: &Transform2D,
     _camera: &Transform2D,
@@ -203,14 +211,18 @@ pub fn render_vbuf_ws_ex(
 ) {
 }
 
-pub fn render_vbuf_texture(_window: &mut Window_Handle, _vbuf: &Vertex_Buffer, _texture: &Texture) {
+pub fn render_vbuf_texture(
+    _window: &mut Render_Window_Handle,
+    _vbuf: &Vertex_Buffer,
+    _texture: &Texture,
+) {
 }
 
 pub fn create_text<'a>(_string: &str, _font: &'a Font, _size: u16) -> Text<'a> {
     Text { _pd: PhantomData }
 }
 
-pub fn render_line(_window: &mut Window_Handle, _start: &Vertex, _end: &Vertex) {}
+pub fn render_line(_window: &mut Render_Window_Handle, _start: &Vertex, _end: &Vertex) {}
 
 pub fn copy_texture_to_image(_texture: &Texture) -> Image {}
 

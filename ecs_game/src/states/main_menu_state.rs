@@ -1,7 +1,8 @@
 use super::state::{Game_State, Game_State_Args, State_Transition};
 use ecs_engine::common::rect::Rect;
 use ecs_engine::common::vector::{lerp_v, Vec2f};
-use ecs_engine::gfx::window::{self, Window_Handle};
+use ecs_engine::gfx::render_window::Render_Window_Handle;
+use ecs_engine::gfx::window;
 use ecs_engine::ui;
 use std::time::Duration;
 
@@ -23,7 +24,7 @@ pub struct Main_Menu_State {
 }
 
 impl Main_Menu_State {
-    fn create_buttons(window: &Window_Handle) -> Vec<Menu_Button> {
+    fn create_buttons(window: &Render_Window_Handle) -> Vec<Menu_Button> {
         let mut buttons = vec![];
         let (ww, wh) = window::get_window_target_size(window);
         let (ww, wh) = (ww as f32, wh as f32);

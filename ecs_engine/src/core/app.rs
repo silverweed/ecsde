@@ -8,6 +8,7 @@ use crate::common::Maybe_Error;
 use crate::core::rand;
 use crate::core::systems::Core_Systems;
 use crate::gfx;
+use crate::gfx::render_window::Render_Window_Handle;
 use crate::input;
 use crate::resources::gfx::Gfx_Resources;
 use crate::resources::gfx::Shader_Cache;
@@ -382,7 +383,7 @@ pub fn create_input_provider() -> Box<dyn input::provider::Input_Provider> {
 /// Returns true if the engine should quit
 pub fn handle_core_actions(
     actions: &[input::core_actions::Core_Action],
-    window: &mut gfx::window::Window_Handle,
+    window: &mut Render_Window_Handle,
 ) -> bool {
     use input::core_actions::Core_Action;
 
@@ -390,7 +391,7 @@ pub fn handle_core_actions(
         match action {
             Core_Action::Quit => return true,
             Core_Action::Resize(new_width, new_height) => {
-                gfx::window::resize_keep_ratio(window, *new_width, *new_height)
+                gfx::render_window::resize_keep_ratio(window, *new_width, *new_height)
             }
         }
     }

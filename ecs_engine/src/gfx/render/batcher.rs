@@ -10,7 +10,7 @@ use crate::common::vector::Vec2f;
 use crate::ecs::components::gfx::Material;
 use crate::gfx::light::{Lights, Point_Light};
 use crate::gfx::render::{self, Shader, Texture, Vertex, Vertex_Buffer_Quads};
-use crate::gfx::window::Window_Handle;
+use crate::gfx::render_window::Render_Window_Handle;
 use crate::resources::gfx::{Gfx_Resources, Shader_Cache};
 use rayon::prelude::*;
 use std::cmp;
@@ -237,7 +237,7 @@ fn set_shader_uniforms(
 
 #[allow(clippy::too_many_arguments)]
 pub fn draw_batches(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     gres: &Gfx_Resources,
     batches: &mut Batches,
     shader_cache: &mut Shader_Cache,

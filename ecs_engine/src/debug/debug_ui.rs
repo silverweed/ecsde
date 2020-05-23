@@ -6,7 +6,7 @@ use super::log::Debug_Log;
 use super::overlay;
 use crate::alloc::temp;
 use crate::common::stringid::String_Id;
-use crate::gfx::window::Window_Handle;
+use crate::gfx::render_window::Render_Window_Handle;
 use crate::input::input_state::Input_State;
 use crate::resources::gfx::Gfx_Resources;
 use std::any::type_name;
@@ -202,7 +202,7 @@ impl Debug_Ui_System {
     pub fn update_and_draw(
         &mut self,
         dt: &Duration,
-        window: &mut Window_Handle,
+        window: &mut Render_Window_Handle,
         gres: &mut Gfx_Resources,
         input_state: &Input_State,
         log: &Debug_Log,

@@ -3,7 +3,8 @@ use super::ui_context::*;
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rectf;
 use crate::common::vector::Vec2f;
-use crate::gfx::window::{mouse_pos_in_window, Window_Handle};
+use crate::gfx::render_window::Render_Window_Handle;
+use crate::gfx::window::mouse_pos_in_window;
 use crate::input::bindings::mouse::{mouse_went_down, mouse_went_up, Mouse_Button};
 use crate::input::input_state::Input_State;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
@@ -74,7 +75,7 @@ impl Default for Button_Props {
 }
 
 pub fn button(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     gres: &Gfx_Resources,
     input_state: &Input_State,
     ui: &mut UI_Context,

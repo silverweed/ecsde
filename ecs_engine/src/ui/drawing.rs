@@ -6,7 +6,7 @@ use crate::common::rect::Rectf;
 use crate::common::vector::Vec2f;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
-use crate::gfx::window::Window_Handle;
+use crate::gfx::render_window::Render_Window_Handle;
 use crate::resources::gfx::Gfx_Resources;
 
 fn select_ac<T>(by_ac: &By_Activeness<T>, active: bool, hot: bool) -> &T {
@@ -37,7 +37,7 @@ pub enum Draw_Command {
     },
 }
 
-pub fn draw_all_ui(window: &mut Window_Handle, gres: &Gfx_Resources, ui: &mut UI_Context) {
+pub fn draw_all_ui(window: &mut Render_Window_Handle, gres: &Gfx_Resources, ui: &mut UI_Context) {
     for cmd in &ui.draw_cmd_queue {
         match cmd {
             Draw_Command::Rect { rect, props } => {

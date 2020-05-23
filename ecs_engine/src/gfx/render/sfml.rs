@@ -5,9 +5,9 @@ use crate::common::shapes;
 use crate::common::transform::Transform2D;
 use crate::common::vector::Vec2f;
 use crate::gfx::paint_props::Paint_Properties;
-use crate::gfx::window::{get_blend_mode, Window_Handle};
+use crate::gfx::render_window::Render_Window_Handle;
 use sfml::graphics::{
-    glsl, CircleShape, PrimitiveType, RectangleShape, RenderStates, RenderTarget, Shape,
+    glsl, BlendMode, CircleShape, PrimitiveType, RectangleShape, RenderStates, RenderTarget, Shape,
     Transformable, VertexBuffer, VertexBufferUsage,
 };
 use sfml::system::Vector2f;
@@ -34,7 +34,7 @@ fn set_text_paint_props(text: &mut Text, paint_props: &Paint_Properties) {
 }
 
 pub fn render_text(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     text: &mut Text,
     paint_props: &Paint_Properties,
     screen_pos: Vec2f,
@@ -46,7 +46,7 @@ pub fn render_text(
 }
 
 pub fn render_text_ws(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     text: &mut Text,
     paint_props: &Paint_Properties,
     transform: &Transform2D,
@@ -57,7 +57,7 @@ pub fn render_text_ws(
 
     let render_states = RenderStates {
         transform: render_transform,
-        blend_mode: get_blend_mode(window),
+        blend_mode: BlendMode::ALPHA,
         ..Default::default()
     };
 
@@ -68,8 +68,11 @@ pub fn render_text_ws(
         .draw_with_renderstates(text, render_states);
 }
 
-pub fn fill_color_rect<T>(window: &mut Window_Handle, paint_props: &Paint_Properties, rect: T)
-where
+pub fn fill_color_rect<T>(
+    window: &mut Render_Window_Handle,
+    paint_props: &Paint_Properties,
+    rect: T,
+) where
     T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
     fill_color_rect_internal(
@@ -77,14 +80,14 @@ where
         paint_props,
         rect,
         RenderStates {
-            blend_mode: get_blend_mode(window),
+            blend_mode: BlendMode::ALPHA,
             ..Default::default()
         },
     );
 }
 
 pub fn fill_color_rect_ws<T>(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     paint_props: &Paint_Properties,
     rect: T,
     transform: &Transform2D,
@@ -97,7 +100,7 @@ pub fn fill_color_rect_ws<T>(
 
     let render_states = RenderStates {
         transform: render_transform,
-        blend_mode: get_blend_mode(window),
+        blend_mode: BlendMode::ALPHA,
         ..Default::default()
     };
 
@@ -107,7 +110,7 @@ pub fn fill_color_rect_ws<T>(
 // @Refactoring: we should migrate shape code outside sfml and leverage
 // render_texture_ws for everything.
 fn fill_color_rect_internal<T>(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     paint_props: &Paint_Properties,
     rect: T,
     render_states: RenderStates,
@@ -127,12 +130,12 @@ fn fill_color_rect_internal<T>(
 }
 
 pub fn fill_color_circle(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     paint_props: &Paint_Properties,
     circle: shapes::Circle,
 ) {
     let render_states = RenderStates {
-        blend_mode: get_blend_mode(window),
+        blend_mode: BlendMode::ALPHA,
         ..Default::default()
     };
 
@@ -140,7 +143,7 @@ pub fn fill_color_circle(
 }
 
 pub fn fill_color_circle_ws(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     paint_props: &Paint_Properties,
     circle: shapes::Circle,
     camera: &Transform2D,
@@ -149,7 +152,7 @@ pub fn fill_color_circle_ws(
 
     let render_states = RenderStates {
         transform: render_transform,
-        blend_mode: get_blend_mode(window),
+        blend_mode: BlendMode::ALPHA,
         ..Default::default()
     };
 
@@ -157,7 +160,7 @@ pub fn fill_color_circle_ws(
 }
 
 fn fill_color_circle_internal(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     paint_props: &Paint_Properties,
     circle: shapes::Circle,
     render_states: RenderStates,
@@ -293,17 +296,21 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     Vertex::new(Vector2f::from(pos), col.into(), Vector2f::from(tex_coords))
 }
 
-pub fn render_vbuf(window: &mut Window_Handle, vbuf: &Vertex_Buffer, transform: &Transform2D) {
+pub fn render_vbuf(
+    window: &mut Render_Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
+) {
     let render_states = RenderStates {
         transform: transform.get_matrix_sfml(),
-        blend_mode: get_blend_mode(window),
+        blend_mode: BlendMode::ALPHA,
         ..Default::default()
     };
     render_vbuf_internal(window, vbuf, render_states);
 }
 
 pub fn render_vbuf_ws(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
     camera: &Transform2D,
@@ -313,14 +320,14 @@ pub fn render_vbuf_ws(
 
     let render_states = RenderStates {
         transform: render_transform,
-        blend_mode: get_blend_mode(window),
+        blend_mode: BlendMode::ALPHA,
         ..Default::default()
     };
     render_vbuf_internal(window, vbuf, render_states);
 }
 
 pub fn render_vbuf_ws_ex(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
     camera: &Transform2D,
@@ -333,16 +340,20 @@ pub fn render_vbuf_ws_ex(
 
     let render_states = RenderStates {
         transform: render_transform,
-        blend_mode: get_blend_mode(window),
+        blend_mode: BlendMode::ALPHA,
         texture: extra_params.texture.map(|t| t.wrapped.borrow()),
         shader: extra_params.shader,
     };
     render_vbuf_internal(window, vbuf, render_states);
 }
 
-pub fn render_vbuf_texture(window: &mut Window_Handle, vbuf: &Vertex_Buffer, texture: &Texture) {
+pub fn render_vbuf_texture(
+    window: &mut Render_Window_Handle,
+    vbuf: &Vertex_Buffer,
+    texture: &Texture,
+) {
     let render_states = RenderStates {
-        blend_mode: get_blend_mode(window),
+        blend_mode: BlendMode::ALPHA,
         texture: Some(texture),
         ..Default::default()
     };
@@ -350,11 +361,13 @@ pub fn render_vbuf_texture(window: &mut Window_Handle, vbuf: &Vertex_Buffer, tex
 }
 
 fn render_vbuf_internal(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
     render_states: RenderStates,
 ) {
-    window.draw_vertex_buffer(&vbuf.buf, render_states);
+    window
+        .raw_handle_mut()
+        .draw_vertex_buffer(&vbuf.buf, render_states);
 }
 
 #[inline(always)]
@@ -362,9 +375,13 @@ pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
     Text::new(string, font, size as u32)
 }
 
-pub fn render_line(window: &mut Window_Handle, start: &Vertex, end: &Vertex) {
+pub fn render_line(window: &mut Render_Window_Handle, start: &Vertex, end: &Vertex) {
     let vertices: [sfml::graphics::Vertex; 2] = [*start, *end];
-    window.draw_primitives(&vertices, PrimitiveType::Lines, RenderStates::default());
+    window.raw_handle_mut().draw_primitives(
+        &vertices,
+        PrimitiveType::Lines,
+        RenderStates::default(),
+    );
 }
 
 #[inline(always)]

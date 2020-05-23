@@ -5,7 +5,7 @@ use crate::common::rect::Rect;
 use crate::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
-use crate::gfx::window::Window_Handle;
+use crate::gfx::render_window::Render_Window_Handle;
 use crate::input::input_state::Input_State;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
@@ -77,7 +77,7 @@ pub struct Debug_Overlay {
 impl Debug_Element for Debug_Overlay {
     fn draw(
         &self,
-        window: &mut Window_Handle,
+        window: &mut Render_Window_Handle,
         gres: &mut Gfx_Resources,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
@@ -170,7 +170,7 @@ impl Debug_Element for Debug_Overlay {
     fn update(
         &mut self,
         _dt: &std::time::Duration,
-        window: &Window_Handle,
+        window: &Render_Window_Handle,
         input_state: &Input_State,
     ) {
         use crate::gfx::window;

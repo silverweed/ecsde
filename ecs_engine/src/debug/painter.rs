@@ -7,7 +7,7 @@ use crate::core::env::Env_Info;
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
 use crate::gfx::render::Vertex_Buffer_Quads;
-use crate::gfx::window::Window_Handle;
+use crate::gfx::render_window::Render_Window_Handle;
 use crate::resources::gfx;
 
 pub struct Debug_Painter {
@@ -83,7 +83,7 @@ impl Debug_Painter {
 
     pub fn draw(
         &self,
-        window: &mut Window_Handle,
+        window: &mut Render_Window_Handle,
         gres: &mut gfx::Gfx_Resources,
         camera: &Transform2D,
     ) {
@@ -120,7 +120,7 @@ impl Debug_Painter {
 }
 
 fn draw_line(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     line: &Line,
     props: &Paint_Properties,
     camera: &Transform2D,
@@ -135,7 +135,7 @@ fn draw_line(
 }
 
 fn draw_arrow(
-    window: &mut Window_Handle,
+    window: &mut Render_Window_Handle,
     arrow: &Arrow,
     props: &Paint_Properties,
     camera: &Transform2D,
