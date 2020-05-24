@@ -91,78 +91,14 @@ fn register_all_components(world: &mut Ecs_World) {
 // @Temporary
 fn init_demo_lights(lights: &mut Lights) {
     lights.ambient_light.color = colors::rgb(200, 140, 180);
-    lights.ambient_light.intensity = 0.1;
+    lights.ambient_light.intensity = 0.2;
 
     let light = Point_Light {
-        position: v2!(-100., 0.),
-        radius: 250.,
-        attenuation: 0.0,
-        color: colors::YELLOW,
-        intensity: 1.0,
-    };
-    lights.add_point_light(light);
-    let light = Point_Light {
-        position: v2!(100., 0.),
-        radius: 250.,
-        attenuation: 0.0,
-        color: colors::YELLOW,
-        intensity: 2.0,
-    };
-    lights.add_point_light(light);
-    let light = Point_Light {
-        position: v2!(0., 100.),
-        radius: 250.,
-        attenuation: 0.2,
-        color: colors::RED,
-        intensity: 1.0,
-    };
-    lights.add_point_light(light);
-    let light = Point_Light {
         position: v2!(0., -100.),
-        radius: 250.,
-        attenuation: 0.2,
-        color: colors::RED,
-        intensity: 1.0,
-    };
-    lights.add_point_light(light);
-    let light = Point_Light {
-        position: v2!(-20., 230.),
-        radius: 200.,
-        attenuation: 0.1,
-        color: colors::GREEN,
-        intensity: 1.0,
-    };
-    lights.add_point_light(light);
-    let light = Point_Light {
-        position: v2!(200., 330.),
-        radius: 300.,
-        attenuation: 0.01,
-        color: colors::BLUE,
-        intensity: 1.0,
-    };
-    lights.add_point_light(light);
-    let light = Point_Light {
-        position: v2!(250., 330.),
-        radius: 100.,
-        attenuation: 0.01,
-        color: colors::AQUA,
-        intensity: 1.0,
-    };
-    lights.add_point_light(light);
-    let light = Point_Light {
-        position: v2!(130., 290.),
-        radius: 100.,
-        attenuation: 0.01,
-        color: colors::FUCHSIA,
-        intensity: 1.0,
-    };
-    lights.add_point_light(light);
-    let light = Point_Light {
-        position: v2!(430., 290.),
-        radius: 50.,
-        attenuation: 0.01,
-        color: colors::FUCHSIA,
-        intensity: 0.3,
+        radius: 350.,
+        attenuation: 0.0,
+        color: colors::WHITE,
+        intensity: 2.0,
     };
     lights.add_point_light(light);
 }
@@ -190,6 +126,9 @@ fn init_demo_entities(
 
     const TERRAIN_SHADER_NAME: &str = "terrain";
     let terrain_shader = shader_cache.load_shader(&shader_path(&env, TERRAIN_SHADER_NAME));
+
+    const UNLIT_SHADER_NAME: &str = "sprite_unlit";
+    let sprite_unlit_shader = shader_cache.load_shader(&shader_path(&env, UNLIT_SHADER_NAME));
 
     let camera = level.world.new_entity();
     {
@@ -248,13 +187,16 @@ fn init_demo_entities(
     {
         let gnd = level.world.new_entity();
 
-        level.world.add_component(gnd, C_Spatial2D::default());
+        {
+            let t = level.world.add_component(gnd, C_Spatial2D::default());
+            t.transform.set_position(0., 600.);
+        }
 
         let rend = level.world.add_component(
             gnd,
             C_Renderable {
                 material: Material {
-                    texture: rsrc.load_texture(&tex_path(&env, "ground2.png")),
+                    texture: rsrc.load_texture(&tex_path(&env, "ground3.png")),
                     shader: terrain_shader,
                     shininess: Material::encode_shininess(0.2),
                     ..Default::default()
@@ -272,6 +214,44 @@ fn init_demo_entities(
         level
             .world
             .add_component(gnd, C_Texture_Collider { texture });
+    }
+
+    // Sky
+    {
+        let sky = level.world.new_entity();
+
+        {
+            let t = level.world.add_component(sky, C_Spatial2D::default());
+            t.transform.set_position(0., -370.);
+        }
+
+        let rend = level.world.add_component(
+            sky,
+            C_Renderable {
+                material: Material {
+                    texture: rsrc.load_texture(&tex_path(&env, "sky.png")),
+                    shader: sprite_unlit_shader,
+                    ..Default::default()
+                },
+                z_index: 0,
+                ..Default::default()
+            },
+        );
+        assert!(rend.material.texture.is_some(), "Could not load texture!");
+        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.material.texture));
+        rend.rect = Rect::new(0, 0, sw as i32 * 1, sh as i32 * 1);
+        //rsrc.get_texture_mut(rend.texture).set_repeated(true);
+        let texture = rend.material.texture;
+
+        //level
+        //    .world
+        //    .add_component(sky, Collider {
+        //        shape: Collision_Shape::Rect {
+        //            width: sw as f32,
+        //            height: sh as f32
+        //        },
+        //        ..Default::default()
+        //    });
     }
 
     let n_frames = 3;
