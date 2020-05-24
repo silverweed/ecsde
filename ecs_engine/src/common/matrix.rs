@@ -23,6 +23,18 @@ impl<T> Matrix3<T> {
     }
 }
 
+impl<T> Matrix3<T> where T: Copy {
+    pub fn transposed(&self) -> Self {
+        Self {
+            columns: [
+                [r1c1, r1c2, r1c3],
+                [r2c1, r2c2, r2c3],
+                [r3c1, r3c2, r3c3],
+            ]
+        }
+    }
+}
+
 impl<T> Copy for Matrix3<T> where T: Copy {}
 
 impl<T> Clone for Matrix3<T>

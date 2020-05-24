@@ -166,16 +166,16 @@ impl Pixel_Collision_System {
 
         self.collided_entities.clear();
 
-        foreach_entity!(world, +C_Texture_Collider, |entity| {
+        foreach_entity!(world, +C_Texture_Collider, +C_Spatial2D, |entity| {
+            let tex_transform = world.get_component::<C_Spatial2D>(entity).unwrap().transform;
             let tex_cld = world.get_component::<C_Texture_Collider>(entity).unwrap().texture;
             let img = self.images.entry(tex_cld).or_insert_with(||
                 render::copy_texture_to_image(gres.get_texture(tex_cld))
             );
 
             let (iw, ih) = render::get_image_size(img);
-            let iw = iw as i32;
-            let ih = ih as i32;
-
+            let (iw, ih) = (iw as i32, ih as i32);
+            
             for info in &colliding_positions {
                 trace!("pixel_collision::narrow");
 
@@ -186,10 +186,12 @@ impl Pixel_Collision_System {
                     velocity,
                 } = info;
 
-                let x_range = ((pos.x - extent.x * 0.5).floor() as i32 + iw / 2).max(0) ..
-                                ((pos.x + extent.x * 0.5).floor() as i32 + iw / 2).min(iw);
-                let y_range = ((pos.y - extent.y * 0.5).floor() as i32 + ih / 2).max(0) ..
-                                ((pos.y + extent.y * 0.5).floor() as i32 + ih / 2).min(ih);
+                // TODO: Convert entity in local space
+
+                let x_range = ((pos.x - extent.x * 0.5).floor() as i32 + iw / 2 - tex_pos.x).max(0) ..
+                                ((pos.x + extent.x * 0.5).floor() as i32 + iw / 2 - tex_pos.x).min(iw);
+                let y_range = ((pos.y - extent.y * 0.5).floor() as i32 + ih / 2 - tex_pos.y).max(0) ..
+                                ((pos.y + extent.y * 0.5).floor() as i32 + ih / 2 - tex_pos.y).min(ih);
                 for x in x_range {
                     for y in y_range.clone() {
                         debug_assert!(x >= 0 && x < iw);

@@ -1,4 +1,5 @@
 use crate::common::colors::{self, Color};
+use crate::common::rect::Rectf;
 use crate::common::vector::Vec2f;
 
 #[derive(Copy, Clone, Debug)]
@@ -6,7 +7,7 @@ pub struct Point_Light {
     pub color: Color,
     pub position: Vec2f,
     pub radius: f32,
-    // Exponent used in 1/d^x
+    // Exponent used in 1/d^x (not actually used right now)
     pub attenuation: f32,
     pub intensity: f32,
 }
@@ -38,19 +39,27 @@ impl Default for Ambient_Light {
     }
 }
 
-const MAX_POINT_LIGHTS: usize = 64;
+#[derive(Copy, Clone, Debug)]
+pub struct Rect_Light {
+    pub color: Color,
+    // Light inside this rect is at its maximum intensity
+    pub rect: Rectf,
+    pub radius: f32,
+    pub attenuation: f32,
+    pub intensity: f32,
+}
 
 pub struct Lights {
-    pub point_lights: [Point_Light; MAX_POINT_LIGHTS],
-    pub n_actual_point_lights: usize,
+    pub point_lights: Vec<Point_Light>,
+    pub rect_lights: Vec<Rect_Light>,
     pub ambient_light: Ambient_Light,
 }
 
 impl Default for Lights {
     fn default() -> Self {
         Self {
-            point_lights: [Point_Light::default(); MAX_POINT_LIGHTS],
-            n_actual_point_lights: 0,
+            point_lights: vec![],
+            rect_lights: vec![],
             ambient_light: Ambient_Light::default(),
         }
     }
@@ -58,18 +67,17 @@ impl Default for Lights {
 
 impl Lights {
     pub fn add_point_light(&mut self, light: Point_Light) {
-        assert!(
-            self.n_actual_point_lights < self.point_lights.len(),
-            "Too many point lights!"
-        );
-        self.point_lights[self.n_actual_point_lights] = light;
-        self.n_actual_point_lights += 1;
+        self.point_lights.push(light);
+    }
+
+    pub fn add_rect_light(&mut self, light: Rect_Light) {
+        self.rect_lights.push(light);
     }
 
     pub fn get_nearest_point_light(&self, pos: Vec2f) -> Option<&Point_Light> {
         let mut nearest = None;
         let mut nearest_dist2 = -1.;
-        for pl in &self.point_lights[..self.n_actual_point_lights] {
+        for pl in &self.point_lights {
             let dist2 = pl.position.distance2(pos);
             if nearest_dist2 < 0. || dist2 <= nearest_dist2 {
                 nearest = Some(pl);
@@ -88,18 +96,18 @@ impl Lights {
     ) {
         let radius2 = radius * radius;
         // @Speed
-        let mut sorted = self.point_lights[..self.n_actual_point_lights].to_vec();
-        sorted.sort_by(|a, b| {
+        let mut lights = self
+            .point_lights
+            .iter()
+            .filter(|pl| pl.position.distance2(pos) < radius2)
+            .copied()
+            .collect::<Vec<_>>();
+        lights.sort_by(|a, b| {
             a.position
                 .distance2(pos)
                 .partial_cmp(&b.position.distance2(pos))
                 .unwrap()
         });
-        result.extend(
-            sorted
-                .into_iter()
-                .filter(|pl| pl.position.distance2(pos) < radius2)
-                .take(at_most),
-        );
+        result.extend(lights.into_iter().take(at_most));
     }
 }

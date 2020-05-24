@@ -1044,7 +1044,7 @@ fn debug_draw_lights(
         15,
         lights.ambient_light.color,
     );
-    for pl in &lights.point_lights[..lights.n_actual_point_lights] {
+    for pl in &lights.point_lights {
         debug_painter.add_circle(
             Circle {
                 center: pl.position,
