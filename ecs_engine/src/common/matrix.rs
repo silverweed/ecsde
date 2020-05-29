@@ -36,6 +36,19 @@ impl<T> Matrix3<T> where T: Copy {
     }
 }
 
+impl<T> Matrix3<T> where T: Copy + Add<Output=T> + Sub<Output=T> + Mul<Output=T> {
+    pub fn determinant(&self) -> T {
+        let c = &self.columns;
+
+        c[0][0] * c[1][1] * c[2][2] +
+            c[1][0] * c[2][1] * c[0][2] +
+            c[2][0] * c[0][1] * c[1][2] -
+            c[0][0] * c[2][1] * c[1][2] -
+            c[2][0] * c[1][1] * c[0][2] -
+            c[1][0] * c[0][1] * c[2][2]
+    }
+}
+
 impl<T> Copy for Matrix3<T> where T: Copy {}
 
 impl<T> Clone for Matrix3<T>
@@ -413,5 +426,17 @@ mod tests {
             2, 2, 4,
             7, 13, 12
         ));
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn determinant() {
+        let a = Matrix3::new(
+            3.2, 4.6, 0.9,
+            -3.9, 0.1, -4.8,
+            10., 33., -2.1
+        );
+
+        assert_approx_eq!(a.determinant(), 131.004);
     }
 }

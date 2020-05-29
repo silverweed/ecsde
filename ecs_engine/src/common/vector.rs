@@ -545,7 +545,7 @@ mod tests {
     #[test]
     fn to_from_framework() {
         let a = Vec2f::new(3., 2.);
-        let b: sfml::system::Vector2f = a.into();
+        let b: ::sfml::system::Vector2f = a.into();
         assert_eq!(a.x, b.x);
         assert_eq!(a.y, b.y);
 

@@ -146,7 +146,7 @@ impl Pixel_Collision_System {
 
         struct Potential_Colliding_Entity_Info {
             pub entity: Entity,
-            pub pos: Vec2f,
+            pub transform: Transform2D,
             pub velocity: Vec2f,
             pub extent: Vec2f,
         }
@@ -157,7 +157,7 @@ impl Pixel_Collision_System {
             if !c.is_static {
                 colliding_positions.push(Potential_Colliding_Entity_Info {
                     entity,
-                    pos: s.transform.position(),
+                    transform: s.transform,
                     extent: c.shape.extent(),
                     velocity: s.velocity
                 });
@@ -176,17 +176,20 @@ impl Pixel_Collision_System {
             let (iw, ih) = render::get_image_size(img);
             let (iw, ih) = (iw as i32, ih as i32);
             
+            let tex_inv_transform = tex_transform.inverse();
+
             for info in &colliding_positions {
                 trace!("pixel_collision::narrow");
 
                 let Potential_Colliding_Entity_Info {
                     entity: e,
-                    pos,
+                    transform,
                     extent,
                     velocity,
                 } = info;
 
                 // TODO: Convert entity in local space
+                let colliding_local_transform = tex_inv_transform * transform;
                 let tex_pos = Vec2i::from(tex_transform.position());
 
                 let x_range = ((pos.x - extent.x * 0.5).floor() as i32 + iw / 2 - tex_pos.x).max(0) ..
