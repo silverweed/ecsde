@@ -187,6 +187,7 @@ impl Pixel_Collision_System {
                 } = info;
 
                 // TODO: Convert entity in local space
+                let tex_pos = Vec2i::from(tex_transform.position());
 
                 let x_range = ((pos.x - extent.x * 0.5).floor() as i32 + iw / 2 - tex_pos.x).max(0) ..
                                 ((pos.x + extent.x * 0.5).floor() as i32 + iw / 2 - tex_pos.x).min(iw);

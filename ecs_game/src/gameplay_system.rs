@@ -440,7 +440,7 @@ fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration) {
             use ecs_engine::common::angle::deg;
             let speed = 90.0;
             //if i == 1 {
-            t.transform.rotate(deg(dt_secs * speed));
+            //t.transform.rotate(deg(dt_secs * speed));
             //}
             //let prev_pos = t.local_transform.position();
             //t.local_transform.set_position(

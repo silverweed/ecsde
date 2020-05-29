@@ -243,18 +243,18 @@ fn init_demo_entities(
         //rsrc.get_texture_mut(rend.texture).set_repeated(true);
         let texture = rend.material.texture;
 
-        //level
-        //    .world
-        //    .add_component(sky, Collider {
-        //        shape: Collision_Shape::Rect {
-        //            width: sw as f32,
-        //            height: sh as f32
-        //        },
-        //        ..Default::default()
-        //    });
+        level
+            .world
+            .add_component(sky, Collider {
+                shape: Collision_Shape::Rect {
+                    width: sw as f32,
+                    height: sh as f32
+                },
+                ..Default::default()
+            });
     }
 
-    let n_frames = 3;
+    let n_frames = 4;
     for i in 0..gs_cfg.n_entities_to_spawn {
         let entity = level.world.new_entity();
         let (sw, sh) = {
@@ -264,8 +264,8 @@ fn init_demo_entities(
                     //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
                     //rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
                     material: Material {
-                        texture: rsrc.load_texture(&tex_path(&env, "jelly.png")),
-                        normals: rsrc.load_texture(&tex_path(&env, "jelly_n.png")),
+                        texture: rsrc.load_texture(&tex_path(&env, "jelly2.png")),
+                        normals: rsrc.load_texture(&tex_path(&env, "jelly2_n.png")),
                         shader: sprite_normal_shader,
                         shininess: Material::encode_shininess(10.0),
                         cast_shadows: true,
