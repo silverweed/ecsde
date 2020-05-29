@@ -243,15 +243,16 @@ fn init_demo_entities(
         //rsrc.get_texture_mut(rend.texture).set_repeated(true);
         let texture = rend.material.texture;
 
-        level
-            .world
-            .add_component(sky, Collider {
-                shape: Collision_Shape::Rect {
-                    width: sw as f32,
-                    height: sh as f32
-                },
-                ..Default::default()
-            });
+        // @Incomplete: add this after we implement collision layers
+        //level
+            //.world
+            //.add_component(sky, Collider {
+                //shape: Collision_Shape::Rect {
+                    //width: sw as f32,
+                    //height: sh as f32
+                //},
+                //..Default::default()
+            //});
     }
 
     let n_frames = 4;

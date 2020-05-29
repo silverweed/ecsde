@@ -1,5 +1,6 @@
 use ecs_engine::alloc::temp::*;
 use ecs_engine::collisions::collider::{C_Phys_Data, Collider};
+use ecs_engine::common::transform::Transform2D;
 use ecs_engine::common::colors::Color;
 use ecs_engine::common::math::clamp;
 use ecs_engine::common::rect::Rect;
@@ -188,19 +189,21 @@ impl Pixel_Collision_System {
                     velocity,
                 } = info;
 
-                // TODO: Convert entity in local space
-                let colliding_local_transform = tex_inv_transform * transform;
-                let tex_pos = Vec2i::from(tex_transform.position());
+                // Convert entity in local space
+                let colliding_local_transform = tex_inv_transform.combine(&transform);
+                let pos = colliding_local_transform.position();
+                let extent = *extent * colliding_local_transform.scale();
+                // @TODO: consider rotation
 
-                let x_range = ((pos.x - extent.x * 0.5).floor() as i32 + iw / 2 - tex_pos.x).max(0) ..
-                                ((pos.x + extent.x * 0.5).floor() as i32 + iw / 2 - tex_pos.x).min(iw);
-                let y_range = ((pos.y - extent.y * 0.5).floor() as i32 + ih / 2 - tex_pos.y).max(0) ..
-                                ((pos.y + extent.y * 0.5).floor() as i32 + ih / 2 - tex_pos.y).min(ih);
+                let x_range = ((pos.x - extent.x * 0.5).floor() as i32 + iw / 2).max(0) ..
+                                ((pos.x + extent.x * 0.5).floor() as i32 + iw / 2).min(iw);
+                let y_range = ((pos.y - extent.y * 0.5).floor() as i32 + ih / 2).max(0) ..
+                                ((pos.y + extent.y * 0.5).floor() as i32 + ih / 2).min(ih);
                 for x in x_range {
                     for y in y_range.clone() {
                         debug_assert!(x >= 0 && x < iw);
                         debug_assert!(y >= 0 && y < ih);
-                        let dir_to_pixel = v2!((x - iw / 2) as f32, (y - ih / 2) as f32) - *pos;
+                        let dir_to_pixel = v2!((x - iw / 2) as f32, (y - ih / 2) as f32) - pos;
                         if dir_to_pixel.dot(*velocity) >= 0. {
                             let pixel = render::get_image_pixel(img, x as u32, y as u32);
                             if pixel.a > 0 {
