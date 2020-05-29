@@ -298,11 +298,6 @@ impl Debug_Frame_Scroller {
                     // The very_first_frame is initially 1, but it can change if the game is paused and resumed
                     // (in which case the debug log will drop old history and restart from a later frame).
                     // It can also change simply due to the scroller filling up.
-                    ldebug!(
-                        "real: {}, tot: {}",
-                        self.real_cur_frame,
-                        self.tot_scroller_filled_frames
-                    );
                     let very_first_frame =
                         self.real_cur_frame - self.tot_scroller_filled_frames as u64;
                     let row_first_frame = (self.n_frames as u64 * i as u64) + very_first_frame;

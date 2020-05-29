@@ -512,4 +512,5 @@ pub fn set_traced_fn(debug_systems: &mut Debug_Systems, fn_name: String) {
         .get_graph(String_Id::from("fn_profile"));
     graph.config.title = Some(fn_name);
     graph.data.points.clear();
+    graph.selected_point = None;
 }

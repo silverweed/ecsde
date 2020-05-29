@@ -48,31 +48,31 @@ impl<T> Matrix3<T> where T: Copy + Add<Output=T> + Sub<Output=T> + Mul<Output=T>
             c[1][0] * c[0][1] * c[2][2]
     }
 
-    pub fn cofactor_matrix(&self) -> Matrix3<T> {
-        todo!();
-    }
+    //pub fn cofactor_matrix(&self) -> Matrix3<T> {
+        //Matrix3::new(
+    //}
 
-    pub fn cofactor_at(&self, row: usize, column: usize) -> T {
-        // Note: if matrix is
-        //
-        // |A  B  C|
-        // |D  E  F|
-        // |G  H  I|
-        //                             |E  F|
-        // then cofactor at 0,0 is det(|H  I|)
-        //                         |B  C|
-        // cofactor at 1,0 is -det(|H  I|) and so on.
-        let c = &self.columns;
+    //pub fn cofactor_at(&self, row: usize, column: usize) -> T {
+        //// Note: if matrix is
+        ////
+        //// |A  B  C|
+        //// |D  E  F|
+        //// |G  H  I|
+        ////                             |E  F|
+        //// then cofactor at 0,0 is det(|H  I|)
+        ////                         |B  C|
+        //// cofactor at 1,0 is -det(|H  I|) and so on.
+        //let c = &self.columns;
 
-        todo!();
-    }
+        //todo!();
+    //}
 }
 
-impl Matrix3<f32> {
-    pub fn inverse(&self) -> Matrix3<f32> {
-        self.cofactor_matrix().transposed() / self.determinant()
-    }
-}
+//impl Matrix3<f32> {
+    //pub fn inverse(&self) -> Matrix3<f32> {
+        //self.cofactor_matrix().transposed() / self.determinant()
+    //}
+//}
 
 impl<T> Copy for Matrix3<T> where T: Copy {}
 

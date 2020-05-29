@@ -133,6 +133,7 @@ impl Transform2D {
     }
 
     pub fn combine(&self, other: &Transform2D) -> Transform2D {
+        trace!("transform::combine");
         Transform2D::new_from_matrix(&(self.get_matrix() * other.get_matrix()))
     }
 

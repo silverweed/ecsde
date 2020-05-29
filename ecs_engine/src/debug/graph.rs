@@ -51,8 +51,8 @@ pub struct Debug_Graph_View {
     pub config: Debug_Graph_View_Config,
 
     // goes from 0 to data.points.len() - 1
-    hovered_point: Option<usize>,
-    selected_point: Option<usize>,
+    pub hovered_point: Option<usize>,
+    pub selected_point: Option<usize>,
 }
 
 /// Note: for simplicify, the graph assumes points are added in x-sorted order.
@@ -60,8 +60,8 @@ pub struct Debug_Graph {
     pub points: VecDeque<Vec2f>,
     pub x_range: Range<f32>,
     pub points_metadata: HashMap<String_Id, VecDeque<Option<Cfg_Value>>>,
-    max_y_value: Option<f32>,
-    min_y_value: Option<f32>,
+    pub max_y_value: Option<f32>,
+    pub min_y_value: Option<f32>,
 }
 
 impl Debug_Element for Debug_Graph_View {

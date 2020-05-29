@@ -11,6 +11,7 @@ use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::gfx::render::{self, Image};
 use ecs_engine::resources::gfx::{Gfx_Resources, Texture_Handle};
 use std::collections::HashMap;
+//use rayon::prelude::*;
 
 #[derive(Copy, Clone, Default)]
 pub struct C_Texture_Collider {
@@ -42,6 +43,19 @@ fn approx_normal(image: &Image, x: u32, y: u32, step: i32) -> Vec2f {
     let size = render::get_image_size(image);
     let x_range = (x as i32 - step).max(0) as u32..(x as i32 + step).min(size.0 as i32) as u32;
     let y_range = (y as i32 - step).max(0) as u32..(y as i32 + step).min(size.0 as i32) as u32;
+
+    // @Speed: investigate on this making this faster.
+    // This multithreaded version commented here seems to be slower than the single-threaded version,
+    // although that may only be true because of our bad use of Rayon.
+    //let pixels = render::get_image_pixels(image);
+    //let cartesian_product = x_range.into_par_iter().enumerate().map(|(i, x)|
+        //y_range.clone().into_par_iter().enumerate().zip(rayon::iter::repeatn((i, x), y_range.len()))
+    //).flatten();
+    //let avg: Vec2f =  cartesian_product
+        //.into_par_iter()
+        //.filter(|((_, x), (_, y))| is_solid(pixels[(*y * size.0 + *x) as usize]))
+        //.map(|((i, _), (j, _))| v2!((i as i32 - step) as f32, (j as i32 - step) as f32))
+        //.reduce(Vec2f::default, |a, b| a - b);
     for (i, x) in x_range.enumerate() {
         for (j, y) in y_range.clone().enumerate() {
             if is_solid(render::get_image_pixel(image, x, y)) {
