@@ -7,6 +7,7 @@ pub(super) struct Cmdline_Args {
     pub in_replay_file: Option<Box<path::Path>>,
 
     pub n_entities_to_spawn: Option<usize>,
+    pub start_from_menu: bool,
 }
 
 macro_rules! opt_with_arg {
@@ -42,6 +43,10 @@ pub(super) fn parse_cmdline_args<'a>(mut args: impl Iterator<Item = &'a String>)
                 cmdline_args.n_entities_to_spawn,
                 |n: &str| { n.parse::<usize>().ok() }
             ),
+
+            "--from-menu" => {
+                cmdline_args.start_from_menu = true;
+            }
 
             _ => eprintln!("Unknown argument {}", arg),
         }

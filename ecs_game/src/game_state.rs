@@ -1,4 +1,5 @@
 use crate::cmdline;
+use crate::collisions;
 use crate::gameplay_system;
 use crate::states;
 use ecs_engine::cfg;
@@ -118,6 +119,14 @@ pub(super) fn internal_game_init<'a>(
         //&mut game_state.level_batches,
         //);
 
+        collisions::init_collision_layers(
+            &mut game_state
+                .engine_state
+                .systems
+                .physics_settings
+                .collision_matrix,
+        );
+
         init_states(
             &mut game_state.state_mgr,
             &mut game_state.engine_state,
@@ -125,6 +134,7 @@ pub(super) fn internal_game_init<'a>(
             &mut game_state.window,
             &mut *game_resources,
             &mut game_state.level_batches,
+            &parsed_cmdline_args,
         );
 
         #[cfg(debug_assertions)]
@@ -339,6 +349,7 @@ fn init_states(
     window: &mut Render_Window_Handle,
     game_resources: &mut Game_Resources,
     level_batches: &mut Level_Batches,
+    cmdline_args: &cmdline::Cmdline_Args,
 ) {
     let mut args = states::state::Game_State_Args {
         engine_state,
@@ -363,7 +374,7 @@ fn init_states(
         };
         state_mgr.add_persistent_state(debug_base_state, &mut args);
     }
-    let menu_state = Box::new(states::main_menu_state::Main_Menu_State::default());
+
     let mut args = states::state::Game_State_Args {
         engine_state,
         gameplay_system: gs,
@@ -371,7 +382,13 @@ fn init_states(
         game_resources,
         level_batches,
     };
-    state_mgr.push_state(menu_state, &mut args);
+    if cmdline_args.start_from_menu {
+        let menu_state = Box::new(states::main_menu_state::Main_Menu_State::default());
+        state_mgr.push_state(menu_state, &mut args);
+    } else {
+        let in_game_state = Box::new(states::in_game_state::In_Game_State::default());
+        state_mgr.push_state(in_game_state, &mut args);
+    }
 }
 
 #[cfg(debug_assertions)]

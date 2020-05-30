@@ -1,3 +1,4 @@
+use crate::collisions::Game_Collision_Layer;
 use crate::gameplay_system::Gameplay_System_Config;
 use crate::levels::Level;
 use crate::spatial::World_Chunks;
@@ -211,9 +212,13 @@ fn init_demo_entities(
         //rsrc.get_texture_mut(rend.texture).set_repeated(true);
         let texture = rend.material.texture;
 
-        level
-            .world
-            .add_component(gnd, C_Texture_Collider { texture });
+        level.world.add_component(
+            gnd,
+            C_Texture_Collider {
+                texture,
+                layer: Game_Collision_Layer::Ground as _,
+            },
+        );
     }
 
     // Sky
@@ -243,19 +248,27 @@ fn init_demo_entities(
         //rsrc.get_texture_mut(rend.texture).set_repeated(true);
         let texture = rend.material.texture;
 
-        // @Incomplete: add this after we implement collision layers
-        //level
-            //.world
-            //.add_component(sky, Collider {
-                //shape: Collision_Shape::Rect {
-                    //width: sw as f32,
-                    //height: sh as f32
-                //},
-                //..Default::default()
-            //});
+        level.world.add_component(
+            sky,
+            Collider {
+                shape: Collision_Shape::Rect {
+                    width: sw as f32,
+                    height: sh as f32,
+                },
+                layer: Game_Collision_Layer::Sky as _,
+                ..Default::default()
+            },
+        );
+        level.world.add_component(
+            sky,
+            C_Phys_Data {
+                inv_mass: 0.,
+                ..Default::default()
+            },
+        );
     }
 
-    let n_frames = 4;
+    let n_frames = 3;
     for i in 0..gs_cfg.n_entities_to_spawn {
         let entity = level.world.new_entity();
         let (sw, sh) = {
@@ -265,8 +278,8 @@ fn init_demo_entities(
                     //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
                     //rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
                     material: Material {
-                        texture: rsrc.load_texture(&tex_path(&env, "jelly2.png")),
-                        normals: rsrc.load_texture(&tex_path(&env, "jelly2_n.png")),
+                        texture: rsrc.load_texture(&tex_path(&env, "jelly.png")),
+                        normals: rsrc.load_texture(&tex_path(&env, "jelly_n.png")),
                         shader: sprite_normal_shader,
                         shininess: Material::encode_shininess(10.0),
                         cast_shadows: true,
@@ -316,6 +329,7 @@ fn init_demo_entities(
                         let height = sh as f32;
                         Collision_Shape::Rect { width, height }
                     },
+                    layer: Game_Collision_Layer::Entities as _,
                     ..Default::default()
                 },
             );
@@ -446,6 +460,7 @@ fn calc_terrain_colliders(world: &mut Ecs_World) {
                     width: ROCK_SIZE,
                     height: ROCK_SIZE
                 },
+                layer: Game_Collision_Layer::Ground as _,
                 is_static: true,
                 ..Default::default()
             });

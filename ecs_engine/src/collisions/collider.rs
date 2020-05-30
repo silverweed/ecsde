@@ -1,3 +1,4 @@
+use super::layers::Collision_Layer;
 use crate::common::vector::Vec2f;
 use crate::ecs::ecs_world::Entity;
 
@@ -30,6 +31,7 @@ pub struct Collider {
     pub offset: Vec2f,
     pub colliding_with: Option<Entity>,
     pub is_static: bool,
+    pub layer: Collision_Layer,
 }
 
 // Attach this component alongside Collider to have a rigidbody

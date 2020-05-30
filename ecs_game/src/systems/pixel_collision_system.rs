@@ -1,10 +1,11 @@
 use ecs_engine::alloc::temp::*;
 use ecs_engine::collisions::collider::{C_Phys_Data, Collider};
-use ecs_engine::common::transform::Transform2D;
+use ecs_engine::collisions::layers::{Collision_Layer, Collision_Matrix};
 use ecs_engine::common::colors::Color;
 use ecs_engine::common::math::clamp;
 use ecs_engine::common::rect::Rect;
 use ecs_engine::common::shapes::Circle;
+use ecs_engine::common::transform::Transform2D;
 use ecs_engine::common::vector::{Vec2f, Vec2i};
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
@@ -16,6 +17,7 @@ use std::collections::HashMap;
 #[derive(Copy, Clone, Default)]
 pub struct C_Texture_Collider {
     pub texture: Texture_Handle,
+    pub layer: Collision_Layer,
 }
 
 struct Collision_Info {
@@ -49,13 +51,13 @@ fn approx_normal(image: &Image, x: u32, y: u32, step: i32) -> Vec2f {
     // although that may only be true because of our bad use of Rayon.
     //let pixels = render::get_image_pixels(image);
     //let cartesian_product = x_range.into_par_iter().enumerate().map(|(i, x)|
-        //y_range.clone().into_par_iter().enumerate().zip(rayon::iter::repeatn((i, x), y_range.len()))
+    //y_range.clone().into_par_iter().enumerate().zip(rayon::iter::repeatn((i, x), y_range.len()))
     //).flatten();
     //let avg: Vec2f =  cartesian_product
-        //.into_par_iter()
-        //.filter(|((_, x), (_, y))| is_solid(pixels[(*y * size.0 + *x) as usize]))
-        //.map(|((i, _), (j, _))| v2!((i as i32 - step) as f32, (j as i32 - step) as f32))
-        //.reduce(Vec2f::default, |a, b| a - b);
+    //.into_par_iter()
+    //.filter(|((_, x), (_, y))| is_solid(pixels[(*y * size.0 + *x) as usize]))
+    //.map(|((i, _), (j, _))| v2!((i as i32 - step) as f32, (j as i32 - step) as f32))
+    //.reduce(Vec2f::default, |a, b| a - b);
     for (i, x) in x_range.enumerate() {
         for (j, y) in y_range.clone().enumerate() {
             if is_solid(render::get_image_pixel(image, x, y)) {
@@ -153,6 +155,7 @@ impl Pixel_Collision_System {
         &mut self,
         world: &mut Ecs_World,
         gres: &Gfx_Resources,
+        collision_matrix: &Collision_Matrix,
         temp_alloc: &mut Temp_Allocator,
     ) {
         trace!("pixel_collision::update");
@@ -164,6 +167,7 @@ impl Pixel_Collision_System {
             pub transform: Transform2D,
             pub velocity: Vec2f,
             pub extent: Vec2f,
+            pub layer: Collision_Layer,
         }
 
         foreach_entity!(world, +Collider, +C_Spatial2D, |entity| {
@@ -174,7 +178,8 @@ impl Pixel_Collision_System {
                     entity,
                     transform: s.transform,
                     extent: c.shape.extent(),
-                    velocity: s.velocity
+                    velocity: s.velocity,
+                    layer: c.layer,
                 });
             }
         });
@@ -183,14 +188,14 @@ impl Pixel_Collision_System {
 
         foreach_entity!(world, +C_Texture_Collider, +C_Spatial2D, |entity| {
             let tex_transform = world.get_component::<C_Spatial2D>(entity).unwrap().transform;
-            let tex_cld = world.get_component::<C_Texture_Collider>(entity).unwrap().texture;
-            let img = self.images.entry(tex_cld).or_insert_with(||
-                render::copy_texture_to_image(gres.get_texture(tex_cld))
+            let tex_cld = world.get_component::<C_Texture_Collider>(entity).unwrap();
+            let img = self.images.entry(tex_cld.texture).or_insert_with(||
+                render::copy_texture_to_image(gres.get_texture(tex_cld.texture))
             );
 
             let (iw, ih) = render::get_image_size(img);
             let (iw, ih) = (iw as i32, ih as i32);
-            
+
             let tex_inv_transform = tex_transform.inverse();
 
             for info in &colliding_positions {
@@ -201,7 +206,12 @@ impl Pixel_Collision_System {
                     transform,
                     extent,
                     velocity,
+                    layer,
                 } = info;
+
+                if !collision_matrix.layers_collide(tex_cld.layer, *layer) {
+                    continue;
+                }
 
                 // Convert entity in local space
                 let colliding_local_transform = tex_inv_transform.combine(&transform);

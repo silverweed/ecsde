@@ -1,4 +1,5 @@
 use crate::audio::audio_system;
+use crate::collisions;
 use crate::events::evt_register;
 use crate::ui;
 
@@ -17,6 +18,7 @@ pub struct Core_Systems<'r> {
     pub audio_system: audio_system::Audio_System<'r>,
     pub evt_register: evt_register::Event_Register,
     pub ui: ui::UI_Context,
+    pub physics_settings: collisions::physics::Physics_Settings,
 }
 
 #[cfg(debug_assertions)]
@@ -44,6 +46,7 @@ impl Core_Systems<'_> {
             }),
             evt_register: evt_register::Event_Register::new(),
             ui: ui::UI_Context::default(),
+            physics_settings: collisions::physics::Physics_Settings::default(),
         }
     }
 }

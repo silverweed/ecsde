@@ -6,6 +6,7 @@
 extern crate ecs_engine;
 
 mod cmdline;
+mod collisions;
 mod directions;
 mod game_loop;
 mod game_state;

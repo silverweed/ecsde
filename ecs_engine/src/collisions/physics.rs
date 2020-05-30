@@ -1,5 +1,6 @@
 // reference: https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331
 
+use super::layers::Collision_Matrix;
 use super::spatial::Spatial_Accelerator;
 use crate::collisions::collider::{C_Phys_Data, Collider, Collision_Shape};
 use crate::common::math::clamp;
@@ -8,6 +9,11 @@ use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Component_Storage, Ecs_World, Entity};
 use rayon::prelude::*;
 use std::collections::HashMap;
+
+#[derive(Default)]
+pub struct Physics_Settings {
+    pub collision_matrix: Collision_Matrix,
+}
 
 #[derive(Debug, Clone)]
 struct Rigidbody {
@@ -239,6 +245,7 @@ fn detect_collisions<T_Spatial_Accelerator>(
     colliders: &Component_Storage<'_, Collider>,
     entities: &[Entity],
     accelerator: &T_Spatial_Accelerator,
+    collision_matrix: &Collision_Matrix,
     #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
 ) -> Vec<Collision_Info>
 where
@@ -273,7 +280,9 @@ where
             }
             if let Some(b) = colliders.get_component(ent_b) {
                 let b_shape = collision_shape_type_index(&b.shape);
-                if stored.contains(&(ent_b, ent_a)) {
+                if !collision_matrix.layers_collide(a.layer, b.layer)
+                    || stored.contains(&(ent_b, ent_a))
+                {
                     continue;
                 }
 
@@ -411,6 +420,7 @@ fn solve_collisions(objects: &mut HashMap<Entity, Rigidbody>, infos: &[&Collisio
 pub fn update_collisions<T_Spatial_Accelerator>(
     ecs_world: &mut Ecs_World,
     accelerator: &T_Spatial_Accelerator,
+    settings: &Physics_Settings,
     #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
 ) where
     T_Spatial_Accelerator: Spatial_Accelerator<Entity>,
@@ -423,6 +433,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
         &colliders,
         &entities,
         accelerator,
+        &settings.collision_matrix,
         #[cfg(debug_assertions)]
         debug_data,
     );

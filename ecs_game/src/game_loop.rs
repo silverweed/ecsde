@@ -328,6 +328,7 @@ where
         let pixel_collision_system = &mut gameplay_system.pixel_collision_system;
         let levels = &gameplay_system.levels;
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
+        let phys_settings = &game_state.engine_state.systems.physics_settings;
         levels.foreach_active_level(|level| {
             #[cfg(debug_assertions)]
             let coll_debug = collision_debug_data
@@ -337,11 +338,17 @@ where
             physics::update_collisions(
                 &mut level.world,
                 &level.chunks,
+                phys_settings,
                 #[cfg(debug_assertions)]
                 coll_debug,
             );
 
-            pixel_collision_system.update(&mut level.world, &game_resources.gfx, frame_alloc);
+            pixel_collision_system.update(
+                &mut level.world,
+                &game_resources.gfx,
+                &phys_settings.collision_matrix,
+                frame_alloc,
+            );
 
             {
                 let mut moved = excl_temp_array(frame_alloc);
@@ -947,7 +954,10 @@ fn update_physics_debug_overlay(
 
 #[cfg(debug_assertions)]
 fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
+    use crate::collisions::Game_Collision_Layer;
     use ecs_engine::collisions::collider::{Collider, Collision_Shape};
+    use std::convert::TryFrom;
+
     foreach_entity!(ecs_world, +Collider, +C_Spatial2D, |entity| {
         let collider = ecs_world.get_component::<Collider>(entity).unwrap();
         // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
@@ -977,6 +987,15 @@ fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World
             }
             _ => {}
         }
+
+        debug_painter.add_text(
+            &Game_Collision_Layer::try_from(collider.layer).map_or_else(
+                |_| format!("? {}", collider.layer),
+                |gcl| format!("{:?}", gcl),
+            ),
+            transform.position(),
+            8,
+            colors::BLACK);
     });
 }
 
