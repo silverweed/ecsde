@@ -15,15 +15,15 @@ use rayon::prelude::*;
 use std::cmp;
 use std::collections::{BTreeMap, HashMap};
 
-struct Texture_Batch {
+struct Sprite_Batch {
     pub vbuffer: Vertex_Buffer_Holder,
     pub shadow_vbuffer: Option<Vertex_Buffer_Holder>,
-    pub tex_props: Vec<Texture_Props_Ws>,
+    pub sprites: Vec<Sprite>,
 }
 
 #[derive(Default)]
 pub struct Batches {
-    textures_ws: BTreeMap<render::Z_Index, HashMap<Material, Texture_Batch>>,
+    textures_ws: BTreeMap<render::Z_Index, HashMap<Material, Sprite_Batch>>,
 }
 
 struct Vertex_Buffer_Holder {
@@ -104,7 +104,7 @@ impl Vertex_Buffer_Holder {
     }
 }
 
-struct Texture_Props_Ws {
+struct Sprite {
     pub tex_rect: Rect<i32>,
     pub color: Color,
     pub transform: Transform2D,
@@ -126,13 +126,13 @@ pub(super) fn add_texture_ws(
             .or_insert_with(HashMap::new)
     };
 
-    let tex_batches = {
-        trace!("get_tex_batches");
+    let sprite_batches = {
+        trace!("get_sprite_batches");
         &mut z_index_texmap
             .entry(material)
             .or_insert_with(|| {
                 ldebug!("creating buffer for material {:?}", material,);
-                Texture_Batch {
+                Sprite_Batch {
                     vbuffer: Vertex_Buffer_Holder::with_initial_vertex_count(
                         48,
                         #[cfg(debug_assertions)]
@@ -147,15 +147,15 @@ pub(super) fn add_texture_ws(
                     } else {
                         None
                     },
-                    tex_props: vec![],
+                    sprites: vec![],
                 }
             })
-            .tex_props
+            .sprites
     };
 
     {
         trace!("push_tex");
-        tex_batches.push(Texture_Props_Ws {
+        sprite_batches.push(Sprite {
             tex_rect: *tex_rect,
             color,
             transform: *transform,
@@ -168,7 +168,7 @@ pub fn clear_batches(batches: &mut Batches) {
     batches
         .textures_ws
         .values_mut()
-        .for_each(|m| m.values_mut().for_each(|batch| batch.tex_props.clear()));
+        .for_each(|m| m.values_mut().for_each(|batch| batch.sprites.clear()));
 }
 
 #[inline(always)]
@@ -252,14 +252,14 @@ pub fn draw_batches(
     let n_threads = rayon::current_num_threads();
 
     // for each Z-index...
-    for tex_map in batches.textures_ws.values_mut() {
+    for sprite_map in batches.textures_ws.values_mut() {
         // for each texture/shader...
-        for (material, batch) in tex_map {
+        for (material, batch) in sprite_map {
             let vbuffer = &mut batch.vbuffer;
             let shadow_vbuffer = &mut batch.shadow_vbuffer;
-            let tex_props = &mut batch.tex_props;
+            let sprites = &mut batch.sprites;
 
-            let n_texs = tex_props.len();
+            let n_texs = sprites.len();
             if n_texs == 0 {
                 // @Speed: right now we don't delete this batch from the tex_map, but it may be worth doing so.
                 continue;
@@ -283,7 +283,7 @@ pub fn draw_batches(
             // @Speed! We can't use the temp array as it's not Send! Maybe we should make it Send (at least a read-only version of it)?
             let mut shadows = vec![];
             if cast_shadows {
-                for tex in tex_props.iter() {
+                for tex in sprites.iter() {
                     let mut nearby_point_lights = Vec::with_capacity(SHADOWS_PER_ENTITY); // @Speed!
 
                     // @Speed: should lights be spatially accelerated?
@@ -333,7 +333,7 @@ pub fn draw_batches(
             debug_assert!(n_vertices_without_shadows <= render::vbuf_max_vertices(&vbuffer.vbuf));
 
             {
-                trace!("tex_batch_ws");
+                trace!("sprite_batch_ws");
 
                 if cast_shadows {
                     let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
@@ -361,21 +361,21 @@ pub fn draw_batches(
                     let shadows_per_chunk = n_vert_per_chunk * SHADOWS_PER_ENTITY;
                     let shadow_chunks = shadow_vertices.par_iter_mut().chunks(shadows_per_chunk);
 
-                    let tex_chunks = tex_props.par_iter().chunks(n_texs_per_chunk);
-                    debug_assert_eq!(tex_chunks.len(), vert_chunks.len());
-                    debug_assert_eq!(tex_chunks.len(), shadow_chunks.len());
+                    let sprite_chunks = sprites.par_iter().chunks(n_texs_per_chunk);
+                    debug_assert_eq!(sprite_chunks.len(), vert_chunks.len());
+                    debug_assert_eq!(sprite_chunks.len(), shadow_chunks.len());
 
-                    tex_chunks.zip(vert_chunks).zip(shadow_chunks).for_each(
-                        |((tex_chunk, mut vert_chunk), mut shadow_chunk)| {
-                            for (i, tex_prop) in tex_chunk.iter().enumerate() {
-                                let Texture_Props_Ws {
+                    sprite_chunks.zip(vert_chunks).zip(shadow_chunks).for_each(
+                        |((sprite_chunk, mut vert_chunk), mut shadow_chunk)| {
+                            for (i, sprite) in sprite_chunk.iter().enumerate() {
+                                let Sprite {
                                     tex_rect,
                                     transform,
                                     color,
-                                } = tex_prop;
+                                } = sprite;
 
                                 let uv: Rect<f32> = (*tex_rect).into();
-                                let tex_size =
+                                let sprite_size =
                                     Vec2f::new(tex_rect.width as _, tex_rect.height as _);
                                 let render_transform = *transform;
 
@@ -388,10 +388,10 @@ pub fn draw_batches(
 
                                 // Note: beware of the order of multiplications!
                                 // Scaling the local positions must be done BEFORE multiplying the matrix!
-                                let p1 = render_transform * (tex_size * v2!(-0.5, -0.5));
-                                let p2 = render_transform * (tex_size * v2!(0.5, -0.5));
-                                let p3 = render_transform * (tex_size * v2!(0.5, 0.5));
-                                let p4 = render_transform * (tex_size * v2!(-0.5, 0.5));
+                                let p1 = render_transform * (sprite_size * v2!(-0.5, -0.5));
+                                let p2 = render_transform * (sprite_size * v2!(0.5, -0.5));
+                                let p3 = render_transform * (sprite_size * v2!(0.5, 0.5));
+                                let p4 = render_transform * (sprite_size * v2!(-0.5, 0.5));
 
                                 let v1 = render::new_vertex(p1, color, v2!(uv.x, uv.y));
                                 let v2 = render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
@@ -467,20 +467,20 @@ pub fn draw_batches(
                         },
                     );
                 } else {
-                    tex_props
+                    sprites
                         .par_iter()
                         .chunks(n_texs_per_chunk)
                         .zip(vert_chunks)
-                        .for_each(|(tex_chunk, mut vert_chunk)| {
-                            for (i, tex_prop) in tex_chunk.iter().enumerate() {
-                                let Texture_Props_Ws {
+                        .for_each(|(sprite_chunk, mut vert_chunk)| {
+                            for (i, sprite) in sprite_chunk.iter().enumerate() {
+                                let Sprite {
                                     tex_rect,
                                     transform,
                                     color,
-                                } = tex_prop;
+                                } = sprite;
 
                                 let uv: Rect<f32> = (*tex_rect).into();
-                                let tex_size =
+                                let sprite_size =
                                     Vec2f::new(tex_rect.width as _, tex_rect.height as _);
                                 let render_transform = *transform;
 
@@ -493,10 +493,10 @@ pub fn draw_batches(
 
                                 // Note: beware of the order of multiplications!
                                 // Scaling the local positions must be done BEFORE multiplying the matrix!
-                                let p1 = render_transform * (tex_size * v2!(-0.5, -0.5));
-                                let p2 = render_transform * (tex_size * v2!(0.5, -0.5));
-                                let p3 = render_transform * (tex_size * v2!(0.5, 0.5));
-                                let p4 = render_transform * (tex_size * v2!(-0.5, 0.5));
+                                let p1 = render_transform * (sprite_size * v2!(-0.5, -0.5));
+                                let p2 = render_transform * (sprite_size * v2!(0.5, -0.5));
+                                let p3 = render_transform * (sprite_size * v2!(0.5, 0.5));
+                                let p4 = render_transform * (sprite_size * v2!(-0.5, 0.5));
 
                                 let v1 = render::new_vertex(p1, color, v2!(uv.x, uv.y));
                                 let v2 = render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
