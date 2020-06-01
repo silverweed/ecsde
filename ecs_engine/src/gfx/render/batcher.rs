@@ -259,8 +259,8 @@ pub fn draw_batches(
             let shadow_vbuffer = &mut batch.shadow_vbuffer;
             let sprites = &mut batch.sprites;
 
-            let n_texs = sprites.len();
-            if n_texs == 0 {
+            let n_sprites = sprites.len();
+            if n_sprites == 0 {
                 // @Speed: right now we don't delete this batch from the tex_map, but it may be worth doing so.
                 continue;
             }
@@ -298,9 +298,9 @@ pub fn draw_batches(
                 }
             }
 
-            let n_texs_per_chunk = cmp::min(n_texs, n_texs / n_threads + 1);
+            let n_sprites_per_chunk = cmp::min(n_sprites, n_sprites / n_threads + 1);
 
-            let n_vertices_without_shadows = (n_texs * 4) as u32;
+            let n_vertices_without_shadows = (n_sprites * 4) as u32;
             debug_assert!(
                 n_vertices_without_shadows as usize + (shadows.len() * 4 * SHADOWS_PER_ENTITY)
                     <= std::u32::MAX as usize
@@ -323,7 +323,7 @@ pub fn draw_batches(
                 }
             }
 
-            let n_vert_per_chunk = n_texs_per_chunk * 4;
+            let n_vert_per_chunk = n_sprites_per_chunk * 4;
             let vert_chunks = vertices.par_iter_mut().chunks(n_vert_per_chunk);
 
             // Ensure the vbuffer has enough room to write in
@@ -361,7 +361,7 @@ pub fn draw_batches(
                     let shadows_per_chunk = n_vert_per_chunk * SHADOWS_PER_ENTITY;
                     let shadow_chunks = shadow_vertices.par_iter_mut().chunks(shadows_per_chunk);
 
-                    let sprite_chunks = sprites.par_iter().chunks(n_texs_per_chunk);
+                    let sprite_chunks = sprites.par_iter().chunks(n_sprites_per_chunk);
                     debug_assert_eq!(sprite_chunks.len(), vert_chunks.len());
                     debug_assert_eq!(sprite_chunks.len(), shadow_chunks.len());
 
@@ -469,7 +469,7 @@ pub fn draw_batches(
                 } else {
                     sprites
                         .par_iter()
-                        .chunks(n_texs_per_chunk)
+                        .chunks(n_sprites_per_chunk)
                         .zip(vert_chunks)
                         .for_each(|(sprite_chunk, mut vert_chunk)| {
                             for (i, sprite) in sprite_chunk.iter().enumerate() {
