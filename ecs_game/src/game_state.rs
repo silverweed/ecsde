@@ -52,6 +52,7 @@ pub struct CVars {
     pub gameplay_update_tick_ms: Cfg_Var<f32>,
     pub vsync: Cfg_Var<bool>,
     pub clear_color: Cfg_Var<u32>,
+    pub enable_shaders: Cfg_Var<bool>,
 }
 
 #[cfg(debug_assertions)]
@@ -283,11 +284,13 @@ fn create_cvars(cfg: &ecs_engine::cfg::Config) -> CVars {
     let gameplay_update_tick_ms = Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg);
     let clear_color = Cfg_Var::new("engine/rendering/clear_color", cfg);
     let vsync = Cfg_Var::new("engine/window/vsync", cfg);
+    let enable_shaders = Cfg_Var::new("engine/rendering/enable_shaders", cfg);
 
     CVars {
         gameplay_update_tick_ms,
         clear_color,
         vsync,
+        enable_shaders
     }
 }
 

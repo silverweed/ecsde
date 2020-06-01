@@ -1,6 +1,5 @@
 use super::backend;
 use crate::alloc::temp;
-use crate::cfg::{self, Cfg_Var};
 use crate::common::angle::Angle;
 use crate::common::colors::{self, Color};
 use crate::common::math::{lerp, lerp_clamped};
@@ -243,14 +242,13 @@ pub fn draw_batches(
     shader_cache: &mut Shader_Cache,
     camera: &Transform2D,
     lights: &Lights,
-    cfg: &cfg::Config,
+    enable_shaders: bool,
     frame_alloc: &mut temp::Temp_Allocator,
 ) {
     trace!("draw_all_batches");
 
     const SHADOWS_PER_ENTITY: usize = 4;
 
-    let enable_shaders = Cfg_Var::<bool>::new("engine/rendering/enable_shaders", cfg).read(cfg);
     let n_threads = rayon::current_num_threads();
 
     // for each Z-index...

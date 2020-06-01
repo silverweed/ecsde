@@ -485,6 +485,7 @@ where
         let lv_batches = &mut game_state.level_batches;
         let window = &mut game_state.window;
         let shader_cache = &mut game_state.engine_state.shader_cache;
+        let enable_shaders = game_state.cvars.enable_shaders.read(cfg);
 
         game_state
             .gameplay_system
@@ -497,7 +498,7 @@ where
                     shader_cache,
                     &level.get_camera().transform,
                     &level.lights,
-                    cfg,
+                    enable_shaders,
                     frame_alloc,
                 );
             });
@@ -508,7 +509,7 @@ where
             shader_cache,
             &Transform2D::default(),
             &ecs_engine::gfx::light::Lights::default(),
-            cfg,
+            enable_shaders,
             frame_alloc,
         );
     }
