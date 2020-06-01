@@ -97,10 +97,13 @@ pub fn render_texture_ws(
     tex_rect: &Rect<i32>,
     color: Color,
     transform: &Transform2D,
+    velocity: Vec2f,
     z_index: Z_Index,
 ) {
     trace!("render_texture_ws");
-    batcher::add_texture_ws(batches, material, tex_rect, color, transform, z_index);
+    batcher::add_texture_ws(
+        batches, material, tex_rect, color, transform, velocity, z_index,
+    );
 }
 
 pub fn render_text<P>(

@@ -290,7 +290,7 @@ fn create_cvars(cfg: &ecs_engine::cfg::Config) -> CVars {
         gameplay_update_tick_ms,
         clear_color,
         vsync,
-        enable_shaders
+        enable_shaders,
     }
 }
 

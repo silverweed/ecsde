@@ -1,4 +1,5 @@
 use super::{Game_Resources, Game_State};
+use crate::movement_system;
 use crate::states::state::Game_State_Args;
 use ecs_engine::alloc::temp::*;
 use ecs_engine::collisions::physics;
@@ -13,7 +14,7 @@ use ecs_engine::input;
 use ecs_engine::resources::gfx::Gfx_Resources;
 use ecs_engine::ui;
 use std::convert::TryInto;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 #[cfg(debug_assertions)]
 use {
@@ -179,6 +180,8 @@ where
         }
     }
 
+    #[cfg(debug_assertions)]
+    let mut collision_debug_data = HashMap::new();
     {
         let actions = game_state
             .engine_state
@@ -282,95 +285,110 @@ where
                 &game_state.engine_state.config,
             );
 
-            // @Cleanup: where do we put this? Do we want this inside gameplay_system?
-            {
-                trace!("state_mgr::update");
+            game_state.execution_time += dt;
 
-                let mut args = Game_State_Args {
-                    engine_state: &mut game_state.engine_state,
-                    gameplay_system: &mut game_state.gameplay_system,
-                    window: &mut game_state.window,
+            let mut n_game_updates = 0;
+            let mut time_taken_for_update = Duration::default();
+            let max_time_for_update = target_time_per_frame * 3; // @Robustness: should we adapt the target framerate dynamically?
+            while game_state.execution_time >= target_time_per_frame
+                && time_taken_for_update < max_time_for_update
+            {
+                game_state.execution_time -= target_time_per_frame;
+                n_game_updates += 1;
+
+                let time_before_game_update = Instant::now();
+
+                // @Cleanup: where do we put this? Do we want this inside gameplay_system?
+                {
+                    trace!("state_mgr::update");
+
+                    let mut args = Game_State_Args {
+                        engine_state: &mut game_state.engine_state,
+                        gameplay_system: &mut game_state.gameplay_system,
+                        window: &mut game_state.window,
+                        game_resources,
+                        level_batches: &mut game_state.level_batches,
+                    };
+                    game_state.state_mgr.update(&mut args, &dt, &real_dt);
+                }
+
+                game_state.gameplay_system.update(
+                    &target_time_per_frame,
+                    &actions,
+                    &mut game_state.engine_state,
                     game_resources,
-                    level_batches: &mut game_state.level_batches,
-                };
-                game_state.state_mgr.update(&mut args, &dt, &real_dt);
+                );
+
+                {
+                    // Update collisions
+                    trace!("physics::update");
+
+                    let gameplay_system = &mut game_state.gameplay_system;
+                    let time = &game_state.engine_state.time;
+                    let update_dt = time::mul_duration(
+                        &target_time_per_frame,
+                        time.time_scale * (!time.paused as u32 as f32),
+                    );
+                    let pixel_collision_system = &mut gameplay_system.pixel_collision_system;
+                    let levels = &gameplay_system.levels;
+                    let frame_alloc = &mut game_state.engine_state.frame_alloc;
+                    let phys_settings = &game_state.engine_state.systems.physics_settings;
+                    levels.foreach_active_level(|level| {
+                        #[cfg(debug_assertions)]
+                        let coll_debug = collision_debug_data
+                            .entry(level.id)
+                            .or_insert_with(physics::Collision_System_Debug_Data::default);
+
+                        physics::update_collisions(
+                            &mut level.world,
+                            &level.chunks,
+                            phys_settings,
+                            #[cfg(debug_assertions)]
+                            coll_debug,
+                        );
+
+                        pixel_collision_system.update(
+                            &mut level.world,
+                            &game_resources.gfx,
+                            &phys_settings.collision_matrix,
+                            frame_alloc,
+                        );
+
+                        {
+                            let mut moved = excl_temp_array(frame_alloc);
+                            movement_system::update(&update_dt, &mut level.world, &mut moved);
+
+                            let moved = unsafe { moved.into_read_only() };
+                            for mov in &moved {
+                                level.chunks.update_entity(
+                                    mov.entity,
+                                    mov.prev_pos,
+                                    mov.new_pos,
+                                    mov.extent,
+                                    frame_alloc,
+                                );
+                            }
+                        }
+                    });
+                }
+
+                game_state
+                    .gameplay_system
+                    .late_update(&mut game_state.engine_state.systems.evt_register);
+
+                time_taken_for_update += time_before_game_update.elapsed();
             }
 
-            let time = &game_state.engine_state.time;
-            // @Cleanup @Soundness: either pass to the update the "actual" dt or accumulate the extra time to
-            // have a really fixed time step. That depends if we care about being deterministic or not.
-            let update_dt = time::mul_duration(
-                &target_time_per_frame,
-                time.time_scale * (!time.paused as u32 as f32),
-            );
-            game_state.gameplay_system.update(
-                &update_dt,
-                &actions,
-                &mut game_state.engine_state,
-                game_resources,
+            println!(
+                "n updates = {}; time spared: {} ms ({} ms per update)",
+                n_game_updates,
+                max_time_for_update
+                    .as_millis()
+                    .saturating_sub(time_taken_for_update.as_millis()),
+                time_taken_for_update.as_millis() as f32 / n_game_updates as f32
             );
         }
     }
-
-    #[cfg(debug_assertions)]
-    let mut collision_debug_data = HashMap::new();
-
-    // Update collisions
-    {
-        trace!("physics::update");
-
-        let gameplay_system = &mut game_state.gameplay_system;
-        let time = &game_state.engine_state.time;
-        let update_dt = time::mul_duration(
-            &target_time_per_frame,
-            time.time_scale * (!time.paused as u32 as f32),
-        );
-        let pixel_collision_system = &mut gameplay_system.pixel_collision_system;
-        let levels = &gameplay_system.levels;
-        let frame_alloc = &mut game_state.engine_state.frame_alloc;
-        let phys_settings = &game_state.engine_state.systems.physics_settings;
-        levels.foreach_active_level(|level| {
-            #[cfg(debug_assertions)]
-            let coll_debug = collision_debug_data
-                .entry(level.id)
-                .or_insert_with(physics::Collision_System_Debug_Data::default);
-
-            physics::update_collisions(
-                &mut level.world,
-                &level.chunks,
-                phys_settings,
-                #[cfg(debug_assertions)]
-                coll_debug,
-            );
-
-            pixel_collision_system.update(
-                &mut level.world,
-                &game_resources.gfx,
-                &phys_settings.collision_matrix,
-                frame_alloc,
-            );
-
-            {
-                let mut moved = excl_temp_array(frame_alloc);
-                crate::movement_system::update(&update_dt, &mut level.world, &mut moved);
-
-                let moved = unsafe { moved.into_read_only() };
-                for mov in &moved {
-                    level.chunks.update_entity(
-                        mov.entity,
-                        mov.prev_pos,
-                        mov.new_pos,
-                        mov.extent,
-                        frame_alloc,
-                    );
-                }
-            }
-        });
-    }
-
-    game_state
-        .gameplay_system
-        .late_update(&mut game_state.engine_state.systems.evt_register);
 
     // Update audio
     {
@@ -390,7 +408,12 @@ where
     #[cfg(debug_assertions)]
     update_debug(game_state, collision_debug_data);
 
-    update_graphics(game_state, &mut game_resources.gfx);
+    let seconds_into_frame =
+        time::duration_ratio(&game_state.execution_time, &target_time_per_frame).min(1.0)
+            * target_time_per_frame.as_secs_f32()
+            * game_state.engine_state.time.time_scale;
+    println!("seconds_into_frame: {}", seconds_into_frame);
+    update_graphics(game_state, &mut game_resources.gfx, seconds_into_frame);
     update_ui(game_state, &game_resources.gfx);
 
     #[cfg(debug_assertions)]
@@ -419,8 +442,11 @@ fn update_ui(game_state: &mut Game_State, gres: &Gfx_Resources) {
     ui::draw_all_ui(window, gres, ui_ctx);
 }
 
-fn update_graphics<'a, 's, 'r>(game_state: &'a mut Game_State<'s>, gres: &'a mut Gfx_Resources<'r>)
-where
+fn update_graphics<'a, 's, 'r>(
+    game_state: &'a mut Game_State<'s>,
+    gres: &'a mut Gfx_Resources<'r>,
+    seconds_into_frame: f32,
+) where
     'r: 's,
     's: 'a,
 {
@@ -499,6 +525,7 @@ where
                     &level.get_camera().transform,
                     &level.lights,
                     enable_shaders,
+                    seconds_into_frame,
                     frame_alloc,
                 );
             });
@@ -510,6 +537,7 @@ where
             &Transform2D::default(),
             &ecs_engine::gfx::light::Lights::default(),
             enable_shaders,
+            seconds_into_frame,
             frame_alloc,
         );
     }
@@ -729,7 +757,7 @@ fn update_debug(
 
             update_physics_debug_overlay(
                 debug_ui.get_overlay(sid_physics),
-                &collision_debug_data[&level.id],
+                collision_debug_data.get(&level.id),
                 &level.chunks,
             );
 
@@ -939,14 +967,14 @@ fn update_camera_debug_overlay(
 #[cfg(debug_assertions)]
 fn update_physics_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
-    collision_data: &physics::Collision_System_Debug_Data,
+    collision_data: Option<&physics::Collision_System_Debug_Data>,
     chunks: &crate::spatial::World_Chunks,
 ) {
     debug_overlay.clear();
     debug_overlay.add_line_color(
         &format!(
             "[phys] n_inter_tests: {}, n_chunks: {}",
-            collision_data.n_intersection_tests,
+            collision_data.map_or(0, |cd| cd.n_intersection_tests),
             chunks.n_chunks(),
         ),
         colors::rgba(0, 173, 90, 220),
@@ -1133,7 +1161,9 @@ fn debug_draw_entities_prev_frame_ghost(
     use ecs_engine::gfx::render;
 
     foreach_entity!(ecs_world, +C_Spatial2D, +C_Renderable, +C_Debug_Data, |entity| {
-        let frame_starting_pos = ecs_world.get_component::<C_Spatial2D>(entity).unwrap().frame_starting_pos;
+        let spatial = ecs_world.get_component::<C_Spatial2D>(entity).unwrap();
+        let frame_starting_pos = spatial.frame_starting_pos;
+        let velocity = spatial.velocity;
         let C_Renderable {
             material,
             rect,
@@ -1160,7 +1190,7 @@ fn debug_draw_entities_prev_frame_ghost(
                 modulate.b,
                 200 - 10 * (debug_data.prev_positions.len() - i as usize) as u8,
             );
-            render::render_texture_ws(batches, material, &rect, color, &transform, z_index);
+            render::render_texture_ws(batches, material, &rect, color, &transform, velocity, z_index);
         }
     });
 }

@@ -108,6 +108,7 @@ struct Sprite {
     pub tex_rect: Rect<i32>,
     pub color: Color,
     pub transform: Transform2D,
+    pub velocity: Vec2f,
 }
 
 pub(super) fn add_texture_ws(
@@ -116,6 +117,7 @@ pub(super) fn add_texture_ws(
     tex_rect: &Rect<i32>,
     color: Color,
     transform: &Transform2D,
+    velocity: Vec2f,
     z_index: render::Z_Index,
 ) {
     let z_index_texmap = {
@@ -159,6 +161,7 @@ pub(super) fn add_texture_ws(
             tex_rect: *tex_rect,
             color,
             transform: *transform,
+            velocity,
         });
     }
 }
@@ -243,6 +246,7 @@ pub fn draw_batches(
     camera: &Transform2D,
     lights: &Lights,
     enable_shaders: bool,
+    seconds_into_frame: f32,
     frame_alloc: &mut temp::Temp_Allocator,
 ) {
     trace!("draw_all_batches");
@@ -372,12 +376,14 @@ pub fn draw_batches(
                                     tex_rect,
                                     transform,
                                     color,
+                                    velocity,
                                 } = sprite;
 
                                 let uv: Rect<f32> = (*tex_rect).into();
                                 let sprite_size =
                                     Vec2f::new(tex_rect.width as _, tex_rect.height as _);
-                                let render_transform = *transform;
+                                let mut render_transform = *transform;
+                                render_transform.translate_v(*velocity * seconds_into_frame);
 
                                 // Encode rotation in color
                                 let color = if has_shader {
@@ -477,12 +483,14 @@ pub fn draw_batches(
                                     tex_rect,
                                     transform,
                                     color,
+                                    velocity,
                                 } = sprite;
 
                                 let uv: Rect<f32> = (*tex_rect).into();
                                 let sprite_size =
                                     Vec2f::new(tex_rect.width as _, tex_rect.height as _);
-                                let render_transform = *transform;
+                                let mut render_transform = *transform;
+                                render_transform.translate_v(*velocity * seconds_into_frame);
 
                                 // Encode rotation in color
                                 let color = if has_shader {

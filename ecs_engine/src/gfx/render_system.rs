@@ -78,6 +78,7 @@ pub fn update(args: Render_System_Update_Args) {
             src_rect,
             *modulate,
             &spatial.transform,
+            spatial.velocity,
             *z_index,
         );
     }
