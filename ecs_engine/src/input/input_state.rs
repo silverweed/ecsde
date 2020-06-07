@@ -1,5 +1,6 @@
 use super::axes;
 use super::bindings::joystick;
+use super::bindings::keyboard::{self, Keyboard_State};
 use super::bindings::mouse::{self, Mouse_State};
 use super::bindings::{Axis_Emulation_Type, Input_Bindings};
 use super::core_actions::Core_Action;
@@ -24,6 +25,7 @@ pub type Game_Action = (String_Id, Action_Kind);
 pub struct Input_Raw_State {
     pub joy_state: Joystick_State,
     pub mouse_state: Mouse_State,
+    pub kb_state: Keyboard_State,
     // These events are always handled in realtime, even when replaying
     pub core_events: Vec<Input_Raw_Event>,
     // This Vec contains ALL events, including core events
@@ -49,6 +51,7 @@ pub fn create_input_state(env: &Env_Info) -> Input_State {
         raw: Input_Raw_State {
             joy_state: Joystick_State::default(),
             mouse_state: Mouse_State::default(),
+            kb_state: Keyboard_State::default(),
             core_events: vec![],
             events: vec![],
         },
@@ -86,6 +89,8 @@ pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut
             _ => raw_state.events.push(evt),
         }
     }
+
+    keyboard::update_kb_state(&mut raw_state.kb_state, &raw_state.events);
 
     for joy_id in 0..joystick::JOY_COUNT {
         if let Some(joy) = &raw_state.joy_state.joysticks[joy_id as usize] {

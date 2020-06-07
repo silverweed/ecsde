@@ -16,7 +16,7 @@ impl Game_Base_State {
 
 impl Persistent_Game_State for Game_Base_State {
     fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Game_State_Args) {
-        for action in actions.iter() {
+        for action in actions {
             match action {
                 (name, Action_Kind::Pressed) if *name == self.sid_quit => {
                     args.engine_state.should_close = true;

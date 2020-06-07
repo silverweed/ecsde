@@ -192,13 +192,6 @@ where
     }
 
     {
-        let actions = game_state
-            .engine_state
-            .input_state
-            .processed
-            .game_actions
-            .split_off(0);
-
         #[cfg(debug_assertions)]
         {
             let input_state = &game_state.engine_state.input_state;
@@ -233,6 +226,14 @@ where
         {
             trace!("state_mgr::handle_actions");
 
+            // Note: we clone the actions here to ease the implementation of handle_actions and avoid
+            // ownership errors due to mutably borrowing engine_state.
+            let actions = game_state
+                .engine_state
+                .input_state
+                .processed
+                .game_actions
+                .clone();
             let mut args = Game_State_Args {
                 engine_state: &mut game_state.engine_state,
                 gameplay_system: &mut game_state.gameplay_system,
@@ -250,6 +251,8 @@ where
         {
             use ecs_engine::debug::console::Console_Status;
             use ecs_engine::input::input_state::Action_Kind;
+
+            let actions = &game_state.engine_state.input_state.processed.game_actions;
 
             if actions.contains(&(String_Id::from("toggle_console"), Action_Kind::Pressed)) {
                 game_state.engine_state.debug_systems.console.toggle();
@@ -281,12 +284,9 @@ where
         {
             trace!("game_update");
 
-            let axes = &game_state.engine_state.input_state.processed.virtual_axes;
-
             game_state.gameplay_system.realtime_update(
                 &real_dt,
-                &actions,
-                axes,
+                &game_state.engine_state.input_state,
                 &game_state.engine_state.config,
             );
 
@@ -313,7 +313,6 @@ where
             );
             game_state.gameplay_system.update(
                 &update_dt,
-                &actions,
                 &mut game_state.engine_state,
                 game_resources,
             );

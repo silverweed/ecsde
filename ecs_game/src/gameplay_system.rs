@@ -31,7 +31,7 @@ use ecs_engine::gfx;
 use ecs_engine::gfx::render::batcher::Batches;
 use ecs_engine::input::axes::Virtual_Axes;
 use ecs_engine::input::bindings::keyboard;
-use ecs_engine::input::input_state::{Action_Kind, Game_Action};
+use ecs_engine::input::input_state::{Action_Kind, Game_Action, Input_State};
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -130,13 +130,13 @@ impl Gameplay_System {
     pub fn update(
         &mut self,
         dt: &Duration,
-        actions: &[Game_Action],
         engine_state: &mut Engine_State,
         rsrc: &mut Game_Resources,
     ) {
         trace!("gameplay_system::update");
 
         let axes = &engine_state.input_state.processed.virtual_axes;
+        let actions = &engine_state.input_state.processed.game_actions;
 
         #[cfg(debug_assertions)]
         {
@@ -184,23 +184,17 @@ impl Gameplay_System {
     pub fn realtime_update(
         &mut self,
         real_dt: &Duration,
-        actions: &[Game_Action],
-        axes: &Virtual_Axes,
+        input_state: &Input_State,
         cfg: &cfg::Config,
     ) {
         trace!("gameplay_system::realtime_update");
-        self.update_camera(real_dt, actions, axes, cfg);
+        self.update_camera(real_dt, input_state, cfg);
     }
 
-    fn update_camera(
-        &mut self,
-        real_dt: &Duration,
-        actions: &[Game_Action],
-        axes: &Virtual_Axes,
-        cfg: &cfg::Config,
-    ) {
+    fn update_camera(&mut self, real_dt: &Duration, input_state: &Input_State, cfg: &cfg::Config) {
         self.levels.foreach_active_level(|level| {
-            let movement = get_movement_from_input(axes, self.input_cfg, cfg);
+            let movement =
+                get_movement_from_input(&input_state.processed.virtual_axes, self.input_cfg, cfg);
             let v = {
                 let camera_ctrl = level
                     .world
@@ -229,8 +223,8 @@ impl Gameplay_System {
             let mut add_scale = Vec2f::new(0., 0.);
             const BASE_CAM_DELTA_ZOOM_PER_SCROLL: f32 = 0.2;
 
-            if keyboard::is_key_pressed(keyboard::Key::LControl) {
-                for action in actions {
+            if keyboard::is_key_pressed(&input_state.raw.kb_state, keyboard::Key::LControl) {
+                for action in &input_state.processed.game_actions {
                     match action {
                         (name, Action_Kind::Pressed)
                             if *name == String_Id::from("camera_zoom_up") =>
@@ -296,7 +290,7 @@ impl Gameplay_System {
         resources: &mut Game_Resources,
     ) {
         // @Incomplete: probably should use previous frame actions
-        self.update(dt, &[], engine_state, resources);
+        self.update(dt, engine_state, resources);
     }
 
     /*

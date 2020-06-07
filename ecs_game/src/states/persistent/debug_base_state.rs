@@ -66,7 +66,7 @@ impl Persistent_Game_State for Debug_Base_State {
         } = args;
         // @Speed: eventually we want to replace all the *name == sid with a const sid function, to allow doing
         // (sid!("game_speed_up"), Action_Kind::Pressed) => { ... }
-        for action in actions.iter() {
+        for action in actions {
             match action {
                 (name, Action_Kind::Pressed)
                     if *name == self.sid_game_speed_up || *name == self.sid_game_speed_down =>

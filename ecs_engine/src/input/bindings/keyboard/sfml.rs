@@ -115,11 +115,6 @@ pub(super) fn num_to_key(num: usize) -> Option<Key> {
 }
 
 #[inline(always)]
-pub(super) fn is_key_pressed(key: Key) -> bool {
-    key.is_pressed()
-}
-
-#[inline(always)]
 pub const fn keypressed(code: Key) -> Event {
     Event::KeyPressed {
         code,

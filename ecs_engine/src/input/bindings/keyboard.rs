@@ -1,3 +1,6 @@
+use crate::input::input_state::Input_Raw_Event;
+use std::collections::HashSet;
+
 #[cfg(feature = "use-sfml")]
 pub mod sfml;
 
@@ -6,14 +9,31 @@ use self::sfml as backend;
 
 pub type Key = backend::Key;
 
+#[derive(Debug, Default, Clone)]
+pub struct Keyboard_State {
+    keys_pressed: HashSet<Key>,
+}
+
+pub fn update_kb_state(kb_state: &mut Keyboard_State, events: &[Input_Raw_Event]) {
+    for evt in events {
+        match evt {
+            Input_Raw_Event::KeyPressed { code, .. } => {
+                kb_state.keys_pressed.insert(*code);
+            }
+            Input_Raw_Event::KeyReleased { code, .. } => {
+                kb_state.keys_pressed.remove(code);
+            }
+            _ => (),
+        }
+    }
+}
+
 pub fn num_to_key(num: usize) -> Option<Key> {
     backend::num_to_key(num)
 }
 
-// @Soundness @Cleanup: this does not allow for replaying!
-// We should change this to use the Input_State.
-pub fn is_key_pressed(key: Key) -> bool {
-    backend::is_key_pressed(key)
+pub fn is_key_pressed(kb_state: &Keyboard_State, key: Key) -> bool {
+    kb_state.keys_pressed.contains(&key)
 }
 
 #[cfg(debug_assertions)]
