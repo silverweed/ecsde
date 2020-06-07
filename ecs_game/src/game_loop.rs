@@ -55,46 +55,58 @@ where
             * 1000.0) as u64,
     );
 
-    // @Speed @WaitForStable: these should all be computed at compile time.
-    // Probably will do that when either const fn or proc macros/syntax extensions are stable.
-    #[cfg(debug_assertions)]
-    let (sid_joysticks, sid_msg) = (String_Id::from("joysticks"), String_Id::from("msg"));
-
     #[cfg(debug_assertions)]
     let debug_systems = &mut game_state.engine_state.debug_systems;
 
-    // Check if the replay ended this frame
-    if game_state.is_replaying && game_state.input_provider.is_realtime_player_input() {
-        #[cfg(debug_assertions)]
-        debug_systems
-            .debug_ui
-            .get_fadeout_overlay(sid_msg)
-            .add_line("REPLAY HAS ENDED.");
-        game_state.is_replaying = false;
-    }
+    let mut_in_debug!(replaying) = false;
 
     // Update input
     {
         trace!("input_state::update");
 
-        let process_game_actions;
+        let mut_in_debug!(process_game_actions) = true;
+
         #[cfg(debug_assertions)]
         {
             process_game_actions =
                 debug_systems.console.status != debug::console::Console_Status::Open;
         }
-        #[cfg(not(debug_assertions))]
-        {
-            process_game_actions = true;
-        }
 
-        // @Incomplete: allow this input to come from the replay; replace the Input_Provider stuff with something simpler.
+        // Update the raw input. This may be overwritten later by replay data, but its core_events won't.
         input::input_state::update_raw_input(
             &mut game_state.window,
-            &mut game_state.engine_state.input_state.raw_state,
+            &mut game_state.engine_state.input_state.raw,
         );
+
+        #[cfg(debug_assertions)]
+        if let Some(rip) = game_state.engine_state.replay_input_provider.as_mut() {
+            if rip.has_more_input() {
+                replaying = true;
+
+                if let Some(mut raw_input) =
+                    rip.get_replayed_input_for_frame(game_state.engine_state.cur_frame)
+                {
+                    std::mem::swap(&mut game_state.engine_state.input_state.raw, &mut raw_input);
+                    // Preserve the realtime core events.
+                    // Note: now raw_input contains the realtime events
+                    game_state
+                        .engine_state
+                        .input_state
+                        .raw
+                        .events
+                        .extend(&raw_input.core_events);
+                    game_state.engine_state.input_state.raw.core_events = raw_input.core_events;
+                } else {
+                    game_state.engine_state.input_state.raw.events =
+                        game_state.engine_state.input_state.raw.core_events.clone();
+                }
+            } else {
+                game_state.engine_state.replay_input_provider = None;
+            }
+        }
+
         input::input_state::process_raw_input(
-            &game_state.engine_state.input_state.raw_state,
+            &game_state.engine_state.input_state.raw,
             &game_state.engine_state.input_state.bindings,
             &mut game_state.engine_state.input_state.processed,
             process_game_actions,
@@ -109,7 +121,7 @@ where
         if debug_systems.console.status == debug::console::Console_Status::Open {
             debug_systems
                 .console
-                .update(&game_state.engine_state.input_state.raw_state.events);
+                .update(&game_state.engine_state.input_state.raw.events);
 
             let mut output = vec![];
             while let Some(cmd) = game_state
@@ -151,7 +163,7 @@ where
         let prev_selected_second = scroller.cur_second;
         let was_manually_selected = scroller.manually_selected;
 
-        scroller.handle_events(&game_state.engine_state.input_state.raw_state.events);
+        scroller.handle_events(&game_state.engine_state.input_state.raw.events);
 
         if scroller.cur_frame != prev_selected_frame
             || scroller.cur_second != prev_selected_second
@@ -188,37 +200,33 @@ where
             .split_off(0);
 
         #[cfg(debug_assertions)]
-        let input_state = &game_state.engine_state.input_state;
-        #[cfg(debug_assertions)]
-        let raw_events = &input_state.raw_state.events;
-        #[cfg(debug_assertions)]
-        let (real_axes, joy_mask) =
-            input::joystick_state::all_joysticks_values(&input_state.raw_state.joy_state);
-
-        #[cfg(debug_assertions)]
         {
+            let input_state = &game_state.engine_state.input_state;
+
             update_joystick_debug_overlay(
-                debug_systems.debug_ui.get_overlay(sid_joysticks),
-                real_axes,
-                joy_mask,
+                debug_systems
+                    .debug_ui
+                    .get_overlay(String_Id::from("joysticks")),
+                &input_state.raw.joy_state,
                 game_state.gameplay_system.input_cfg,
                 &game_state.engine_state.config,
             );
 
             // Record replay data (only if we're not already playing back a replay).
-            if debug_systems.replay_recording_system.is_recording()
-                && game_state.input_provider.is_realtime_player_input()
-            {
-                let record_replay_data = game_state
-                    .debug_cvars
-                    .record_replay
-                    .read(&game_state.engine_state.config);
-                if record_replay_data {
-                    debug_systems
-                        .replay_recording_system
-                        .update(raw_events, real_axes, joy_mask);
-                }
+            let recording = !replaying && debug_systems.replay_recording_system.is_recording();
+            if recording {
+                debug_systems
+                    .replay_recording_system
+                    .update(&input_state.raw, game_state.engine_state.cur_frame);
             }
+
+            update_record_debug_overlay(
+                debug_systems
+                    .debug_ui
+                    .get_overlay(String_Id::from("record")),
+                recording,
+                replaying,
+            );
         }
 
         // Update states
@@ -782,9 +790,7 @@ fn update_debug(
 #[cfg(debug_assertions)]
 fn update_joystick_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
-    real_axes: &[input::joystick_state::Real_Axes_Values;
-         input::bindings::joystick::JOY_COUNT as usize],
-    joy_mask: u8,
+    joy_state: &input::joystick_state::Joystick_State,
     input_cfg: crate::input_utils::Input_Config,
     cfg: &ecs_engine::cfg::Config,
 ) {
@@ -793,6 +799,8 @@ fn update_joystick_debug_overlay(
     debug_overlay.clear();
 
     let deadzone = input_cfg.joy_deadzone.read(cfg);
+
+    let (real_axes, joy_mask) = input::joystick_state::all_joysticks_values(joy_state);
 
     for (joy_id, axes) in real_axes.iter().enumerate() {
         if (joy_mask & (1 << joy_id)) != 0 {
@@ -951,6 +959,20 @@ fn update_physics_debug_overlay(
         ),
         colors::rgba(0, 173, 90, 220),
     );
+}
+
+#[cfg(debug_assertions)]
+fn update_record_debug_overlay(
+    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    recording: bool,
+    replaying: bool,
+) {
+    debug_overlay.clear();
+    if replaying {
+        debug_overlay.add_line_color("REPLAYING", colors::rgb(30, 200, 30));
+    } else if recording {
+        debug_overlay.add_line_color("RECORDING", colors::rgb(200, 30, 30));
+    }
 }
 
 #[cfg(debug_assertions)]

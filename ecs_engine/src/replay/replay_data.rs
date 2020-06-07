@@ -1,16 +1,18 @@
 // @Incomplete! We should save the rng seed somewhere, or the replay won't be deterministic.
 
 use crate::common::serialize::{Binary_Serializable, Byte_Stream};
+use crate::core::rand::Default_Rng_Seed;
 use crate::input::bindings::joystick;
+use crate::input::bindings::mouse::Mouse_State;
+use crate::input::input_state::{Input_Raw_Event, Input_Raw_State};
+use crate::input::joystick_state::Joystick_State;
+use crate::input::serialize;
 use std::default::Default;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 use std::time::Duration;
 use std::vec::Vec;
-
-#[cfg(feature = "use-sfml")]
-type Event_Type = ::sfml::window::Event;
 
 const AXES_COUNT: usize = joystick::Joystick_Axis::_Count as usize;
 const JOY_COUNT: usize = joystick::JOY_COUNT as usize;
@@ -21,7 +23,7 @@ const JOY_COUNT: usize = joystick::JOY_COUNT as usize;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Replay_Data_Point {
     pub frame_number: u64,
-    pub events: Vec<Event_Type>,
+    pub events: Vec<Input_Raw_Event>,
     pub joy_data: [Replay_Joystick_Data; JOY_COUNT],
     /// Bitmask indicating which joysticks in self.joy_data must be considered.
     /// This is done for optimizing the disk space taken by serializing replay data:
@@ -53,16 +55,43 @@ impl std::default::Default for Replay_Data_Point {
 impl Replay_Data_Point {
     pub fn new(
         frame_number: u64,
-        events: &[Event_Type],
+        events: &[Input_Raw_Event],
         joy_data: &[Replay_Joystick_Data; JOY_COUNT],
         joy_mask: u8,
     ) -> Replay_Data_Point {
         Replay_Data_Point {
             frame_number,
-            events: events.to_vec(),
+            events: events
+                .iter()
+                .filter(|evt| serialize::should_event_be_serialized(&evt))
+                .cloned()
+                .collect(),
             joy_data: *joy_data,
             joy_mask,
         }
+    }
+}
+
+impl From<Replay_Data_Point> for Input_Raw_State {
+    fn from(rdp: Replay_Data_Point) -> Self {
+        let mut input_raw_state = Input_Raw_State::default();
+        input_raw_state.events = rdp.events.clone();
+        input_raw_state.mouse_state = Mouse_State::default(); // @Incomplete
+        input_raw_state.joy_state = Joystick_State::default();
+
+        for joy_id in 0..input_raw_state.joy_state.joysticks.len() {
+            if (rdp.joy_mask & (1 << joy_id)) != 0 {
+                let joy_axes = &mut input_raw_state.joy_state.values[joy_id];
+                let joy_data = rdp.joy_data[joy_id];
+                for (axis_id, axis) in joy_axes.iter_mut().enumerate() {
+                    if (joy_data.axes_mask & (1 << axis_id)) != 0 {
+                        *axis = joy_data.axes[axis_id];
+                    }
+                }
+            }
+        }
+
+        input_raw_state
     }
 }
 
@@ -127,7 +156,7 @@ impl Binary_Serializable for Replay_Data_Point {
         let n_events = input.read_u8()?;
         let mut events = vec![];
         for _ in 0u8..n_events {
-            events.push(Event_Type::deserialize(input)?);
+            events.push(Input_Raw_Event::deserialize(input)?);
         }
 
         let mut joy_data: [Replay_Joystick_Data; JOY_COUNT] = Default::default();
@@ -150,25 +179,26 @@ impl Binary_Serializable for Replay_Data_Point {
 
 /// Replay_Data is used only for the playback. It loads serialized replay data from a file
 /// and provides an iterator to access all the recorded events.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Replay_Data {
     pub data: Vec<Replay_Data_Point>,
-    /// Note: for the replay to work correctly, the game tick time should not be changed while recording
-    pub ms_per_frame: u16,
+    pub ms_per_frame: f32,
+    pub seed: Default_Rng_Seed,
     pub duration: Duration,
 }
 
 impl Replay_Data {
-    pub fn new(ms_per_frame: u16) -> Replay_Data {
+    pub fn new(ms_per_frame: f32, seed: Default_Rng_Seed) -> Replay_Data {
         Replay_Data {
             data: vec![],
             ms_per_frame,
+            seed,
             duration: Duration::new(0, 0),
         }
     }
 
     #[cfg(test)]
-    pub fn new_from_data(ms_per_frame: u16, data: &[Replay_Data_Point]) -> Replay_Data {
+    pub fn new_from_data(ms_per_frame: f32, data: &[Replay_Data_Point]) -> Replay_Data {
         let mut replay = Replay_Data {
             data: data.to_vec(),
             ms_per_frame,
@@ -204,17 +234,17 @@ impl Replay_Data {
             Duration::new(0, 0)
         } else {
             let last_frame_number = replay.data[replay.data.len() - 1].frame_number;
-            Duration::from_millis(last_frame_number * u64::from(replay.ms_per_frame))
+            Duration::from_secs_f32(last_frame_number as f32 * replay.ms_per_frame * 0.001)
         }
     }
 }
 
 impl Binary_Serializable for Replay_Data {
     fn deserialize(input: &mut Byte_Stream) -> std::io::Result<Replay_Data> {
-        let mut replay = Replay_Data::new(0);
+        let mut replay = Replay_Data::default();
 
-        // First line should contains the ms per frame
-        replay.ms_per_frame = input.read_u16()?;
+        replay.ms_per_frame = input.read_f32()?;
+        replay.seed = Default_Rng_Seed::deserialize(input)?;
 
         while (input.pos() as usize) < input.len() {
             replay.data.push(Replay_Data_Point::deserialize(input)?);

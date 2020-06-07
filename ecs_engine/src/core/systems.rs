@@ -8,6 +8,7 @@ use {
     crate::cfg,
     crate::common::stringid::String_Id,
     crate::core::env::Env_Info,
+    crate::core::rand::Default_Rng_Seed,
     crate::debug::{calipers, console, debug_ui, log, painter::Debug_Painter},
     crate::replay::recording_system,
     crate::resources::gfx::Gfx_Resources,
@@ -53,7 +54,7 @@ impl Core_Systems<'_> {
 
 #[cfg(debug_assertions)]
 impl Debug_Systems {
-    pub fn new(cfg: &cfg::Config) -> Debug_Systems {
+    pub fn new(cfg: &cfg::Config, rng_seed: Default_Rng_Seed) -> Debug_Systems {
         let ms_per_frame =
             cfg::Cfg_Var::<f32>::new("engine/gameplay/gameplay_update_tick_ms", cfg).read(cfg);
         let debug_log_size =
@@ -62,7 +63,10 @@ impl Debug_Systems {
         Debug_Systems {
             debug_ui: debug_ui::Debug_Ui_System::new(),
             replay_recording_system: recording_system::Replay_Recording_System::new(
-                recording_system::Replay_Recording_System_Config { ms_per_frame },
+                recording_system::Replay_Recording_System_Config {
+                    ms_per_frame,
+                    rng_seed,
+                },
             ),
             painters: HashMap::default(),
             global_painter: Debug_Painter::new(),

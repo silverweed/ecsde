@@ -1,5 +1,6 @@
 use crate::common::serialize::{Binary_Serializable, Byte_Stream};
 use crate::input::bindings::{keyboard, mouse};
+use crate::input::input_state::Input_Raw_Event;
 use sfml::window::Event;
 use std::io;
 
@@ -9,6 +10,16 @@ const PRE_JOY_PRESSED: u8 = 0x2;
 const PRE_JOY_RELEASED: u8 = 0x3;
 const PRE_MOUSE_PRESSED: u8 = 0x4;
 const PRE_MOUSE_RELEASED: u8 = 0x5;
+const PRE_WHEEL_SCROLLED: u8 = 0x6;
+
+pub fn should_event_be_serialized(event: &Input_Raw_Event) -> bool {
+    let mut bs = Byte_Stream::new();
+    if let Ok(_) = event.serialize(&mut bs) {
+        bs.pos() > 0
+    } else {
+        false
+    }
+}
 
 impl Binary_Serializable for Event {
     fn serialize(&self, output: &mut Byte_Stream) -> io::Result<()> {
@@ -40,6 +51,10 @@ impl Binary_Serializable for Event {
             Event::MouseButtonReleased { button, .. } => {
                 output.write_u8(PRE_MOUSE_RELEASED)?;
                 output.write_u8(*button as u8)?;
+            }
+            Event::MouseWheelScrolled { delta, .. } => {
+                output.write_u8(PRE_WHEEL_SCROLLED)?;
+                output.write_f32(*delta)?;
             }
             _ => (),
         }
@@ -81,6 +96,10 @@ impl Binary_Serializable for Event {
                 let button =
                     mouse::num_to_mouse_btn(button as usize).ok_or(io::ErrorKind::InvalidData)?;
                 Ok(mouse::sfml::mousereleased(button.into()))
+            }
+            PRE_WHEEL_SCROLLED => {
+                let delta = input.read_f32()?;
+                Ok(mouse::sfml::wheelscrolled(delta))
             }
             _ => Err(io::Error::new(
                 io::ErrorKind::InvalidData,

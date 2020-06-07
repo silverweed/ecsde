@@ -68,6 +68,14 @@ impl Byte_Stream {
         self.cursor.write_u64::<LittleEndian>(x)
     }
 
+    pub fn write_f32(&mut self, x: f32) -> std::io::Result<()> {
+        let x_as_le = x.to_le_bytes();
+        for &b in &x_as_le {
+            self.cursor.write_u8(b)?;
+        }
+        Ok(())
+    }
+
     pub fn read_u8(&mut self) -> std::io::Result<u8> {
         self.cursor.read_u8()
     }
@@ -82,5 +90,13 @@ impl Byte_Stream {
 
     pub fn read_u64(&mut self) -> std::io::Result<u64> {
         self.cursor.read_u64::<LittleEndian>()
+    }
+
+    pub fn read_f32(&mut self) -> std::io::Result<f32> {
+        let mut x_as_le = [0u8; 4];
+        for i in 0..x_as_le.len() {
+            x_as_le[i] = self.cursor.read_u8()?;
+        }
+        Ok(f32::from_le_bytes(x_as_le))
     }
 }

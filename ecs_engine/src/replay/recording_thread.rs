@@ -57,7 +57,8 @@ fn write_prelude(
     recording_cfg: Replay_Recording_System_Config,
 ) -> std::io::Result<()> {
     let mut byte_stream = Byte_Stream::new();
-    byte_stream.write_u16(recording_cfg.ms_per_frame as u16)?;
+    byte_stream.write_f32(recording_cfg.ms_per_frame)?;
+    recording_cfg.rng_seed.serialize(&mut byte_stream)?;
     file.write_all(byte_stream.as_ref())
 }
 

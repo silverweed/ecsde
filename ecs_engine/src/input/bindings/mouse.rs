@@ -30,7 +30,7 @@ impl TryFrom<u8> for Mouse_Button {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Mouse_State {
     // indexed by Mouse_Button
     was_pressed_latest_frame: [bool; 3],

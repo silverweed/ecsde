@@ -97,10 +97,7 @@ impl Debug_Element for Debug_Graph_View {
             }
         }
 
-        if mouse::mouse_went_down(
-            &input_state.raw_state.mouse_state,
-            mouse::Mouse_Button::Left,
-        ) {
+        if mouse::mouse_went_down(&input_state.raw.mouse_state, mouse::Mouse_Button::Left) {
             self.selected_point = self.hovered_point;
         }
     }

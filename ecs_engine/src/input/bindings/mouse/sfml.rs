@@ -1,5 +1,5 @@
 use super::Mouse_Button;
-pub(super) use sfml::window::mouse::Button;
+pub(super) use sfml::window::mouse::{Button, Wheel};
 use sfml::window::Event;
 
 pub(super) fn get_mouse_btn(btn: Button) -> Option<Mouse_Button> {
@@ -50,6 +50,16 @@ pub const fn mousepressed(button: Button) -> Event {
 #[inline(always)]
 pub const fn mousereleased(button: Button) -> Event {
     Event::MouseButtonReleased { button, x: 0, y: 0 }
+}
+
+#[inline(always)]
+pub const fn wheelscrolled(delta: f32) -> Event {
+    Event::MouseWheelScrolled {
+        wheel: Wheel::Vertical,
+        delta,
+        x: 0,
+        y: 0,
+    }
 }
 
 #[cfg(test)]

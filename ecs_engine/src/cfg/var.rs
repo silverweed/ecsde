@@ -161,8 +161,14 @@ impl<T: std::fmt::Display> std::fmt::Display for Cfg_Var<T>
 where
     T: Default + Into<Cfg_Value>,
 {
+    #[cfg(debug_assertions)]
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", &self)
+        write!(f, "{}", &self.id)
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", &self.0)
     }
 }
 

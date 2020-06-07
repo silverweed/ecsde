@@ -10,6 +10,8 @@ pub fn num_to_key(num: usize) -> Option<Key> {
     backend::num_to_key(num)
 }
 
+// @Soundness @Cleanup: this does not allow for replaying!
+// We should change this to use the Input_State.
 pub fn is_key_pressed(key: Key) -> bool {
     backend::is_key_pressed(key)
 }

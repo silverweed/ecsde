@@ -8,7 +8,6 @@ use ecs_engine::common::stringid::String_Id;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::{app, app_config};
 use ecs_engine::gfx::{self as ngfx, render_window::Render_Window_Handle};
-use ecs_engine::input;
 use ecs_engine::resources;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -28,24 +27,20 @@ pub struct Game_State<'a> {
     pub engine_state: app::Engine_State<'a>,
 
     pub gameplay_system: gameplay_system::Gameplay_System,
-
     pub state_mgr: states::state_manager::State_Manager,
-    #[cfg(debug_assertions)]
-    pub fps_debug: ngdebug::fps::Fps_Counter,
-
     pub execution_time: Duration,
-    pub input_provider: Box<dyn input::provider::Input_Provider>,
-    pub is_replaying: bool,
 
     pub sleep_granularity: Option<Duration>,
 
     pub level_batches: Level_Batches,
 
-    //// Cfg vars
     pub cvars: CVars,
 
     #[cfg(debug_assertions)]
     pub debug_cvars: Debug_CVars,
+
+    #[cfg(debug_assertions)]
+    pub fps_debug: ngdebug::fps::Fps_Counter,
 }
 
 pub struct CVars {
@@ -100,8 +95,10 @@ pub struct Game_Bundle<'a> {
 pub(super) fn internal_game_init<'a>(
     args: &[String],
 ) -> Result<(Box<Game_State<'a>>, Box<Game_Resources<'a>>), Box<dyn std::error::Error>> {
-    let mut game_resources = create_game_resources()?;
-    let (mut game_state, parsed_cmdline_args) = create_game_state(&mut game_resources, args)?;
+    let mut game_resources = create_game_resources()
+        .unwrap_or_else(|err| fatal!("create_game_resources() failed with err {}", err));
+    let (mut game_state, parsed_cmdline_args) = create_game_state(&mut game_resources, args)
+        .unwrap_or_else(|err| fatal!("create_game_state() failed with err {}", err));
 
     {
         let gres = &mut game_resources.gfx;
@@ -206,7 +203,9 @@ fn create_game_state<'a>(
     {
         if let Some(in_replay_file) = &appcfg.in_replay_file {
             linfo!("Loading replay file {:?}", in_replay_file);
-            engine_state.replay_data = app::try_create_replay_data(in_replay_file);
+            if let Some(replay_data) = app::try_create_replay_data(in_replay_file) {
+                app::set_replay_data(&mut engine_state, replay_data);
+            }
         }
     }
 
@@ -236,45 +235,39 @@ fn create_game_state<'a>(
         {
             lok!("Loaded console history");
         }
-
-        app::start_recording(&mut engine_state)?;
     }
 
     #[cfg(debug_assertions)]
     let cfg = &engine_state.config;
 
     #[cfg(debug_assertions)]
-    let input_provider = app::create_input_provider(&mut engine_state.replay_data, cfg);
-    #[cfg(not(debug_assertions))]
-    let input_provider = app::create_input_provider();
-
-    let is_replaying = !input_provider.is_realtime_player_input();
+    let debug_cvars = create_debug_cvars(cfg);
 
     #[cfg(debug_assertions)]
-    let debug_cvars = create_debug_cvars(cfg);
+    {
+        let record_replay_data = debug_cvars.record_replay.read(&engine_state.config);
+        if record_replay_data && engine_state.app_config.in_replay_file.is_none() {
+            app::start_recording(&mut engine_state).unwrap_or_else(|err| {
+                lerr!("Failed to start recording input: {}", err);
+            });
+        }
+    }
 
     Ok((
         Box::new(Game_State {
             window,
             engine_state,
-
-            #[cfg(debug_assertions)]
-            fps_debug: ngdebug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(2)),
-
             sleep_granularity: None,
-
             level_batches: HashMap::new(),
-
             execution_time: Duration::default(),
-            input_provider,
-            is_replaying,
             gameplay_system: gameplay_system::Gameplay_System::new(),
             state_mgr: states::state_manager::State_Manager::new(),
-
-            // Cfg_Vars
             cvars,
+
             #[cfg(debug_assertions)]
             debug_cvars,
+            #[cfg(debug_assertions)]
+            fps_debug: ngdebug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(2)),
         }),
         parsed_cmdline_args,
     ))
@@ -290,7 +283,7 @@ fn create_cvars(cfg: &ecs_engine::cfg::Config) -> CVars {
         gameplay_update_tick_ms,
         clear_color,
         vsync,
-        enable_shaders
+        enable_shaders,
     }
 }
 

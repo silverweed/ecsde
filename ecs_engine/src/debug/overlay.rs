@@ -189,10 +189,7 @@ impl Debug_Element for Debug_Overlay {
             );
         let mpos = Vec2f::from(window::mouse_pos_in_window(window));
 
-        if mouse::is_mouse_btn_pressed(
-            &input_state.raw_state.mouse_state,
-            mouse::Mouse_Button::Left,
-        ) {
+        if mouse::is_mouse_btn_pressed(&input_state.raw.mouse_state, mouse::Mouse_Button::Left) {
             self.hover_data.selected_line = self.hover_data.hovered_line;
             self.hover_data.just_selected = true;
         } else {

@@ -1,11 +1,10 @@
-use super::bindings::joystick::{self, Joystick, Joystick_Axis};
-use std::default::Default;
+use super::bindings::joystick::{self, Joystick, Joystick_Axis, Joystick_Mask};
 
 const JOY_COUNT: usize = joystick::JOY_COUNT as usize;
 
 pub type Real_Axes_Values = [f32; Joystick_Axis::_Count as usize];
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Joystick_State {
     pub joysticks: [Option<Joystick>; JOY_COUNT],
     pub values: [Real_Axes_Values; JOY_COUNT],
@@ -52,6 +51,8 @@ pub fn joy_get_values(joy_state: &Joystick_State, joy: Joystick) -> Option<&Real
     }
 }
 
-pub fn all_joysticks_values(joy_state: &Joystick_State) -> (&[Real_Axes_Values; JOY_COUNT], u8) {
+pub fn all_joysticks_values(
+    joy_state: &Joystick_State,
+) -> (&[Real_Axes_Values; JOY_COUNT], Joystick_Mask) {
     (&joy_state.values, joystick::get_connected_joysticks_mask())
 }

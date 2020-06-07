@@ -23,7 +23,7 @@ use {
     crate::debug,
     crate::debug::tracer,
     crate::fs,
-    crate::replay::{replay_data, replay_input_provider},
+    crate::replay::{replay_data::Replay_Data, replay_input_provider::Replay_Input_Provider},
     crate::resources::{self},
     std::time::Duration,
 };
@@ -58,7 +58,7 @@ pub struct Engine_State<'r> {
     pub prev_frame_time: Duration,
 
     #[cfg(debug_assertions)]
-    pub replay_data: Option<replay_data::Replay_Data>,
+    pub replay_input_provider: Option<Replay_Input_Provider>,
 }
 
 pub fn create_engine_state<'r>(
@@ -69,21 +69,22 @@ pub fn create_engine_state<'r>(
     let systems = Core_Systems::new();
     let input_state = input::input_state::create_input_state(&env);
     let time = time::Time::default();
-    #[cfg(debug_assertions)]
-    let debug_systems = Debug_Systems::new(&config);
-    let rng;
+    let seed;
     #[cfg(debug_assertions)]
     {
-        rng = rand::new_rng_with_seed([
+        seed = [
             0x12, 0x23, 0x33, 0x44, 0x44, 0xab, 0xbc, 0xcc, 0x45, 0x21, 0x72, 0x21, 0xfe, 0x31,
             0xdf, 0x46, 0xfe, 0xb4, 0x2a, 0xa9, 0x47, 0xdd, 0xd1, 0x37, 0x80, 0xfc, 0x22, 0xa1,
             0xa2, 0xb3, 0xc0, 0xfe,
-        ])?;
+        ];
     }
     #[cfg(not(debug_assertions))]
     {
-        rng = rand::new_rng_with_random_seed()?;
+        seed = rand::new_random_seed()?;
     }
+    #[cfg(debug_assertions)]
+    let debug_systems = Debug_Systems::new(&config, seed);
+    let rng = rand::new_rng_with_seed(seed);
 
     Ok(Engine_State {
         should_close: false,
@@ -103,7 +104,7 @@ pub fn create_engine_state<'r>(
         #[cfg(debug_assertions)]
         prev_frame_time: Duration::default(),
         #[cfg(debug_assertions)]
-        replay_data: None,
+        replay_input_provider: None,
     })
 }
 
@@ -128,7 +129,7 @@ pub fn init_engine_systems(
     engine_state: &mut Engine_State,
     gres: &mut Gfx_Resources,
 ) -> Maybe_Error {
-    input::joystick_state::init_joysticks(&mut engine_state.input_state.raw_state.joy_state);
+    input::joystick_state::init_joysticks(&mut engine_state.input_state.raw.joy_state);
     ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
 
     linfo!("Number of Rayon threads: {}", rayon::current_num_threads());
@@ -138,17 +139,10 @@ pub fn init_engine_systems(
 
 #[cfg(debug_assertions)]
 pub fn start_recording(engine_state: &mut Engine_State) -> Maybe_Error {
-    if engine_state.replay_data.is_none()
-        && Cfg_Var::<bool>::new("engine/debug/replay/record", &engine_state.config)
-            .read(&engine_state.config)
-    {
-        engine_state
-            .debug_systems
-            .replay_recording_system
-            .start_recording_thread(&engine_state.config)?;
-    }
-
-    Ok(())
+    engine_state
+        .debug_systems
+        .replay_recording_system
+        .start_recording_thread(&engine_state.env, &engine_state.config)
 }
 
 #[cfg(debug_assertions)]
@@ -249,6 +243,16 @@ pub fn init_engine_debug(
         trace_overlay.position = Vec2f::new(win_w * 0.5, win_h * 0.5);
         // Trace overlay starts disabled
         debug_ui.set_overlay_enabled(String_Id::from("trace"), false);
+
+        debug_overlay_config.background = colors::TRANSPARENT;
+        debug_overlay_config.pad_y = 0.;
+        debug_overlay_config.font_size = (14.0 * ui_scale) as _;
+        let record_overlay = debug_ui
+            .create_overlay(String_Id::from("record"), debug_overlay_config)
+            .unwrap();
+        record_overlay.config.vert_align = Align::Begin;
+        record_overlay.config.horiz_align = Align::Begin;
+        record_overlay.position = Vec2f::new(2.0, 2.0);
     }
 
     // Debug fadeout overlays
@@ -352,34 +356,6 @@ pub fn init_engine_debug(
     Ok(())
 }
 
-#[cfg(debug_assertions)]
-pub fn create_input_provider(
-    replay_data: &mut Option<replay_data::Replay_Data>,
-    cfg: &cfg::Config,
-) -> Box<dyn input::provider::Input_Provider> {
-    // Consumes self.replay_data!
-    let replay_data = replay_data.take();
-    if let Some(replay_data) = replay_data {
-        let config = replay_input_provider::Replay_Input_Provider_Config {
-            disable_input_during_replay: Cfg_Var::new(
-                "engine/debug/replay/disable_input_during_replay",
-                cfg,
-            ),
-        };
-        Box::new(replay_input_provider::Replay_Input_Provider::new(
-            config,
-            replay_data,
-        ))
-    } else {
-        Box::new(input::default_input_provider::Default_Input_Provider::default())
-    }
-}
-
-#[cfg(not(debug_assertions))]
-pub fn create_input_provider() -> Box<dyn input::provider::Input_Provider> {
-    Box::new(input::default_input_provider::Default_Input_Provider::default())
-}
-
 /// Returns true if the engine should quit
 pub fn handle_core_actions(
     actions: &[input::core_actions::Core_Action],
@@ -400,14 +376,19 @@ pub fn handle_core_actions(
 }
 
 #[cfg(debug_assertions)]
-pub fn try_create_replay_data(replay_file: &std::path::Path) -> Option<replay_data::Replay_Data> {
-    match replay_data::Replay_Data::from_file(replay_file) {
+pub fn try_create_replay_data(replay_file: &std::path::Path) -> Option<Replay_Data> {
+    match Replay_Data::from_file(replay_file) {
         Ok(data) => Some(data),
         Err(err) => {
             lerr!("Failed to load replay data from {:?}: {}", replay_file, err);
             None
         }
     }
+}
+
+#[cfg(debug_assertions)]
+pub fn set_replay_data(engine_state: &mut Engine_State, replay_data: Replay_Data) {
+    engine_state.replay_input_provider = Some(Replay_Input_Provider::new(replay_data));
 }
 
 #[cfg(debug_assertions)]

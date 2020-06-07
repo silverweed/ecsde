@@ -20,10 +20,13 @@ pub enum Action_Kind {
 
 pub type Game_Action = (String_Id, Action_Kind);
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Input_Raw_State {
     pub joy_state: Joystick_State,
     pub mouse_state: Mouse_State,
+    // These events are always handled in realtime, even when replaying
+    pub core_events: Vec<Input_Raw_Event>,
+    // This Vec contains ALL events, including core events
     pub events: Vec<Input_Raw_Event>,
 }
 
@@ -35,7 +38,7 @@ pub struct Processed_Input {
 
 pub struct Input_State {
     pub bindings: Input_Bindings,
-    pub raw_state: Input_Raw_State,
+    pub raw: Input_Raw_State,
     pub processed: Processed_Input,
 }
 
@@ -43,9 +46,10 @@ pub fn create_input_state(env: &Env_Info) -> Input_State {
     let bindings = super::create_bindings(env);
     let virtual_axes = axes::Virtual_Axes::with_axes(&bindings.axis_bindings.axes_names);
     Input_State {
-        raw_state: Input_Raw_State {
+        raw: Input_Raw_State {
             joy_state: Joystick_State::default(),
             mouse_state: Mouse_State::default(),
+            core_events: vec![],
             events: vec![],
         },
         bindings,
@@ -63,15 +67,21 @@ pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut
     joystick::update_joysticks();
     mouse::update_mouse_state(&mut raw_state.mouse_state);
 
+    raw_state.core_events.clear();
     raw_state.events.clear();
 
     while let Some(evt) = window::poll_event(window) {
         match evt {
+            // @Cleanup: should these be handled later as core events?
             Event::JoystickConnected { joystickid } => {
                 joystick_state::register_joystick(&mut raw_state.joy_state, joystickid);
             }
             Event::JoystickDisconnected { joystickid } => {
                 joystick_state::unregister_joystick(&mut raw_state.joy_state, joystickid);
+            }
+            Event::Resized { .. } | Event::Closed => {
+                raw_state.core_events.push(evt);
+                raw_state.events.push(evt);
             }
             _ => raw_state.events.push(evt),
         }

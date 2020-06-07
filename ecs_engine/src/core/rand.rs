@@ -1,20 +1,44 @@
+use crate::common::serialize::{Binary_Serializable, Byte_Stream};
+
 // Implementation derived from https://github.com/BareRose/ranxoshi256/blob/master/ranxoshi256.h
 
 pub type Default_Rng = Rand_Xoshiro256;
+pub type Default_Rng_Seed = [u8; 32];
+
+impl Binary_Serializable for Default_Rng_Seed {
+    fn serialize(&self, out: &mut Byte_Stream) -> std::io::Result<()> {
+        for i in 0..32 {
+            out.write_u8(self[i])?;
+        }
+        Ok(())
+    }
+
+    fn deserialize(input: &mut Byte_Stream) -> std::io::Result<Self> {
+        let mut res = [0; 32];
+        for i in 0..32 {
+            res[i] = input.read_u8()?;
+        }
+        Ok(res)
+    }
+}
 
 pub struct Rand_Xoshiro256 {
     state: [u64; 4],
 }
 
-pub fn new_rng_with_random_seed() -> std::io::Result<Rand_Xoshiro256> {
+pub fn new_random_seed() -> std::io::Result<Default_Rng_Seed> {
     let mut seed_buf = [0u8; 32];
-    get_entropy_from_os(&mut seed_buf)?;
     // @Robustness: consider hashing in the system time or something like that.
-    Ok(Rand_Xoshiro256::new_with_seed(seed_buf))
+    get_entropy_from_os(&mut seed_buf)?;
+    Ok(seed_buf)
 }
 
-pub fn new_rng_with_seed(seed: [u8; 32]) -> std::io::Result<Rand_Xoshiro256> {
-    Ok(Rand_Xoshiro256::new_with_seed(seed))
+pub fn new_rng_with_random_seed() -> std::io::Result<Rand_Xoshiro256> {
+    Ok(Rand_Xoshiro256::new_with_seed(new_random_seed()?))
+}
+
+pub fn new_rng_with_seed(seed: Default_Rng_Seed) -> Rand_Xoshiro256 {
+    Rand_Xoshiro256::new_with_seed(seed)
 }
 
 pub fn rand_01(rng: &mut Rand_Xoshiro256) -> f32 {

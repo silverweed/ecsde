@@ -69,15 +69,17 @@ pub unsafe extern "C" fn game_init<'a>(
         args.push(new_string_from_c_char_ptr(*arg));
     }
 
-    if let Ok((game_state, game_resources)) = internal_game_init(&args) {
-        Game_Bundle {
+    match internal_game_init(&args) {
+        Ok((game_state, game_resources)) => Game_Bundle {
             game_state: Box::into_raw(game_state),
             game_resources: Box::into_raw(game_resources),
-        }
-    } else {
-        Game_Bundle {
-            game_state: std::ptr::null_mut(),
-            game_resources: std::ptr::null_mut(),
+        },
+        Err(err) => {
+            lerr!("internal_game_init() failed with err {}", err);
+            Game_Bundle {
+                game_state: std::ptr::null_mut(),
+                game_resources: std::ptr::null_mut(),
+            }
         }
     }
 }

@@ -8,6 +8,8 @@ use self::sfml as backend;
 
 pub const JOY_COUNT: u32 = backend::JOY_COUNT;
 
+pub type Joystick_Mask = u8;
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Joystick_Type {
     XBox360,
@@ -129,7 +131,7 @@ pub fn get_joy_type(id: u32) -> Result<Joystick_Type, &'static str> {
 }
 
 #[inline]
-pub fn get_connected_joysticks_mask() -> u8 {
+pub fn get_connected_joysticks_mask() -> Joystick_Mask {
     backend::get_connected_joysticks_mask()
 }
 

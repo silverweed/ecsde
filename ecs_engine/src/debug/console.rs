@@ -161,6 +161,7 @@ impl Console {
 
         match event {
             Event::KeyPressed { code, .. } if self.toggle_console_keys.contains(&code) => {
+                ldebug!("closing!");
                 self.status = Console_Status::Closed;
             }
             Event::KeyPressed {

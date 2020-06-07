@@ -89,14 +89,14 @@ pub fn button(
     let mut result = false;
     if props.enabled {
         if is_active(ui, id) {
-            if mouse_went_up(&input_state.raw_state.mouse_state, Mouse_Button::Left) {
+            if mouse_went_up(&input_state.raw.mouse_state, Mouse_Button::Left) {
                 if is_hot(ui, id) {
                     result = true;
                 }
                 set_inactive(ui, id);
             }
         } else if is_hot(ui, id)
-            && mouse_went_down(&input_state.raw_state.mouse_state, Mouse_Button::Left)
+            && mouse_went_down(&input_state.raw.mouse_state, Mouse_Button::Left)
         {
             set_active(ui, id);
         }

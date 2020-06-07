@@ -1,115 +1,34 @@
 use super::replay_data::{Replay_Data, Replay_Data_Iter};
-use crate::cfg::{self, Cfg_Var};
-use crate::gfx::window::{self, Event};
-use crate::input::bindings::joystick;
-use crate::input::default_input_provider::Default_Input_Provider;
-use crate::input::input_state::Input_Raw_Event;
-use crate::input::joystick_state::{Joystick_State, Real_Axes_Values};
-use crate::input::provider::{Input_Provider, Input_Provider_Input};
+use crate::input::input_state::Input_Raw_State;
 use std::iter::Peekable;
 
-pub struct Replay_Input_Provider_Config {
-    pub disable_input_during_replay: Cfg_Var<bool>,
-}
-
 pub struct Replay_Input_Provider {
-    cur_frame: u64,
     replay_data_iter: Peekable<Replay_Data_Iter>,
-    depleted: bool,
-    dip: Default_Input_Provider,
-    config: Replay_Input_Provider_Config,
 }
 
 impl Replay_Input_Provider {
-    pub fn new(
-        config: Replay_Input_Provider_Config,
-        replay_data: Replay_Data,
-    ) -> Replay_Input_Provider {
-        Replay_Input_Provider {
-            cur_frame: 0,
+    pub fn new(replay_data: Replay_Data) -> Self {
+        Self {
             replay_data_iter: replay_data.into_iter().peekable(),
-            depleted: false,
-            dip: Default_Input_Provider::default(),
-            config,
         }
     }
-}
 
-impl Input_Provider for Replay_Input_Provider {
-    fn update(
-        &mut self,
-        window: &mut Input_Provider_Input,
-        joy_mgr: Option<&Joystick_State>,
-        cfg: &cfg::Config,
-    ) {
-        self.dip.events.clear();
+    pub fn has_more_input(&mut self) -> bool {
+        self.replay_data_iter.peek().is_some()
+    }
 
-        if self.depleted {
-            // Once replay data is depleted, feed regular window events.
-            self.dip.update(window, joy_mgr, cfg);
-        } else {
-            if self.config.disable_input_during_replay.read(cfg) {
-                self.update_core_events(window);
+    pub fn get_replayed_input_for_frame(&mut self, cur_frame: u64) -> Option<Input_Raw_State> {
+        if let Some(datum) = self.replay_data_iter.peek() {
+            if cur_frame == datum.frame_number {
+                // We have a new replay data point at this frame.
+                let replay_data = self.replay_data_iter.next().unwrap();
+                Some(replay_data.into())
             } else {
-                while let Some(evt) = window::poll_event(window) {
-                    self.dip.events.push(evt);
-                }
+                assert!(cur_frame < datum.frame_number);
+                None
             }
-
-            loop {
-                if let Some(datum) = self.replay_data_iter.peek() {
-                    if self.cur_frame >= datum.frame_number {
-                        // We have a new replay data point at this frame.
-
-                        // Update events
-                        self.dip.events.extend_from_slice(&datum.events);
-
-                        // Update all joysticks values
-                        for joy_id in 0..self.dip.axes.len() {
-                            if (datum.joy_mask & (1 << joy_id)) != 0 {
-                                let joy_axes = &mut self.dip.axes[joy_id];
-                                let joy_data = datum.joy_data[joy_id];
-                                for (axis_id, axis) in joy_axes.iter_mut().enumerate() {
-                                    if (joy_data.axes_mask & (1 << axis_id)) != 0 {
-                                        *axis = joy_data.axes[axis_id];
-                                    }
-                                }
-                            }
-                        }
-                        self.replay_data_iter.next();
-                    } else {
-                        break;
-                    }
-                } else {
-                    self.depleted = true;
-                    break;
-                }
-            }
-
-            self.cur_frame += 1;
-        }
-    }
-
-    fn get_events(&self) -> &[Input_Raw_Event] {
-        self.dip.get_events()
-    }
-
-    fn get_axes(&self, axes: &mut [Real_Axes_Values; joystick::JOY_COUNT as usize]) {
-        self.dip.get_axes(axes)
-    }
-
-    fn is_realtime_player_input(&self) -> bool {
-        self.depleted
-    }
-}
-
-impl Replay_Input_Provider {
-    fn update_core_events(&mut self, window: &mut Input_Provider_Input) {
-        while let Some(evt) = window::poll_event(window) {
-            match evt {
-                Event::Closed | Event::Resized { .. } => self.dip.events.push(evt),
-                _ => (),
-            }
+        } else {
+            None
         }
     }
 }
