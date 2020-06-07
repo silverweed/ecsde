@@ -85,12 +85,9 @@ impl Replay_Recording_System {
                 continue;
             }
 
-            let axes_mask = calc_axes_diff_mask(&self.prev_axes_values[i], axes);
-            if axes_mask != 0 {
-                joy_data[i].axes = *axes;
-                joy_data[i].axes_mask = axes_mask;
-                should_send = true;
-            }
+            joy_data[i].axes = *axes;
+            joy_data[i].axes_mask = !0;
+            should_send = true;
 
             self.prev_axes_values[i] = *axes;
         }
