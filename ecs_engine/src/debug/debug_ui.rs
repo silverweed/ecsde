@@ -158,7 +158,7 @@ macro_rules! add_debug_elem {
         pub fn $enable_fn(&mut self, id: String_Id, enabled: bool) {
             self.$container.set_enabled(id, enabled);
         }
-    }
+    };
 }
 
 impl Debug_Ui_System {

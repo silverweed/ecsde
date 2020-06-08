@@ -23,7 +23,10 @@ impl<T> Matrix3<T> {
     }
 }
 
-impl<T> Matrix3<T> where T: Copy {
+impl<T> Matrix3<T>
+where
+    T: Copy,
+{
     pub fn transposed(&self) -> Self {
         let c = &self.columns;
         Self {
@@ -31,47 +34,48 @@ impl<T> Matrix3<T> where T: Copy {
                 [c[0][0], c[1][0], c[2][0]],
                 [c[0][1], c[1][1], c[2][1]],
                 [c[0][2], c[1][2], c[2][2]],
-            ]
+            ],
         }
     }
 }
 
-impl<T> Matrix3<T> where T: Copy + Add<Output=T> + Sub<Output=T> + Mul<Output=T> + Neg<Output=T> {
+impl<T> Matrix3<T>
+where
+    T: Copy + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Neg<Output = T>,
+{
     pub fn determinant(&self) -> T {
         let c = &self.columns;
 
-        c[0][0] * c[1][1] * c[2][2] +
-            c[1][0] * c[2][1] * c[0][2] +
-            c[2][0] * c[0][1] * c[1][2] -
-            c[0][0] * c[2][1] * c[1][2] -
-            c[2][0] * c[1][1] * c[0][2] -
-            c[1][0] * c[0][1] * c[2][2]
+        c[0][0] * c[1][1] * c[2][2] + c[1][0] * c[2][1] * c[0][2] + c[2][0] * c[0][1] * c[1][2]
+            - c[0][0] * c[2][1] * c[1][2]
+            - c[2][0] * c[1][1] * c[0][2]
+            - c[1][0] * c[0][1] * c[2][2]
     }
 
     //pub fn cofactor_matrix(&self) -> Matrix3<T> {
-        //Matrix3::new(
+    //Matrix3::new(
     //}
 
     //pub fn cofactor_at(&self, row: usize, column: usize) -> T {
-        //// Note: if matrix is
-        ////
-        //// |A  B  C|
-        //// |D  E  F|
-        //// |G  H  I|
-        ////                             |E  F|
-        //// then cofactor at 0,0 is det(|H  I|)
-        ////                         |B  C|
-        //// cofactor at 1,0 is -det(|H  I|) and so on.
-        //let c = &self.columns;
+    //// Note: if matrix is
+    ////
+    //// |A  B  C|
+    //// |D  E  F|
+    //// |G  H  I|
+    ////                             |E  F|
+    //// then cofactor at 0,0 is det(|H  I|)
+    ////                         |B  C|
+    //// cofactor at 1,0 is -det(|H  I|) and so on.
+    //let c = &self.columns;
 
-        //todo!();
+    //todo!();
     //}
 }
 
 //impl Matrix3<f32> {
-    //pub fn inverse(&self) -> Matrix3<f32> {
-        //self.cofactor_matrix().transposed() / self.determinant()
-    //}
+//pub fn inverse(&self) -> Matrix3<f32> {
+//self.cofactor_matrix().transposed() / self.determinant()
+//}
 //}
 
 impl<T> Copy for Matrix3<T> where T: Copy {}

@@ -12,7 +12,6 @@ use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::gfx::render::{self, Image};
 use ecs_engine::resources::gfx::{Gfx_Resources, Texture_Handle};
 use std::collections::HashMap;
-//use rayon::prelude::*;
 
 #[derive(Copy, Clone, Default)]
 pub struct C_Texture_Collider {
@@ -46,18 +45,6 @@ fn approx_normal(image: &Image, x: u32, y: u32, step: i32) -> Vec2f {
     let x_range = (x as i32 - step).max(0) as u32..(x as i32 + step).min(size.0 as i32) as u32;
     let y_range = (y as i32 - step).max(0) as u32..(y as i32 + step).min(size.0 as i32) as u32;
 
-    // @Speed: investigate on this making this faster.
-    // This multithreaded version commented here seems to be slower than the single-threaded version,
-    // although that may only be true because of our bad use of Rayon.
-    //let pixels = render::get_image_pixels(image);
-    //let cartesian_product = x_range.into_par_iter().enumerate().map(|(i, x)|
-    //y_range.clone().into_par_iter().enumerate().zip(rayon::iter::repeatn((i, x), y_range.len()))
-    //).flatten();
-    //let avg: Vec2f =  cartesian_product
-    //.into_par_iter()
-    //.filter(|((_, x), (_, y))| is_solid(pixels[(*y * size.0 + *x) as usize]))
-    //.map(|((i, _), (j, _))| v2!((i as i32 - step) as f32, (j as i32 - step) as f32))
-    //.reduce(Vec2f::default, |a, b| a - b);
     for (i, x) in x_range.enumerate() {
         for (j, y) in y_range.clone().enumerate() {
             if is_solid(render::get_image_pixel(image, x, y)) {
@@ -223,6 +210,10 @@ impl Pixel_Collision_System {
                                 ((pos.x + extent.x * 0.5).floor() as i32 + iw / 2).min(iw);
                 let y_range = ((pos.y - extent.y * 0.5).floor() as i32 + ih / 2).max(0) ..
                                 ((pos.y + extent.y * 0.5).floor() as i32 + ih / 2).min(ih);
+
+                // @Speed: we may cycle in an inward spiral in the hope of using less iteration to
+                // find the first colliding pixel. Or even only cycle the border.
+                'outer:
                 for x in x_range {
                     for y in y_range.clone() {
                         debug_assert!(x >= 0 && x < iw);
@@ -238,6 +229,7 @@ impl Pixel_Collision_System {
                                     restitution: world.get_component::<C_Phys_Data>(*e)
                                                     .map(|pd| pd.restitution).unwrap_or(1.),
                                 });
+                                break 'outer;
                             }
                         }
                     }
