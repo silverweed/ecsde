@@ -6,6 +6,8 @@ use ecs_engine::common::math;
 use ecs_engine::common::rect::Rect;
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::vector::{Vec2f, Vec2i};
+use ecs_engine::ecs::components::base::C_Spatial2D;
+use ecs_engine::ecs::entity_stream::new_entity_stream;
 use ecs_engine::gfx::{render, render_window, window};
 use ecs_engine::input::bindings::mouse;
 use ecs_engine::input::input_state::{Action_Kind, Game_Action};
@@ -180,26 +182,39 @@ impl Persistent_Game_State for Debug_Base_State {
                     .transform,
             );
 
-            let texture = args
+            let world = &args
                 .gameplay_system
                 .levels
                 .first_active_level()
                 .unwrap() // assume we have an active level
-                .world
-                .get_components::<C_Texture_Collider>()
-                .next()
-                .unwrap() // assume we have a texture collider (and it's the one we're interested in)
+                .world;
+            let mut entity_stream = new_entity_stream(world)
+                .require::<C_Texture_Collider>()
+                .require::<C_Spatial2D>()
+                .build();
+            // assume we have a texture collider (and it's the one we're interested in)
+            let tex_cld_entity = entity_stream.next(world).unwrap();
+            let texture = world
+                .get_component::<C_Texture_Collider>(tex_cld_entity)
+                .unwrap()
                 .texture;
+            let tex_transform = &world
+                .get_component::<C_Spatial2D>(tex_cld_entity)
+                .unwrap()
+                .transform;
+
             let (tex_w, tex_h) =
                 render::get_texture_size(args.game_resources.gfx.get_texture(texture));
             let pixel_collision_system = &mut args.gameplay_system.pixel_collision_system;
 
             const SIZE: u32 = 50;
             let mpos = Vec2i::from(mpos);
+            // @Incomplete: not handling rotation/scale
+            let tex_cld_pos = tex_transform.position();
 
             if Rect::new(
-                -(tex_w as i32) / 2,
-                -(tex_h as i32) / 2,
+                tex_cld_pos.x as i32 - (tex_w as i32) / 2,
+                tex_cld_pos.y as i32 - (tex_h as i32) / 2,
                 2 * tex_w as i32,
                 2 * tex_h as i32,
             )
@@ -211,7 +226,7 @@ impl Persistent_Game_State for Debug_Base_State {
                         center: v2!(
                             (mpos.x + tex_w as i32 / 2) as f32,
                             (mpos.y + tex_h as i32 / 2) as f32
-                        ),
+                        ) - tex_cld_pos,
                         radius: (SIZE / 2) as f32,
                     },
                     if mleft {
