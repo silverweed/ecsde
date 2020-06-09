@@ -1,3 +1,4 @@
+use crate::systems::controllable_system::C_Controllable;
 use ecs_engine::alloc::temp::*;
 use ecs_engine::collisions::collider::{C_Phys_Data, Collider};
 use ecs_engine::collisions::layers::{Collision_Layer, Collision_Matrix};
@@ -42,8 +43,8 @@ fn approx_normal(image: &Image, x: u32, y: u32, step: i32) -> Vec2f {
 
     let mut avg = Vec2f::default();
     let size = render::get_image_size(image);
-    let x_range = (x as i32 - step).max(0) as u32..(x as i32 + step).min(size.0 as i32) as u32;
-    let y_range = (y as i32 - step).max(0) as u32..(y as i32 + step).min(size.0 as i32) as u32;
+    let x_range = (x as i32 - step).max(0) as u32..=(x as i32 + step).min(size.0 as i32) as u32;
+    let y_range = (y as i32 - step).max(0) as u32..=(y as i32 + step).min(size.0 as i32) as u32;
 
     for (i, x) in x_range.enumerate() {
         for (j, y) in y_range.clone().enumerate() {
@@ -144,6 +145,8 @@ impl Pixel_Collision_System {
         gres: &Gfx_Resources,
         collision_matrix: &Collision_Matrix,
         temp_alloc: &mut Temp_Allocator,
+        // @Cleanup: move this in update_debug and use the C_Entity_Debug to store the needed debug data
+        #[cfg(debug_assertions)] _debug_painter: &mut ecs_engine::debug::painter::Debug_Painter,
     ) {
         trace!("pixel_collision::update");
 
@@ -214,18 +217,30 @@ impl Pixel_Collision_System {
                 // @Speed: we may cycle in an inward spiral in the hope of using less iteration to
                 // find the first colliding pixel. Or even only cycle the border.
                 'outer:
-                for x in x_range {
-                    for y in y_range.clone() {
+                for y in y_range {
+                    for x in x_range.clone() {
                         debug_assert!(x >= 0 && x < iw);
                         debug_assert!(y >= 0 && y < ih);
                         let dir_to_pixel = v2!((x - iw / 2) as f32, (y - ih / 2) as f32) - pos;
                         if dir_to_pixel.dot(*velocity) >= 0. {
                             let pixel = render::get_image_pixel(img, x as u32, y as u32);
                             if pixel.a > 0 {
+                                let normal = approx_normal(img, x as _, y as _, 6);
+                                // @Cleanup: move this in update_debug and use the C_Entity_Debug
+                                // to store the needed debug data
+                                //debug_painter.add_arrow(ecs_engine::common::shapes::Arrow {
+                                    //center: tex_transform.position() + pos + v2!(i as f32, j as f32),
+                                    //direction: 30. * normal,
+                                    //thickness: 1.,
+                                    //arrow_size: 10.
+                                //}, ecs_engine::common::colors::rgb(150, 150, 0));
+                                //debug_painter.add_rect(v2!(1., 1.),
+                                    //&Transform2D::from_pos(tex_transform.position() + pos + v2!(i as f32, j as f32)),
+                                 //ecs_engine::common::colors::rgb(150, 0, 150));
                                 self.collided_entities.push(Collision_Info {
                                     entity_nonpixel: *e,
                                     entity_pixel: entity,
-                                    normal: approx_normal(img, x as u32, y as u32, 6),
+                                    normal,
                                     restitution: world.get_component::<C_Phys_Data>(*e)
                                                     .map(|pd| pd.restitution).unwrap_or(1.),
                                 });
@@ -242,11 +257,18 @@ impl Pixel_Collision_System {
                 .get_component_mut::<Collider>(info.entity_nonpixel)
                 .unwrap()
                 .colliding_with = Some(info.entity_pixel);
+            let is_controlled = world
+                .get_component::<C_Controllable>(info.entity_nonpixel)
+                .is_some();
             let spat = world
                 .get_component_mut::<C_Spatial2D>(info.entity_nonpixel)
                 .unwrap();
-            let speed = spat.velocity.magnitude();
-            spat.velocity = speed * info.normal * info.restitution;
+            if is_controlled {
+                spat.velocity = v2!(0., 0.);
+            } else {
+                let speed = spat.velocity.magnitude();
+                spat.velocity = speed * info.normal * info.restitution;
+            }
         }
     }
 }

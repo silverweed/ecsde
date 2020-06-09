@@ -336,6 +336,9 @@ where
         let levels = &gameplay_system.levels;
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
         let phys_settings = &game_state.engine_state.systems.physics_settings;
+        #[cfg(debug_assertions)]
+        let debug_systems = &mut game_state.engine_state.debug_systems;
+
         levels.foreach_active_level(|level| {
             #[cfg(debug_assertions)]
             let coll_debug = collision_debug_data
@@ -355,6 +358,8 @@ where
                 &game_resources.gfx,
                 &phys_settings.collision_matrix,
                 frame_alloc,
+                #[cfg(debug_assertions)]
+                debug_systems.painters.get_mut(&level.id).unwrap(),
             );
 
             {
