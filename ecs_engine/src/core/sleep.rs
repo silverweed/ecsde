@@ -42,8 +42,7 @@ mod win32 {
     type DWORD = c_ulong;
 
     const MMRESULT_NOERROR: MMRESULT = 0;
-    // Note: this is not the real value of TIMERR_NOCANDO
-    const TIMERR_NOCANDO: MMRESULT = 999;
+    const TIMERR_NOCANDO: MMRESULT = 97;
 
     #[allow(non_snake_case)]
     #[repr(C)]
@@ -73,28 +72,6 @@ mod win32 {
             let msg = match self.code {
                 0 => Cow::Borrowed("MMSYSERR_NOERROR"),
                 1 => Cow::Borrowed("MMSYSERR_ERROR"),
-                2 => Cow::Borrowed("MMSYSERR_BADDEVICEID"),
-                3 => Cow::Borrowed("MMSYSERR_NOTENABLED"),
-                4 => Cow::Borrowed("MMSYSERR_ALLOCATED"),
-                5 => Cow::Borrowed("MMSYSERR_INVALHANDLE"),
-                6 => Cow::Borrowed("MMSYSERR_NODRIVER"),
-                7 => Cow::Borrowed("MMSYSERR_NOMEM"),
-                8 => Cow::Borrowed("MMSYSERR_NOTSUPPORTED"),
-                9 => Cow::Borrowed("MMSYSERR_BADERRNUM"),
-                10 => Cow::Borrowed("MMSYSERR_INVALFLAG"),
-                11 => Cow::Borrowed("MMSYSERR_INVALPARAM"),
-                12 => Cow::Borrowed("MMSYSERR_HANDLEBUSY"),
-                13 => Cow::Borrowed("MMSYSERR_INVALIDALIAS"),
-                14 => Cow::Borrowed("MMSYSERR_BADDB"),
-                15 => Cow::Borrowed("MMSYSERR_KEYNOTFOUND"),
-                16 => Cow::Borrowed("MMSYSERR_READERROR"),
-                17 => Cow::Borrowed("MMSYSERR_WRITEERROR"),
-                18 => Cow::Borrowed("MMSYSERR_DELETEERROR"),
-                19 => Cow::Borrowed("MMSYSERR_VALNOTFOUND"),
-                20 => Cow::Borrowed("MMSYSERR_NODRIVERCB"),
-                32 => Cow::Borrowed("WAVERR_BADFORMAT"),
-                33 => Cow::Borrowed("WAVERR_STILLPLAYING"),
-                34 => Cow::Borrowed("WAVERR_UNPREPARED"),
                 TIMERR_NOCANDO => Cow::Borrowed("TIMERR_NOCANDO"),
                 _ => Cow::Owned(format!("Unknown MMERROR {}", self.code)),
             };
@@ -123,9 +100,7 @@ mod win32 {
             let tc = tc.assume_init();
             let res = timeBeginPeriod(tc.wPeriodMin);
             if res != MMRESULT_NOERROR {
-                return Err(Box::new(Sleep_Init_Error {
-                    code: TIMERR_NOCANDO,
-                }));
+                return Err(Box::new(Sleep_Init_Error { code: res }));
             }
             Ok(Duration::from_millis(tc.wPeriodMin as u64))
         }
