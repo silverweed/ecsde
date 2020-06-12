@@ -18,6 +18,12 @@ pub struct Vertex_Buffer {
     cur_vertices: u32,
 }
 
+impl std::fmt::Debug for Vertex_Buffer {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Vertex_Buffer {{ cur_vertices: {} }}", self.cur_vertices)
+    }
+}
+
 pub type Vertex = sfml::graphics::Vertex;
 pub type Image = sfml::graphics::Image;
 pub type Shader<'texture> = sfml::graphics::Shader<'texture>;
@@ -283,12 +289,10 @@ pub fn set_vbuf_cur_vertices(vbuf: &mut Vertex_Buffer, cur_vertices: u32) {
 }
 
 #[inline(always)]
-pub fn copy_vbuf_to_vbuf(dest: &mut Vertex_Buffer, src: &Vertex_Buffer) -> bool {
-    let ok = dest.buf.update_from_vertex_buffer(&src.buf);
-    if ok {
-        dest.cur_vertices = src.cur_vertices;
-    }
-    ok
+pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
+    a.buf.swap(&mut b.buf);
+    std::mem::swap(&mut a.cur_vertices, &mut b.cur_vertices);
+    true
 }
 
 #[inline(always)]

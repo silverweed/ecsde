@@ -285,8 +285,8 @@ pub fn set_vbuf_cur_vertices(vbuf: &mut Vertex_Buffer, cur_vertices: u32) {
     backend::set_vbuf_cur_vertices(vbuf, cur_vertices);
 }
 
-pub fn copy_vbuf_to_vbuf(dest: &mut Vertex_Buffer, src: &Vertex_Buffer) -> bool {
-    backend::copy_vbuf_to_vbuf(dest, src)
+pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
+    backend::swap_vbuf(a, b)
 }
 
 pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {

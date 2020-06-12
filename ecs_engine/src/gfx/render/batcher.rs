@@ -94,13 +94,11 @@ impl Vertex_Buffer_Holder {
         );
 
         let mut new_vbuf = render::start_draw_quads(new_cap / 4);
-        let _res = render::copy_vbuf_to_vbuf(&mut new_vbuf, &self.vbuf);
+        let _res = render::swap_vbuf(&mut new_vbuf, &mut self.vbuf);
         #[cfg(debug_assertions)]
         {
             debug_assert!(_res, "Vertex Buffer copying failed ({:?})!", self.id);
         }
-
-        self.vbuf = new_vbuf;
     }
 }
 
