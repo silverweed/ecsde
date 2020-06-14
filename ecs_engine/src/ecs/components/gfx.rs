@@ -63,6 +63,23 @@ impl Default for C_Renderable {
 }
 
 #[derive(Copy, Clone, Debug, Default)]
+pub struct C_Multi_Renderable {
+    pub renderables: [C_Renderable; Self::MAX_RENDERABLES],
+    pub rend_transforms: [Transform2D; Self::MAX_RENDERABLES],
+    pub n_renderables: u8,
+}
+
+impl C_Multi_Renderable {
+    pub const MAX_RENDERABLES: usize = 32;
+
+    pub fn add(&mut self, renderable: C_Renderable) {
+        assert!((self.n_renderables as usize) < self.renderables.len());
+        self.renderables[self.n_renderables as usize] = renderable;
+        self.n_renderables += 1;
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default)]
 pub struct C_Animated_Sprite {
     pub n_frames: u32,
     pub frame_time: f32,

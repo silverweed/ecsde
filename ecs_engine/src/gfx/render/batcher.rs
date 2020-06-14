@@ -405,6 +405,8 @@ pub fn draw_batches(
                                 *vert_chunk[i * 4 + 2] = v3;
                                 *vert_chunk[i * 4 + 3] = v4;
 
+                                // @Incomplete: the shadow looks weird: it should be flipped in certain situations
+                                // and probably have some bias to not make the entity look like "floating"
                                 for (light_idx, light) in shadows[i].iter().enumerate() {
                                     debug_assert!(light_idx < 4);
                                     let light_pos = light.position;

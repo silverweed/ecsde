@@ -151,6 +151,7 @@ impl Gameplay_System {
         let levels = &self.levels;
         let input_cfg = self.input_cfg;
         let ground_collision_calc_system = &mut self.ground_collision_calc_system;
+        let frame_alloc = &mut engine_state.frame_alloc;
 
         levels.foreach_active_level(|level| {
             let world = &mut level.world;
@@ -167,6 +168,8 @@ impl Gameplay_System {
 
             //movement_system::update(&dt, world);
             dumb_movement_system::update(&dt, world, rng);
+
+            crate::gfx::multi_sprite_animation_system::update(&dt, world, frame_alloc);
 
             level.chunks.update(world);
         });

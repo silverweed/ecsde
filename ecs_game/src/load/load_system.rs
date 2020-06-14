@@ -1,6 +1,7 @@
 use crate::collisions::Game_Collision_Layer;
 use crate::entities;
 use crate::gameplay_system::Gameplay_System_Config;
+use crate::gfx::multi_sprite_animation_system::C_Multi_Renderable_Animation;
 use crate::gfx::shaders::*;
 use crate::levels::Level;
 use crate::spatial::World_Chunks;
@@ -11,6 +12,7 @@ use crate::systems::pixel_collision_system::C_Texture_Collider;
 use crate::Game_Resources;
 use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider::{C_Phys_Data, Collider, Collision_Shape};
+use ecs_engine::common::angle::rad;
 use ecs_engine::common::colors;
 use ecs_engine::common::rect::Rect;
 use ecs_engine::common::stringid::String_Id;
@@ -19,7 +21,9 @@ use ecs_engine::core::app::Engine_State;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::rand;
 use ecs_engine::ecs::components::base::C_Spatial2D;
-use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable, Material};
+use ecs_engine::ecs::components::gfx::{
+    C_Animated_Sprite, C_Camera2D, C_Multi_Renderable, C_Renderable, Material,
+};
 use ecs_engine::ecs::ecs_world::Ecs_World;
 use ecs_engine::gfx;
 use ecs_engine::gfx::light::{Lights, Point_Light};
@@ -79,6 +83,8 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Phys_Data>();
     world.register_component::<C_Ground>();
     world.register_component::<C_Texture_Collider>();
+    world.register_component::<C_Multi_Renderable>();
+    world.register_component::<C_Multi_Renderable_Animation>();
 
     #[cfg(debug_assertions)]
     {
@@ -282,6 +288,15 @@ fn init_demo_entities(
             i == 0,
         );
     }
+
+    entities::create_drill(
+        &mut level.world,
+        gres,
+        shader_cache,
+        env,
+        cfg,
+        &Transform2D::from_pos_rot_scale(v2!(10., 10.), rad(0.), v2!(0.2, 0.2)),
+    );
 }
 
 fn calc_terrain_colliders(world: &mut Ecs_World) {
