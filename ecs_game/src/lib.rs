@@ -8,9 +8,11 @@ extern crate ecs_engine;
 mod cmdline;
 mod collisions;
 mod directions;
+mod entities;
 mod game_loop;
 mod game_state;
 mod gameplay_system;
+mod gfx;
 mod input_utils;
 mod levels;
 mod load;
@@ -25,7 +27,7 @@ mod debug;
 use ecs_engine::common::colors;
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::core::{app, sleep, time};
-use ecs_engine::gfx;
+use ecs_engine::gfx as ngfx;
 use game_state::*;
 use std::convert::TryInto;
 use std::ffi::CStr;
@@ -155,7 +157,7 @@ where
 
     ///// !!! Must not use frame_alloc after this !!! /////
 
-    if !gfx::window::has_vsync(&game_state.window) {
+    if !ngfx::window::has_vsync(&game_state.window) {
         let mut t_elapsed_for_work = t_before_work.elapsed();
         if t_elapsed_for_work < target_time_per_frame {
             while t_elapsed_for_work < target_time_per_frame {

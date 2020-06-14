@@ -1,9 +1,12 @@
 use crate::collisions::Game_Collision_Layer;
+use crate::entities;
 use crate::gameplay_system::Gameplay_System_Config;
+use crate::gfx::shaders::*;
 use crate::levels::Level;
 use crate::spatial::World_Chunks;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::dumb_movement_system::C_Dumb_Movement;
+use crate::systems::ground_collision_calculation_system::C_Ground;
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use crate::Game_Resources;
 use ecs_engine::cfg::{self, Cfg_Var};
@@ -12,24 +15,18 @@ use ecs_engine::common::colors;
 use ecs_engine::common::rect::Rect;
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::transform::Transform2D;
-use ecs_engine::common::vector::Vec2f;
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::rand;
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable, Material};
-use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
+use ecs_engine::ecs::ecs_world::Ecs_World;
 use ecs_engine::gfx;
 use ecs_engine::gfx::light::{Lights, Point_Light};
 use ecs_engine::resources::gfx::{tex_path, Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
 use crate::debug::entity_debug::C_Debug_Data;
-
-#[derive(Copy, Clone, Default)]
-pub struct C_Ground {
-    pub neighbours: [Entity; 4],
-}
 
 pub fn level_load_sync(
     level_id: String_Id,
@@ -106,7 +103,7 @@ fn init_demo_lights(lights: &mut Lights) {
 
 // @Temporary
 fn init_demo_entities(
-    rsrc: &mut Gfx_Resources,
+    gres: &mut Gfx_Resources,
     shader_cache: &mut Shader_Cache,
     env: &Env_Info,
     rng: &mut rand::Default_Rng,
@@ -118,18 +115,11 @@ fn init_demo_entities(
     use ecs_engine::common::angle;
     use ecs_engine::resources::gfx::shader_path;
 
-    const SPRITE_NORMAL_SHADER_NAME: &str = "sprite_with_normals";
     let sprite_normal_shader =
-        shader_cache.load_shader(&shader_path(&env, SPRITE_NORMAL_SHADER_NAME));
-
-    const SPRITE_FLAT_SHADER_NAME: &str = "sprite_flat";
-    let sprite_flat_shader = shader_cache.load_shader(&shader_path(&env, SPRITE_FLAT_SHADER_NAME));
-
-    const TERRAIN_SHADER_NAME: &str = "terrain";
-    let terrain_shader = shader_cache.load_shader(&shader_path(&env, TERRAIN_SHADER_NAME));
-
-    const UNLIT_SHADER_NAME: &str = "sprite_unlit";
-    let sprite_unlit_shader = shader_cache.load_shader(&shader_path(&env, UNLIT_SHADER_NAME));
+        shader_cache.load_shader(&shader_path(&env, SHD_SPRITE_WITH_NORMALS));
+    let sprite_flat_shader = shader_cache.load_shader(&shader_path(&env, SHD_SPRITE_FLAT));
+    let terrain_shader = shader_cache.load_shader(&shader_path(&env, SHD_TERRAIN));
+    let sprite_unlit_shader = shader_cache.load_shader(&shader_path(&env, SHD_SPRITE_UNLIT));
 
     let camera = level.world.new_entity();
     {
@@ -155,7 +145,7 @@ fn init_demo_entities(
             ground,
             C_Renderable {
                 material: Material {
-                    texture: rsrc.load_texture(&tex_path(&env, "ground.png")),
+                    texture: gres.load_texture(&tex_path(&env, "ground.png")),
                     shader: sprite_flat_shader,
                     ..Default::default()
                 },
@@ -164,9 +154,9 @@ fn init_demo_entities(
             },
         );
         assert!(rend.material.texture.is_some(), "Could not load texture!");
-        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.material.texture));
+        let (sw, sh) = gfx::render::get_texture_size(gres.get_texture(rend.material.texture));
         rend.rect = Rect::new(0, 0, sw as i32 * 100, sh as i32 * 100);
-        gfx::render::set_texture_repeated(rsrc.get_texture_mut(rend.material.texture), true);
+        gfx::render::set_texture_repeated(gres.get_texture_mut(rend.material.texture), true);
 
         level.world.add_component(ground, C_Spatial2D::default());
     }
@@ -180,7 +170,12 @@ fn init_demo_entities(
             if (-int..=int).contains(&x) && (-int..=int).contains(&y) {
                 continue;
             }
-            spawn_rock_at(level, env, rsrc, v2!((x * sw) as f32, (y * sh) as f32));
+            entities::create_rock(
+                &mut level.world,
+                gres,
+                env,
+                &Transform2D::from_pos(v2!((x * sw) as f32, (y * sh) as f32)),
+            );
         }
     }
 
@@ -197,7 +192,7 @@ fn init_demo_entities(
             gnd,
             C_Renderable {
                 material: Material {
-                    texture: rsrc.load_texture(&tex_path(&env, "ground3.png")),
+                    texture: gres.load_texture(&tex_path(&env, "ground3.png")),
                     shader: terrain_shader,
                     shininess: Material::encode_shininess(0.2),
                     ..Default::default()
@@ -207,9 +202,9 @@ fn init_demo_entities(
             },
         );
         assert!(rend.material.texture.is_some(), "Could not load texture!");
-        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.material.texture));
+        let (sw, sh) = gfx::render::get_texture_size(gres.get_texture(rend.material.texture));
         rend.rect = Rect::new(0, 0, sw as i32 * 1, sh as i32 * 1);
-        //rsrc.get_texture_mut(rend.texture).set_repeated(true);
+        //gres.get_texture_mut(rend.texture).set_repeated(true);
         let texture = rend.material.texture;
 
         level.world.add_component(
@@ -234,7 +229,7 @@ fn init_demo_entities(
             sky,
             C_Renderable {
                 material: Material {
-                    texture: rsrc.load_texture(&tex_path(&env, "sky.png")),
+                    texture: gres.load_texture(&tex_path(&env, "sky.png")),
                     shader: sprite_unlit_shader,
                     ..Default::default()
                 },
@@ -243,9 +238,9 @@ fn init_demo_entities(
             },
         );
         assert!(rend.material.texture.is_some(), "Could not load texture!");
-        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.material.texture));
+        let (sw, sh) = gfx::render::get_texture_size(gres.get_texture(rend.material.texture));
         rend.rect = Rect::new(0, 0, sw as i32 * 1, sh as i32 * 1);
-        //rsrc.get_texture_mut(rend.texture).set_repeated(true);
+        //gres.get_texture_mut(rend.texture).set_repeated(true);
         let texture = rend.material.texture;
 
         level.world.add_component(
@@ -268,150 +263,23 @@ fn init_demo_entities(
         );
     }
 
-    let n_frames = 3;
     for i in 0..gs_cfg.n_entities_to_spawn {
-        let entity = level.world.new_entity();
-        let (sw, sh) = {
-            let rend = level.world.add_component(
-                entity,
-                C_Renderable {
-                    //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
-                    //rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
-                    material: Material {
-                        texture: rsrc.load_texture(&tex_path(&env, "jelly.png")),
-                        normals: rsrc.load_texture(&tex_path(&env, "jelly_n.png")),
-                        shader: sprite_normal_shader,
-                        shininess: Material::encode_shininess(10.0),
-                        cast_shadows: true,
-                        ..Default::default()
-                    },
-                    modulate: if i == 1 {
-                        colors::rgb(0, 255, 0)
-                    } else {
-                        colors::WHITE
-                    },
-                    ..Default::default()
-                },
-            );
-            assert!(rend.material.texture.is_some(), "Could not load texture!");
-            let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.material.texture));
-            rend.rect = Rect::new(0, 0, sw as i32 / (n_frames as i32), sh as i32);
-            (sw, sh)
+        let x = rand::rand_01(rng);
+        let y = rand::rand_01(rng);
+        let pos = if i > 0 {
+            v2!(x * 50., 1. * y * 50.)
+        } else {
+            v2!(20., 20.)
         };
-        if i == 0 {
-            let ctr = level.world.add_component(
-                entity,
-                C_Controllable {
-                    speed: Cfg_Var::new("game/gameplay/player_speed", cfg),
-                    ..Default::default()
-                },
-            );
-        }
-        {
-            let t = level.world.add_component(entity, C_Spatial2D::default());
-            let x = rand::rand_01(rng);
-            let y = rand::rand_01(rng);
-            if i > 0 {
-                //t.local_transform.set_position(i as f32 * 242.0, 0.);
-                t.transform.set_position(x * 50., 1. * y * 50.);
-            //t.local_transform.set_rotation(angle::deg(45. * i as f32));
-            //t.local_transform.set_scale(2., 4.);
-            } else {
-                t.transform.set_position(20., 20.);
-            }
-        }
-        {
-            let c = level.world.add_component(
-                entity,
-                Collider {
-                    shape: {
-                        let width = (sw / n_frames) as f32;
-                        let height = sh as f32;
-                        Collision_Shape::Rect { width, height }
-                    },
-                    layer: Game_Collision_Layer::Entities as _,
-                    ..Default::default()
-                },
-            );
-            //c.shape = Collision_Shape::Circle {
-            //radius: width.max(height) * 0.5,
-            //};
-        }
-        {
-            let p = level.world.add_component(
-                entity,
-                C_Phys_Data {
-                    inv_mass: 1.,
-                    restitution: 0.9,
-                    static_friction: 0.5,
-                    dyn_friction: 0.3,
-                },
-            );
-        }
-        {
-            let s = level.world.add_component(
-                entity,
-                C_Animated_Sprite {
-                    n_frames,
-                    frame_time: 0.12,
-                    ..Default::default()
-                },
-            );
-        }
-        //level
-        //.world
-        //.add_component(entity, C_Dumb_Movement::default());
 
-        #[cfg(debug_assertions)]
-        {
-            level.world.add_component(entity, C_Debug_Data::default());
-        }
-        //{
-        //    let mut t = level.world.add_component::<C_Spatial2D>(entity);
-        //    t.transform.set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
-        //    t.transform
-        //        .set_position(n as f32 * (i % n) as f32, n as f32 * (i / n) as f32);
-        //}
-        //{
-        //let mut ctrl = level.world.add_component::<C_Controllable>(entity);
-        //ctrl.speed = cfg.get_var_float_or("gameplay/player/player_speed", 300.0);
-        //}
-    }
-
-    //spawn_rock_at(level, env, rsrc, v2!(0., 200.));
-    //spawn_rock_at(level, env, rsrc, v2!(-100., 200.));
-    //spawn_rock_at(level, env, rsrc, v2!(300., 200.));
-}
-
-fn spawn_rock_at(level: &mut Level, env: &Env_Info, rsrc: &mut Gfx_Resources, pos: Vec2f) {
-    let rock = level.world.new_entity();
-
-    {
-        let rend = level.world.add_component(rock, C_Renderable::default());
-        rend.material.texture = rsrc.load_texture(&tex_path(&env, "rock.png"));
-        rend.z_index = 1;
-        assert!(rend.material.texture.is_some(), "Could not load texture!");
-        let (sw, sh) = gfx::render::get_texture_size(rsrc.get_texture(rend.material.texture));
-        let (sw, sh) = (sw as i32, sh as i32);
-        rend.rect = Rect::new(0, 0, sw, sh);
-    };
-
-    {
-        let t = level.world.add_component(rock, C_Spatial2D::default());
-        t.transform.set_position_v(pos);
-    }
-
-    level.world.add_component(rock, C_Ground::default());
-
-    {
-        level.world.add_component(
-            rock,
-            C_Phys_Data {
-                inv_mass: 0., // infinite mass
-                restitution: 1.0,
-                static_friction: 0.5,
-                dyn_friction: 0.3,
-            },
+        entities::create_jelly(
+            &mut level.world,
+            gres,
+            shader_cache,
+            env,
+            cfg,
+            &Transform2D::from_pos(pos),
+            i == 0,
         );
     }
 }
