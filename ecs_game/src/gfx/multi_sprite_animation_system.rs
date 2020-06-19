@@ -95,8 +95,7 @@ pub fn update(dt: &Duration, world: &mut Ecs_World, frame_alloc: &mut Temp_Alloc
         }
 
         let mr = world.get_component_mut::<C_Multi_Renderable>(entity).unwrap();
-        let mut i = 0;
-        for result in &anim_results {
+        for (i, result) in anim_results.iter().enumerate() {
             if result.filled_x {
                 let pos = mr.rend_transforms[i].position();
                 mr.rend_transforms[i].set_position(result.result_x, pos.y);
@@ -105,8 +104,6 @@ pub fn update(dt: &Duration, world: &mut Ecs_World, frame_alloc: &mut Temp_Alloc
                 let pos = mr.rend_transforms[i].position();
                 mr.rend_transforms[i].set_position(pos.x, result.result_y);
             }
-
-            i += 1;
         }
     });
 }

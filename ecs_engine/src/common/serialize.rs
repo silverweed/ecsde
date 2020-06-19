@@ -94,8 +94,8 @@ impl Byte_Stream {
 
     pub fn read_f32(&mut self) -> std::io::Result<f32> {
         let mut x_as_le = [0u8; 4];
-        for i in 0..x_as_le.len() {
-            x_as_le[i] = self.cursor.read_u8()?;
+        for byte in &mut x_as_le {
+            *byte = self.cursor.read_u8()?;
         }
         Ok(f32::from_le_bytes(x_as_le))
     }

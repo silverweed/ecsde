@@ -1,3 +1,5 @@
+#![allow(clippy::op_ref)]
+
 use std::fmt::{Debug, Formatter};
 use std::ops::*;
 

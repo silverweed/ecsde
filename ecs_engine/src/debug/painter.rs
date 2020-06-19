@@ -67,8 +67,14 @@ impl Debug_Painter {
             .push((String::from(text), world_pos, font_size, props.into()));
     }
 
-    pub fn add_shaded_text<T>(&mut self, text: &str, world_pos: Vec2f, font_size: u16, props: T, shade_color: Color)
-    where
+    pub fn add_shaded_text<T>(
+        &mut self,
+        text: &str,
+        world_pos: Vec2f,
+        font_size: u16,
+        props: T,
+        shade_color: Color,
+    ) where
         T: Into<Paint_Properties>,
     {
         let props = props.into();
@@ -76,8 +82,12 @@ impl Debug_Painter {
             color: shade_color,
             ..props
         };
-        self.texts
-            .push((String::from(text), world_pos + v2!(1., 1.), font_size, shade_props));
+        self.texts.push((
+            String::from(text),
+            world_pos + v2!(1., 1.),
+            font_size,
+            shade_props,
+        ));
         self.texts
             .push((String::from(text), world_pos, font_size, props));
     }

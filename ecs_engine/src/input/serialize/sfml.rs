@@ -14,7 +14,7 @@ const PRE_WHEEL_SCROLLED: u8 = 0x6;
 
 pub fn should_event_be_serialized(event: &Input_Raw_Event) -> bool {
     let mut bs = Byte_Stream::new();
-    if let Ok(_) = event.serialize(&mut bs) {
+    if event.serialize(&mut bs).is_ok() {
         bs.pos() > 0
     } else {
         false

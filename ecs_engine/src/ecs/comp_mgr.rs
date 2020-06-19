@@ -29,7 +29,7 @@ pub struct Component_Manager {
     entity_comp_set: Vec<Bit_Set>,
 
     #[cfg(debug_assertions)]
-    pub(super) debug: Components_Debug
+    pub(super) debug: Components_Debug,
 }
 
 pub struct Component_Storage {
@@ -126,9 +126,7 @@ impl Component_Manager {
             handles: HashMap::new(),
             entity_comp_set: vec![],
             #[cfg(debug_assertions)]
-            debug: Components_Debug {
-                comp_names: vec![],
-            }
+            debug: Components_Debug { comp_names: vec![] },
         }
     }
 

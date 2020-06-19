@@ -7,16 +7,16 @@ pub type Default_Rng_Seed = [u8; 32];
 
 impl Binary_Serializable for Default_Rng_Seed {
     fn serialize(&self, out: &mut Byte_Stream) -> std::io::Result<()> {
-        for i in 0..32 {
-            out.write_u8(self[i])?;
+        for byte in self.iter().take(32) {
+            out.write_u8(*byte)?;
         }
         Ok(())
     }
 
     fn deserialize(input: &mut Byte_Stream) -> std::io::Result<Self> {
         let mut res = [0; 32];
-        for i in 0..32 {
-            res[i] = input.read_u8()?;
+        for byte in &mut res {
+            *byte = input.read_u8()?;
         }
         Ok(res)
     }

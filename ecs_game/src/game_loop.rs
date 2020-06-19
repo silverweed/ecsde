@@ -1091,9 +1091,9 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 
 #[cfg(debug_assertions)]
 fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
-    use std::borrow::Borrow;
-    use ecs_engine::common::bitset::Bit_Set;
     use crate::debug::entity_debug::C_Debug_Data;
+    use ecs_engine::common::bitset::Bit_Set;
+    use std::borrow::Borrow;
 
     foreach_entity!(ecs_world, |entity| {
         let pos = if let Some(spatial) = ecs_world.get_component::<C_Spatial2D>(entity) {
@@ -1103,27 +1103,28 @@ fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs
         };
 
         let name = if let Some(debug) = ecs_world.get_component::<C_Debug_Data>(entity) {
-            &debug.entity_name
+            debug.entity_name
         } else {
             "Unknown"
         };
-        debug_painter.add_shaded_text(
-            &format!("{}", name),
-            pos,
-            8,
-            colors::GREEN,
-            colors::BLACK
-        );
+        debug_painter.add_shaded_text(name, pos, 8, colors::GREEN, colors::BLACK);
 
         let comp_set = ecs_world.get_entity_comp_set(entity);
         let comp_set_b: &Bit_Set = comp_set.borrow();
         for (i, handle) in comp_set_b.into_iter().enumerate() {
             debug_painter.add_shaded_text(
-                &format!(" {}", ecs_world::component_name_from_handle(ecs_world, handle as ecs_world::Component_Handle).unwrap()),
+                &format!(
+                    " {}",
+                    ecs_world::component_name_from_handle(
+                        ecs_world,
+                        handle as ecs_world::Component_Handle
+                    )
+                    .unwrap()
+                ),
                 pos + v2!(0., (i + 1) as f32 * 8.5),
                 8,
                 colors::WHITE,
-                colors::BLACK
+                colors::BLACK,
             );
         }
     });

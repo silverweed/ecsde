@@ -142,7 +142,7 @@ impl Console {
     {
         self.hints
             .entry(cmd.to_string())
-            .or_insert_with(|| vec![])
+            .or_insert_with(Vec::default)
             .extend(hints);
     }
 
