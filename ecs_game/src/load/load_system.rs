@@ -7,6 +7,7 @@ use crate::levels::Level;
 use crate::spatial::World_Chunks;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::dumb_movement_system::C_Dumb_Movement;
+use crate::systems::entity_preview_system::C_Entity_Preview;
 use crate::systems::ground_collision_calculation_system::C_Ground;
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use crate::Game_Resources;
@@ -14,7 +15,6 @@ use ecs_engine::cfg::{self, Cfg_Var};
 use ecs_engine::collisions::collider::{C_Phys_Data, Collider, Collision_Shape};
 use ecs_engine::common::angle::rad;
 use ecs_engine::common::colors;
-use ecs_engine::common::rect::Rect;
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::transform::Transform2D;
 use ecs_engine::core::app::Engine_State;
@@ -22,12 +22,11 @@ use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::rand;
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::components::gfx::{
-    C_Animated_Sprite, C_Camera2D, C_Multi_Renderable, C_Renderable, Material,
+    C_Animated_Sprite, C_Camera2D, C_Multi_Renderable, C_Renderable,
 };
 use ecs_engine::ecs::ecs_world::Ecs_World;
-use ecs_engine::gfx;
 use ecs_engine::gfx::light::{Lights, Point_Light};
-use ecs_engine::resources::gfx::{tex_path, Gfx_Resources, Shader_Cache};
+use ecs_engine::resources::gfx::{Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
 use crate::debug::entity_debug::C_Debug_Data;
@@ -85,6 +84,7 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Texture_Collider>();
     world.register_component::<C_Multi_Renderable>();
     world.register_component::<C_Multi_Renderable_Animation>();
+    world.register_component::<C_Entity_Preview>();
 
     #[cfg(debug_assertions)]
     {
@@ -145,27 +145,7 @@ fn init_demo_entities(
         );
     }
 
-    {
-        let ground = level.world.new_entity();
-        let rend = level.world.add_component(
-            ground,
-            C_Renderable {
-                material: Material {
-                    texture: gres.load_texture(&tex_path(&env, "ground.png")),
-                    shader: sprite_flat_shader,
-                    ..Default::default()
-                },
-                z_index: -1,
-                ..Default::default()
-            },
-        );
-        assert!(rend.material.texture.is_some(), "Could not load texture!");
-        let (sw, sh) = gfx::render::get_texture_size(gres.get_texture(rend.material.texture));
-        rend.rect = Rect::new(0, 0, sw as i32 * 100, sh as i32 * 100);
-        gfx::render::set_texture_repeated(gres.get_texture_mut(rend.material.texture), true);
-
-        level.world.add_component(ground, C_Spatial2D::default());
-    }
+    entities::create_background(&mut level.world, gres, shader_cache, env, cfg);
 
     let ext = 0;
     let int = 5;
@@ -185,89 +165,9 @@ fn init_demo_entities(
         }
     }
 
-    // Spawn terrain
-    {
-        let gnd = level.world.new_entity();
+    entities::create_terrain(&mut level.world, gres, shader_cache, env, cfg);
 
-        {
-            let t = level.world.add_component(gnd, C_Spatial2D::default());
-            t.transform.set_position(0., 600.);
-        }
-
-        let rend = level.world.add_component(
-            gnd,
-            C_Renderable {
-                material: Material {
-                    texture: gres.load_texture(&tex_path(&env, "ground3.png")),
-                    shader: terrain_shader,
-                    shininess: Material::encode_shininess(0.2),
-                    ..Default::default()
-                },
-                z_index: 1,
-                ..Default::default()
-            },
-        );
-        assert!(rend.material.texture.is_some(), "Could not load texture!");
-        let (sw, sh) = gfx::render::get_texture_size(gres.get_texture(rend.material.texture));
-        rend.rect = Rect::new(0, 0, sw as i32 * 1, sh as i32 * 1);
-        //gres.get_texture_mut(rend.texture).set_repeated(true);
-        let texture = rend.material.texture;
-
-        level.world.add_component(
-            gnd,
-            C_Texture_Collider {
-                texture,
-                layer: Game_Collision_Layer::Ground as _,
-            },
-        );
-    }
-
-    // Sky
-    {
-        let sky = level.world.new_entity();
-
-        {
-            let t = level.world.add_component(sky, C_Spatial2D::default());
-            t.transform.set_position(0., -370.);
-        }
-
-        let rend = level.world.add_component(
-            sky,
-            C_Renderable {
-                material: Material {
-                    texture: gres.load_texture(&tex_path(&env, "sky.png")),
-                    shader: sprite_unlit_shader,
-                    ..Default::default()
-                },
-                z_index: 0,
-                ..Default::default()
-            },
-        );
-        assert!(rend.material.texture.is_some(), "Could not load texture!");
-        let (sw, sh) = gfx::render::get_texture_size(gres.get_texture(rend.material.texture));
-        rend.rect = Rect::new(0, 0, sw as i32 * 1, sh as i32 * 1);
-        //gres.get_texture_mut(rend.texture).set_repeated(true);
-        let texture = rend.material.texture;
-
-        level.world.add_component(
-            sky,
-            Collider {
-                shape: Collision_Shape::Rect {
-                    width: sw as f32,
-                    height: sh as f32,
-                },
-                layer: Game_Collision_Layer::Sky as _,
-                ..Default::default()
-            },
-        );
-        level.world.add_component(
-            sky,
-            C_Phys_Data {
-                inv_mass: 0.,
-                ..Default::default()
-            },
-        );
-    }
+    entities::create_sky(&mut level.world, gres, shader_cache, env, cfg);
 
     for i in 0..gs_cfg.n_entities_to_spawn {
         let x = rand::rand_01(rng);

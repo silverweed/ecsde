@@ -16,8 +16,8 @@ use crate::debug::painter::Debug_Painter;
 pub(super) type Component_Handle = u32;
 
 pub struct Component_Manager {
-    /// Storage for all non-ZST components
-    storages: Vec<Component_Storage>,
+    /// Note: storage is None for ZST components
+    storages: Vec<Option<Component_Storage>>,
 
     last_comp_handle: Component_Handle,
     handles: HashMap<TypeId, Component_Handle>,
@@ -125,10 +125,8 @@ impl Component_Manager {
         };
 
         let handle = self.last_comp_handle;
-        if size_of::<T>() != 0 {
-            self.storages.push(Component_Storage::new::<T>());
-            self.last_comp_handle += 1;
-        }
+        self.storages.push(if size_of::<T>() != 0 { Some(Component_Storage::new::<T>()) } else { None });
+        self.last_comp_handle += 1;
 
         handles_entry.insert(handle);
 
@@ -143,7 +141,7 @@ impl Component_Manager {
         {
             if size_of::<T>() != 0 {
                 debug_assert_eq!(
-                    self.storages[handle as usize].has_component::<T>(entity),
+                    self.storages[handle as usize].as_ref().unwrap().has_component::<T>(entity),
                     bit_is_set
                 );
             }
@@ -163,7 +161,7 @@ impl Component_Manager {
                 None
             }
         } else {
-            self.storages[handle as usize].get_component::<T>(entity)
+            self.storages[handle as usize].as_ref().unwrap().get_component::<T>(entity)
         }
     }
 
@@ -178,7 +176,7 @@ impl Component_Manager {
                 None
             }
         } else {
-            self.storages[handle as usize].get_component_mut::<T>(entity)
+            self.storages[handle as usize].as_mut().unwrap().get_component_mut::<T>(entity)
         }
     }
 
@@ -191,7 +189,7 @@ impl Component_Manager {
         self.entity_comp_set[entity.index as usize].set(handle as usize, true);
 
         if size_of::<T>() != 0 {
-            self.storages[handle as usize].add_component::<T>(entity, data)
+            self.storages[handle as usize].as_mut().unwrap().add_component::<T>(entity, data)
         } else {
             static mut UNIT: () = ();
             unsafe { &mut *(&mut UNIT as *mut () as *mut T) }
@@ -201,13 +199,13 @@ impl Component_Manager {
     pub fn remove_component<T: Copy + 'static>(&mut self, entity: Entity) {
         let handle = self.get_handle::<T>();
         self.entity_comp_set[entity.index as usize].set(handle as usize, false);
-        self.storages[handle as usize].remove_component::<T>(entity);
+        self.storages[handle as usize].as_mut().unwrap().remove_component::<T>(entity);
     }
 
     pub fn remove_all_components(&mut self, entity: Entity) {
         let comp_set = &self.entity_comp_set[entity.index as usize];
         for handle in comp_set {
-            self.storages[handle as usize].remove_component_dyn(entity);
+            self.storages[handle as usize].as_mut().unwrap().remove_component_dyn(entity);
         }
     }
 
@@ -216,7 +214,7 @@ impl Component_Manager {
             comp_alloc::Component_Allocator_Iter::empty()
         } else {
             let handle = self.get_handle::<T>();
-            self.storages[handle as usize].alloc.iter::<T>()
+            self.storages[handle as usize].as_ref().unwrap().alloc.iter::<T>()
         }
     }
 
@@ -225,7 +223,7 @@ impl Component_Manager {
             comp_alloc::Component_Allocator_Iter_Mut::empty()
         } else {
             let handle = self.get_handle::<T>();
-            self.storages[handle as usize].alloc.iter_mut::<T>()
+            self.storages[handle as usize].as_mut().unwrap().alloc.iter_mut::<T>()
         }
     }
 
@@ -237,7 +235,7 @@ impl Component_Manager {
             type_name::<T>()
         );
         let handle = self.get_handle::<T>();
-        &self.storages[handle as usize]
+        self.storages[handle as usize].as_ref().unwrap()
     }
 
     pub fn get_component_storage_mut<T: Copy + 'static>(&mut self) -> &mut Component_Storage {
@@ -248,7 +246,7 @@ impl Component_Manager {
             type_name::<T>()
         );
         let handle = self.get_handle::<T>();
-        &mut self.storages[handle as usize]
+        self.storages[handle as usize].as_mut().unwrap()
     }
 
     pub fn get_entity_comp_set(&self, entity: Entity) -> Cow<'_, Bit_Set> {
@@ -275,6 +273,8 @@ pub(super) fn draw_comp_alloc<T: 'static + Copy>(
     painter: &mut Debug_Painter,
 ) {
     world.component_manager.storages[world.component_manager.get_handle::<T>() as usize]
+        .as_ref()
+        .unwrap()
         .alloc
         .debug_draw::<T>(painter);
 }

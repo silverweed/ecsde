@@ -1,8 +1,11 @@
 use crate::common::colors;
 use crate::common::rect::Rect;
 use crate::common::transform::Transform2D;
+use crate::core::env::Env_Info;
 use crate::gfx::render;
-use crate::resources::gfx::{Shader_Handle, Texture_Handle};
+use crate::resources::gfx::{
+    shader_path, tex_path, Gfx_Resources, Shader_Cache, Shader_Handle, Texture_Handle,
+};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Default)]
 pub struct Material {
@@ -59,6 +62,63 @@ impl Default for C_Renderable {
             modulate: colors::WHITE,
             z_index: 0,
         }
+    }
+}
+
+impl C_Renderable {
+    pub fn new_with_diffuse(gres: &mut Gfx_Resources, env: &Env_Info, diffuse: &str) -> Self {
+        let texture = gres.load_texture(&tex_path(&env, diffuse));
+        let (sw, sh) = render::get_texture_size(gres.get_texture(texture));
+        C_Renderable {
+            material: Material {
+                texture,
+                ..Default::default()
+            },
+            rect: Rect::new(0, 0, sw as i32, sh as i32),
+            ..Default::default()
+        }
+    }
+
+    pub fn with_n_frames<T: Into<i32>>(mut self, n_frames: T) -> Self {
+        self.rect.width /= n_frames.into();
+        self
+    }
+
+    pub fn with_normals(mut self, gres: &mut Gfx_Resources, env: &Env_Info, normals: &str) -> Self {
+        let texture = gres.load_texture(&tex_path(&env, normals));
+        self.material.normals = texture;
+        self
+    }
+
+    pub fn with_shader(
+        mut self,
+        shader_cache: &mut Shader_Cache,
+        env: &Env_Info,
+        shader: &str,
+    ) -> Self {
+        let shader = shader_cache.load_shader(&shader_path(&env, shader));
+        self.material.shader = shader;
+        self
+    }
+
+    pub fn with_z_index(mut self, z_index: render::Z_Index) -> Self {
+        self.z_index = z_index;
+        self
+    }
+
+    pub fn with_cast_shadows(mut self, cast_shadows: bool) -> Self {
+        self.material.cast_shadows = cast_shadows;
+        self
+    }
+
+    pub fn with_shininess(mut self, shininess: f32) -> Self {
+        self.material.shininess = Material::encode_shininess(shininess);
+        self
+    }
+
+    pub fn with_color(mut self, color: colors::Color) -> Self {
+        self.modulate = color;
+        self
     }
 }
 

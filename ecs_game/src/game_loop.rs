@@ -315,6 +315,7 @@ where
                 &update_dt,
                 &mut game_state.engine_state,
                 game_resources,
+                &game_state.window,
             );
         }
     }

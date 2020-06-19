@@ -110,7 +110,7 @@ impl Persistent_Game_State for Debug_Base_State {
                     );
                     engine_state.time.paused = true;
                     engine_state.time.step(&step_delta);
-                    gs.step(&step_delta, engine_state, game_resources);
+                    gs.step(&step_delta, engine_state, game_resources, window);
                     gs.levels.foreach_active_level(|level| {
                         use ecs_engine::collisions::physics;
                         let mut _ignored = physics::Collision_System_Debug_Data::default();

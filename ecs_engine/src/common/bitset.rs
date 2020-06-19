@@ -1,10 +1,21 @@
+use std::fmt;
 use std::ops::BitAnd;
 use std::vec::Vec;
 
-#[derive(Clone, PartialEq, Default, Debug)]
+#[derive(Clone, PartialEq, Default)]
 pub struct Bit_Set {
     fast_bits: u64,
     slow_bits: Vec<u64>,
+}
+
+impl fmt::Debug for Bit_Set {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:064b}", self.fast_bits)?;
+        for bits in &self.slow_bits {
+            write!(f, " {:064b}", bits)?;
+        }
+        Ok(())
+    }
 }
 
 #[allow(clippy::len_without_is_empty)] // is_empty() wouldn't make sense, as len() is always >= 8.

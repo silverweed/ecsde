@@ -4,6 +4,7 @@ use crate::gfx::multi_sprite_animation_system::{Animation_Track, C_Multi_Rendera
 use crate::gfx::shaders::*;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::ground_collision_calculation_system::C_Ground;
+use crate::systems::pixel_collision_system::C_Texture_Collider;
 use ecs_engine::cfg::{Cfg_Var, Config};
 use ecs_engine::collisions::collider::{C_Phys_Data, Collider, Collision_Shape};
 use ecs_engine::common::rect::Rect;
@@ -26,32 +27,16 @@ pub fn create_jelly(
     transform: &Transform2D,
     make_controllable: bool,
 ) -> Entity {
-    const N_ANIM_FRAMES: usize = 3;
-
-    let shd_sprite_with_normals =
-        shader_cache.load_shader(&shader_path(env, SHD_SPRITE_WITH_NORMALS));
-    let texture = gres.load_texture(&tex_path(&env, "jelly.png"));
-    let normals = gres.load_texture(&tex_path(&env, "jelly_n.png"));
-    let (sw, sh) = render::get_texture_size(gres.get_texture(texture));
+    const N_ANIM_FRAMES: i32 = 3;
 
     let entity = world.new_entity();
-    {
-        world.add_component(
-            entity,
-            C_Renderable {
-                material: Material {
-                    texture,
-                    normals,
-                    shader: shd_sprite_with_normals,
-                    shininess: Material::encode_shininess(10.0),
-                    cast_shadows: true,
-                    ..Default::default()
-                },
-                rect: Rect::new(0, 0, sw as i32 / (N_ANIM_FRAMES as i32), sh as i32),
-                ..Default::default()
-            },
-        );
-    }
+    let renderable = C_Renderable::new_with_diffuse(gres, env, "jelly.png")
+        .with_normals(gres, env, "jelly_n.png")
+        .with_cast_shadows(true)
+        .with_shininess(10.0)
+        .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS)
+        .with_n_frames(N_ANIM_FRAMES);
+    world.add_component(entity, renderable);
 
     // @Temporary
     if make_controllable {
@@ -72,6 +57,7 @@ pub fn create_jelly(
         },
     );
 
+    let (sw, sh) = render::get_texture_size(gres.get_texture(renderable.material.texture));
     world.add_component(
         entity,
         Collider {
@@ -120,21 +106,8 @@ pub fn create_rock(
 ) -> Entity {
     let rock = world.new_entity();
 
-    let texture = gres.load_texture(&tex_path(&env, "rock.png"));
-    let (sw, sh) = render::get_texture_size(gres.get_texture(texture));
-
-    world.add_component(
-        rock,
-        C_Renderable {
-            material: Material {
-                texture,
-                ..Default::default()
-            },
-            rect: Rect::new(0, 0, sw as _, sh as _),
-            z_index: 1,
-            ..Default::default()
-        },
-    );
+    let renderable = C_Renderable::new_with_diffuse(gres, env, "rock.png").with_z_index(1);
+    world.add_component(rock, renderable);
 
     world.add_component(
         rock,
@@ -280,4 +253,106 @@ pub fn create_drill(
     }
 
     entity
+}
+
+pub fn create_sky(
+    world: &mut Ecs_World,
+    gres: &mut Gfx_Resources,
+    shader_cache: &mut Shader_Cache,
+    env: &Env_Info,
+    _cfg: &Config,
+) {
+    let sky = world.new_entity();
+
+    {
+        let spatial = world.add_component(sky, C_Spatial2D::default());
+        spatial.transform.set_position(0., -370.);
+    }
+
+    let renderable = world.add_component(
+        sky,
+        C_Renderable::new_with_diffuse(gres, env, "sky.png").with_shader(
+            shader_cache,
+            env,
+            SHD_SPRITE_UNLIT,
+        ),
+    );
+
+    let (sw, sh) = render::get_texture_size(gres.get_texture(renderable.material.texture));
+
+    world.add_component(
+        sky,
+        Collider {
+            shape: Collision_Shape::Rect {
+                width: sw as f32,
+                height: sh as f32,
+            },
+            layer: Game_Collision_Layer::Sky as _,
+            ..Default::default()
+        },
+    );
+
+    world.add_component(
+        sky,
+        C_Phys_Data {
+            inv_mass: 0.,
+            ..Default::default()
+        },
+    );
+}
+
+pub fn create_terrain(
+    world: &mut Ecs_World,
+    gres: &mut Gfx_Resources,
+    shader_cache: &mut Shader_Cache,
+    env: &Env_Info,
+    _cfg: &Config,
+) {
+    let gnd = world.new_entity();
+
+    {
+        let t = world.add_component(gnd, C_Spatial2D::default());
+        t.transform.set_position(0., 600.);
+    }
+
+    let rend = world.add_component(
+        gnd,
+        C_Renderable::new_with_diffuse(gres, env, "ground3.png")
+            .with_shader(shader_cache, env, SHD_TERRAIN)
+            .with_shininess(0.2)
+            .with_z_index(1),
+    );
+
+    let texture = rend.material.texture;
+
+    world.add_component(
+        gnd,
+        C_Texture_Collider {
+            texture,
+            layer: Game_Collision_Layer::Ground as _,
+        },
+    );
+}
+
+pub fn create_background(
+    world: &mut Ecs_World,
+    gres: &mut Gfx_Resources,
+    shader_cache: &mut Shader_Cache,
+    env: &Env_Info,
+    _cfg: &Config,
+) {
+    let ground = world.new_entity();
+    let rend = world.add_component(
+        ground,
+        C_Renderable::new_with_diffuse(gres, env, "ground.png")
+            .with_shader(shader_cache, env, SHD_SPRITE_FLAT)
+            .with_z_index(-1),
+    );
+
+    let texture = gres.get_texture_mut(rend.material.texture);
+    let (sw, sh) = render::get_texture_size(texture);
+    rend.rect = Rect::new(0, 0, sw as i32 * 100, sh as i32 * 100);
+    render::set_texture_repeated(texture, true);
+
+    world.add_component(ground, C_Spatial2D::default());
 }
