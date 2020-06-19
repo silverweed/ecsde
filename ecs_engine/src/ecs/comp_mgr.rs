@@ -27,12 +27,21 @@ pub struct Component_Manager {
 
     /// Indexed by entity index
     entity_comp_set: Vec<Bit_Set>,
+
+    #[cfg(debug_assertions)]
+    pub(super) debug: Components_Debug
 }
 
 pub struct Component_Storage {
     alloc: Component_Allocator,
     ent_comp_map: HashMap<Entity, u32>,
     comp_layout: std::alloc::Layout,
+}
+
+#[cfg(debug_assertions)]
+pub(super) struct Components_Debug {
+    /// Indexed by handle
+    pub comp_names: Vec<&'static str>,
 }
 
 impl Component_Storage {
@@ -116,6 +125,10 @@ impl Component_Manager {
             last_comp_handle: 0,
             handles: HashMap::new(),
             entity_comp_set: vec![],
+            #[cfg(debug_assertions)]
+            debug: Components_Debug {
+                comp_names: vec![],
+            }
         }
     }
 
@@ -135,6 +148,16 @@ impl Component_Manager {
             None
         });
         self.is_zst.push(size_of::<T>() == 0);
+
+        #[cfg(debug_assertions)]
+        {
+            // Note: we sort of assume that type_name returns a full path like foo::bar::Type,
+            // although that's not guaranteed. This won't break if that's not the case, so it's fine.
+            let full_name = type_name::<T>();
+            let base_name = full_name.rsplit(':').next().unwrap_or(full_name);
+            self.debug.comp_names.push(base_name);
+        }
+
         self.last_comp_handle += 1;
 
         handles_entry.insert(handle);

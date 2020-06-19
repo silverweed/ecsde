@@ -65,6 +65,7 @@ pub struct Debug_CVars {
     pub draw_entities: Cfg_Var<bool>,
     pub draw_velocities: Cfg_Var<bool>,
     pub draw_entity_prev_frame_ghost: Cfg_Var<bool>,
+    pub draw_component_lists: Cfg_Var<bool>,
 
     pub draw_debug_grid: Cfg_Var<bool>,
     pub debug_grid_square_size: Cfg_Var<f32>,
@@ -296,6 +297,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
     let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
     let draw_entities = Cfg_Var::new("engine/debug/entities/draw_entities", cfg);
     let draw_velocities = Cfg_Var::new("engine/debug/entities/draw_velocities", cfg);
+    let draw_component_lists = Cfg_Var::new("engine/debug/entities/draw_component_lists", cfg);
     let draw_entity_prev_frame_ghost =
         Cfg_Var::new("engine/debug/entities/draw_prev_frame_ghost", cfg);
     let draw_colliders = Cfg_Var::new("engine/debug/collisions/draw_colliders", cfg);
@@ -317,6 +319,7 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
         draw_entities,
         draw_velocities,
         draw_colliders,
+        draw_component_lists,
         draw_debug_grid,
         debug_grid_square_size,
         debug_grid_opacity,

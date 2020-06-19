@@ -1,4 +1,5 @@
 use crate::common::angle::rad;
+use crate::common::colors::Color;
 use crate::common::rect::Rect;
 use crate::common::shapes::{Arrow, Circle, Line};
 use crate::common::transform::Transform2D;
@@ -64,6 +65,21 @@ impl Debug_Painter {
     {
         self.texts
             .push((String::from(text), world_pos, font_size, props.into()));
+    }
+
+    pub fn add_shaded_text<T>(&mut self, text: &str, world_pos: Vec2f, font_size: u16, props: T, shade_color: Color)
+    where
+        T: Into<Paint_Properties>,
+    {
+        let props = props.into();
+        let shade_props = Paint_Properties {
+            color: shade_color,
+            ..props
+        };
+        self.texts
+            .push((String::from(text), world_pos + v2!(1., 1.), font_size, shade_props));
+        self.texts
+            .push((String::from(text), world_pos, font_size, props));
     }
 
     pub fn add_line<T>(&mut self, line: Line, props: T)

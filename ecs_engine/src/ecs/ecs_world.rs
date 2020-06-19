@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use crate::debug::painter::Debug_Painter;
 
 pub type Entity = Generational_Index;
+pub type Component_Handle = comp_mgr::Component_Handle;
 
 pub struct Evt_Entity_Destroyed;
 
@@ -241,6 +242,17 @@ impl<T: Copy> Component_Storage_Mut<'_, T> {
 #[cfg(debug_assertions)]
 pub fn draw_comp_alloc<T: 'static + Copy>(world: &Ecs_World, painter: &mut Debug_Painter) {
     comp_mgr::draw_comp_alloc::<T>(world, painter);
+}
+
+#[cfg(debug_assertions)]
+pub fn component_name_from_handle(world: &Ecs_World, handle: Component_Handle) -> Option<&str> {
+    let idx = handle as usize;
+    let names = &world.component_manager.debug.comp_names;
+    if idx < names.len() {
+        Some(names[idx])
+    } else {
+        None
+    }
 }
 
 #[cfg(tests)]

@@ -25,7 +25,7 @@ use {
         debug,
         debug::painter::Debug_Painter,
         ecs::components::base::C_Spatial2D,
-        ecs::ecs_world::Ecs_World,
+        ecs::ecs_world::{self, Ecs_World},
         gfx::paint_props::Paint_Properties,
         gfx::window,
     },
@@ -714,6 +714,7 @@ fn update_debug(
 
     let cvars = &game_state.debug_cvars;
     let draw_entities = cvars.draw_entities.read(&engine_state.config);
+    let draw_component_lists = cvars.draw_component_lists.read(&engine_state.config);
     let draw_velocities = cvars.draw_velocities.read(&engine_state.config);
     let draw_entity_prev_frame_ghost = cvars
         .draw_entity_prev_frame_ghost
@@ -757,6 +758,10 @@ fn update_debug(
             if draw_entity_prev_frame_ghost {
                 let batches = lv_batches.get_mut(&level.id).unwrap();
                 debug_draw_entities_prev_frame_ghost(batches, &mut level.world);
+            }
+
+            if draw_component_lists {
+                debug_draw_component_lists(debug_painter, &level.world);
             }
 
             if draw_colliders {
@@ -1074,18 +1079,39 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
             },
             COLOR,
         );
-        debug_painter.add_text(
+        debug_painter.add_shaded_text(
             &spatial.velocity.to_string(),
-            transform.position() + Vec2f::new(1., -14.),
-            12,
-            colors::WHITE,
-        );
-        debug_painter.add_text(
-            &spatial.velocity.to_string(),
-            transform.position() + Vec2f::new(0., -15.),
+            transform.position() + Vec2f::new(1., -15.),
             12,
             COLOR,
+            colors::WHITE,
         );
+    });
+}
+
+#[cfg(debug_assertions)]
+fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
+    use std::borrow::Borrow;
+    use ecs_engine::common::bitset::Bit_Set;
+
+    foreach_entity!(ecs_world, |entity| {
+        let pos = if let Some(spatial) = ecs_world.get_component::<C_Spatial2D>(entity) {
+            spatial.transform.position() + v2!(0., -15.)
+        } else {
+            v2!(0., 0.) // @Incomplete
+        };
+
+        let comp_set = ecs_world.get_entity_comp_set(entity);
+        let comp_set_b: &Bit_Set = comp_set.borrow();
+        for (i, handle) in comp_set_b.into_iter().enumerate() {
+            debug_painter.add_shaded_text(
+                &format!("{}", ecs_world::component_name_from_handle(ecs_world, handle as ecs_world::Component_Handle).unwrap()),
+                pos + v2!(0., i as f32 * 10.),
+                8,
+                colors::WHITE,
+                colors::BLACK
+            );
+        }
     });
 }
 
@@ -1095,7 +1121,7 @@ fn debug_draw_lights(
     debug_painter: &mut Debug_Painter,
     lights: &ecs_engine::gfx::light::Lights,
 ) {
-    screenspace_debug_painter.add_text(
+    screenspace_debug_painter.add_shaded_text(
         &format!(
             "Ambient Light: color: #{:X}, intensity: {}",
             colors::color_to_hex_no_alpha(lights.ambient_light.color),
@@ -1104,6 +1130,11 @@ fn debug_draw_lights(
         v2!(5., 300.),
         15,
         lights.ambient_light.color,
+        if colors::to_hsv(lights.ambient_light.color).v > 0.5 {
+            colors::BLACK
+        } else {
+            colors::WHITE
+        },
     );
     for pl in &lights.point_lights {
         debug_painter.add_circle(
@@ -1125,20 +1156,7 @@ fn debug_draw_lights(
             },
             pl.color,
         );
-        debug_painter.add_text(
-            &format!(
-                "radius: {}\natten: {}\nintens: {}",
-                pl.radius, pl.attenuation, pl.intensity
-            ),
-            pl.position + v2!(1., 1.),
-            10,
-            if colors::to_hsv(pl.color).v > 0.5 {
-                colors::BLACK
-            } else {
-                colors::WHITE
-            },
-        );
-        debug_painter.add_text(
+        debug_painter.add_shaded_text(
             &format!(
                 "radius: {}\natten: {}\nintens: {}",
                 pl.radius, pl.attenuation, pl.intensity
@@ -1146,6 +1164,11 @@ fn debug_draw_lights(
             pl.position,
             10,
             pl.color,
+            if colors::to_hsv(pl.color).v > 0.5 {
+                colors::BLACK
+            } else {
+                colors::WHITE
+            },
         );
     }
 }
