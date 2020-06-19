@@ -66,10 +66,9 @@ impl Bit_Set {
         self.slow_bits.clear();
     }
 
-    // Returns the maximum bit index that may be set (i.e. 8 + #slow_bits * 8)
+    // Returns the maximum bit index that may be set (i.e. 64 + #slow_bits * 64)
     pub fn len(&self) -> usize {
-        use crate::common::WORD_SIZE;
-        WORD_SIZE * (1 + self.slow_bits.len())
+        64 * (1 + self.slow_bits.len())
     }
 }
 
@@ -104,14 +103,14 @@ impl Iterator for Bit_Set_Iter<'_> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
+        let len = self.bitset.len();
         let mut idx = self.idx;
-        self.idx += 1;
-        while idx < self.bitset.len() {
+        while idx < len {
+            self.idx += 1;
             if self.bitset.get(idx) {
                 return Some(idx);
             }
             idx = self.idx;
-            self.idx += 1;
         }
         None
     }

@@ -94,7 +94,8 @@ pub fn create_jelly(
 
     #[cfg(debug_assertions)]
     {
-        world.add_component(entity, C_Debug_Data::default());
+        let debug = world.add_component(entity, C_Debug_Data::default());
+        debug.entity_name = "Jelly";
     }
 
     entity
@@ -130,6 +131,12 @@ pub fn create_rock(
             dyn_friction: 0.3,
         },
     );
+
+    #[cfg(debug_assertions)]
+    {
+        let debug = world.add_component(rock, C_Debug_Data::default());
+        debug.entity_name = "Rock";
+    }
 
     rock
 }
@@ -251,7 +258,8 @@ pub fn create_drill(
 
     #[cfg(debug_assertions)]
     {
-        world.add_component(entity, C_Debug_Data::default());
+        let debug = world.add_component(entity, C_Debug_Data::default());
+        debug.entity_name = "Drill";
     }
 
     entity
@@ -301,6 +309,12 @@ pub fn create_sky(
             ..Default::default()
         },
     );
+
+    #[cfg(debug_assertions)]
+    {
+        let debug = world.add_component(sky, C_Debug_Data::default());
+        debug.entity_name = "Sky";
+    }
 }
 
 pub fn create_terrain(
@@ -334,6 +348,12 @@ pub fn create_terrain(
             layer: Game_Collision_Layer::Ground as _,
         },
     );
+
+    #[cfg(debug_assertions)]
+    {
+        let debug = world.add_component(gnd, C_Debug_Data::default());
+        debug.entity_name = "Terrain";
+    }
 }
 
 pub fn create_background(
@@ -357,4 +377,10 @@ pub fn create_background(
     render::set_texture_repeated(texture, true);
 
     world.add_component(ground, C_Spatial2D::default());
+
+    #[cfg(debug_assertions)]
+    {
+        let debug = world.add_component(ground, C_Debug_Data::default());
+        debug.entity_name = "Background";
+    }
 }
