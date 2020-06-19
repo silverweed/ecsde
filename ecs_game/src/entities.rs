@@ -1,5 +1,4 @@
 use crate::collisions::Game_Collision_Layer;
-use crate::debug::entity_debug::C_Debug_Data;
 use crate::gfx::multi_sprite_animation_system::{Animation_Track, C_Multi_Renderable_Animation};
 use crate::gfx::shaders::*;
 use crate::systems::controllable_system::C_Controllable;
@@ -17,6 +16,9 @@ use ecs_engine::ecs::components::gfx::{
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::gfx::render;
 use ecs_engine::resources::gfx::{shader_path, tex_path, Gfx_Resources, Shader_Cache};
+
+#[cfg(debug_assertions)]
+use crate::debug::entity_debug::C_Debug_Data;
 
 pub fn create_jelly(
     world: &mut Ecs_World,
