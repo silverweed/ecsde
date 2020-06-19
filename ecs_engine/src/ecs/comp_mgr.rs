@@ -18,6 +18,9 @@ pub(super) type Component_Handle = u32;
 pub struct Component_Manager {
     /// Note: storage is None for ZST components
     storages: Vec<Option<Component_Storage>>,
+    /// This is only used when dealing with components dynamically (e.g. remove_all_components)
+    /// since we cannot know the component size by its handle alone.
+    is_zst: Vec<bool>,
 
     last_comp_handle: Component_Handle,
     handles: HashMap<TypeId, Component_Handle>,
@@ -109,6 +112,7 @@ impl Component_Manager {
     pub fn new() -> Self {
         Self {
             storages: vec![],
+            is_zst: vec![],
             last_comp_handle: 0,
             handles: HashMap::new(),
             entity_comp_set: vec![],
@@ -125,7 +129,12 @@ impl Component_Manager {
         };
 
         let handle = self.last_comp_handle;
-        self.storages.push(if size_of::<T>() != 0 { Some(Component_Storage::new::<T>()) } else { None });
+        self.storages.push(if size_of::<T>() != 0 {
+            Some(Component_Storage::new::<T>())
+        } else {
+            None
+        });
+        self.is_zst.push(size_of::<T>() == 0);
         self.last_comp_handle += 1;
 
         handles_entry.insert(handle);
@@ -141,7 +150,7 @@ impl Component_Manager {
         {
             if size_of::<T>() != 0 {
                 debug_assert_eq!(
-                    self.must_get_storage(handle).has_component::<T>(entity),
+                    unsafe { self.must_get_storage(handle).has_component::<T>(entity) },
                     bit_is_set
                 );
             }
@@ -161,7 +170,7 @@ impl Component_Manager {
                 None
             }
         } else {
-            self.must_get_storage(handle).get_component::<T>(entity)
+            unsafe { self.must_get_storage(handle).get_component::<T>(entity) }
         }
     }
 
@@ -176,7 +185,10 @@ impl Component_Manager {
                 None
             }
         } else {
-            self.must_get_storage_mut(handle).get_component_mut::<T>(entity)
+            unsafe {
+                self.must_get_storage_mut(handle)
+                    .get_component_mut::<T>(entity)
+            }
         }
     }
 
@@ -189,7 +201,10 @@ impl Component_Manager {
         self.entity_comp_set[entity.index as usize].set(handle as usize, true);
 
         if size_of::<T>() != 0 {
-            self.must_get_storage_mut(handle).add_component::<T>(entity, data)
+            unsafe {
+                self.must_get_storage_mut(handle)
+                    .add_component::<T>(entity, data)
+            }
         } else {
             static mut UNIT: () = ();
             unsafe { &mut *(&mut UNIT as *mut () as *mut T) }
@@ -199,13 +214,23 @@ impl Component_Manager {
     pub fn remove_component<T: Copy + 'static>(&mut self, entity: Entity) {
         let handle = self.get_handle::<T>();
         self.entity_comp_set[entity.index as usize].set(handle as usize, false);
-        self.must_get_storage_mut(handle).remove_component::<T>(entity);
+        if size_of::<T>() != 0 {
+            unsafe {
+                self.must_get_storage_mut(handle)
+                    .remove_component::<T>(entity);
+            }
+        }
     }
 
     pub fn remove_all_components(&mut self, entity: Entity) {
         let comp_set = self.entity_comp_set[entity.index as usize].clone();
         for handle in &comp_set {
-            self.must_get_storage_mut(handle as _).remove_component_dyn(entity);
+            if !self.is_zst[handle as usize] {
+                unsafe {
+                    self.must_get_storage_mut(handle as _)
+                        .remove_component_dyn(entity);
+                }
+            }
         }
     }
 
@@ -214,7 +239,7 @@ impl Component_Manager {
             comp_alloc::Component_Allocator_Iter::empty()
         } else {
             let handle = self.get_handle::<T>();
-            self.must_get_storage(handle).alloc.iter::<T>()
+            unsafe { self.must_get_storage(handle).alloc.iter::<T>() }
         }
     }
 
@@ -223,7 +248,7 @@ impl Component_Manager {
             comp_alloc::Component_Allocator_Iter_Mut::empty()
         } else {
             let handle = self.get_handle::<T>();
-            self.must_get_storage_mut(handle).alloc.iter_mut::<T>()
+            unsafe { self.must_get_storage_mut(handle).alloc.iter_mut::<T>() }
         }
     }
 
@@ -235,7 +260,7 @@ impl Component_Manager {
             type_name::<T>()
         );
         let handle = self.get_handle::<T>();
-        self.must_get_storage(handle)
+        unsafe { self.must_get_storage(handle) }
     }
 
     pub fn get_component_storage_mut<T: Copy + 'static>(&mut self) -> &mut Component_Storage {
@@ -246,7 +271,7 @@ impl Component_Manager {
             type_name::<T>()
         );
         let handle = self.get_handle::<T>();
-        self.must_get_storage_mut(handle)
+        unsafe { self.must_get_storage_mut(handle) }
     }
 
     pub fn get_entity_comp_set(&self, entity: Entity) -> Cow<'_, Bit_Set> {
@@ -266,25 +291,33 @@ impl Component_Manager {
             .unwrap_or_else(|| fatal!("Component {:?} was not registered!", type_name::<T>()))
     }
 
-    fn must_get_storage(&self, handle: Component_Handle) -> &Component_Storage {
+    /// # Safety
+    /// The caller must ensure that `handle` corresponds to a non-ZST storage
+    unsafe fn must_get_storage(&self, handle: Component_Handle) -> &Component_Storage {
         let storage = self.storages[handle as usize].as_ref();
-        debug_assert!(storage.is_some(), "must_get_storage[{}] failed!", handle as usize);
-        unsafe {
-            match storage {
-                Some(x) => x,
-                None => std::hint::unreachable_unchecked(),
-            }
+        debug_assert!(
+            storage.is_some(),
+            "must_get_storage[{}] failed!",
+            handle as usize
+        );
+        match storage {
+            Some(x) => x,
+            None => std::hint::unreachable_unchecked(),
         }
     }
 
-    fn must_get_storage_mut(&mut self, handle: Component_Handle) -> &mut Component_Storage {
+    /// # Safety
+    /// The caller must ensure that `handle` corresponds to a non-ZST storage
+    unsafe fn must_get_storage_mut(&mut self, handle: Component_Handle) -> &mut Component_Storage {
         let storage = self.storages[handle as usize].as_mut();
-        debug_assert!(storage.is_some(), "must_get_storage_mut[{}] failed!", handle as usize);
-        unsafe {
-            match storage {
-                Some(x) => x,
-                None => std::hint::unreachable_unchecked(),
-            }
+        debug_assert!(
+            storage.is_some(),
+            "must_get_storage_mut[{}] failed!",
+            handle as usize
+        );
+        match storage {
+            Some(x) => x,
+            None => std::hint::unreachable_unchecked(),
         }
     }
 }
@@ -294,7 +327,13 @@ pub(super) fn draw_comp_alloc<T: 'static + Copy>(
     world: &super::ecs_world::Ecs_World,
     painter: &mut Debug_Painter,
 ) {
-    world.component_manager.must_get_storage(world.component_manager.get_handle::<T>())
-        .alloc
-        .debug_draw::<T>(painter);
+    if size_of::<T>() != 0 {
+        unsafe {
+            world
+                .component_manager
+                .must_get_storage(world.component_manager.get_handle::<T>())
+                .alloc
+                .debug_draw::<T>(painter);
+        }
+    }
 }
