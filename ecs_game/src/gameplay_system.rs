@@ -181,7 +181,7 @@ impl Gameplay_System {
             ground_collision_calc_system.update(world, &mut level.chunks);
 
             //movement_system::update(&dt, world);
-            dumb_movement_system::update(&dt, world, rng);
+            dumb_movement_system::update(&dt, world, &mut level.phys_world, rng);
 
             gfx::multi_sprite_animation_system::update(&dt, world, frame_alloc);
             let camera = level.get_camera().transform;

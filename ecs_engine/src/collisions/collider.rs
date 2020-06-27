@@ -1,8 +1,9 @@
 use super::layers::Collision_Layer;
+use super::phys_world::Physics_Body_Handle;
 use crate::common::vector::Vec2f;
 use crate::ecs::ecs_world::Entity;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub enum Collision_Shape {
     Rect { width: f32, height: f32 },
@@ -34,11 +35,7 @@ pub struct Collider {
     pub layer: Collision_Layer,
 }
 
-// Attach this component alongside Collider to have a rigidbody
 #[derive(Copy, Clone, Debug, Default)]
-pub struct C_Phys_Data {
-    pub inv_mass: f32,
-    pub restitution: f32,
-    pub static_friction: f32,
-    pub dyn_friction: f32,
+pub struct C_Collider {
+    pub handle: Physics_Body_Handle,
 }

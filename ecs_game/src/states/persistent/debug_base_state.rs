@@ -117,6 +117,7 @@ impl Persistent_Game_State for Debug_Base_State {
                         physics::update_collisions(
                             &mut level.world,
                             &level.chunks,
+                            &mut level.phys_world,
                             &engine_state.systems.physics_settings,
                             &mut _ignored,
                         );

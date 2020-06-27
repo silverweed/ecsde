@@ -1,4 +1,3 @@
-use crate::collisions::Game_Collision_Layer;
 use crate::entities;
 use crate::gameplay_system::Gameplay_System_Config;
 use crate::gfx::multi_sprite_animation_system::C_Multi_Renderable_Animation;
@@ -12,7 +11,8 @@ use crate::systems::ground_collision_calculation_system::C_Ground;
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use crate::Game_Resources;
 use ecs_engine::cfg::{self, Cfg_Var};
-use ecs_engine::collisions::collider::{C_Phys_Data, Collider, Collision_Shape};
+use ecs_engine::collisions::collider::C_Collider;
+use ecs_engine::collisions::phys_world::Physics_World;
 use ecs_engine::common::angle::rad;
 use ecs_engine::common::colors;
 use ecs_engine::common::stringid::String_Id;
@@ -44,6 +44,7 @@ pub fn level_load_sync(
         active_camera: 0,
         chunks: World_Chunks::new(),
         lights: Lights::default(),
+        phys_world: Physics_World::new(),
     };
 
     linfo!("Loading level {} ...", level_id);
@@ -58,8 +59,7 @@ pub fn level_load_sync(
         gs_cfg,
     );
     init_demo_lights(&mut level.lights);
-    calc_terrain_colliders(&mut level.world);
-    fill_world_chunks(&mut level.chunks, &mut level.world);
+    fill_world_chunks(&mut level.chunks, &mut level.world, &mut level.phys_world);
     lok!(
         "Loaded level {}. N. entities = {}, n. cameras = {}",
         level_id,
@@ -77,9 +77,8 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Renderable>();
     world.register_component::<C_Animated_Sprite>();
     world.register_component::<C_Controllable>();
-    world.register_component::<Collider>();
     world.register_component::<C_Dumb_Movement>();
-    world.register_component::<C_Phys_Data>();
+    world.register_component::<C_Collider>();
     world.register_component::<C_Ground>();
     world.register_component::<C_Texture_Collider>();
     world.register_component::<C_Multi_Renderable>();
@@ -147,27 +146,16 @@ fn init_demo_entities(
 
     entities::create_background(&mut level.world, gres, shader_cache, env, cfg);
 
-    let ext = 0;
-    let int = 5;
-    let sw = 32;
-    let sh = 32;
-    for x in -ext..=ext {
-        for y in -ext..=ext {
-            if (-int..=int).contains(&x) && (-int..=int).contains(&y) {
-                continue;
-            }
-            entities::create_rock(
-                &mut level.world,
-                gres,
-                env,
-                &Transform2D::from_pos(v2!((x * sw) as f32, (y * sh) as f32)),
-            );
-        }
-    }
-
     entities::create_terrain(&mut level.world, gres, shader_cache, env, cfg);
 
-    entities::create_sky(&mut level.world, gres, shader_cache, env, cfg);
+    entities::create_sky(
+        &mut level.world,
+        &mut level.phys_world,
+        gres,
+        shader_cache,
+        env,
+        cfg,
+    );
 
     for i in 0..gs_cfg.n_entities_to_spawn {
         let x = rand::rand_01(rng);
@@ -180,6 +168,7 @@ fn init_demo_entities(
 
         entities::create_jelly(
             &mut level.world,
+            &mut level.phys_world,
             gres,
             shader_cache,
             env,
@@ -191,6 +180,7 @@ fn init_demo_entities(
 
     entities::create_drill(
         &mut level.world,
+        &mut level.phys_world,
         gres,
         shader_cache,
         env,
@@ -199,64 +189,16 @@ fn init_demo_entities(
     );
 }
 
-fn calc_terrain_colliders(world: &mut Ecs_World) {
-    use ecs_engine::common::vector::Vec2i;
-    use std::collections::HashMap;
-
-    const ROCK_SIZE: f32 = 32.;
-    let mut rocks_by_tile = HashMap::new();
-
-    // for each rock ...
-    foreach_entity!(world, +C_Ground, |entity| {
-        let pos = world.get_component::<C_Spatial2D>(entity).unwrap().transform.position();
-        let tile = Vec2i::from(pos / ROCK_SIZE);
-        rocks_by_tile.insert(tile, entity);
-    });
-
-    foreach_entity!(world, +C_Ground, |entity| {
-        let pos = world.get_component::<C_Spatial2D>(entity).unwrap().transform.position();
-        let tile = Vec2i::from(pos / ROCK_SIZE);
-
-        let up = tile - v2!(0, 1);
-        let down = tile + v2!(0, 1);
-        let left = tile - v2!(1, 0);
-        let right = tile + v2!(1, 0);
-
-        let mut neighs = 0;
-        let e_up = rocks_by_tile.get(&up);
-        let e_right = rocks_by_tile.get(&right);
-        let e_left = rocks_by_tile.get(&left);
-        let e_down = rocks_by_tile.get(&down);
-
-        let ground = world.get_component_mut::<C_Ground>(entity).unwrap();
-        // Note: order must be the same as Square_Directions!
-        for (i, &dir) in [e_up, e_right, e_down, e_left].iter().enumerate() {
-            if let Some(e) = dir {
-                neighs += 1;
-                ground.neighbours[i] = *e;
-            }
-        }
-
-        if neighs < 4 {
-            world.add_component(entity, Collider {
-                shape: Collision_Shape::Rect {
-                    width: ROCK_SIZE,
-                    height: ROCK_SIZE
-                },
-                layer: Game_Collision_Layer::Ground as _,
-                is_static: true,
-                ..Default::default()
-            });
-        }
-    });
-}
-
-fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World) {
-    foreach_entity!(world, +C_Spatial2D, +Collider, |entity| {
+fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World, phys_world: &Physics_World) {
+    foreach_entity!(world, +C_Spatial2D, +C_Collider, |entity| {
         let spatial = world.get_component_mut::<C_Spatial2D>(entity).unwrap();
         let pos = spatial.transform.position();
         spatial.frame_starting_pos = pos;
-        let collider = world.get_component::<Collider>(entity).unwrap();
-        chunks.add_entity(entity, pos, collider.shape.extent());
+        let body_handle = world.get_component::<C_Collider>(entity).unwrap().handle;
+        let phys_body = phys_world.get_physics_body(body_handle).unwrap();
+        for cld in phys_body.all_colliders() {
+            let collider = phys_world.get_collider(cld).unwrap();
+            chunks.add_entity(entity, pos, collider.shape.extent());
+        }
     });
 }

@@ -2,10 +2,10 @@ use crate::collisions::Game_Collision_Layer;
 use crate::gfx::multi_sprite_animation_system::{Animation_Track, C_Multi_Renderable_Animation};
 use crate::gfx::shaders::*;
 use crate::systems::controllable_system::C_Controllable;
-use crate::systems::ground_collision_calculation_system::C_Ground;
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use ecs_engine::cfg::{Cfg_Var, Config};
-use ecs_engine::collisions::collider::{C_Phys_Data, Collider, Collision_Shape};
+use ecs_engine::collisions::collider::{C_Collider, Collider, Collision_Shape};
+use ecs_engine::collisions::phys_world::{Phys_Data, Physics_World};
 use ecs_engine::common::rect::Rect;
 use ecs_engine::common::transform::Transform2D;
 use ecs_engine::core::env::Env_Info;
@@ -22,6 +22,7 @@ use crate::debug::entity_debug::C_Debug_Data;
 
 pub fn create_jelly(
     world: &mut Ecs_World,
+    phys_world: &mut Physics_World,
     gres: &mut Gfx_Resources,
     shader_cache: &mut Shader_Cache,
     env: &Env_Info,
@@ -60,28 +61,24 @@ pub fn create_jelly(
     );
 
     let (sw, sh) = render::get_texture_size(gres.get_texture(renderable.material.texture));
-    world.add_component(
-        entity,
-        Collider {
-            shape: {
-                let width = (sw / N_ANIM_FRAMES as u32) as f32;
-                let height = sh as f32;
-                Collision_Shape::Rect { width, height }
-            },
-            layer: Game_Collision_Layer::Entities as _,
-            ..Default::default()
+    let cld = Collider {
+        shape: {
+            let width = (sw / N_ANIM_FRAMES as u32) as f32;
+            let height = sh as f32;
+            Collision_Shape::Rect { width, height }
         },
-    );
+        layer: Game_Collision_Layer::Entities as _,
+        ..Default::default()
+    };
+    let phys_data = Phys_Data {
+        inv_mass: 1.,
+        restitution: 0.9,
+        static_friction: 0.5,
+        dyn_friction: 0.3,
+    };
+    let phys_body = phys_world.new_physics_body_with_rigidbody(cld, phys_data);
 
-    world.add_component(
-        entity,
-        C_Phys_Data {
-            inv_mass: 1.,
-            restitution: 0.9,
-            static_friction: 0.5,
-            dyn_friction: 0.3,
-        },
-    );
+    world.add_component(entity, C_Collider { handle: phys_body });
 
     world.add_component(
         entity,
@@ -101,48 +98,9 @@ pub fn create_jelly(
     entity
 }
 
-pub fn create_rock(
-    world: &mut Ecs_World,
-    gres: &mut Gfx_Resources,
-    env: &Env_Info,
-    transform: &Transform2D,
-) -> Entity {
-    let rock = world.new_entity();
-
-    let renderable = C_Renderable::new_with_diffuse(gres, env, "rock.png").with_z_index(1);
-    world.add_component(rock, renderable);
-
-    world.add_component(
-        rock,
-        C_Spatial2D {
-            transform: *transform,
-            ..Default::default()
-        },
-    );
-
-    world.add_component(rock, C_Ground::default());
-
-    world.add_component(
-        rock,
-        C_Phys_Data {
-            inv_mass: 0., // infinite mass
-            restitution: 1.0,
-            static_friction: 0.5,
-            dyn_friction: 0.3,
-        },
-    );
-
-    #[cfg(debug_assertions)]
-    {
-        let debug = world.add_component(rock, C_Debug_Data::default());
-        debug.entity_name = "Rock";
-    }
-
-    rock
-}
-
 pub fn create_drill(
     world: &mut Ecs_World,
+    phys_world: &mut Physics_World,
     gres: &mut Gfx_Resources,
     shader_cache: &mut Shader_Cache,
     env: &Env_Info,
@@ -241,20 +199,21 @@ pub fn create_drill(
         },
     );
 
+    let cld = Collider {
+        shape: {
+            let width = sw as f32 * transform.scale().x;
+            let height = sh as f32 * transform.scale().y;
+            Collision_Shape::Rect { width, height }
+        },
+        layer: Game_Collision_Layer::Entities as _,
+        ..Default::default()
+    };
     world.add_component(
         entity,
-        Collider {
-            shape: {
-                let width = sw as f32 * transform.scale().x;
-                let height = sh as f32 * transform.scale().y;
-                Collision_Shape::Rect { width, height }
-            },
-            layer: Game_Collision_Layer::Entities as _,
-            ..Default::default()
+        C_Collider {
+            handle: phys_world.new_physics_body_with_rigidbody(cld, Phys_Data::default()),
         },
     );
-
-    world.add_component(entity, C_Phys_Data::default());
 
     #[cfg(debug_assertions)]
     {
@@ -267,6 +226,7 @@ pub fn create_drill(
 
 pub fn create_sky(
     world: &mut Ecs_World,
+    phys_world: &mut Physics_World,
     gres: &mut Gfx_Resources,
     shader_cache: &mut Shader_Cache,
     env: &Env_Info,
@@ -290,23 +250,25 @@ pub fn create_sky(
 
     let (sw, sh) = render::get_texture_size(gres.get_texture(renderable.material.texture));
 
-    world.add_component(
-        sky,
-        Collider {
-            shape: Collision_Shape::Rect {
-                width: sw as f32,
-                height: sh as f32,
-            },
-            layer: Game_Collision_Layer::Sky as _,
-            ..Default::default()
+    let cld = Collider {
+        shape: Collision_Shape::Rect {
+            width: sw as f32,
+            height: sh as f32,
         },
-    );
+        layer: Game_Collision_Layer::Sky as _,
+        ..Default::default()
+    };
 
     world.add_component(
         sky,
-        C_Phys_Data {
-            inv_mass: 0.,
-            ..Default::default()
+        C_Collider {
+            handle: phys_world.new_physics_body_with_rigidbody(
+                cld,
+                Phys_Data {
+                    inv_mass: 0.,
+                    ..Default::default()
+                },
+            ),
         },
     );
 

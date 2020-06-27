@@ -1,6 +1,9 @@
 SHELL = bash
 all: build
 
+c:
+	cargo check
+
 run: build
 	cargo run
 

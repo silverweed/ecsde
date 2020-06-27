@@ -1,8 +1,9 @@
 // reference: https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331
 
 use super::layers::Collision_Matrix;
+use super::phys_world::{Phys_Data, Physics_World};
 use super::spatial::Spatial_Accelerator;
-use crate::collisions::collider::{C_Phys_Data, Collider, Collision_Shape};
+use crate::collisions::collider::{C_Collider, Collider, Collision_Shape};
 use crate::common::math::clamp;
 use crate::common::vector::{sanity_check_v, Vec2f};
 use crate::ecs::components::base::C_Spatial2D;
@@ -21,7 +22,7 @@ struct Rigidbody {
     pub entity: Entity,
     pub position: Vec2f,
     pub velocity: Vec2f,
-    pub phys_data: C_Phys_Data,
+    pub phys_data: Phys_Data,
 }
 
 #[derive(Debug, Clone)]
@@ -420,12 +421,13 @@ fn solve_collisions(objects: &mut HashMap<Entity, Rigidbody>, infos: &[&Collisio
 pub fn update_collisions<T_Spatial_Accelerator>(
     ecs_world: &mut Ecs_World,
     accelerator: &T_Spatial_Accelerator,
+    phys_world: &mut Physics_World,
     settings: &Physics_Settings,
     #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
 ) where
     T_Spatial_Accelerator: Spatial_Accelerator<Entity>,
 {
-    let (mut objects, entities) = prepare_colliders_and_gather_rigidbodies(ecs_world);
+    let (mut objects, entities) = prepare_colliders_and_gather_rigidbodies(ecs_world, phys_world);
 
     let colliders = ecs_world.get_component_storage::<Collider>();
 
@@ -481,35 +483,43 @@ pub fn update_collisions<T_Spatial_Accelerator>(
     }
 }
 
+/// Returns (map { entity => rigidbody }, list of collidable entities)
+/// Note that some entities may have non-physical colliders (i.e. trigger colliders),
+/// but each entity must have at most 1 physical collider.
 fn prepare_colliders_and_gather_rigidbodies(
     world: &mut Ecs_World,
+    phys_world: &mut Physics_World,
 ) -> (HashMap<Entity, Rigidbody>, Vec<Entity>) {
     // @Speed: try to use an array rather than a HashMap
     let mut objects = HashMap::new();
     let mut entities = vec![];
 
-    foreach_entity!(world, +Collider, +C_Spatial2D, |entity| {
+    foreach_entity!(world, +C_Collider, +C_Spatial2D, |entity| {
         let spatial = world.get_component_mut::<C_Spatial2D>(entity).unwrap();
         let pos = spatial.transform.position();
         let velocity = spatial.velocity;
         sanity_check_v(velocity);
         spatial.frame_starting_pos = pos;
 
-        let collider = world.get_component_mut::<Collider>(entity).unwrap();
-        collider.position = pos;
-        collider.colliding_with = None;
-        let position = collider.position;
-        let shape = collider.shape;
+        let collider = world.get_component::<C_Collider>(entity).unwrap();
+        let phys_body = phys_world.get_physics_body(collider.handle).unwrap().clone();
+
+        for cld_handle in phys_body.all_colliders() {
+            let collider = phys_world.get_collider_mut(cld_handle).unwrap();
+            collider.position = pos;
+            collider.colliding_with = None;
+        }
 
         entities.push(entity);
 
-        if let Some(phys_data) = world.get_component::<C_Phys_Data>(entity) {
+        if let Some((cld_handle, phys_data)) = phys_body.rigidbody_collider {
+            let rb_cld = phys_world.get_collider(cld_handle).unwrap();
             objects.insert(entity, Rigidbody {
                 entity,
-                position,
+                position: pos,
                 velocity,
-                shape,
-                phys_data: *phys_data,
+                shape: rb_cld.shape,
+                phys_data,
             });
         }
     });

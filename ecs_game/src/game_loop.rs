@@ -349,6 +349,7 @@ where
             physics::update_collisions(
                 &mut level.world,
                 &level.chunks,
+                &mut level.phys_world,
                 phys_settings,
                 #[cfg(debug_assertions)]
                 coll_debug,
@@ -356,6 +357,7 @@ where
 
             pixel_collision_system.update(
                 &mut level.world,
+                &mut level.phys_world,
                 &game_resources.gfx,
                 &phys_settings.collision_matrix,
                 frame_alloc,

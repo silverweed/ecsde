@@ -1,4 +1,5 @@
 use crate::spatial::World_Chunks;
+use ecs_engine::collisions::phys_world::Physics_World;
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::vector::Vec2f;
 use ecs_engine::ecs::components::gfx::C_Camera2D;
@@ -14,6 +15,7 @@ pub struct Level {
     pub cameras: Vec<Entity>,
     pub active_camera: usize, // index inside 'cameras'
     pub lights: Lights,
+    pub phys_world: Physics_World,
 }
 
 impl Level {

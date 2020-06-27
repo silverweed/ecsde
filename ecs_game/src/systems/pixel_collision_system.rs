@@ -1,7 +1,8 @@
 use crate::systems::controllable_system::C_Controllable;
 use ecs_engine::alloc::temp::*;
-use ecs_engine::collisions::collider::{C_Phys_Data, Collider};
+use ecs_engine::collisions::collider::C_Collider;
 use ecs_engine::collisions::layers::{Collision_Layer, Collision_Matrix};
+use ecs_engine::collisions::phys_world::{Collider_Handle, Physics_World};
 use ecs_engine::common::colors::Color;
 use ecs_engine::common::math::clamp;
 use ecs_engine::common::rect::Rect;
@@ -23,6 +24,7 @@ pub struct C_Texture_Collider {
 struct Collision_Info {
     pub entity_nonpixel: Entity,
     pub entity_pixel: Entity,
+    pub cld_handle: Collider_Handle,
     pub normal: Vec2f,
     pub restitution: f32,
 }
@@ -142,6 +144,7 @@ impl Pixel_Collision_System {
     pub fn update(
         &mut self,
         world: &mut Ecs_World,
+        phys_world: &mut Physics_World,
         gres: &Gfx_Resources,
         collision_matrix: &Collision_Matrix,
         temp_alloc: &mut Temp_Allocator,
@@ -154,23 +157,33 @@ impl Pixel_Collision_System {
 
         struct Potential_Colliding_Entity_Info {
             pub entity: Entity,
+            pub cld_handle: Collider_Handle,
             pub transform: Transform2D,
             pub velocity: Vec2f,
             pub extent: Vec2f,
             pub layer: Collision_Layer,
+            pub restitution: f32,
         }
 
-        foreach_entity!(world, +Collider, +C_Spatial2D, |entity| {
-            let s = world.get_component::<C_Spatial2D>(entity).unwrap();
-            let c = world.get_component::<Collider>(entity).unwrap();
-            if !c.is_static {
-                colliding_positions.push(Potential_Colliding_Entity_Info {
-                    entity,
-                    transform: s.transform,
-                    extent: c.shape.extent(),
-                    velocity: s.velocity,
-                    layer: c.layer,
-                });
+        // Note: currently the Texture_Collider only considers Rigidbodies.
+        // Maybe this is @Incomplete and we should also consider trigger colliders.
+        foreach_entity!(world, +C_Collider, +C_Spatial2D, |entity| {
+            let spat = world.get_component::<C_Spatial2D>(entity).unwrap();
+            let bh = world.get_component::<C_Collider>(entity).unwrap().handle;
+            let body = phys_world.get_physics_body(bh).unwrap();
+            if let Some((ch, phys_data)) = body.rigidbody_collider {
+                let collider = phys_world.get_collider(ch).unwrap();
+                if !collider.is_static {
+                    colliding_positions.push(Potential_Colliding_Entity_Info {
+                        entity,
+                        cld_handle: ch,
+                        transform: spat.transform,
+                        extent: collider.shape.extent(),
+                        velocity: spat.velocity,
+                        layer: collider.layer,
+                        restitution: phys_data.restitution,
+                    });
+                }
             }
         });
 
@@ -193,10 +206,12 @@ impl Pixel_Collision_System {
 
                 let Potential_Colliding_Entity_Info {
                     entity: e,
+                    cld_handle,
                     transform,
                     extent,
                     velocity,
                     layer,
+                    restitution
                 } = info;
 
                 if !collision_matrix.layers_collide(tex_cld.layer, *layer) {
@@ -240,9 +255,9 @@ impl Pixel_Collision_System {
                                 self.collided_entities.push(Collision_Info {
                                     entity_nonpixel: *e,
                                     entity_pixel: entity,
+                                    cld_handle: *cld_handle,
                                     normal,
-                                    restitution: world.get_component::<C_Phys_Data>(*e)
-                                                    .map(|pd| pd.restitution).unwrap_or(1.),
+                                    restitution: *restitution
                                 });
                                 break 'outer;
                             }
@@ -253,16 +268,18 @@ impl Pixel_Collision_System {
         });
 
         for info in &self.collided_entities {
-            world
-                .get_component_mut::<Collider>(info.entity_nonpixel)
+            phys_world
+                .get_collider_mut(info.cld_handle)
                 .unwrap()
                 .colliding_with = Some(info.entity_pixel);
+
             let is_controlled = world
                 .get_component::<C_Controllable>(info.entity_nonpixel)
                 .is_some();
             let spat = world
                 .get_component_mut::<C_Spatial2D>(info.entity_nonpixel)
                 .unwrap();
+
             if is_controlled {
                 spat.velocity = v2!(0., 0.);
             } else {
