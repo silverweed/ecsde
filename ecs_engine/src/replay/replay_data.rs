@@ -198,11 +198,16 @@ impl Replay_Data {
     }
 
     #[cfg(test)]
-    pub fn new_from_data(ms_per_frame: f32, data: &[Replay_Data_Point]) -> Replay_Data {
+    pub fn new_from_data(
+        ms_per_frame: f32,
+        data: &[Replay_Data_Point],
+        seed: Default_Rng_Seed,
+    ) -> Replay_Data {
         let mut replay = Replay_Data {
             data: data.to_vec(),
             ms_per_frame,
             duration: Duration::new(0, 0),
+            seed,
         };
         replay.duration = Self::calc_duration(&replay);
         replay
@@ -352,8 +357,11 @@ mod tests {
         let mut byte_stream = Byte_Stream::new();
 
         // Simulate the serialization done by the recording thread
-        let ms_per_frame = 16;
-        byte_stream.write_u16(ms_per_frame).unwrap();
+        let ms_per_frame = 16.67;
+        byte_stream.write_f32(ms_per_frame).unwrap();
+
+        let seed = Default_Rng_Seed::default();
+        seed.serialize(&mut byte_stream).unwrap();
 
         for point in data_points.iter() {
             point
@@ -367,9 +375,10 @@ mod tests {
             .unwrap_or_else(|err| panic!("Failed to deserialize replay data: {}", err));
 
         assert_eq!(deserialized.ms_per_frame, ms_per_frame);
+        assert_eq!(deserialized.seed, seed);
         assert_eq!(
             deserialized.duration,
-            Duration::from_millis(424_242u64 * (ms_per_frame as u64))
+            Duration::from_secs_f32(424_242f32 * ms_per_frame * 0.001)
         );
         assert_eq!(deserialized.data.len(), data_points.len());
         for i in 0..data_points.len() {
