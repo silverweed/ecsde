@@ -178,7 +178,7 @@ impl Gameplay_System {
             // @Incomplete: level-specific gameplay update
             update_demo_entites(world, &dt);
 
-            ground_collision_calc_system.update(world, &mut level.chunks);
+            ground_collision_calc_system.update(world, &mut level.phys_world, &mut level.chunks);
 
             //movement_system::update(&dt, world);
             dumb_movement_system::update(&dt, world, &mut level.phys_world, rng);
@@ -187,7 +187,7 @@ impl Gameplay_System {
             let camera = level.get_camera().transform;
             entity_preview_system::update(&mut level.world, window, &camera);
 
-            level.chunks.update(&mut level.world);
+            level.chunks.update(&mut level.world, &level.phys_world);
         });
     }
 

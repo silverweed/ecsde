@@ -266,7 +266,7 @@ where
     let mut stored = std::collections::HashSet::new();
 
     // @Speed: maybe we should iterate on the chunks? Can we do that in parallel?
-    for (i, a) in colliders.iter().enumerate() {
+    for (idx_a, a) in colliders.iter().enumerate() {
         if a.is_static {
             continue;
         }
@@ -278,7 +278,7 @@ where
         let mut neighbours = vec![];
         accelerator.get_neighbours(a.position, a_extent, &mut neighbours);
 
-        for (j, b) in colliders.iter().enumerate() {
+        for (idx_b, b) in colliders.iter().enumerate() {
             // @Incomplete: use neighbours!
             let ent_b = b.entity;
             if ent_a == ent_b {
@@ -286,12 +286,13 @@ where
             }
             let b_shape = collision_shape_type_index(&b.shape);
             if !collision_matrix.layers_collide(a.layer, b.layer)
-            //|| stored.contains(&(ent_b, ent_a)) // @Incomplete!
+                || stored.contains(&(idx_b, idx_a))
+            // @Incomplete!
             {
                 continue;
             }
 
-            let info = a_part_cb[b_shape](i, j, a, b);
+            let info = a_part_cb[b_shape](idx_a, idx_b, a, b);
 
             #[cfg(debug_assertions)]
             {
@@ -300,7 +301,7 @@ where
 
             if let Some(info) = info {
                 collision_infos.push(info);
-                stored.insert((ent_a, ent_b));
+                stored.insert((idx_a, idx_b));
             }
         }
     }
@@ -479,15 +480,16 @@ pub fn update_collisions<T_Spatial_Accelerator>(
 
     infos.iter().for_each(|info| {
         let body2 = colliders[info.idx2].entity;
-        colliders[info.idx1].colliding_with = Some(body2);
+        colliders[info.idx1].colliding_with.push(body2);
         let body1 = colliders[info.idx1].entity;
-        colliders[info.idx2].colliding_with = Some(body1);
+        colliders[info.idx2].colliding_with.push(body1);
     });
 
     let rb_infos = infos
         .par_iter()
         .filter(|info| objects.contains_key(&info.idx1) && objects.contains_key(&info.idx2))
         .collect::<Vec<_>>();
+
     solve_collisions(&mut objects, &rb_infos);
 
     // Copy back positions and velocities
@@ -529,25 +531,25 @@ fn prepare_colliders_and_gather_rigidbodies(
             .get_component_mut::<C_Spatial2D>(collider.entity)
             .unwrap();
         let pos = spatial.transform.position();
-        let velocity = spatial.velocity;
-        sanity_check_v(velocity);
         spatial.frame_starting_pos = pos;
 
         collider.position = pos;
-        collider.velocity = velocity;
-        collider.colliding_with = None;
+        collider.colliding_with.clear();
     }
 
     for body in &phys_world.bodies {
         if let Some((cld_handle, phys_data)) = body.rigidbody_collider {
-            let rb_cld = phys_world.get_collider(cld_handle).unwrap();
-            if phys_world.is_valid_collider_handle(cld_handle) {
+            if let Some(rb_cld) = phys_world.get_collider(cld_handle) {
+                let spatial = world.get_component::<C_Spatial2D>(rb_cld.entity).unwrap();
+                let velocity = spatial.velocity;
+                sanity_check_v(velocity);
+
                 objects.insert(
                     cld_handle.index as usize,
                     Rigidbody {
                         entity: rb_cld.entity,
                         position: rb_cld.position,
-                        velocity: rb_cld.velocity,
+                        velocity,
                         shape: rb_cld.shape,
                         phys_data,
                     },
@@ -555,38 +557,6 @@ fn prepare_colliders_and_gather_rigidbodies(
             }
         }
     }
-
-    /*
-    foreach_entity!(world, +C_Collider, +C_Spatial2D, |entity| {
-        let spatial = world.get_component_mut::<C_Spatial2D>(entity).unwrap();
-        let pos = spatial.transform.position();
-        let velocity = spatial.velocity;
-        sanity_check_v(velocity);
-        spatial.frame_starting_pos = pos;
-
-        let collider = world.get_component::<C_Collider>(entity).unwrap();
-        let phys_body = phys_world.get_physics_body(collider.handle).unwrap().clone();
-
-        for cld_handle in phys_body.all_colliders() {
-            let collider = phys_world.get_collider_mut(cld_handle).unwrap();
-            collider.position = pos;
-            collider.velocity = velocity;
-            collider.colliding_with = None;
-        }
-
-        entities.push(entity);
-
-        if let Some((cld_handle, phys_data)) = phys_body.rigidbody_collider {
-            let rb_cld = phys_world.get_collider(cld_handle).unwrap();
-            objects.insert(entity, Rigidbody {
-                entity,
-                position: pos,
-                velocity,
-                shape: rb_cld.shape,
-                phys_data,
-            });
-        }
-    });*/
 
     objects
 }

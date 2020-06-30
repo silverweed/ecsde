@@ -1,5 +1,6 @@
 use ecs_engine::alloc::temp::*;
-use ecs_engine::collisions::collider::Collider;
+use ecs_engine::collisions::collider::C_Collider;
+use ecs_engine::collisions::phys_world::Physics_World;
 use ecs_engine::collisions::spatial::Spatial_Accelerator;
 use ecs_engine::common::vector::Vec2f;
 use ecs_engine::core::app::Engine_State;
@@ -88,17 +89,19 @@ impl World_Chunks {
             );
     }
 
-    pub fn update(&mut self, ecs_world: &Ecs_World) {
+    pub fn update(&mut self, ecs_world: &Ecs_World, phys_world: &Physics_World) {
         let mut to_remove = vec![];
         with_cb_data(&mut self.to_destroy, |to_destroy: &mut Vec<Entity>| {
             for &entity in to_destroy.iter() {
                 if let Some(spatial) = ecs_world.get_component::<C_Spatial2D>(entity) {
-                    if let Some(collider) = ecs_world.get_component::<Collider>(entity) {
-                        to_remove.push((
-                            entity,
-                            spatial.transform.position(),
-                            collider.shape.extent(),
-                        ));
+                    if let Some(collider) = ecs_world.get_component::<C_Collider>(entity) {
+                        if let Some(rb_cld) = phys_world.get_rigidbody_collider(collider.handle) {
+                            to_remove.push((
+                                entity,
+                                spatial.transform.position(),
+                                rb_cld.shape.extent(),
+                            ));
+                        }
                     }
                 }
             }

@@ -1,6 +1,7 @@
 use crate::directions;
 use crate::spatial::World_Chunks;
-use ecs_engine::collisions::collider::{Collider, Collision_Shape};
+use ecs_engine::collisions::collider::{C_Collider, Collider, Collision_Shape};
+use ecs_engine::collisions::phys_world::{Phys_Data, Physics_World};
 use ecs_engine::common::vector::Vec2i;
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::ecs::components::base::C_Spatial2D;
@@ -38,7 +39,12 @@ impl Ground_Collision_Calculation_System {
             );
     }
 
-    pub fn update(&mut self, world: &mut Ecs_World, chunks: &mut World_Chunks) {
+    pub fn update(
+        &mut self,
+        world: &mut Ecs_World,
+        phys_world: &mut Physics_World,
+        chunks: &mut World_Chunks,
+    ) {
         with_cb_data(
             &mut self.entities_to_recalc,
             |to_recalc: &mut Vec<Entity>| {
@@ -58,17 +64,23 @@ impl Ground_Collision_Calculation_System {
                                 x: width,
                                 y: height,
                             } = renderable.rect.size();
-                            if !world.has_component::<Collider>(e) {
+                            if !world.has_component::<C_Collider>(e) {
                                 let shape = Collision_Shape::Rect {
                                     width: width as f32,
                                     height: height as f32,
                                 };
+                                let cld = Collider {
+                                    shape,
+                                    is_static: true,
+                                    ..Default::default()
+                                };
+                                // @Incomplete
+                                let body_handle = phys_world
+                                    .new_physics_body_with_rigidbody(cld, Phys_Data::default());
                                 world.add_component(
                                     e,
-                                    Collider {
-                                        shape,
-                                        is_static: true,
-                                        ..Default::default()
+                                    C_Collider {
+                                        handle: body_handle,
                                     },
                                 );
                                 let pos = world

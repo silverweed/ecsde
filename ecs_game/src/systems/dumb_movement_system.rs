@@ -30,16 +30,13 @@ pub fn update(
         //}
 
         let body_handle = ecs_world.get_component::<C_Collider>(entity).unwrap().handle;
-        let body = phys_world.get_physics_body(body_handle).unwrap();
-        let colliding_with = body.rigidbody_collider.map(|(handle, _)|
-            phys_world.get_collider(handle).unwrap().colliding_with
-        ).unwrap_or(None);
+        let colliding_with = phys_world.get_rigidbody_collider(body_handle).map_or_else(Vec::default, |cld| cld.colliding_with.clone());
 
         let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
         if spatial.velocity.magnitude2() < 0.1 {
             spatial.velocity = v2!(120., 200.);
         }
-        if colliding_with.is_none() {
+        if colliding_with.is_empty() {
             return;
         }
 
@@ -54,13 +51,14 @@ pub fn update(
         dumb_movement.time_since_change = Duration::default();
 
         if rand::rand_01(rng) < 1.2 {
-            let to_destroy = colliding_with.unwrap();
-            if ecs_world.is_valid_entity(to_destroy) {
-                if let Some(cld) = ecs_world.get_component::<C_Collider>(to_destroy) {
-                    if let Some((rb_handle, _)) = phys_world.get_physics_body(cld.handle).unwrap().rigidbody_collider {
-                        let rb = phys_world.get_collider(rb_handle).unwrap();
-                        if rb.is_static {
-                            ecs_world.destroy_entity(to_destroy);
+            for to_destroy in colliding_with {
+                if ecs_world.is_valid_entity(to_destroy) {
+                    if let Some(cld) = ecs_world.get_component::<C_Collider>(to_destroy) {
+                        if let Some((rb_handle, _)) = phys_world.get_physics_body(cld.handle).unwrap().rigidbody_collider {
+                            let rb = phys_world.get_collider(rb_handle).unwrap();
+                            if rb.is_static {
+                                ecs_world.destroy_entity(to_destroy);
+                            }
                         }
                     }
                 }

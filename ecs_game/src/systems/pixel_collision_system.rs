@@ -271,7 +271,8 @@ impl Pixel_Collision_System {
             phys_world
                 .get_collider_mut(info.cld_handle)
                 .unwrap()
-                .colliding_with = Some(info.entity_pixel);
+                .colliding_with
+                .push(info.entity_pixel);
 
             let is_controlled = world
                 .get_component::<C_Controllable>(info.entity_nonpixel)

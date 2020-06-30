@@ -796,8 +796,8 @@ fn update_debug(
             }
 
             if draw_comp_alloc_colliders {
-                use ecs_engine::collisions::collider::Collider;
-                ecs_engine::ecs::ecs_world::draw_comp_alloc::<Collider>(
+                use ecs_engine::collisions::collider::C_Collider;
+                ecs_engine::ecs::ecs_world::draw_comp_alloc::<C_Collider>(
                     &level.world,
                     global_painter,
                 );
@@ -1009,7 +1009,7 @@ fn debug_draw_colliders(
             // @Incomplete: scale?
             let mut transform = Transform2D::from_pos_rot_scale(collider.position + collider.offset, rad(0.), v2!(1., 1.));
 
-            let color = if collider.colliding_with.is_some() {
+            let color = if !collider.colliding_with.is_empty() {
                 colors::rgba(255, 0, 0, 100)
             } else {
                 colors::rgba(255, 255, 0, 100)

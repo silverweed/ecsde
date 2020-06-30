@@ -25,13 +25,12 @@ impl Default for Collision_Shape {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Collider {
     pub shape: Collision_Shape,
     pub position: Vec2f, // This should not be set directly: it's computed by collision system
-    pub velocity: Vec2f, // This should not be set directly: it's computed by collision system
     pub offset: Vec2f,
-    pub colliding_with: Option<Entity>,
+    pub colliding_with: Vec<Entity>,
     pub is_static: bool,
     pub layer: Collision_Layer,
     pub entity: Entity,

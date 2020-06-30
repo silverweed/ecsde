@@ -230,6 +230,13 @@ impl Physics_World {
             }
         })
     }
+
+    pub fn get_rigidbody_collider(&self, handle: Physics_Body_Handle) -> Option<&Collider> {
+        self.get_physics_body(handle).and_then(|body| {
+            body.rigidbody_collider
+                .and_then(|(h, _)| self.get_collider(h))
+        })
+    }
 }
 
 #[cfg(test)]
