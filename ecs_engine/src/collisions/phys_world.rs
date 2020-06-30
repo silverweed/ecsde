@@ -209,14 +209,21 @@ impl Physics_World {
         Some(&mut self.colliders[index])
     }
 
-    //pub fn get_all_colliders(&self, handle: Physics_Body_Handle) -> impl Iterator<Item=&Collider> {
-        //let body_handle = self.get_physics_body(handle);
-        //if let Some(body) = body_handle {
-            //body.all_colliders().map(|handle| self.get_collider(handle).unwrap())
-        //} else {
-            //std::iter::empty()
-        //}
-    //}
+    pub fn get_all_colliders(&self, handle: Physics_Body_Handle) -> impl Iterator<Item=&Collider> {
+        let body_handle = self.get_physics_body(handle);
+        let mut iter = None;
+        if let Some(body) = body_handle {
+            iter = Some(body.all_colliders().map(move |h| self.get_collider(h).unwrap()));
+        }
+
+        std::iter::from_fn(move || {
+            if let Some(iter) = iter.as_mut() {
+                iter.next()
+            } else {
+                None
+            }
+        })
+    }
 }
 
 #[cfg(test)]

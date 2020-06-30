@@ -995,10 +995,7 @@ fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World
     use std::convert::TryFrom;
 
     foreach_entity!(ecs_world, +C_Collider, +C_Spatial2D, |entity| {
-        let collider = ecs_world.get_component::<C_Collider>(entity).unwrap();
-        let body = phys_world.get_physics_body(collider.handle).unwrap();
-        for cld_handle in body.all_colliders() {
-            let collider = phys_world.get_collider(cld_handle).unwrap();
+        for collider in phys_world.get_all_colliders(ecs_world.get_component::<C_Collider>(entity).unwrap().handle) {
             // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
             // @Incomplete: scale?
             let mut transform = Transform2D::from_pos_rot_scale(collider.position + collider.offset, rad(0.), v2!(1., 1.));
