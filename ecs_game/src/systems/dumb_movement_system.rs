@@ -5,6 +5,7 @@ use ecs_engine::common::angle::deg;
 use ecs_engine::core::rand::{self, Default_Rng};
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::ecs_world::Ecs_World;
+use smallvec::SmallVec;
 use std::time::Duration;
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -30,7 +31,7 @@ pub fn update(
         //}
 
         let body_handle = ecs_world.get_component::<C_Collider>(entity).unwrap().handle;
-        let colliding_with = phys_world.get_rigidbody_collider(body_handle).map_or_else(Vec::default, |cld| cld.colliding_with.clone());
+        let colliding_with = phys_world.get_rigidbody_collider(body_handle).map_or_else(SmallVec::default, |cld| cld.colliding_with.clone());
 
         let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
         if spatial.velocity.magnitude2() < 0.1 {

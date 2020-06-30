@@ -14,6 +14,10 @@ path = "../ecs_engine"
 [dependencies]
 rayon = "1.3"
 
+[dependencies.smallvec]
+default-features = false
+version = "1.4"
+
 [features]
 prof_entities_update = []
 prof_scene_tree = []
