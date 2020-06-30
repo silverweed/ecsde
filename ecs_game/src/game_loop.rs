@@ -25,6 +25,7 @@ use {
         debug,
         debug::painter::Debug_Painter,
         ecs::components::base::C_Spatial2D,
+        collisions::phys_world::Physics_World,
         ecs::ecs_world::{self, Ecs_World},
         gfx::paint_props::Paint_Properties,
         gfx::window,
@@ -367,7 +368,7 @@ where
 
             {
                 let mut moved = excl_temp_array(frame_alloc);
-                crate::movement_system::update(&update_dt, &mut level.world, &mut moved);
+                crate::movement_system::update(&update_dt, &mut level.world, &level.phys_world, &mut moved);
 
                 let moved = unsafe { moved.into_read_only() };
                 for mov in &moved {
@@ -767,7 +768,7 @@ fn update_debug(
             }
 
             if draw_colliders {
-                debug_draw_colliders(debug_painter, &level.world);
+                debug_draw_colliders(debug_painter, &level.world, &level.phys_world);
             }
 
             if draw_lights {
@@ -988,49 +989,53 @@ fn update_record_debug_overlay(
 }
 
 #[cfg(debug_assertions)]
-fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
+fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World, phys_world: &Physics_World) {
     use crate::collisions::Game_Collision_Layer;
-    use ecs_engine::collisions::collider::{Collider, Collision_Shape};
+    use ecs_engine::collisions::collider::{C_Collider, Collision_Shape};
     use std::convert::TryFrom;
 
-    foreach_entity!(ecs_world, +Collider, +C_Spatial2D, |entity| {
-        let collider = ecs_world.get_component::<Collider>(entity).unwrap();
-        // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
-        // @Incomplete: scale?
-        let mut transform = Transform2D::from_pos_rot_scale(collider.position + collider.offset, rad(0.), v2!(1., 1.));
+    foreach_entity!(ecs_world, +C_Collider, +C_Spatial2D, |entity| {
+        let collider = ecs_world.get_component::<C_Collider>(entity).unwrap();
+        let body = phys_world.get_physics_body(collider.handle).unwrap();
+        for cld_handle in body.all_colliders() {
+            let collider = phys_world.get_collider(cld_handle).unwrap();
+            // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
+            // @Incomplete: scale?
+            let mut transform = Transform2D::from_pos_rot_scale(collider.position + collider.offset, rad(0.), v2!(1., 1.));
 
-        let color = if collider.colliding_with.is_some() {
-            colors::rgba(255, 0, 0, 100)
-        } else {
-            colors::rgba(255, 255, 0, 100)
-        };
+            let color = if collider.colliding_with.is_some() {
+                colors::rgba(255, 0, 0, 100)
+            } else {
+                colors::rgba(255, 255, 0, 100)
+            };
 
-        match collider.shape {
-            Collision_Shape::Rect { width, height } => {
-                transform.translate(-width * 0.5, -height * 0.5);
-                debug_painter.add_rect(Vec2f::new(width, height), &transform, color);
+            match collider.shape {
+                Collision_Shape::Rect { width, height } => {
+                    transform.translate(-width * 0.5, -height * 0.5);
+                    debug_painter.add_rect(Vec2f::new(width, height), &transform, color);
+                }
+                Collision_Shape::Circle { radius } => {
+                    transform.translate(-radius * 0.5, -radius * 0.5);
+                    debug_painter.add_circle(
+                        Circle {
+                            center: transform.position(),
+                            radius,
+                        },
+                        color,
+                    );
+                }
+                _ => {}
             }
-            Collision_Shape::Circle { radius } => {
-                transform.translate(-radius * 0.5, -radius * 0.5);
-                debug_painter.add_circle(
-                    Circle {
-                        center: transform.position(),
-                        radius,
-                    },
-                    color,
-                );
-            }
-            _ => {}
+
+            debug_painter.add_text(
+                &Game_Collision_Layer::try_from(collider.layer).map_or_else(
+                    |_| format!("? {}", collider.layer),
+                    |gcl| format!("{:?}", gcl),
+                ),
+                transform.position(),
+                8,
+                colors::BLACK);
         }
-
-        debug_painter.add_text(
-            &Game_Collision_Layer::try_from(collider.layer).map_or_else(
-                |_| format!("? {}", collider.layer),
-                |gcl| format!("{:?}", gcl),
-            ),
-            transform.position(),
-            8,
-            colors::BLACK);
     });
 }
 

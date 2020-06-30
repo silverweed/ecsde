@@ -63,7 +63,7 @@ pub struct Physics_World {
 
     bodies_alloc: Generational_Allocator,
     /// Indexed by a Physics_Body_Handle's index.
-    bodies: Vec<Physics_Body>,
+    pub(super) bodies: Vec<Physics_Body>,
 }
 
 impl Physics_World {
@@ -75,6 +75,10 @@ impl Physics_World {
             bodies_alloc: Generational_Allocator::new(INITIAL_SIZE),
             bodies: vec![],
         }
+    }
+
+    pub fn is_valid_collider_handle(&self, handle: Collider_Handle) -> bool {
+        self.cld_alloc.is_valid(handle)
     }
 
     pub fn new_physics_body(&mut self) -> Physics_Body_Handle {
@@ -204,6 +208,15 @@ impl Physics_World {
         debug_assert!(index < self.colliders.len());
         Some(&mut self.colliders[index])
     }
+
+    //pub fn get_all_colliders(&self, handle: Physics_Body_Handle) -> impl Iterator<Item=&Collider> {
+        //let body_handle = self.get_physics_body(handle);
+        //if let Some(body) = body_handle {
+            //body.all_colliders().map(|handle| self.get_collider(handle).unwrap())
+        //} else {
+            //std::iter::empty()
+        //}
+    //}
 }
 
 #[cfg(test)]

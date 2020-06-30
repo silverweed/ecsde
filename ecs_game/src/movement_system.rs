@@ -1,5 +1,6 @@
 use ecs_engine::alloc::temp::*;
-use ecs_engine::collisions::collider::Collider;
+use ecs_engine::collisions::collider::C_Collider;
+use ecs_engine::collisions::phys_world::Physics_World;
 use ecs_engine::common::vector::Vec2f;
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
@@ -18,6 +19,7 @@ const MIN_SPEED: f32 = 0.001;
 pub fn update(
     dt: &Duration,
     ecs_world: &mut Ecs_World,
+    phys_world: &Physics_World,
     moved: &mut Exclusive_Temp_Array<Moved_Entity>,
 ) {
     let dt_secs = dt.as_secs_f32();
@@ -33,13 +35,17 @@ pub fn update(
         let pos = spatial.transform.position();
         let starting_pos = spatial.frame_starting_pos;
         if (pos - starting_pos).magnitude2() > std::f32::EPSILON {
-            if let Some(collider) = ecs_world.get_component::<Collider>(entity) {
-                moved.push(Moved_Entity {
-                    entity,
-                    prev_pos: starting_pos,
-                    new_pos: pos,
-                    extent: collider.shape.extent(),
-                });
+            if let Some(collider) = ecs_world.get_component::<C_Collider>(entity) {
+                let body = phys_world.get_physics_body(collider.handle).unwrap();
+                if let Some((handle, _)) = body.rigidbody_collider {
+                    let collider = phys_world.get_collider(handle).unwrap();
+                    moved.push(Moved_Entity {
+                        entity,
+                        prev_pos: starting_pos,
+                        new_pos: pos,
+                        extent: collider.shape.extent(),
+                    });
+                }
             }
         }
     });

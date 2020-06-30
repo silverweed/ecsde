@@ -68,6 +68,7 @@ pub fn create_jelly(
             Collision_Shape::Rect { width, height }
         },
         layer: Game_Collision_Layer::Entities as _,
+        entity,
         ..Default::default()
     };
     let phys_data = Phys_Data {
@@ -206,6 +207,7 @@ pub fn create_drill(
             Collision_Shape::Rect { width, height }
         },
         layer: Game_Collision_Layer::Entities as _,
+        entity,
         ..Default::default()
     };
     world.add_component(
@@ -256,6 +258,7 @@ pub fn create_sky(
             height: sh as f32,
         },
         layer: Game_Collision_Layer::Sky as _,
+        entity: sky,
         ..Default::default()
     };
 

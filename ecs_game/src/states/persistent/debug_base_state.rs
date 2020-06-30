@@ -123,7 +123,7 @@ impl Persistent_Game_State for Debug_Base_State {
                         );
                         let mut moved =
                             ecs_engine::alloc::temp::excl_temp_array(&mut engine_state.frame_alloc);
-                        crate::movement_system::update(&step_delta, &mut level.world, &mut moved);
+                        crate::movement_system::update(&step_delta, &mut level.world, &level.phys_world, &mut moved);
                         let moved = unsafe { moved.into_read_only() };
                         for mov in &moved {
                             level.chunks.update_entity(
