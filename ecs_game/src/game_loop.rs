@@ -18,6 +18,7 @@ use std::time::Duration;
 #[cfg(debug_assertions)]
 use {
     ecs_engine::{
+        collisions::phys_world::Physics_World,
         common::angle::rad,
         common::shapes::{Arrow, Circle},
         common::stringid::String_Id,
@@ -25,7 +26,6 @@ use {
         debug,
         debug::painter::Debug_Painter,
         ecs::components::base::C_Spatial2D,
-        collisions::phys_world::Physics_World,
         ecs::ecs_world::{self, Ecs_World},
         gfx::paint_props::Paint_Properties,
         gfx::window,
@@ -368,7 +368,12 @@ where
 
             {
                 let mut moved = excl_temp_array(frame_alloc);
-                crate::movement_system::update(&update_dt, &mut level.world, &level.phys_world, &mut moved);
+                crate::movement_system::update(
+                    &update_dt,
+                    &mut level.world,
+                    &level.phys_world,
+                    &mut moved,
+                );
 
                 let moved = unsafe { moved.into_read_only() };
                 for mov in &moved {
@@ -989,7 +994,11 @@ fn update_record_debug_overlay(
 }
 
 #[cfg(debug_assertions)]
-fn debug_draw_colliders(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World, phys_world: &Physics_World) {
+fn debug_draw_colliders(
+    debug_painter: &mut Debug_Painter,
+    ecs_world: &Ecs_World,
+    phys_world: &Physics_World,
+) {
     use crate::collisions::Game_Collision_Layer;
     use ecs_engine::collisions::collider::{C_Collider, Collision_Shape};
     use std::convert::TryFrom;

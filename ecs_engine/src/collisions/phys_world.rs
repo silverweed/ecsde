@@ -49,7 +49,7 @@ impl Iterator for Physics_Body_Cld_Iter<'_> {
         }
 
         debug_assert!(self.i >= 0);
-        self.body.trigger_colliders.get(self.i as usize).map(|h| *h)
+        self.body.trigger_colliders.get(self.i as usize).copied()
     }
 }
 
@@ -209,11 +209,17 @@ impl Physics_World {
         Some(&mut self.colliders[index])
     }
 
-    pub fn get_all_colliders(&self, handle: Physics_Body_Handle) -> impl Iterator<Item=&Collider> {
+    pub fn get_all_colliders(
+        &self,
+        handle: Physics_Body_Handle,
+    ) -> impl Iterator<Item = &Collider> {
         let body_handle = self.get_physics_body(handle);
         let mut iter = None;
         if let Some(body) = body_handle {
-            iter = Some(body.all_colliders().map(move |h| self.get_collider(h).unwrap()));
+            iter = Some(
+                body.all_colliders()
+                    .map(move |h| self.get_collider(h).unwrap()),
+            );
         }
 
         std::iter::from_fn(move || {

@@ -59,7 +59,7 @@ pub fn level_load_sync(
         gs_cfg,
     );
     init_demo_lights(&mut level.lights);
-    fill_world_chunks(&mut level.chunks, &mut level.world, &mut level.phys_world);
+    fill_world_chunks(&mut level.chunks, &mut level.world, &level.phys_world);
     lok!(
         "Loaded level {}. N. entities = {}, n. cameras = {}",
         level_id,

@@ -278,14 +278,15 @@ where
         let mut neighbours = vec![];
         accelerator.get_neighbours(a.position, a_extent, &mut neighbours);
 
-        for (j, b) in colliders.iter().enumerate() { // @Incomplete: use neighbours!
+        for (j, b) in colliders.iter().enumerate() {
+            // @Incomplete: use neighbours!
             let ent_b = b.entity;
             if ent_a == ent_b {
                 continue;
             }
             let b_shape = collision_shape_type_index(&b.shape);
             if !collision_matrix.layers_collide(a.layer, b.layer)
-                //|| stored.contains(&(ent_b, ent_a)) // @Incomplete!
+            //|| stored.contains(&(ent_b, ent_a)) // @Incomplete!
             {
                 continue;
             }
@@ -303,7 +304,7 @@ where
             }
         }
     }
-/*
+    /*
     for &ent_a in entities.iter() {
         let a = colliders.get_component(ent_a).unwrap();
         if a.is_static {
@@ -348,12 +349,7 @@ where
 }
 
 // "roughly" because it doesn't do the positional correction
-fn solve_collision_roughly(
-    objects: &mut Rigidbodies,
-    a_idx: usize,
-    b_idx: usize,
-    normal: Vec2f,
-) {
+fn solve_collision_roughly(objects: &mut Rigidbodies, a_idx: usize, b_idx: usize, normal: Vec2f) {
     trace!("physics::solve_collisions_roughly");
 
     let a = objects[&a_idx].clone();
@@ -450,7 +446,7 @@ fn solve_collisions(objects: &mut Rigidbodies, infos: &[&Collision_Info]) {
     for info in infos {
         let Collision_Info {
             idx1,
-            idx2, 
+            idx2,
             normal,
             penetration,
         } = **info;
@@ -529,7 +525,9 @@ fn prepare_colliders_and_gather_rigidbodies(
     let mut objects = HashMap::new();
 
     for collider in &mut phys_world.colliders {
-        let spatial = world.get_component_mut::<C_Spatial2D>(collider.entity).unwrap();
+        let spatial = world
+            .get_component_mut::<C_Spatial2D>(collider.entity)
+            .unwrap();
         let pos = spatial.transform.position();
         let velocity = spatial.velocity;
         sanity_check_v(velocity);
@@ -544,13 +542,16 @@ fn prepare_colliders_and_gather_rigidbodies(
         if let Some((cld_handle, phys_data)) = body.rigidbody_collider {
             let rb_cld = phys_world.get_collider(cld_handle).unwrap();
             if phys_world.is_valid_collider_handle(cld_handle) {
-                objects.insert(cld_handle.index as usize, Rigidbody {
-                    entity: rb_cld.entity,
-                    position: rb_cld.position,
-                    velocity: rb_cld.velocity,
-                    shape: rb_cld.shape,
-                    phys_data,
-                });
+                objects.insert(
+                    cld_handle.index as usize,
+                    Rigidbody {
+                        entity: rb_cld.entity,
+                        position: rb_cld.position,
+                        velocity: rb_cld.velocity,
+                        shape: rb_cld.shape,
+                        phys_data,
+                    },
+                );
             }
         }
     }

@@ -29,7 +29,7 @@ impl Default for Collision_Shape {
 pub struct Collider {
     pub shape: Collision_Shape,
     pub position: Vec2f, // This should not be set directly: it's computed by collision system
-    pub velocity: Vec2f,// This should not be set directly: it's computed by collision system
+    pub velocity: Vec2f, // This should not be set directly: it's computed by collision system
     pub offset: Vec2f,
     pub colliding_with: Option<Entity>,
     pub is_static: bool,
