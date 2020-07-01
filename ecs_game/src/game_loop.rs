@@ -848,8 +848,8 @@ fn update_time_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, 
     debug_overlay.add_line_color(
         &format!(
             "[time] game: {:.2}, real: {:.2}, scale: {:.2}, paused: {}",
-            time.get_game_time().as_secs_f32(),
-            time.get_real_time().as_secs_f32(),
+            time.game_time().as_secs_f32(),
+            time.real_time().as_secs_f32(),
             time.time_scale,
             if time.paused { "yes" } else { "no" }
         ),
@@ -1301,7 +1301,7 @@ fn update_graph_fps(
     const TIME_LIMIT: f32 = 60.0;
 
     let fps = fps.get_instant_fps();
-    debug::graph::add_point_and_scroll(graph, time.get_real_time(), TIME_LIMIT, fps);
+    debug::graph::add_point_and_scroll(graph, time.real_time(), TIME_LIMIT, fps);
 }
 
 #[cfg(debug_assertions)]
@@ -1314,7 +1314,7 @@ fn update_graph_prev_frame_t(
 
     debug::graph::add_point_and_scroll(
         graph,
-        time.get_real_time(),
+        time.real_time(),
         TIME_LIMIT,
         prev_frame_t.as_secs_f32() * 1000.,
     );

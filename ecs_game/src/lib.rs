@@ -117,7 +117,7 @@ where
         let log = &mut game_state.engine_state.debug_systems.log;
 
         if !game_state.engine_state.time.paused {
-            if game_state.engine_state.time.was_paused {
+            if game_state.engine_state.time.was_paused() {
                 // Just resumed
                 game_state
                     .engine_state

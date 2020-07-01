@@ -470,9 +470,9 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
                 &flattened_traces,
                 graph,
                 if trace_realtime {
-                    engine_state.time.get_real_time()
+                    engine_state.time.real_time()
                 } else {
-                    engine_state.time.get_game_time()
+                    engine_state.time.game_time()
                 },
                 &debug_systems.traced_fn,
                 engine_state.cur_frame,

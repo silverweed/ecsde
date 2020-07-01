@@ -1,33 +1,45 @@
 use std::time::Duration;
-use std::time::SystemTime;
+use std::time::Instant;
 
-type Microseconds = u64;
-
-// @Cleanup: do we still all this?
 pub struct Time {
-    game_time: Microseconds,
-    prev_game_time: Microseconds,
-    start_time: SystemTime,
-    real_time: SystemTime,
-    dt: Duration,
+    /// The starting instant, used as reference to compute real_time.
+    start_time: Instant,
+
+    /// How much time elapsed since the start of Time, as latest recorded during update()
+    real_time: Duration,
+
+    /// The latest updated real delta time
     real_dt: Duration,
-    prev_real_time: SystemTime,
+
+    /// How much game time (i.e. real time scaled/paused) elapsed since the start of Time, as latest recorded during update()
+    game_time: Duration,
+
+    /// The value of game_time during the previous frame
+    prev_game_time: Duration,
+
+    /// The latest updated game delta time
+    dt: Duration,
+
+    /// How fast does game_time pass relative to real_time
     pub time_scale: f32,
+
+    /// Whether game_time passes or not
     pub paused: bool,
-    pub was_paused: bool,
+
+    /// Holds the previous value of `paused`
+    was_paused: bool,
 }
 
 impl Default for Time {
     fn default() -> Self {
-        let now = SystemTime::now();
+        let now = Instant::now();
         Time {
-            real_time: now,
-            prev_real_time: now,
             start_time: now,
-            game_time: 0,
-            prev_game_time: 0,
-            dt: Duration::default(),
+            real_time: now.elapsed(),
             real_dt: Duration::default(),
+            game_time: Duration::default(),
+            prev_game_time: Duration::default(),
+            dt: Duration::default(),
             time_scale: 1.,
             paused: false,
             was_paused: false,
@@ -36,42 +48,33 @@ impl Default for Time {
 }
 
 impl Time {
-    const MAX_FRAME_TIME: Microseconds = 1_000_000 / 15;
-
     pub fn start(&mut self) {
         assert!(
-            self.game_time == 0,
+            self.game_time.as_micros() == 0,
             "Time::start() called while already running!"
         );
-        let now = SystemTime::now();
-        self.start_time = now;
-        self.prev_real_time = now;
+        self.start_time = Instant::now();
     }
 
     pub fn update(&mut self) {
-        let now = SystemTime::now();
+        // Update real time
+        let prev_real_time = self.real_time;
+        self.real_time = self.start_time.elapsed();
+        self.real_dt = self.real_time - prev_real_time;
 
-        self.prev_real_time = self.real_time;
-        self.real_time = now;
-
+        // Update game time
         self.prev_game_time = self.game_time;
-
         self.was_paused = self.paused;
-        if !self.paused {
-            let real_delta = now
-                .duration_since(self.prev_real_time)
-                .unwrap_or(Duration::from_secs(0));
 
-            self.game_time += (self.time_scale * real_delta.as_micros() as f32) as Microseconds;
-        }
-
-        self.dt = self.calc_dt();
-        self.real_dt = self.calc_real_dt();
+        self.dt = Duration::from_micros(
+            (((self.real_dt.as_micros() * (!self.paused as u128)) as f32) * self.time_scale) as u64,
+        );
+        self.game_time += self.dt;
     }
 
     pub fn step(&mut self, dt: &Duration) {
         self.prev_game_time = self.game_time;
-        self.game_time += (dt.as_secs_f32() * 1_000_000.0) as Microseconds;
+        self.game_time += *dt;
     }
 
     pub fn dt(&self) -> Duration {
@@ -90,30 +93,16 @@ impl Time {
         self.paused = !self.paused;
     }
 
-    pub fn get_real_time(&self) -> Duration {
-        self.real_time.duration_since(self.start_time).unwrap()
+    pub fn was_paused(&self) -> bool {
+        self.was_paused
     }
 
-    pub fn get_game_time(&self) -> Duration {
-        Duration::from_micros(self.game_time)
+    pub fn real_time(&self) -> Duration {
+        self.real_time
     }
 
-    fn calc_dt(&self) -> Duration {
-        let tscale = self.time_scale;
-        let delta_microseconds = self.game_time - self.prev_game_time;
-        let scaled_max_frame_time = (Self::MAX_FRAME_TIME as f32 * tscale) as Microseconds;
-        let delta_microseconds = if delta_microseconds > scaled_max_frame_time {
-            // frame lock
-            scaled_max_frame_time
-        } else {
-            delta_microseconds
-        };
-
-        Duration::from_micros(delta_microseconds)
-    }
-
-    fn calc_real_dt(&self) -> Duration {
-        self.real_time.duration_since(self.prev_real_time).unwrap()
+    pub fn game_time(&self) -> Duration {
+        self.game_time
     }
 }
 
