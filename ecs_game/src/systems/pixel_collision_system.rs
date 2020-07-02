@@ -27,6 +27,9 @@ struct Collision_Info {
     pub cld_handle: Collider_Handle,
     pub normal: Vec2f,
     pub restitution: f32,
+    // This is the inv_mass of the nonpixel entity, as the pixel entity always has infinite mass.
+    pub inv_mass: f32,
+    pub penetration: f32,
 }
 
 #[derive(Default)]
@@ -163,6 +166,7 @@ impl Pixel_Collision_System {
             pub extent: Vec2f,
             pub layer: Collision_Layer,
             pub restitution: f32,
+            pub inv_mass: f32,
         }
 
         // Note: currently the Texture_Collider only considers Rigidbodies.
@@ -182,6 +186,7 @@ impl Pixel_Collision_System {
                         velocity: spat.velocity,
                         layer: collider.layer,
                         restitution: phys_data.restitution,
+                        inv_mass: phys_data.inv_mass,
                     });
                 }
             }
@@ -211,7 +216,8 @@ impl Pixel_Collision_System {
                     extent,
                     velocity,
                     layer,
-                    restitution
+                    restitution,
+                    inv_mass
                 } = info;
 
                 if !collision_matrix.layers_collide(tex_cld.layer, *layer) {
@@ -257,7 +263,9 @@ impl Pixel_Collision_System {
                                     entity_pixel: entity,
                                     cld_handle: *cld_handle,
                                     normal,
-                                    restitution: *restitution
+                                    restitution: *restitution,
+                                    inv_mass: *inv_mass,
+                                    penetration: 1., // @Incomplete
                                 });
                                 break 'outer;
                             }
@@ -286,6 +294,18 @@ impl Pixel_Collision_System {
             } else {
                 let speed = spat.velocity.magnitude();
                 spat.velocity = speed * info.normal * info.restitution;
+
+                if info.inv_mass == 0. {
+                    return;
+                }
+
+                let correction_perc = 0.2;
+                let slop = 0.01;
+
+                let correction =
+                    (info.penetration - slop).max(0.0) / info.inv_mass * correction_perc * info.normal;
+
+                spat.transform.translate_v(-info.inv_mass * correction);
             }
         }
     }
