@@ -1,10 +1,9 @@
 use ecs_engine::alloc::temp::*;
 use ecs_engine::collisions::collider::C_Collider;
-use ecs_engine::collisions::phys_world::Physics_World;
+use ecs_engine::collisions::phys_world::{Collider_Handle, Physics_World};
 use ecs_engine::collisions::spatial::Spatial_Accelerator;
 use ecs_engine::common::vector::Vec2f;
 use ecs_engine::core::app::Engine_State;
-use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity, Evt_Entity_Destroyed};
 use ecs_engine::events::evt_register::{with_cb_data, wrap_cb_data, Event_Callback_Data};
 use std::cmp::Ordering;
@@ -64,7 +63,7 @@ pub struct World_Chunks {
 
 #[derive(Default, Debug)]
 pub struct World_Chunk {
-    pub entities: Vec<Entity>,
+    pub colliders: Vec<Collider_Handle>,
 }
 
 impl World_Chunks {
@@ -93,22 +92,17 @@ impl World_Chunks {
         let mut to_remove = vec![];
         with_cb_data(&mut self.to_destroy, |to_destroy: &mut Vec<Entity>| {
             for &entity in to_destroy.iter() {
-                if let Some(spatial) = ecs_world.get_component::<C_Spatial2D>(entity) {
-                    if let Some(collider) = ecs_world.get_component::<C_Collider>(entity) {
-                        if let Some(rb_cld) = phys_world.get_rigidbody_collider(collider.handle) {
-                            to_remove.push((
-                                entity,
-                                spatial.transform.position(),
-                                rb_cld.shape.extent(),
-                            ));
-                        }
+                if let Some(collider) = ecs_world.get_component::<C_Collider>(entity) {
+                    for (cld, handle) in phys_world.get_all_colliders_with_handles(collider.handle)
+                    {
+                        to_remove.push((handle, cld.position, cld.shape.extent()));
                     }
                 }
             }
             to_destroy.clear();
         });
-        for (entity, pos, extent) in to_remove {
-            self.remove_entity(entity, pos, extent);
+        for (cld, pos, extent) in to_remove {
+            self.remove_collider(cld, pos, extent);
         }
     }
 
@@ -116,64 +110,64 @@ impl World_Chunks {
         self.chunks.len()
     }
 
-    pub fn add_entity(&mut self, entity: Entity, pos: Vec2f, extent: Vec2f) {
+    pub fn add_collider(&mut self, cld_handle: Collider_Handle, pos: Vec2f, extent: Vec2f) {
         for coords in self.get_all_chunks_containing(pos, extent) {
-            self.add_entity_coords(entity, coords);
+            self.add_collider_coords(cld_handle, coords);
         }
     }
 
-    fn add_entity_coords(&mut self, entity: Entity, coords: Chunk_Coords) {
+    fn add_collider_coords(&mut self, cld_handle: Collider_Handle, coords: Chunk_Coords) {
         let chunk = self
             .chunks
             .entry(coords)
             .or_insert_with(World_Chunk::default);
         debug_assert!(
-            !chunk.entities.contains(&entity),
-            "Duplicate entity {:?} in chunk {:?}!",
-            entity,
+            !chunk.colliders.contains(&cld_handle),
+            "Duplicate collider {:?} in chunk {:?}!",
+            cld_handle,
             coords
         );
-        chunk.entities.push(entity);
+        chunk.colliders.push(cld_handle);
     }
 
-    pub fn remove_entity(&mut self, entity: Entity, pos: Vec2f, extent: Vec2f) {
+    pub fn remove_collider(&mut self, cld_handle: Collider_Handle, pos: Vec2f, extent: Vec2f) {
         for coords in self.get_all_chunks_containing(pos, extent) {
-            self.remove_entity_coords(entity, coords);
+            self.remove_collider_coords(cld_handle, coords);
         }
     }
 
-    fn remove_entity_coords(&mut self, entity: Entity, coords: Chunk_Coords) {
+    fn remove_collider_coords(&mut self, cld_handle: Collider_Handle, coords: Chunk_Coords) {
         let chunk = self.chunks.get_mut(&coords).unwrap_or_else(|| {
             fatal!(
-                "Entity {:?} should be in chunk {:?}, but that chunk does not exist.",
-                entity,
+                "Collider {:?} should be in chunk {:?}, but that chunk does not exist.",
+                cld_handle,
                 coords
             )
         });
-        let idx = chunk.entities.iter().position(|&e| e == entity);
+        let idx = chunk.colliders.iter().position(|&c| c == cld_handle);
         if let Some(idx) = idx {
-            chunk.entities.remove(idx);
-            if chunk.entities.is_empty() {
+            chunk.colliders.remove(idx);
+            if chunk.colliders.is_empty() {
                 self.chunks.remove(&coords);
             }
         } else {
             lerr!(
-                "Entity {:?} not found in expected chunk {:?}.",
-                entity,
+                "Collider {:?} not found in expected chunk {:?}.",
+                cld_handle,
                 coords
             );
         }
     }
 
-    pub fn update_entity(
+    pub fn update_collider(
         &mut self,
-        entity: Entity,
+        cld_handle: Collider_Handle,
         prev_pos: Vec2f,
         new_pos: Vec2f,
         extent: Vec2f,
         frame_alloc: &mut Temp_Allocator,
     ) {
-        trace!("world_chunks::update_entity");
+        trace!("world_chunks::update_collider");
 
         let prev_coords = self.get_all_chunks_containing(prev_pos, extent);
         let new_coords = self.get_all_chunks_containing(new_pos, extent);
@@ -255,7 +249,7 @@ impl World_Chunks {
             .skip(chunks_to_add_offset)
             .take(n_chunks_to_add)
         {
-            self.add_entity_coords(entity, *coord);
+            self.add_collider_coords(cld_handle, *coord);
         }
 
         for coord in all_chunks
@@ -263,7 +257,7 @@ impl World_Chunks {
             .skip(chunks_to_remove_offset)
             .take(n_chunks_to_remove)
         {
-            self.remove_entity_coords(entity, *coord);
+            self.remove_collider_coords(cld_handle, *coord);
         }
     }
 
@@ -306,14 +300,14 @@ impl World_Chunks {
     }
 }
 
-impl Spatial_Accelerator<Entity> for World_Chunks {
+impl Spatial_Accelerator<Collider_Handle> for World_Chunks {
     fn get_neighbours<R>(&self, pos: Vec2f, extent: Vec2f, result: &mut R)
     where
-        R: Extend<Entity>,
+        R: Extend<Collider_Handle>,
     {
         for coords in self.get_all_chunks_containing(pos, extent) {
             if let Some(chunk) = self.chunks.get(&coords) {
-                result.extend(chunk.entities.iter().copied());
+                result.extend(chunk.colliders.iter().copied());
             }
         }
     }
@@ -330,10 +324,10 @@ impl World_Chunks {
             return;
         }
 
-        let max_entities = self
+        let max_colliders = self
             .chunks
             .iter()
-            .map(|(_, chk)| chk.entities.len())
+            .map(|(_, chk)| chk.colliders.len())
             .max()
             .unwrap_or(0) as f32;
 
@@ -342,7 +336,7 @@ impl World_Chunks {
             let col = colors::lerp_col(
                 colors::rgba(0, 150, 0, 100),
                 colors::rgba(150, 0, 0, 100),
-                chunk.entities.len() as f32 / max_entities,
+                chunk.colliders.len() as f32 / max_colliders,
             );
             painter.add_rect(
                 v2!(CHUNK_WIDTH, CHUNK_HEIGHT),
@@ -355,7 +349,7 @@ impl World_Chunks {
                 },
             );
             painter.add_text(
-                &format!("{},{}: {}", coords.x, coords.y, chunk.entities.len()),
+                &format!("{},{}: {}", coords.x, coords.y, chunk.colliders.len()),
                 world_pos + v2!(10., 5.),
                 (CHUNK_WIDTH as u16 / 10).max(20),
                 colors::rgba(50, 220, 0, 250),

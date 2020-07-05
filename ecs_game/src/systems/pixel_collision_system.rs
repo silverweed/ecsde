@@ -302,8 +302,9 @@ impl Pixel_Collision_System {
                 let correction_perc = 0.2;
                 let slop = 0.01;
 
-                let correction =
-                    (info.penetration - slop).max(0.0) / info.inv_mass * correction_perc * info.normal;
+                let correction = (info.penetration - slop).max(0.0) / info.inv_mass
+                    * correction_perc
+                    * info.normal;
 
                 spat.transform.translate_v(-info.inv_mass * correction);
             }

@@ -195,8 +195,8 @@ fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World, phys_worl
         let pos = spatial.transform.position();
         spatial.frame_starting_pos = pos;
         let body_handle = world.get_component::<C_Collider>(entity).unwrap().handle;
-        for collider in phys_world.get_all_colliders(body_handle) {
-            chunks.add_entity(entity, pos, collider.shape.extent());
+        for (collider, cld_handle) in phys_world.get_all_colliders_with_handles(body_handle) {
+            chunks.add_collider(cld_handle, pos, collider.shape.extent());
         }
     });
 }

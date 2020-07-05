@@ -377,8 +377,8 @@ where
 
                 let moved = unsafe { moved.into_read_only() };
                 for mov in &moved {
-                    level.chunks.update_entity(
-                        mov.entity,
+                    level.chunks.update_collider(
+                        mov.handle,
                         mov.prev_pos,
                         mov.new_pos,
                         mov.extent,
