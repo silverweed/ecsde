@@ -135,8 +135,7 @@ where
         let rads = angle.as_rad();
         let x = self.x.into();
         let y = self.y.into();
-        let s = rads.sin();
-        let c = rads.cos();
+        let (s, c) = rads.sin_cos();
         Self {
             x: T::from(c * x - s * y),
             y: T::from(s * x + c * y),

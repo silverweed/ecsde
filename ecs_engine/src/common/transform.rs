@@ -118,8 +118,7 @@ impl Transform2D {
     pub fn get_matrix(&self) -> Matrix3<f32> {
         let angle = self.rotation.as_rad();
         let angle = -angle;
-        let cosine = angle.cos();
-        let sine = angle.sin();
+        let (sine, cosine) = angle.sin_cos();
         let sxc = self.scale.x * cosine;
         let syc = self.scale.y * cosine;
         let sxs = self.scale.x * sine;

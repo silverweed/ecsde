@@ -3,8 +3,7 @@ use super::Transform2D;
 pub fn to_matrix_sfml(transform: &Transform2D) -> sfml::graphics::Transform {
     let angle = transform.rotation.as_rad();
     let angle = -angle;
-    let cosine = angle.cos();
-    let sine = angle.sin();
+    let (sine, cosine) = angle.sin_cos();
     let sxc = transform.scale.x * cosine;
     let syc = transform.scale.y * cosine;
     let sxs = transform.scale.x * sine;
