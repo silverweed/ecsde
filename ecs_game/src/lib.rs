@@ -147,6 +147,22 @@ where
 
     #[cfg(debug_assertions)]
     {
+        // Initialize the hints for the `trace` command. Do this after the first
+        // frame so the tracer contains all the function names.
+        static mut INIT_CONSOLE_FN_NAME_HINTS: std::sync::Once = std::sync::Once::new();
+        INIT_CONSOLE_FN_NAME_HINTS.call_once(|| {
+            let console = &mut game_state.engine_state.debug_systems.console;
+            let fn_names: std::collections::HashSet<_> = {
+                let tracer = ecs_engine::prelude::DEBUG_TRACER.lock().unwrap();
+                tracer
+                    .saved_traces
+                    .iter()
+                    .map(|trace| trace.info.tag)
+                    .collect()
+            };
+            console.add_hints("trace", fn_names.into_iter().map(String::from));
+        });
+
         app::update_traces(
             &mut game_state.engine_state,
             game_state.debug_cvars.trace_overlay_refresh_rate,

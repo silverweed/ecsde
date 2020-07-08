@@ -454,13 +454,14 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
     overlay.position = Vec2f::new(0.0, win_h as f32 - 40. * ui_scale);
 
     // Console hints
-    game_state.engine_state.debug_systems.console.add_hints(
+    let console = &mut game_state.engine_state.debug_systems.console;
+    console.add_hints(
         "",
         crate::debug::console_executor::ALL_CMD_STRINGS
             .iter()
             .map(|s| String::from(*s)),
     );
-    game_state.engine_state.debug_systems.console.add_hints(
+    console.add_hints(
         "var",
         game_state
             .engine_state
@@ -468,7 +469,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
             .get_all_pairs()
             .map(|(k, _)| k),
     );
-    game_state.engine_state.debug_systems.console.add_hints(
+    console.add_hints(
         "toggle",
         game_state
             .engine_state

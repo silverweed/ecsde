@@ -138,8 +138,20 @@ impl Debug_Painter {
         let font = gres.get_font(self.font);
         for (text, world_pos, font_size, props) in &self.texts {
             trace!("painter::draw_text");
-            let mut txt = render::create_text(text, font, *font_size);
-            let transform = Transform2D::from_pos(*world_pos);
+            let aa_adj_scale = if *font_size < 10 {
+                4
+            } else if *font_size < 20 {
+                2
+            } else {
+                1
+            };
+            let aa_adj_inv_scale = 1. / (aa_adj_scale as f32);
+            let mut txt = render::create_text(text, font, aa_adj_scale * *font_size);
+            let transform = Transform2D::from_pos_rot_scale(
+                *world_pos,
+                rad(0.),
+                v2!(aa_adj_inv_scale, aa_adj_inv_scale),
+            );
             render::render_text_ws(window, &mut txt, *props, &transform, camera);
         }
     }
