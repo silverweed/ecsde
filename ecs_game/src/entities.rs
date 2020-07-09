@@ -92,8 +92,15 @@ pub fn create_jelly(
 
     #[cfg(debug_assertions)]
     {
+        static mut N_JELLIES: usize = 0;
+
         let debug = world.add_component(entity, C_Debug_Data::default());
-        debug.entity_name = "Jelly";
+        debug
+            .entity_name
+            .set(&format!("Jelly_{}", unsafe { N_JELLIES }));
+        unsafe {
+            N_JELLIES += 1;
+        }
     }
 
     entity
@@ -219,8 +226,15 @@ pub fn create_drill(
 
     #[cfg(debug_assertions)]
     {
+        static mut N_DRILLS: usize = 0;
+
         let debug = world.add_component(entity, C_Debug_Data::default());
-        debug.entity_name = "Drill";
+        debug
+            .entity_name
+            .set(&format!("Drill_{}", unsafe { N_DRILLS }));
+        unsafe {
+            N_DRILLS += 1;
+        }
     }
 
     entity
@@ -278,7 +292,7 @@ pub fn create_sky(
     #[cfg(debug_assertions)]
     {
         let debug = world.add_component(sky, C_Debug_Data::default());
-        debug.entity_name = "Sky";
+        debug.entity_name.set("Sky");
     }
 }
 
@@ -317,7 +331,7 @@ pub fn create_terrain(
     #[cfg(debug_assertions)]
     {
         let debug = world.add_component(gnd, C_Debug_Data::default());
-        debug.entity_name = "Terrain";
+        debug.entity_name.set("Terrain");
     }
 }
 
@@ -346,6 +360,6 @@ pub fn create_background(
     #[cfg(debug_assertions)]
     {
         let debug = world.add_component(ground, C_Debug_Data::default());
-        debug.entity_name = "Background";
+        debug.entity_name.set("Background");
     }
 }

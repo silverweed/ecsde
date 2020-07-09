@@ -111,13 +111,6 @@ pub(super) fn internal_game_init<'a>(
             },
         )?;
 
-        // @Temporary
-        //game_state.gameplay_system.load_test_level(
-        //&mut game_state.engine_state,
-        //&mut *game_resources,
-        //&mut game_state.level_batches,
-        //);
-
         collisions::init_collision_layers(
             &mut game_state
                 .engine_state
@@ -227,7 +220,9 @@ fn create_game_state<'a>(
             target_win_size: engine_state.app_config.target_win_size,
             font: font.read(&engine_state.config).to_string(),
         };
+
         app::init_engine_debug(&mut engine_state, &mut game_resources.gfx, cfg)?;
+
         if ecs_engine::debug::console::load_console_hist(
             &mut engine_state.debug_systems.console,
             &engine_state.env,

@@ -316,7 +316,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let h2 = phys_world.add_collider(c);
+        let h2 = phys_world.add_collider(c.clone());
 
         phys_world.remove_collider(h1);
 

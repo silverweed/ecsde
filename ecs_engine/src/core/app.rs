@@ -48,7 +48,6 @@ pub struct Engine_State<'r> {
 
     pub global_batches: gfx::render::batcher::Batches,
 
-    // @Temporary: figure out if this is the right place for this
     pub shader_cache: Shader_Cache<'r>,
 
     #[cfg(debug_assertions)]

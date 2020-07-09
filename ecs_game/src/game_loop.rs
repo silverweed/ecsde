@@ -1116,11 +1116,11 @@ fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs
         };
 
         let name = if let Some(debug) = ecs_world.get_component::<C_Debug_Data>(entity) {
-            debug.entity_name
+            debug.entity_name.as_ref()
         } else {
-            "Unknown"
+            "<Unknown>"
         };
-        debug_painter.add_shaded_text(name, pos, 8, colors::GREEN, colors::BLACK);
+        debug_painter.add_shaded_text(name, pos, 7, colors::GREEN, colors::BLACK);
 
         let comp_set = ecs_world.get_entity_comp_set(entity);
         let comp_set_b: &Bit_Set = comp_set.borrow();
@@ -1135,7 +1135,7 @@ fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs
                     .unwrap()
                 ),
                 pos + v2!(0., (i + 1) as f32 * 8.5),
-                8,
+                6,
                 colors::WHITE,
                 colors::BLACK,
             );

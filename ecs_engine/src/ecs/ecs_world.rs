@@ -83,7 +83,6 @@ impl Ecs_World {
     }
 
     pub fn add_component<T: 'static + Copy>(&mut self, entity: Entity, data: T) -> &mut T {
-        // @Temporary
         self.component_manager.add_component::<T>(entity, data)
     }
 

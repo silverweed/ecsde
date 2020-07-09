@@ -228,7 +228,8 @@ impl Pixel_Collision_System {
                 let colliding_local_transform = tex_inv_transform.combine(&transform);
                 let pos = colliding_local_transform.position();
                 let extent = *extent * colliding_local_transform.scale();
-                // @TODO: consider rotation
+                // Note (possibly @Incomplete): we don't consider rotation right now, as our colliders
+                // are AABBs.
 
                 let x_range = ((pos.x - extent.x * 0.5).floor() as i32 + iw / 2).max(0) ..
                                 ((pos.x + extent.x * 0.5).floor() as i32 + iw / 2).min(iw);

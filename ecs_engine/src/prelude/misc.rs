@@ -14,6 +14,18 @@ macro_rules! mut_in_debug {
     };
 }
 
+// Taken from `static_assertions` crate
+#[macro_export]
+macro_rules! const_assert {
+    ($x:expr $(,)?) => {
+        #[allow(unknown_lints, eq_op)]
+        const _: [(); 0 - !{
+            const ASSERT: bool = $x;
+            ASSERT
+        } as usize] = [];
+    };
+}
+
 // Utils to have in default scope
 #[macro_export]
 macro_rules! v2 {
