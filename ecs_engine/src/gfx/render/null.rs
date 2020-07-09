@@ -229,9 +229,15 @@ pub fn copy_texture_to_image(_texture: &Texture) -> Image {}
 pub fn get_image_pixel(_image: &Image, _x: u32, _y: u32) -> Color {
     colors::TRANSPARENT
 }
+
 pub fn set_image_pixel(_image: &mut Image, _x: u32, _y: u32, _val: Color) {}
+
 pub fn get_image_pixels(_image: &Image) -> &[Color] {
     &[]
+}
+
+pub fn swap_vbuf(_a: &mut Vertex_Buffer, _b: &mut Vertex_Buffer) -> bool {
+    true
 }
 
 pub fn update_texture_pixels(_texture: &mut Texture, _rect: &Rect<u32>, _pixels: &[Color]) {}
