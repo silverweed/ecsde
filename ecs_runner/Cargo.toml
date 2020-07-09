@@ -4,6 +4,12 @@ name = "ecs"
 version = "0.1.0"
 authors = ["silverweed <silverweed1991@gmail.com>"]
 
+[features]
+hotload = []
+
+[target.x86_64-unknown-linux-gnu]
+features = ["hotload"]
+
 [dependencies]
 libloading = "0.5"
 

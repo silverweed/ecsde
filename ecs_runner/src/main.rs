@@ -49,7 +49,10 @@ fn main() -> std::io::Result<()> {
     let game_dll_path = PathBuf::from(game_dll_abs_path.clone());
 
     // Start file watch for hotloading
+    #[cfg(feature="hotload")]
     let (reload_pending_send, reload_pending_recv) = sync_channel(1);
+
+    #[cfg(feature="hotload")]
     {
         let dll_watcher = Box::new(Game_Dll_File_Watcher::new(
             game_dll_path,
@@ -77,6 +80,7 @@ fn main() -> std::io::Result<()> {
     } = unsafe { (game_api.init)(argv, argc) };
 
     loop {
+        #[cfg(feature="hotload")]
         if reload_pending_recv.try_recv().is_ok() {
             unsafe {
                 (game_api.unload)(game_state, game_resources);
@@ -103,6 +107,7 @@ fn main() -> std::io::Result<()> {
         (game_api.shutdown)(game_state, game_resources);
     }
 
+    #[cfg(feature="hotload")]
     if let Err(err) = std::fs::remove_file(&unique_lib_path) {
         eprintln!(
             "[ WARNING ] Failed to remove old lib {:?}: {:?}",
