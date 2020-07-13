@@ -166,6 +166,9 @@ impl Gameplay_System {
         let input_cfg = self.input_cfg;
         let ground_collision_calc_system = &mut self.ground_collision_calc_system;
         let frame_alloc = &mut engine_state.frame_alloc;
+        let gres = &mut rsrc.gfx;
+        let env = &engine_state.env;
+        let shader_cache = &mut engine_state.shader_cache;
 
         levels.foreach_active_level(|level| {
             let world = &mut level.world;
@@ -185,7 +188,17 @@ impl Gameplay_System {
 
             gfx::multi_sprite_animation_system::update(&dt, world, frame_alloc);
             let camera = level.get_camera().transform;
-            entity_preview_system::update(&mut level.world, window, &camera);
+            entity_preview_system::update(
+                &mut level.world,
+                &mut level.phys_world,
+                window,
+                gres,
+                shader_cache,
+                env,
+                &camera,
+                &actions,
+                cfg,
+            );
 
             level.chunks.update(&mut level.world, &level.phys_world);
         });

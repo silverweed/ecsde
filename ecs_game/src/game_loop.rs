@@ -1211,10 +1211,11 @@ fn debug_draw_entities_prev_frame_ghost(
     ecs_world: &mut Ecs_World,
 ) {
     use crate::debug::entity_debug::C_Debug_Data;
+    use crate::systems::pixel_collision_system::C_Texture_Collider;
     use ecs_engine::ecs::components::gfx::C_Renderable;
     use ecs_engine::gfx::render;
 
-    foreach_entity!(ecs_world, +C_Spatial2D, +C_Renderable, +C_Debug_Data, |entity| {
+    foreach_entity!(ecs_world, +C_Spatial2D, +C_Renderable, +C_Debug_Data, ~C_Texture_Collider, |entity| {
         let frame_starting_pos = ecs_world.get_component::<C_Spatial2D>(entity).unwrap().frame_starting_pos;
         let C_Renderable {
             material,

@@ -22,3 +22,6 @@ move_camera_to_origin: O
 toggle_console: Tilde
 calipers: Mouse_Middle
 debug_dig: LControl
+
+# Game
+place_entity: Mouse_Left
