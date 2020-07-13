@@ -1,3 +1,4 @@
+use super::{modifiers::*, Input_Action_Modifiers};
 use crate::input::input_state::Input_Raw_Event;
 use std::collections::HashSet;
 
@@ -12,15 +13,38 @@ pub type Key = backend::Key;
 #[derive(Debug, Default, Clone)]
 pub struct Keyboard_State {
     keys_pressed: HashSet<Key>,
+    modifiers_pressed: Input_Action_Modifiers,
 }
 
 pub fn update_kb_state(kb_state: &mut Keyboard_State, events: &[Input_Raw_Event]) {
     for evt in events {
         match evt {
             Input_Raw_Event::KeyPressed { code, .. } => {
+                match code {
+                    Key::LControl => kb_state.modifiers_pressed |= MOD_LCTRL,
+                    Key::RControl => kb_state.modifiers_pressed |= MOD_RCTRL,
+                    Key::LShift => kb_state.modifiers_pressed |= MOD_LSHIFT,
+                    Key::RShift => kb_state.modifiers_pressed |= MOD_RSHIFT,
+                    Key::LAlt => kb_state.modifiers_pressed |= MOD_LALT,
+                    Key::RAlt => kb_state.modifiers_pressed |= MOD_RALT,
+                    Key::LSystem => kb_state.modifiers_pressed |= MOD_LSUPER,
+                    Key::RSystem => kb_state.modifiers_pressed |= MOD_RSUPER,
+                    _ => {}
+                }
                 kb_state.keys_pressed.insert(*code);
             }
             Input_Raw_Event::KeyReleased { code, .. } => {
+                match code {
+                    Key::LControl => kb_state.modifiers_pressed &= !MOD_LCTRL,
+                    Key::RControl => kb_state.modifiers_pressed &= !MOD_RCTRL,
+                    Key::LShift => kb_state.modifiers_pressed &= !MOD_LSHIFT,
+                    Key::RShift => kb_state.modifiers_pressed &= !MOD_RSHIFT,
+                    Key::LAlt => kb_state.modifiers_pressed &= !MOD_LALT,
+                    Key::RAlt => kb_state.modifiers_pressed &= !MOD_RALT,
+                    Key::LSystem => kb_state.modifiers_pressed &= !MOD_LSUPER,
+                    Key::RSystem => kb_state.modifiers_pressed &= !MOD_RSUPER,
+                    _ => {}
+                }
                 kb_state.keys_pressed.remove(code);
             }
             _ => (),
@@ -34,6 +58,10 @@ pub fn num_to_key(num: usize) -> Option<Key> {
 
 pub fn is_key_pressed(kb_state: &Keyboard_State, key: Key) -> bool {
     kb_state.keys_pressed.contains(&key)
+}
+
+pub fn get_modifiers_pressed(kb_state: &Keyboard_State) -> Input_Action_Modifiers {
+    kb_state.modifiers_pressed
 }
 
 #[cfg(debug_assertions)]

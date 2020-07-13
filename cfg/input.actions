@@ -14,10 +14,10 @@ move_right: D, Joy_Dpad_Right
 
 # Debug
 print_em_debug_info: M
-sound_test: K
+sound_test: CTRL+K
 toggle_trace_overlay: Tab
-camera_zoom_up: Wheel_Up
-camera_zoom_down: Wheel_Down
+camera_zoom_up: CTRL+Wheel_Up
+camera_zoom_down: CTRL+Wheel_Down
 move_camera_to_origin: O
 toggle_console: Tilde
 calipers: Mouse_Middle

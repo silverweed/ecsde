@@ -10,15 +10,22 @@ pub mod mouse;
 
 mod parsing;
 
+use self::modifiers::*;
 use joystick::Joystick_Button;
 use mouse::Mouse_Button;
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
-pub enum Input_Action {
+pub enum Input_Action_Simple {
     Key(keyboard::Key),
     Joystick(Joystick_Button),
     Mouse(Mouse_Button),
     Mouse_Wheel { up: bool },
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
+pub struct Input_Action {
+    pub action: Input_Action_Simple,
+    pub modifiers: Input_Action_Modifiers,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -84,8 +91,15 @@ impl Input_Bindings {
             .collect()
     }
 
-    pub(super) fn get_key_actions(&self, code: keyboard::Key) -> Option<&Vec<String_Id>> {
-        self.action_bindings.get(&Input_Action::Key(code))
+    pub(super) fn get_key_actions(
+        &self,
+        code: keyboard::Key,
+        modifiers: Input_Action_Modifiers,
+    ) -> Option<&Vec<String_Id>> {
+        self.action_bindings.get(&Input_Action::new_with_modifiers(
+            Input_Action_Simple::Key(code),
+            modifiers,
+        ))
     }
 
     pub(super) fn get_joystick_actions(
@@ -101,24 +115,41 @@ impl Input_Bindings {
             )
         });
         let joystick = joystick::get_joy_btn_from_id(*joystick, button)?;
-        let input_action = Input_Action::Joystick(joystick);
+        // @Incomplete: do we want to support modifiers on joysticks?
+        let input_action = Input_Action::new(Input_Action_Simple::Joystick(joystick));
         self.action_bindings.get(&input_action).map(Vec::as_slice)
     }
 
-    pub(super) fn get_mouse_actions(&self, button: mouse::Button) -> Option<&Vec<String_Id>> {
+    pub(super) fn get_mouse_actions(
+        &self,
+        button: mouse::Button,
+        modifiers: Input_Action_Modifiers,
+    ) -> Option<&Vec<String_Id>> {
         let button = mouse::get_mouse_btn(button)?;
-        self.action_bindings.get(&Input_Action::Mouse(button))
+        self.action_bindings.get(&Input_Action::new_with_modifiers(
+            Input_Action_Simple::Mouse(button),
+            modifiers,
+        ))
     }
 
-    pub(super) fn get_mouse_wheel_actions(&self, up: bool) -> Option<&Vec<String_Id>> {
-        self.action_bindings.get(&Input_Action::Mouse_Wheel { up })
+    pub(super) fn get_mouse_wheel_actions(
+        &self,
+        up: bool,
+        modifiers: Input_Action_Modifiers,
+    ) -> Option<&Vec<String_Id>> {
+        self.action_bindings.get(&Input_Action::new_with_modifiers(
+            Input_Action_Simple::Mouse_Wheel { up },
+            modifiers,
+        ))
     }
 
     pub(super) fn get_key_emulated_axes(
         &self,
         code: keyboard::Key,
     ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
-        self.axis_bindings.emulated.get(&Input_Action::Key(code))
+        self.axis_bindings
+            .emulated
+            .get(&Input_Action::new(Input_Action_Simple::Key(code)))
     }
 
     pub(super) fn get_joystick_emulated_axes(
@@ -135,9 +166,9 @@ impl Input_Bindings {
         });
         self.axis_bindings
             .emulated
-            .get(&Input_Action::Joystick(joystick::get_joy_btn_from_id(
-                *joystick, button,
-            )?))
+            .get(&Input_Action::new(Input_Action_Simple::Joystick(
+                joystick::get_joy_btn_from_id(*joystick, button)?,
+            )))
     }
 
     pub(super) fn get_mouse_emulated_axes(
@@ -147,7 +178,7 @@ impl Input_Bindings {
         let button = mouse::get_mouse_btn(button)?;
         self.axis_bindings
             .emulated
-            .get(&Input_Action::Mouse(button))
+            .get(&Input_Action::new(Input_Action_Simple::Mouse(button)))
     }
 
     pub(super) fn get_mouse_wheel_emulated_axes(
@@ -156,6 +187,106 @@ impl Input_Bindings {
     ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
         self.axis_bindings
             .emulated
-            .get(&Input_Action::Mouse_Wheel { up })
+            .get(&Input_Action::new(Input_Action_Simple::Mouse_Wheel { up }))
+    }
+}
+
+type Input_Action_Modifiers = u8;
+
+pub mod modifiers {
+    use super::Input_Action_Modifiers;
+
+    pub const MOD_LCTRL: Input_Action_Modifiers = 1 << 0;
+    pub const MOD_RCTRL: Input_Action_Modifiers = 1 << 1;
+    pub const MOD_CTRL: Input_Action_Modifiers = MOD_LCTRL | MOD_RCTRL;
+    pub const MOD_LSHIFT: Input_Action_Modifiers = 1 << 2;
+    pub const MOD_RSHIFT: Input_Action_Modifiers = 1 << 3;
+    pub const MOD_SHIFT: Input_Action_Modifiers = MOD_LSHIFT | MOD_RSHIFT;
+    pub const MOD_LALT: Input_Action_Modifiers = 1 << 4;
+    pub const MOD_RALT: Input_Action_Modifiers = 1 << 5;
+    pub const MOD_ALT: Input_Action_Modifiers = MOD_LALT | MOD_RALT;
+    pub const MOD_LSUPER: Input_Action_Modifiers = 1 << 6;
+    pub const MOD_RSUPER: Input_Action_Modifiers = 1 << 7;
+    pub const MOD_SUPER: Input_Action_Modifiers = MOD_LSUPER | MOD_RSUPER;
+}
+
+impl Input_Action {
+    pub fn new(action: Input_Action_Simple) -> Self {
+        Self {
+            action,
+            modifiers: 0,
+        }
+    }
+
+    pub fn new_with_modifiers(
+        action: Input_Action_Simple,
+        modifiers: Input_Action_Modifiers,
+    ) -> Self {
+        Self { action, modifiers }
+    }
+
+    #[inline]
+    pub fn has_modifiers(&self) -> bool {
+        self.modifiers != 0
+    }
+
+    #[inline]
+    pub fn has_ctrl(&self) -> bool {
+        (self.modifiers & MOD_CTRL) != 0
+    }
+
+    #[inline]
+    pub fn has_lctrl(&self) -> bool {
+        (self.modifiers & MOD_LCTRL) != 0
+    }
+
+    #[inline]
+    pub fn has_rctrl(&self) -> bool {
+        (self.modifiers & MOD_RCTRL) != 0
+    }
+
+    #[inline]
+    pub fn has_shift(&self) -> bool {
+        (self.modifiers & MOD_SHIFT) != 0
+    }
+
+    #[inline]
+    pub fn has_lshift(&self) -> bool {
+        (self.modifiers & MOD_LSHIFT) != 0
+    }
+
+    #[inline]
+    pub fn has_rshift(&self) -> bool {
+        (self.modifiers & MOD_RSHIFT) != 0
+    }
+
+    #[inline]
+    pub fn has_alt(&self) -> bool {
+        (self.modifiers & MOD_ALT) != 0
+    }
+
+    #[inline]
+    pub fn has_lalt(&self) -> bool {
+        (self.modifiers & MOD_LALT) != 0
+    }
+
+    #[inline]
+    pub fn has_altgr(&self) -> bool {
+        (self.modifiers & MOD_RALT) != 0
+    }
+
+    #[inline]
+    pub fn has_super(&self) -> bool {
+        (self.modifiers & MOD_SUPER) != 0
+    }
+
+    #[inline]
+    pub fn has_lsuper(&self) -> bool {
+        (self.modifiers & MOD_LSUPER) != 0
+    }
+
+    #[inline]
+    pub fn has_rsuper(&self) -> bool {
+        (self.modifiers & MOD_RSUPER) != 0
     }
 }

@@ -1,10 +1,11 @@
 use super::joystick;
 use super::keyboard;
 use super::mouse;
-use super::Input_Action;
+use super::{Input_Action, Input_Action_Modifiers, Input_Action_Simple};
 use crate::common::stringid::String_Id;
 use crate::input::bindings::Axis_Bindings;
 use crate::input::bindings::Axis_Emulation_Type;
+use smallvec::*;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -46,6 +47,12 @@ const COMMENT_START: char = '#';
 /// # this is a comment
 /// action_name: Key1, Key2, ... # whitespace doesn't matter
 ///
+/// An action can be of the form:
+///     MOD1+MOD2+...+Key
+/// e.g.
+///     CTRL+SHIFT+A
+/// Allowed modifiers are: CTRL, LCTRL, RCTRL, etc (see code). They're case insensitive.
+///
 // @Cutnpaste from cfg/parsing.rs
 fn parse_action_bindings_lines(
     lines: impl std::iter::Iterator<Item = String>,
@@ -77,7 +84,7 @@ fn parse_action_bindings_lines(
 
         let mut keys: Vec<Input_Action> = action_values_raw
             .split(',')
-            .filter_map(|tok| parse_action(tok.trim()))
+            .flat_map(|tok| parse_action(tok.trim()))
             .collect();
         keys.sort_unstable();
         keys.dedup();
@@ -93,17 +100,67 @@ fn parse_action_bindings_lines(
     bindings
 }
 
-fn parse_action(s: &str) -> Option<Input_Action> {
-    if s.starts_with("Joy_") {
-        joystick::string_to_joy_btn(&s["Joy_".len()..]).map(Input_Action::Joystick)
-    } else if s.starts_with("Mouse_") {
-        mouse::string_to_mouse_btn(&s["Mouse_".len()..]).map(Input_Action::Mouse)
-    } else if s == "Wheel_Up" {
-        Some(Input_Action::Mouse_Wheel { up: true })
-    } else if s == "Wheel_Down" {
-        Some(Input_Action::Mouse_Wheel { up: false })
+fn parse_action(mods_and_key: &str) -> SmallVec<[Input_Action; 2]> {
+    let mods_and_key_split = mods_and_key.split('+').map(str::trim).collect::<Vec<_>>();
+    let key_raw = mods_and_key_split[mods_and_key_split.len() - 1];
+    if let Some(key) = parse_action_simple(key_raw) {
+        let mut modifiers = vec![];
+        for modif in &mods_and_key_split[..mods_and_key_split.len() - 1] {
+            // Note: certain modifier keys count as "either X or Y", so they produce
+            // multiple results.
+            let ms = parse_modifier(modif);
+            for i in 0..ms.len() {
+                if i < modifiers.len() {
+                    modifiers[i] |= ms[i];
+                } else {
+                    modifiers.push(ms[i]);
+                }
+            }
+        }
+        if modifiers.is_empty() {
+            smallvec![Input_Action::new(key)]
+        } else {
+            modifiers
+                .into_iter()
+                .map(|m| Input_Action::new_with_modifiers(key, m))
+                .collect()
+        }
     } else {
-        keyboard::string_to_key(s).map(Input_Action::Key)
+        smallvec![]
+    }
+}
+
+fn parse_action_simple(s: &str) -> Option<Input_Action_Simple> {
+    if s.starts_with("Joy_") {
+        joystick::string_to_joy_btn(&s["Joy_".len()..]).map(Input_Action_Simple::Joystick)
+    } else if s.starts_with("Mouse_") {
+        mouse::string_to_mouse_btn(&s["Mouse_".len()..]).map(Input_Action_Simple::Mouse)
+    } else if s == "Wheel_Up" {
+        Some(Input_Action_Simple::Mouse_Wheel { up: true })
+    } else if s == "Wheel_Down" {
+        Some(Input_Action_Simple::Mouse_Wheel { up: false })
+    } else {
+        keyboard::string_to_key(s).map(Input_Action_Simple::Key)
+    }
+}
+
+fn parse_modifier(s: &str) -> SmallVec<[Input_Action_Modifiers; 2]> {
+    use super::modifiers::*;
+
+    match s.to_lowercase().as_str() {
+        "ctrl" => smallvec![MOD_LCTRL, MOD_RCTRL],
+        "lctrl" => smallvec![MOD_LCTRL],
+        "rctrl" => smallvec![MOD_RCTRL],
+        "shift" => smallvec![MOD_LSHIFT, MOD_RSHIFT],
+        "lshift" => smallvec![MOD_LSHIFT],
+        "rshift" => smallvec![MOD_RSHIFT],
+        "alt" => smallvec![MOD_LALT, MOD_RALT],
+        "lalt" => smallvec![MOD_LALT],
+        "altgr" => smallvec![MOD_RALT],
+        "super" => smallvec![MOD_LSUPER, MOD_RSUPER],
+        "lsuper" => smallvec![MOD_LSUPER],
+        "rsuper" => smallvec![MOD_RSUPER],
+        _ => smallvec![],
     }
 }
 
@@ -191,18 +248,19 @@ fn parse_axis_bindings_lines(lines: impl std::iter::Iterator<Item = String>) -> 
 
 fn parse_axis(s: &str) -> Option<Virtual_Axis_Mapping> {
     match s.chars().next() {
-        Some('+') => Some(Virtual_Axis_Mapping::Action_Emulate_Max(parse_action(
-            &s[1..],
-        )?)),
-        Some('-') => Some(Virtual_Axis_Mapping::Action_Emulate_Min(parse_action(
-            &s[1..],
-        )?)),
+        Some('+') => Some(Virtual_Axis_Mapping::Action_Emulate_Max(
+            *parse_action(&s[1..]).get(0)?,
+        )),
+        Some('-') => Some(Virtual_Axis_Mapping::Action_Emulate_Min(
+            *parse_action(&s[1..]).get(0)?,
+        )),
         _ => Some(Virtual_Axis_Mapping::Axis(joystick::string_to_joy_axis(s)?)),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::modifiers::*;
     use super::joystick::Joystick_Button;
     use super::keyboard::Key;
     use super::mouse::Mouse_Button;
@@ -210,47 +268,63 @@ mod tests {
 
     #[test]
     fn test_parse_action() {
-        assert_eq!(parse_action("Space"), Some(Input_Action::Key(Key::Space)));
-        assert_eq!(parse_action("Spacex"), None);
-        assert_eq!(parse_action("Dash"), Some(Input_Action::Key(Key::Dash)));
-        assert_eq!(parse_action("  Dash  "), None);
-        assert_eq!(parse_action("Joy_"), None);
+        assert_eq!(
+            parse_action("Space"),
+            smallvec!(Input_Action::new(Input_Action_Simple::Key(Key::Space)))
+        );
+        assert_eq!(parse_action("Spacex"), smallvec![]);
+        assert_eq!(
+            parse_action("Dash"),
+            smallvec!(Input_Action::new(Input_Action_Simple::Key(Key::Dash)))
+        );
+        assert_eq!(
+            parse_action("  Dash  "),
+            smallvec!(Input_Action::new(Input_Action_Simple::Key(Key::Dash)))
+        );
+        assert_eq!(parse_action("Joy_"), smallvec![]);
         assert_eq!(
             parse_action("Joy_Shoulder_Right"),
-            Some(Input_Action::Joystick(Joystick_Button::Shoulder_Right))
+            smallvec!(Input_Action::new(Input_Action_Simple::Joystick(
+                Joystick_Button::Shoulder_Right
+            )))
         );
-        assert_eq!(parse_action("Mouse_"), None);
+        assert_eq!(parse_action("Mouse_"), smallvec![]);
         assert_eq!(
             parse_action("Mouse_Left"),
-            Some(Input_Action::Mouse(Mouse_Button::Left))
+            smallvec!(Input_Action::new(Input_Action_Simple::Mouse(
+                Mouse_Button::Left
+            )))
         );
-        assert_eq!(parse_action(""), None);
+        assert_eq!(parse_action(""), smallvec![]);
     }
 
     #[test]
     fn test_parse_axis() {
         use joystick::Joystick_Axis as J;
         use Input_Action as I;
+        use Input_Action_Simple as IS;
         use Virtual_Axis_Mapping as V;
 
         assert_eq!(parse_axis("Stick_Left_H"), Some(V::Axis(J::Stick_Left_H)));
         assert_eq!(parse_axis("Stick_Left"), None);
         assert_eq!(
             parse_axis("+Joy_Stick_Left"),
-            Some(V::Action_Emulate_Max(I::Joystick(
+            Some(V::Action_Emulate_Max(I::new(IS::Joystick(
                 Joystick_Button::Stick_Left
-            )))
+            ))))
         );
         assert_eq!(parse_axis("+Stick_Left_H"), None);
         assert_eq!(
             parse_axis("-A"),
-            Some(V::Action_Emulate_Min(I::Key(Key::A)))
+            Some(V::Action_Emulate_Min(I::new(IS::Key(Key::A))))
         );
         assert_eq!(parse_axis(""), None);
         assert_eq!(parse_axis("+"), None);
         assert_eq!(
             parse_axis("-Mouse_Right"),
-            Some(V::Action_Emulate_Min(I::Mouse(Mouse_Button::Right)))
+            Some(V::Action_Emulate_Min(I::new(IS::Mouse(
+                Mouse_Button::Right
+            ))))
         );
     }
 
@@ -259,8 +333,8 @@ mod tests {
         let lines: Vec<String> = vec![
             "# This is a sample file",
             "action1: Num0",
-            "action2: Num1,Num2#This is an action",
-            "   action3   :   Num3,",
+            "action2: Num1,ctrl+Num2#This is an action",
+            "   action3   :   SHIFT +  alt +Num3,",
             " action4:",
             "",
             "##############",
@@ -278,61 +352,66 @@ mod tests {
         .collect();
         let parsed = parse_action_bindings_lines(lines.into_iter());
 
-        assert_eq!(parsed.len(), 14);
+        assert_eq!(parsed.len(), 15);
         assert_eq!(
-            parsed[&Input_Action::Key(Key::Num0)],
+            parsed[&Input_Action::new(Input_Action_Simple::Key(Key::Num0))],
             vec![String_Id::from("action1"), String_Id::from("action6")]
         );
         assert_eq!(
-            parsed[&Input_Action::Key(Key::Num1)],
+            parsed[&Input_Action::new(Input_Action_Simple::Key(Key::Num1))],
             vec![String_Id::from("action2"), String_Id::from("action9")]
         );
         assert_eq!(
-            parsed[&Input_Action::Key(Key::Num2)],
-            vec![String_Id::from("action2"), String_Id::from("action9")]
+            parsed
+                [&Input_Action::new_with_modifiers(Input_Action_Simple::Key(Key::Num2), MOD_CTRL)],
+            vec![String_Id::from("action2")]
         );
         assert_eq!(
-            parsed[&Input_Action::Key(Key::Num3)],
+            parsed[&Input_Action::new_with_modifiers(
+                Input_Action_Simple::Key(Key::Num3),
+                MOD_SHIFT | MOD_ALT
+            )],
             vec![String_Id::from("action3")]
         );
         assert_eq!(
-            parsed[&Input_Action::Key(Key::Num4)],
+            parsed[&Input_Action::new(Input_Action_Simple::Key(Key::Num4))],
             vec![String_Id::from("action5")],
         );
         assert_eq!(
-            parsed[&Input_Action::Key(Key::Num5)],
+            parsed[&Input_Action::new(Input_Action_Simple::Key(Key::Num5))],
             vec![String_Id::from("action5")],
         );
         assert_eq!(
-            parsed[&Input_Action::Key(Key::Num6)],
+            parsed[&Input_Action::new(Input_Action_Simple::Key(Key::Num6))],
             vec![String_Id::from("action5")],
         );
         assert_eq!(
-            parsed[&Input_Action::Mouse(Mouse_Button::Left)],
+            parsed[&Input_Action::new(Input_Action_Simple::Mouse(Mouse_Button::Left))],
             vec![String_Id::from("action8")],
         );
         assert_eq!(
-            parsed[&Input_Action::Mouse(Mouse_Button::Right)],
+            parsed[&Input_Action::new(Input_Action_Simple::Mouse(Mouse_Button::Right))],
             vec![String_Id::from("action8")],
         );
         assert_eq!(
-            parsed[&Input_Action::Joystick(Joystick_Button::Face_Bottom)],
+            parsed[&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Face_Bottom))],
             vec![String_Id::from("action10")],
         );
         assert_eq!(
-            parsed[&Input_Action::Joystick(Joystick_Button::Special_Left)],
+            parsed
+                [&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Special_Left))],
             vec![String_Id::from("action10")],
         );
         assert_eq!(
-            parsed[&Input_Action::Key(Key::J)],
+            parsed[&Input_Action::new(Input_Action_Simple::Key(Key::J))],
             vec![String_Id::from("action11")],
         );
         assert_eq!(
-            parsed[&Input_Action::Joystick(Joystick_Button::Stick_Right)],
+            parsed[&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Stick_Right))],
             vec![String_Id::from("action11")],
         );
         assert_eq!(
-            parsed[&Input_Action::Mouse(Mouse_Button::Middle)],
+            parsed[&Input_Action::new(Input_Action_Simple::Mouse(Mouse_Button::Middle))],
             vec![String_Id::from("action11")],
         );
     }
@@ -359,7 +438,6 @@ mod tests {
         } = parse_axis_bindings_lines(lines.into_iter());
 
         use joystick::Joystick_Axis as J;
-        use Input_Action as I;
 
         assert_eq!(emulated.len(), 2);
         assert_eq!(axes_names.len(), 4);
@@ -372,14 +450,15 @@ mod tests {
             vec![String_Id::from("axis1"), String_Id::from("axis3")]
         );
         assert_eq!(
-            emulated[&I::Key(Key::D)],
+            emulated[&Input_Action::new(Input_Action_Simple::Key(Key::D))],
             vec![
                 (String_Id::from("axis2"), Axis_Emulation_Type::Max),
                 (String_Id::from("axis5"), Axis_Emulation_Type::Min)
             ]
         );
         assert_eq!(
-            emulated[&I::Joystick(Joystick_Button::Stick_Right)],
+            emulated
+                [&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Stick_Right))],
             vec![(String_Id::from("axis3"), Axis_Emulation_Type::Max)]
         );
         assert_eq!(

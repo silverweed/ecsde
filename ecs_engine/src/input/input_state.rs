@@ -189,10 +189,11 @@ fn process_event_game_actions(
     bindings: &Input_Bindings,
     processed: &mut Processed_Input,
 ) -> bool {
+    let modifiers = keyboard::get_modifiers_pressed(&raw_state.kb_state);
     match event {
         // Game Actions
         Event::KeyPressed { code, .. } => {
-            if let Some(names) = bindings.get_key_actions(code) {
+            if let Some(names) = bindings.get_key_actions(code, modifiers) {
                 handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
             }
             if let Some(names) = bindings.get_key_emulated_axes(code) {
@@ -200,7 +201,7 @@ fn process_event_game_actions(
             }
         }
         Event::KeyReleased { code, .. } => {
-            if let Some(names) = bindings.get_key_actions(code) {
+            if let Some(names) = bindings.get_key_actions(code, modifiers) {
                 handle_actions(&mut processed.game_actions, Action_Kind::Released, names);
             }
             if let Some(names) = bindings.get_key_emulated_axes(code) {
@@ -232,7 +233,7 @@ fn process_event_game_actions(
             }
         }
         Event::MouseButtonPressed { button, .. } => {
-            if let Some(names) = bindings.get_mouse_actions(button) {
+            if let Some(names) = bindings.get_mouse_actions(button, modifiers) {
                 handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
             }
             if let Some(names) = bindings.get_mouse_emulated_axes(button) {
@@ -240,7 +241,7 @@ fn process_event_game_actions(
             }
         }
         Event::MouseButtonReleased { button, .. } => {
-            if let Some(names) = bindings.get_mouse_actions(button) {
+            if let Some(names) = bindings.get_mouse_actions(button, modifiers) {
                 handle_actions(&mut processed.game_actions, Action_Kind::Released, names);
             }
             if let Some(names) = bindings.get_mouse_emulated_axes(button) {
@@ -248,7 +249,7 @@ fn process_event_game_actions(
             }
         }
         Event::MouseWheelScrolled { delta, .. } => {
-            if let Some(names) = bindings.get_mouse_wheel_actions(delta > 0.) {
+            if let Some(names) = bindings.get_mouse_wheel_actions(delta > 0., modifiers) {
                 // Note: MouseWheel actions always count as 'Pressed'.
                 handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
             }

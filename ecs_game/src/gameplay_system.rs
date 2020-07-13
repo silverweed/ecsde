@@ -255,23 +255,19 @@ impl Gameplay_System {
             let mut add_scale = Vec2f::new(0., 0.);
             const BASE_CAM_DELTA_ZOOM_PER_SCROLL: f32 = 0.2;
 
-            if keyboard::is_key_pressed(&input_state.raw.kb_state, keyboard::Key::LControl) {
-                for action in &input_state.processed.game_actions {
-                    match action {
-                        (name, Action_Kind::Pressed)
-                            if *name == String_Id::from("camera_zoom_up") =>
-                        {
-                            add_scale.x -= BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
-                            add_scale.y = add_scale.x;
-                        }
-                        (name, Action_Kind::Pressed)
-                            if *name == String_Id::from("camera_zoom_down") =>
-                        {
-                            add_scale.x += BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
-                            add_scale.y = add_scale.x;
-                        }
-                        _ => (),
+            for action in &input_state.processed.game_actions {
+                match action {
+                    (name, Action_Kind::Pressed) if *name == String_Id::from("camera_zoom_up") => {
+                        add_scale.x -= BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
+                        add_scale.y = add_scale.x;
                     }
+                    (name, Action_Kind::Pressed)
+                        if *name == String_Id::from("camera_zoom_down") =>
+                    {
+                        add_scale.x += BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
+                        add_scale.y = add_scale.x;
+                    }
+                    _ => (),
                 }
             }
 

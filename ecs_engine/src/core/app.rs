@@ -331,7 +331,7 @@ pub fn init_engine_debug(
     }
 
     {
-        use crate::input::bindings::Input_Action;
+        use crate::input::bindings::{Input_Action, Input_Action_Simple};
 
         let console = &mut engine_state.debug_systems.console;
         console.size = Vec2u::new(win_w as _, win_h as u32 / 2);
@@ -342,7 +342,11 @@ pub fn init_engine_debug(
             .get_all_actions_triggering(String_Id::from("toggle_console"))
             .iter()
             .filter_map(|action| {
-                if let Input_Action::Key(key) = action {
+                if let Input_Action {
+                    action: Input_Action_Simple::Key(key),
+                    modifiers: 0,
+                } = action
+                {
                     Some(*key)
                 } else {
                     None
