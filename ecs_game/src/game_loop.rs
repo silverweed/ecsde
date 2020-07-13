@@ -65,12 +65,16 @@ where
     {
         trace!("input_state::update");
 
-        let mut_in_debug!(process_game_actions) = true;
+        let process_game_actions;
 
         #[cfg(debug_assertions)]
         {
             process_game_actions =
                 debug_systems.console.status != debug::console::Console_Status::Open;
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            process_game_actions = true;
         }
 
         // Update the raw input. This may be overwritten later by replay data, but its core_events won't.
