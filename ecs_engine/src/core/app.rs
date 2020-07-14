@@ -344,7 +344,7 @@ pub fn init_engine_debug(
             .filter_map(|action| {
                 if let Input_Action {
                     action: Input_Action_Simple::Key(key),
-                    modifiers: 0,
+                    .. // @Robustness: right now, the console only supports an unmodified key to close.
                 } = action
                 {
                     Some(*key)
