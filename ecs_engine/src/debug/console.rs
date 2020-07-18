@@ -128,7 +128,7 @@ impl Console {
 
     pub fn update(&mut self, events: &[Input_Raw_Event]) {
         for event in events {
-            self.process_event(*event);
+            self.process_event(event.clone());
         }
     }
 
@@ -150,7 +150,10 @@ impl Console {
         self.output.push((line.to_string(), color));
     }
 
-    #[cfg(feature = "use-sfml")]
+    #[cfg(not(feature = "win-sfml"))]
+    fn process_event(&mut self, _event: Input_Raw_Event) {}
+
+    #[cfg(feature = "win-sfml")]
     fn process_event(&mut self, event: Input_Raw_Event) {
         use keyboard::Key;
         use sfml::window::Event;

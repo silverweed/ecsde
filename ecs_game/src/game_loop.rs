@@ -99,7 +99,7 @@ where
                         .input_state
                         .raw
                         .events
-                        .extend(&raw_input.core_events);
+                        .extend(raw_input.core_events.iter().cloned());
                     game_state.engine_state.input_state.raw.core_events = raw_input.core_events;
                 } else {
                     game_state.engine_state.input_state.raw.events =

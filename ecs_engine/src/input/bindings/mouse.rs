@@ -1,10 +1,16 @@
 use std::convert::TryFrom;
 
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "win-sfml")]
 pub mod sfml;
 
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "win-glfw")]
+pub mod glfw;
+
+#[cfg(feature = "win-sfml")]
 use self::sfml as backend;
+
+#[cfg(feature = "win-glfw")]
+use self::glfw as backend;
 
 pub type Button = backend::Button;
 

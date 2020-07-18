@@ -1,4 +1,4 @@
-#![cfg(feature = "use-sfml")]
+#![cfg(feature = "win-sfml")]
 
 use crate::common::vector::Vec2i;
 use sfml::window as sfwin;

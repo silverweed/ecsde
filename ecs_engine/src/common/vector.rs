@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "win-sfml")]
 mod sfml;
 
 pub struct Vector2<T> {
@@ -540,7 +540,7 @@ mod tests {
         let _ = Vec2f::new(0., 0.).normalized();
     }
 
-    #[cfg(feature = "use-sfml")]
+    #[cfg(feature = "win-sfml")]
     #[test]
     fn to_from_framework() {
         let a = Vec2f::new(3., 2.);

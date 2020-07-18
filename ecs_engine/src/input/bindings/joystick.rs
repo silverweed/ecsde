@@ -1,14 +1,20 @@
 use std::convert::TryFrom;
 
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "win-sfml")]
 mod sfml;
 
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "win-glfw")]
+mod glfw;
+
+#[cfg(feature = "win-sfml")]
 use self::sfml as backend;
+
+#[cfg(feature = "win-glfw")]
+use self::glfw as backend;
 
 pub const JOY_COUNT: u32 = backend::JOY_COUNT;
 
-pub type Joystick_Mask = u8;
+pub type Joystick_Mask = u16;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Joystick_Type {

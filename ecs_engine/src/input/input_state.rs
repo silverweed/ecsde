@@ -10,8 +10,7 @@ use crate::core::env::Env_Info;
 use crate::gfx::window::{self, Event, Window_Handle};
 use std::convert::TryInto;
 
-#[cfg(feature = "use-sfml")]
-pub type Input_Raw_Event = sfml::window::Event;
+pub type Input_Raw_Event = Event;
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub enum Action_Kind {
@@ -76,12 +75,15 @@ pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut
     while let Some(evt) = window::poll_event(window) {
         match evt {
             // @Cleanup: should these be handled later as core events?
+            #[cfg(features = "win-sfml")]
             Event::JoystickConnected { joystickid } => {
                 joystick_state::register_joystick(&mut raw_state.joy_state, joystickid);
             }
+            #[cfg(features = "win-sfml")]
             Event::JoystickDisconnected { joystickid } => {
                 joystick_state::unregister_joystick(&mut raw_state.joy_state, joystickid);
             }
+            #[cfg(features = "win-sfml")]
             Event::Resized { .. } | Event::Closed => {
                 raw_state.core_events.push(evt);
                 raw_state.events.push(evt);
@@ -128,8 +130,8 @@ fn read_events_to_actions(
         process_event_core_actions
     };
 
-    for &event in raw_state.events.iter() {
-        process_event_func(event, raw_state, bindings, processed);
+    for event in raw_state.events.iter() {
+        process_event_func(event.clone(), raw_state, bindings, processed);
     }
 }
 
@@ -139,13 +141,13 @@ fn process_event_core_and_game_actions(
     bindings: &Input_Bindings,
     processed: &mut Processed_Input,
 ) -> bool {
-    if process_event_core_actions(event, raw_state, bindings, processed) {
+    if process_event_core_actions(event.clone(), raw_state, bindings, processed) {
         return true;
     }
     process_event_game_actions(event, raw_state, bindings, processed)
 }
 
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "win-sfml")]
 fn process_event_core_actions(
     event: Input_Raw_Event,
     _raw_state: &Input_Raw_State,
@@ -161,6 +163,16 @@ fn process_event_core_actions(
             return false;
         }
     }
+    true
+}
+
+#[cfg(not(feature = "win-sfml"))]
+fn process_event_core_actions(
+    _event: Input_Raw_Event,
+    _raw_state: &Input_Raw_State,
+    _bindings: &Input_Bindings,
+    processed: &mut Processed_Input,
+) -> bool {
     true
 }
 
@@ -182,7 +194,17 @@ fn handle_axis_released(axes: &mut axes::Virtual_Axes, names: &[(String_Id, Axis
     }
 }
 
-#[cfg(feature = "use-sfml")]
+#[cfg(not(feature = "win-sfml"))]
+fn process_event_game_actions(
+    _event: Input_Raw_Event,
+    _raw_state: &Input_Raw_State,
+    _bindings: &Input_Bindings,
+    _processed: &mut Processed_Input,
+) -> bool {
+    false
+}
+
+#[cfg(feature = "win-sfml")]
 fn process_event_game_actions(
     event: Input_Raw_Event,
     raw_state: &Input_Raw_State,

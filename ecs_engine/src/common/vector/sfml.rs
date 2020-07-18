@@ -1,5 +1,3 @@
-#![cfg(feature = "use-sfml")]
-
 use super::{Vec2f, Vec2i};
 
 impl From<Vec2f> for sfml::system::Vector2f {

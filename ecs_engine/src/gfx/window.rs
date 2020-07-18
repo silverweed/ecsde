@@ -1,10 +1,16 @@
 use crate::common::vector::{Vec2f, Vec2i, Vec2u};
 
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "win-sfml")]
 mod sfml;
 
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "win-glfw")]
+mod glfw;
+
+#[cfg(feature = "win-sfml")]
 use self::sfml as backend;
+
+#[cfg(feature = "win-glfw")]
+use self::glfw as backend;
 
 pub type Window_Handle = backend::Window_Handle;
 pub type Create_Window_Args = backend::Create_Window_Args;

@@ -2,13 +2,17 @@ use super::{modifiers::*, Input_Action_Modifiers};
 use crate::input::input_state::Input_Raw_Event;
 use std::collections::HashSet;
 
-#[cfg(feature = "use-sfml")]
+#[cfg(feature = "win-sfml")]
 pub mod sfml;
 
-#[cfg(feature = "use-sfml")]
-use self::sfml as backend;
+#[cfg(feature = "win-glfw")]
+pub mod glfw;
 
-pub type Key = backend::Key;
+//#[cfg(feature = "win-sfml")]
+//use self::sfml as backend;
+
+#[cfg(feature = "win-glfw")]
+use self::glfw as backend;
 
 #[derive(Debug, Default, Clone)]
 pub struct Keyboard_State {
@@ -17,6 +21,7 @@ pub struct Keyboard_State {
 }
 
 pub fn update_kb_state(kb_state: &mut Keyboard_State, events: &[Input_Raw_Event]) {
+    #[cfg(features = "win-sfml")]
     for evt in events {
         match evt {
             Input_Raw_Event::KeyPressed { code, .. } => {
@@ -52,16 +57,128 @@ pub fn update_kb_state(kb_state: &mut Keyboard_State, events: &[Input_Raw_Event]
     }
 }
 
-pub fn num_to_key(num: usize) -> Option<Key> {
-    backend::num_to_key(num)
-}
-
 pub fn is_key_pressed(kb_state: &Keyboard_State, key: Key) -> bool {
     kb_state.keys_pressed.contains(&key)
 }
 
 pub fn get_modifiers_pressed(kb_state: &Keyboard_State) -> Input_Action_Modifiers {
     kb_state.modifiers_pressed
+}
+
+type Key_Underlying_Type = u8;
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum Key {
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
+    Num0,
+    Num1,
+    Num2,
+    Num3,
+    Num4,
+    Num5,
+    Num6,
+    Num7,
+    Num8,
+    Num9,
+    Escape,
+    LControl,
+    LShift,
+    LAlt,
+    LSystem,
+    RControl,
+    RShift,
+    RAlt,
+    RSystem,
+    Menu,
+    LBracket,
+    RBracket,
+    SemiColon,
+    Comma,
+    Period,
+    Quote,
+    Slash,
+    BackSlash,
+    Tilde,
+    Equal,
+    Dash,
+    Space,
+    Return,
+    BackSpace,
+    Tab,
+    PageUp,
+    PageDown,
+    End,
+    Home,
+    Insert,
+    Delete,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Left,
+    Right,
+    Up,
+    Down,
+    Numpad0,
+    Numpad1,
+    Numpad2,
+    Numpad3,
+    Numpad4,
+    Numpad5,
+    Numpad6,
+    Numpad7,
+    Numpad8,
+    Numpad9,
+    F1,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
+    F13,
+    F14,
+    F15,
+    Pause,
+}
+
+pub fn num_to_key(num: Key_Underlying_Type) -> Option<Key> {
+    if num <= Key::Pause as Key_Underlying_Type {
+        Some(unsafe { std::mem::transmute(num) })
+    } else {
+        None
+    }
 }
 
 #[cfg(debug_assertions)]
@@ -249,106 +366,274 @@ mod tests {
 
     #[test]
     fn test_num_to_key() {
-        assert_eq!(num_to_key(Key::A as usize), Some(Key::A));
-        assert_eq!(num_to_key(Key::B as usize), Some(Key::B));
-        assert_eq!(num_to_key(Key::C as usize), Some(Key::C));
-        assert_eq!(num_to_key(Key::D as usize), Some(Key::D));
-        assert_eq!(num_to_key(Key::E as usize), Some(Key::E));
-        assert_eq!(num_to_key(Key::F as usize), Some(Key::F));
-        assert_eq!(num_to_key(Key::G as usize), Some(Key::G));
-        assert_eq!(num_to_key(Key::H as usize), Some(Key::H));
-        assert_eq!(num_to_key(Key::I as usize), Some(Key::I));
-        assert_eq!(num_to_key(Key::J as usize), Some(Key::J));
-        assert_eq!(num_to_key(Key::K as usize), Some(Key::K));
-        assert_eq!(num_to_key(Key::L as usize), Some(Key::L));
-        assert_eq!(num_to_key(Key::M as usize), Some(Key::M));
-        assert_eq!(num_to_key(Key::N as usize), Some(Key::N));
-        assert_eq!(num_to_key(Key::O as usize), Some(Key::O));
-        assert_eq!(num_to_key(Key::P as usize), Some(Key::P));
-        assert_eq!(num_to_key(Key::Q as usize), Some(Key::Q));
-        assert_eq!(num_to_key(Key::R as usize), Some(Key::R));
-        assert_eq!(num_to_key(Key::S as usize), Some(Key::S));
-        assert_eq!(num_to_key(Key::T as usize), Some(Key::T));
-        assert_eq!(num_to_key(Key::U as usize), Some(Key::U));
-        assert_eq!(num_to_key(Key::V as usize), Some(Key::V));
-        assert_eq!(num_to_key(Key::W as usize), Some(Key::W));
-        assert_eq!(num_to_key(Key::X as usize), Some(Key::X));
-        assert_eq!(num_to_key(Key::Y as usize), Some(Key::Y));
-        assert_eq!(num_to_key(Key::Z as usize), Some(Key::Z));
-        assert_eq!(num_to_key(Key::Num0 as usize), Some(Key::Num0));
-        assert_eq!(num_to_key(Key::Num1 as usize), Some(Key::Num1));
-        assert_eq!(num_to_key(Key::Num2 as usize), Some(Key::Num2));
-        assert_eq!(num_to_key(Key::Num3 as usize), Some(Key::Num3));
-        assert_eq!(num_to_key(Key::Num4 as usize), Some(Key::Num4));
-        assert_eq!(num_to_key(Key::Num5 as usize), Some(Key::Num5));
-        assert_eq!(num_to_key(Key::Num6 as usize), Some(Key::Num6));
-        assert_eq!(num_to_key(Key::Num7 as usize), Some(Key::Num7));
-        assert_eq!(num_to_key(Key::Num8 as usize), Some(Key::Num8));
-        assert_eq!(num_to_key(Key::Num9 as usize), Some(Key::Num9));
-        assert_eq!(num_to_key(Key::Escape as usize), Some(Key::Escape));
-        assert_eq!(num_to_key(Key::LControl as usize), Some(Key::LControl));
-        assert_eq!(num_to_key(Key::LShift as usize), Some(Key::LShift));
-        assert_eq!(num_to_key(Key::LAlt as usize), Some(Key::LAlt));
-        assert_eq!(num_to_key(Key::LSystem as usize), Some(Key::LSystem));
-        assert_eq!(num_to_key(Key::RControl as usize), Some(Key::RControl));
-        assert_eq!(num_to_key(Key::RShift as usize), Some(Key::RShift));
-        assert_eq!(num_to_key(Key::RAlt as usize), Some(Key::RAlt));
-        assert_eq!(num_to_key(Key::RSystem as usize), Some(Key::RSystem));
-        assert_eq!(num_to_key(Key::Menu as usize), Some(Key::Menu));
-        assert_eq!(num_to_key(Key::LBracket as usize), Some(Key::LBracket));
-        assert_eq!(num_to_key(Key::RBracket as usize), Some(Key::RBracket));
-        assert_eq!(num_to_key(Key::SemiColon as usize), Some(Key::SemiColon));
-        assert_eq!(num_to_key(Key::Comma as usize), Some(Key::Comma));
-        assert_eq!(num_to_key(Key::Period as usize), Some(Key::Period));
-        assert_eq!(num_to_key(Key::Quote as usize), Some(Key::Quote));
-        assert_eq!(num_to_key(Key::Slash as usize), Some(Key::Slash));
-        assert_eq!(num_to_key(Key::BackSlash as usize), Some(Key::BackSlash));
-        assert_eq!(num_to_key(Key::Tilde as usize), Some(Key::Tilde));
-        assert_eq!(num_to_key(Key::Equal as usize), Some(Key::Equal));
-        assert_eq!(num_to_key(Key::Dash as usize), Some(Key::Dash));
-        assert_eq!(num_to_key(Key::Space as usize), Some(Key::Space));
-        assert_eq!(num_to_key(Key::Return as usize), Some(Key::Return));
-        assert_eq!(num_to_key(Key::BackSpace as usize), Some(Key::BackSpace));
-        assert_eq!(num_to_key(Key::Tab as usize), Some(Key::Tab));
-        assert_eq!(num_to_key(Key::PageUp as usize), Some(Key::PageUp));
-        assert_eq!(num_to_key(Key::PageDown as usize), Some(Key::PageDown));
-        assert_eq!(num_to_key(Key::End as usize), Some(Key::End));
-        assert_eq!(num_to_key(Key::Home as usize), Some(Key::Home));
-        assert_eq!(num_to_key(Key::Insert as usize), Some(Key::Insert));
-        assert_eq!(num_to_key(Key::Delete as usize), Some(Key::Delete));
-        assert_eq!(num_to_key(Key::Add as usize), Some(Key::Add));
-        assert_eq!(num_to_key(Key::Subtract as usize), Some(Key::Subtract));
-        assert_eq!(num_to_key(Key::Multiply as usize), Some(Key::Multiply));
-        assert_eq!(num_to_key(Key::Divide as usize), Some(Key::Divide));
-        assert_eq!(num_to_key(Key::Left as usize), Some(Key::Left));
-        assert_eq!(num_to_key(Key::Right as usize), Some(Key::Right));
-        assert_eq!(num_to_key(Key::Up as usize), Some(Key::Up));
-        assert_eq!(num_to_key(Key::Down as usize), Some(Key::Down));
-        assert_eq!(num_to_key(Key::Numpad0 as usize), Some(Key::Numpad0));
-        assert_eq!(num_to_key(Key::Numpad1 as usize), Some(Key::Numpad1));
-        assert_eq!(num_to_key(Key::Numpad2 as usize), Some(Key::Numpad2));
-        assert_eq!(num_to_key(Key::Numpad3 as usize), Some(Key::Numpad3));
-        assert_eq!(num_to_key(Key::Numpad4 as usize), Some(Key::Numpad4));
-        assert_eq!(num_to_key(Key::Numpad5 as usize), Some(Key::Numpad5));
-        assert_eq!(num_to_key(Key::Numpad6 as usize), Some(Key::Numpad6));
-        assert_eq!(num_to_key(Key::Numpad7 as usize), Some(Key::Numpad7));
-        assert_eq!(num_to_key(Key::Numpad8 as usize), Some(Key::Numpad8));
-        assert_eq!(num_to_key(Key::Numpad9 as usize), Some(Key::Numpad9));
-        assert_eq!(num_to_key(Key::F1 as usize), Some(Key::F1));
-        assert_eq!(num_to_key(Key::F2 as usize), Some(Key::F2));
-        assert_eq!(num_to_key(Key::F3 as usize), Some(Key::F3));
-        assert_eq!(num_to_key(Key::F4 as usize), Some(Key::F4));
-        assert_eq!(num_to_key(Key::F5 as usize), Some(Key::F5));
-        assert_eq!(num_to_key(Key::F6 as usize), Some(Key::F6));
-        assert_eq!(num_to_key(Key::F7 as usize), Some(Key::F7));
-        assert_eq!(num_to_key(Key::F8 as usize), Some(Key::F8));
-        assert_eq!(num_to_key(Key::F9 as usize), Some(Key::F9));
-        assert_eq!(num_to_key(Key::F10 as usize), Some(Key::F10));
-        assert_eq!(num_to_key(Key::F11 as usize), Some(Key::F11));
-        assert_eq!(num_to_key(Key::F12 as usize), Some(Key::F12));
-        assert_eq!(num_to_key(Key::F13 as usize), Some(Key::F13));
-        assert_eq!(num_to_key(Key::F14 as usize), Some(Key::F14));
-        assert_eq!(num_to_key(Key::F15 as usize), Some(Key::F15));
-        assert_eq!(num_to_key(Key::Pause as usize), Some(Key::Pause));
+        assert_eq!(num_to_key(Key::A as Key_Underlying_Type), Some(Key::A));
+        assert_eq!(num_to_key(Key::B as Key_Underlying_Type), Some(Key::B));
+        assert_eq!(num_to_key(Key::C as Key_Underlying_Type), Some(Key::C));
+        assert_eq!(num_to_key(Key::D as Key_Underlying_Type), Some(Key::D));
+        assert_eq!(num_to_key(Key::E as Key_Underlying_Type), Some(Key::E));
+        assert_eq!(num_to_key(Key::F as Key_Underlying_Type), Some(Key::F));
+        assert_eq!(num_to_key(Key::G as Key_Underlying_Type), Some(Key::G));
+        assert_eq!(num_to_key(Key::H as Key_Underlying_Type), Some(Key::H));
+        assert_eq!(num_to_key(Key::I as Key_Underlying_Type), Some(Key::I));
+        assert_eq!(num_to_key(Key::J as Key_Underlying_Type), Some(Key::J));
+        assert_eq!(num_to_key(Key::K as Key_Underlying_Type), Some(Key::K));
+        assert_eq!(num_to_key(Key::L as Key_Underlying_Type), Some(Key::L));
+        assert_eq!(num_to_key(Key::M as Key_Underlying_Type), Some(Key::M));
+        assert_eq!(num_to_key(Key::N as Key_Underlying_Type), Some(Key::N));
+        assert_eq!(num_to_key(Key::O as Key_Underlying_Type), Some(Key::O));
+        assert_eq!(num_to_key(Key::P as Key_Underlying_Type), Some(Key::P));
+        assert_eq!(num_to_key(Key::Q as Key_Underlying_Type), Some(Key::Q));
+        assert_eq!(num_to_key(Key::R as Key_Underlying_Type), Some(Key::R));
+        assert_eq!(num_to_key(Key::S as Key_Underlying_Type), Some(Key::S));
+        assert_eq!(num_to_key(Key::T as Key_Underlying_Type), Some(Key::T));
+        assert_eq!(num_to_key(Key::U as Key_Underlying_Type), Some(Key::U));
+        assert_eq!(num_to_key(Key::V as Key_Underlying_Type), Some(Key::V));
+        assert_eq!(num_to_key(Key::W as Key_Underlying_Type), Some(Key::W));
+        assert_eq!(num_to_key(Key::X as Key_Underlying_Type), Some(Key::X));
+        assert_eq!(num_to_key(Key::Y as Key_Underlying_Type), Some(Key::Y));
+        assert_eq!(num_to_key(Key::Z as Key_Underlying_Type), Some(Key::Z));
+        assert_eq!(
+            num_to_key(Key::Num0 as Key_Underlying_Type),
+            Some(Key::Num0)
+        );
+        assert_eq!(
+            num_to_key(Key::Num1 as Key_Underlying_Type),
+            Some(Key::Num1)
+        );
+        assert_eq!(
+            num_to_key(Key::Num2 as Key_Underlying_Type),
+            Some(Key::Num2)
+        );
+        assert_eq!(
+            num_to_key(Key::Num3 as Key_Underlying_Type),
+            Some(Key::Num3)
+        );
+        assert_eq!(
+            num_to_key(Key::Num4 as Key_Underlying_Type),
+            Some(Key::Num4)
+        );
+        assert_eq!(
+            num_to_key(Key::Num5 as Key_Underlying_Type),
+            Some(Key::Num5)
+        );
+        assert_eq!(
+            num_to_key(Key::Num6 as Key_Underlying_Type),
+            Some(Key::Num6)
+        );
+        assert_eq!(
+            num_to_key(Key::Num7 as Key_Underlying_Type),
+            Some(Key::Num7)
+        );
+        assert_eq!(
+            num_to_key(Key::Num8 as Key_Underlying_Type),
+            Some(Key::Num8)
+        );
+        assert_eq!(
+            num_to_key(Key::Num9 as Key_Underlying_Type),
+            Some(Key::Num9)
+        );
+        assert_eq!(
+            num_to_key(Key::Escape as Key_Underlying_Type),
+            Some(Key::Escape)
+        );
+        assert_eq!(
+            num_to_key(Key::LControl as Key_Underlying_Type),
+            Some(Key::LControl)
+        );
+        assert_eq!(
+            num_to_key(Key::LShift as Key_Underlying_Type),
+            Some(Key::LShift)
+        );
+        assert_eq!(
+            num_to_key(Key::LAlt as Key_Underlying_Type),
+            Some(Key::LAlt)
+        );
+        assert_eq!(
+            num_to_key(Key::LSystem as Key_Underlying_Type),
+            Some(Key::LSystem)
+        );
+        assert_eq!(
+            num_to_key(Key::RControl as Key_Underlying_Type),
+            Some(Key::RControl)
+        );
+        assert_eq!(
+            num_to_key(Key::RShift as Key_Underlying_Type),
+            Some(Key::RShift)
+        );
+        assert_eq!(
+            num_to_key(Key::RAlt as Key_Underlying_Type),
+            Some(Key::RAlt)
+        );
+        assert_eq!(
+            num_to_key(Key::RSystem as Key_Underlying_Type),
+            Some(Key::RSystem)
+        );
+        assert_eq!(
+            num_to_key(Key::Menu as Key_Underlying_Type),
+            Some(Key::Menu)
+        );
+        assert_eq!(
+            num_to_key(Key::LBracket as Key_Underlying_Type),
+            Some(Key::LBracket)
+        );
+        assert_eq!(
+            num_to_key(Key::RBracket as Key_Underlying_Type),
+            Some(Key::RBracket)
+        );
+        assert_eq!(
+            num_to_key(Key::SemiColon as Key_Underlying_Type),
+            Some(Key::SemiColon)
+        );
+        assert_eq!(
+            num_to_key(Key::Comma as Key_Underlying_Type),
+            Some(Key::Comma)
+        );
+        assert_eq!(
+            num_to_key(Key::Period as Key_Underlying_Type),
+            Some(Key::Period)
+        );
+        assert_eq!(
+            num_to_key(Key::Quote as Key_Underlying_Type),
+            Some(Key::Quote)
+        );
+        assert_eq!(
+            num_to_key(Key::Slash as Key_Underlying_Type),
+            Some(Key::Slash)
+        );
+        assert_eq!(
+            num_to_key(Key::BackSlash as Key_Underlying_Type),
+            Some(Key::BackSlash)
+        );
+        assert_eq!(
+            num_to_key(Key::Tilde as Key_Underlying_Type),
+            Some(Key::Tilde)
+        );
+        assert_eq!(
+            num_to_key(Key::Equal as Key_Underlying_Type),
+            Some(Key::Equal)
+        );
+        assert_eq!(
+            num_to_key(Key::Dash as Key_Underlying_Type),
+            Some(Key::Dash)
+        );
+        assert_eq!(
+            num_to_key(Key::Space as Key_Underlying_Type),
+            Some(Key::Space)
+        );
+        assert_eq!(
+            num_to_key(Key::Return as Key_Underlying_Type),
+            Some(Key::Return)
+        );
+        assert_eq!(
+            num_to_key(Key::BackSpace as Key_Underlying_Type),
+            Some(Key::BackSpace)
+        );
+        assert_eq!(num_to_key(Key::Tab as Key_Underlying_Type), Some(Key::Tab));
+        assert_eq!(
+            num_to_key(Key::PageUp as Key_Underlying_Type),
+            Some(Key::PageUp)
+        );
+        assert_eq!(
+            num_to_key(Key::PageDown as Key_Underlying_Type),
+            Some(Key::PageDown)
+        );
+        assert_eq!(num_to_key(Key::End as Key_Underlying_Type), Some(Key::End));
+        assert_eq!(
+            num_to_key(Key::Home as Key_Underlying_Type),
+            Some(Key::Home)
+        );
+        assert_eq!(
+            num_to_key(Key::Insert as Key_Underlying_Type),
+            Some(Key::Insert)
+        );
+        assert_eq!(
+            num_to_key(Key::Delete as Key_Underlying_Type),
+            Some(Key::Delete)
+        );
+        assert_eq!(num_to_key(Key::Add as Key_Underlying_Type), Some(Key::Add));
+        assert_eq!(
+            num_to_key(Key::Subtract as Key_Underlying_Type),
+            Some(Key::Subtract)
+        );
+        assert_eq!(
+            num_to_key(Key::Multiply as Key_Underlying_Type),
+            Some(Key::Multiply)
+        );
+        assert_eq!(
+            num_to_key(Key::Divide as Key_Underlying_Type),
+            Some(Key::Divide)
+        );
+        assert_eq!(
+            num_to_key(Key::Left as Key_Underlying_Type),
+            Some(Key::Left)
+        );
+        assert_eq!(
+            num_to_key(Key::Right as Key_Underlying_Type),
+            Some(Key::Right)
+        );
+        assert_eq!(num_to_key(Key::Up as Key_Underlying_Type), Some(Key::Up));
+        assert_eq!(
+            num_to_key(Key::Down as Key_Underlying_Type),
+            Some(Key::Down)
+        );
+        assert_eq!(
+            num_to_key(Key::Numpad0 as Key_Underlying_Type),
+            Some(Key::Numpad0)
+        );
+        assert_eq!(
+            num_to_key(Key::Numpad1 as Key_Underlying_Type),
+            Some(Key::Numpad1)
+        );
+        assert_eq!(
+            num_to_key(Key::Numpad2 as Key_Underlying_Type),
+            Some(Key::Numpad2)
+        );
+        assert_eq!(
+            num_to_key(Key::Numpad3 as Key_Underlying_Type),
+            Some(Key::Numpad3)
+        );
+        assert_eq!(
+            num_to_key(Key::Numpad4 as Key_Underlying_Type),
+            Some(Key::Numpad4)
+        );
+        assert_eq!(
+            num_to_key(Key::Numpad5 as Key_Underlying_Type),
+            Some(Key::Numpad5)
+        );
+        assert_eq!(
+            num_to_key(Key::Numpad6 as Key_Underlying_Type),
+            Some(Key::Numpad6)
+        );
+        assert_eq!(
+            num_to_key(Key::Numpad7 as Key_Underlying_Type),
+            Some(Key::Numpad7)
+        );
+        assert_eq!(
+            num_to_key(Key::Numpad8 as Key_Underlying_Type),
+            Some(Key::Numpad8)
+        );
+        assert_eq!(
+            num_to_key(Key::Numpad9 as Key_Underlying_Type),
+            Some(Key::Numpad9)
+        );
+        assert_eq!(num_to_key(Key::F1 as Key_Underlying_Type), Some(Key::F1));
+        assert_eq!(num_to_key(Key::F2 as Key_Underlying_Type), Some(Key::F2));
+        assert_eq!(num_to_key(Key::F3 as Key_Underlying_Type), Some(Key::F3));
+        assert_eq!(num_to_key(Key::F4 as Key_Underlying_Type), Some(Key::F4));
+        assert_eq!(num_to_key(Key::F5 as Key_Underlying_Type), Some(Key::F5));
+        assert_eq!(num_to_key(Key::F6 as Key_Underlying_Type), Some(Key::F6));
+        assert_eq!(num_to_key(Key::F7 as Key_Underlying_Type), Some(Key::F7));
+        assert_eq!(num_to_key(Key::F8 as Key_Underlying_Type), Some(Key::F8));
+        assert_eq!(num_to_key(Key::F9 as Key_Underlying_Type), Some(Key::F9));
+        assert_eq!(num_to_key(Key::F10 as Key_Underlying_Type), Some(Key::F10));
+        assert_eq!(num_to_key(Key::F11 as Key_Underlying_Type), Some(Key::F11));
+        assert_eq!(num_to_key(Key::F12 as Key_Underlying_Type), Some(Key::F12));
+        assert_eq!(num_to_key(Key::F13 as Key_Underlying_Type), Some(Key::F13));
+        assert_eq!(num_to_key(Key::F14 as Key_Underlying_Type), Some(Key::F14));
+        assert_eq!(num_to_key(Key::F15 as Key_Underlying_Type), Some(Key::F15));
+        assert_eq!(
+            num_to_key(Key::Pause as Key_Underlying_Type),
+            Some(Key::Pause)
+        );
     }
 }

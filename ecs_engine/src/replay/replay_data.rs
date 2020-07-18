@@ -2,7 +2,7 @@
 
 use crate::common::serialize::{Binary_Serializable, Byte_Stream};
 use crate::core::rand::Default_Rng_Seed;
-use crate::input::bindings::joystick;
+use crate::input::bindings::joystick::{self, Joystick_Mask};
 use crate::input::bindings::mouse::Mouse_State;
 use crate::input::input_state::{Input_Raw_Event, Input_Raw_State};
 use crate::input::joystick_state::Joystick_State;
@@ -28,7 +28,7 @@ pub struct Replay_Data_Point {
     /// Bitmask indicating which joysticks in self.joy_data must be considered.
     /// This is done for optimizing the disk space taken by serializing replay data:
     /// we don't serialize unconnected joystick data.
-    pub joy_mask: u8,
+    pub joy_mask: Joystick_Mask,
 }
 
 /// Contains replay data for a single frame, for a single joystick.
@@ -47,7 +47,7 @@ impl std::default::Default for Replay_Data_Point {
             frame_number: 0,
             events: vec![],
             joy_data: Default::default(),
-            joy_mask: 0u8,
+            joy_mask: 0u16,
         }
     }
 }
@@ -57,7 +57,7 @@ impl Replay_Data_Point {
         frame_number: u64,
         events: &[Input_Raw_Event],
         joy_data: &[Replay_Joystick_Data; JOY_COUNT],
-        joy_mask: u8,
+        joy_mask: Joystick_Mask,
     ) -> Replay_Data_Point {
         Replay_Data_Point {
             frame_number,
@@ -140,7 +140,7 @@ impl Binary_Serializable for Replay_Data_Point {
             event.serialize(output)?;
         }
 
-        output.write_u8(self.joy_mask)?;
+        output.write_u16(self.joy_mask)?;
         for i in 0..JOY_COUNT {
             if (self.joy_mask & (1 << i)) != 0 {
                 self.joy_data[i].serialize(output)?;
@@ -160,7 +160,7 @@ impl Binary_Serializable for Replay_Data_Point {
         }
 
         let mut joy_data: [Replay_Joystick_Data; JOY_COUNT] = Default::default();
-        let joy_mask = input.read_u8()?;
+        let joy_mask = input.read_u16()?;
         for (i, data) in joy_data.iter_mut().enumerate() {
             if (joy_mask & (1 << i)) != 0 {
                 let val = Replay_Joystick_Data::deserialize(input)?;

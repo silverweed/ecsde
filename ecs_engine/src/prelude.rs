@@ -14,9 +14,9 @@ pub use log::*;
 pub use misc::*;
 pub use tracer::*;
 
-#[cfg(feature = "use-sfml")]
+#[cfg(any(feature = "win-sfml", feature = "audio-sfml"))]
 #[macro_use]
 mod sfml;
 
-#[cfg(feature = "use-sfml")]
+#[cfg(any(feature = "win-sfml", feature = "audio-sfml"))]
 pub use self::sfml::*;

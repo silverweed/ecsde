@@ -8,7 +8,6 @@ authors = ["silverweed <silverweed1991@gmail.com>"]
 crate-type = ["cdylib"]
 
 [dependencies.ecs_engine]
-features = ["use-sfml"]
 path = "../ecs_engine"
 
 [dependencies]

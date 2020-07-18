@@ -5,7 +5,7 @@ use crate::common::vector::{Vec2f, Vec2i, Vec2u};
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
 use crate::gfx::render_window::Render_Window_Handle;
-use crate::gfx::window;
+use crate::gfx::window::{self, Event};
 use crate::input::input_state::Input_Raw_Event;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
@@ -90,10 +90,7 @@ impl Debug_Frame_Scroller {
                 .min(this.n_frames as u32) as _
         };
 
-        #[cfg(feature = "use-sfml")]
-        use sfml::window::Event;
-
-        #[cfg(feature = "use-sfml")]
+        #[cfg(feature = "win-sfml")]
         for event in events {
             match event {
                 Event::MouseButtonPressed {

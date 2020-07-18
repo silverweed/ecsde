@@ -1,5 +1,3 @@
-#![cfg(feature = "use-sfml")]
-
 use sfml::audio as sfaud;
 
 pub(super) type Sound<'a> = sfaud::Sound<'a>;
