@@ -1,5 +1,6 @@
 #![allow(clippy::new_without_default)]
 #![allow(non_camel_case_types)]
+#![allow(clippy::too_many_arguments)]
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
 #[macro_use]

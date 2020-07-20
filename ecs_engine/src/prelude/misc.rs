@@ -18,7 +18,7 @@ macro_rules! mut_in_debug {
 #[macro_export]
 macro_rules! const_assert {
     ($x:expr $(,)?) => {
-        #[allow(unknown_lints, eq_op)]
+        #[allow(unknown_lints)]
         const _: [(); 0 - !{
             const ASSERT: bool = $x;
             ASSERT

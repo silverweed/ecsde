@@ -196,6 +196,7 @@ type Input_Action_Modifiers = u8;
 pub mod modifiers {
     use super::Input_Action_Modifiers;
 
+    #[allow(clippy::identity_op)]
     pub const MOD_LCTRL: Input_Action_Modifiers = 1 << 0;
     pub const MOD_RCTRL: Input_Action_Modifiers = 1 << 1;
     pub const MOD_CTRL: Input_Action_Modifiers = MOD_LCTRL | MOD_RCTRL;

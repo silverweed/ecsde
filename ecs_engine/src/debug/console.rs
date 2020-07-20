@@ -164,10 +164,7 @@ impl Console {
 
         match event {
             Event::KeyPressed {
-                code,
-                ctrl,
-                shift,
-                ..
+                code, ctrl, shift, ..
             } => {
                 if let Some(code) = framework_to_engine_key(code) {
                     match code {
@@ -181,10 +178,11 @@ impl Console {
                                 self.del_prev_char();
                             }
                             line_changed = true;
-                        },
+                        }
                         Key::Up => {
                             if self.hints_displayed.is_empty() {
-                                if let Some(line) = self.history.move_and_read(Direction::To_Older) {
+                                if let Some(line) = self.history.move_and_read(Direction::To_Older)
+                                {
                                     self.cur_line = line.to_string();
                                     self.cur_pos = self.cur_line.len();
                                 }
