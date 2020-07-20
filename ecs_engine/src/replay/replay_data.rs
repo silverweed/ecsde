@@ -47,7 +47,7 @@ impl std::default::Default for Replay_Data_Point {
             frame_number: 0,
             events: vec![],
             joy_data: Default::default(),
-            joy_mask: 0u16,
+            joy_mask: 0u8,
         }
     }
 }
@@ -140,7 +140,7 @@ impl Binary_Serializable for Replay_Data_Point {
             event.serialize(output)?;
         }
 
-        output.write_u16(self.joy_mask)?;
+        output.write_u8(self.joy_mask)?;
         for i in 0..JOY_COUNT {
             if (self.joy_mask & (1 << i)) != 0 {
                 self.joy_data[i].serialize(output)?;
@@ -160,7 +160,7 @@ impl Binary_Serializable for Replay_Data_Point {
         }
 
         let mut joy_data: [Replay_Joystick_Data; JOY_COUNT] = Default::default();
-        let joy_mask = input.read_u16()?;
+        let joy_mask = input.read_u8()?;
         for (i, data) in joy_data.iter_mut().enumerate() {
             if (joy_mask & (1 << i)) != 0 {
                 let val = Replay_Joystick_Data::deserialize(input)?;

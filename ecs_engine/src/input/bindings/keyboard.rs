@@ -8,8 +8,8 @@ pub mod sfml;
 #[cfg(feature = "win-glfw")]
 pub mod glfw;
 
-//#[cfg(feature = "win-sfml")]
-//use self::sfml as backend;
+#[cfg(feature = "win-sfml")]
+use self::sfml as backend;
 
 #[cfg(feature = "win-glfw")]
 use self::glfw as backend;
@@ -179,6 +179,10 @@ pub fn num_to_key(num: Key_Underlying_Type) -> Option<Key> {
     } else {
         None
     }
+}
+
+pub fn framework_to_engine_key(key: backend::Framework_Key) -> Option<Key> {
+    backend::framework_to_engine_key(key)
 }
 
 #[cfg(debug_assertions)]

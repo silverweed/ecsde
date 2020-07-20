@@ -10,8 +10,8 @@ win-sfml = ["sfml/window"]
 audio-sfml = ["sfml/audio"]
 gfx-null = []
 gfx-sfml = ["sfml/graphics"]
-#default = ["audio-sfml", "win-sfml", "gfx-sfml"]
-default = ["audio-sfml", "win-glfw", "gfx-null"]
+default = ["audio-sfml", "win-sfml", "gfx-sfml"]
+#default = ["audio-sfml", "win-glfw", "gfx-null"]
 
 [dependencies]
 byteorder = "1.3.2"

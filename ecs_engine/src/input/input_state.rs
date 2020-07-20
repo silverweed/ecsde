@@ -211,23 +211,29 @@ fn process_event_game_actions(
     bindings: &Input_Bindings,
     processed: &mut Processed_Input,
 ) -> bool {
+    use crate::input::bindings::keyboard::framework_to_engine_key;
+
     let modifiers = keyboard::get_modifiers_pressed(&raw_state.kb_state);
     match event {
         // Game Actions
         Event::KeyPressed { code, .. } => {
-            if let Some(names) = bindings.get_key_actions(code, modifiers) {
-                handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
-            }
-            if let Some(names) = bindings.get_key_emulated_axes(code) {
-                handle_axis_pressed(&mut processed.virtual_axes, names);
+            if let Some(code) = framework_to_engine_key(code) {
+                if let Some(names) = bindings.get_key_actions(code, modifiers) {
+                    handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
+                }
+                if let Some(names) = bindings.get_key_emulated_axes(code) {
+                    handle_axis_pressed(&mut processed.virtual_axes, names);
+                }
             }
         }
         Event::KeyReleased { code, .. } => {
-            if let Some(names) = bindings.get_key_actions(code, modifiers) {
-                handle_actions(&mut processed.game_actions, Action_Kind::Released, names);
-            }
-            if let Some(names) = bindings.get_key_emulated_axes(code) {
-                handle_axis_released(&mut processed.virtual_axes, names);
+            if let Some(code) = framework_to_engine_key(code) {
+                if let Some(names) = bindings.get_key_actions(code, modifiers) {
+                    handle_actions(&mut processed.game_actions, Action_Kind::Released, names);
+                }
+                if let Some(names) = bindings.get_key_emulated_axes(code) {
+                    handle_axis_released(&mut processed.virtual_axes, names);
+                }
             }
         }
         Event::JoystickButtonPressed { joystickid, button } => {

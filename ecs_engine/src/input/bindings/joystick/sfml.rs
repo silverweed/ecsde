@@ -68,7 +68,7 @@ fn norm_minus_one_to_one(x: f32, min: f32, max: f32) -> f32 {
     2.0 * (x - min) / (max - min) - 1.0
 }
 
-pub(super) fn get_connected_joysticks_mask() -> u8 {
+pub(super) fn get_connected_joysticks_mask() -> super::Joystick_Mask {
     let mut mask = 0u8;
     for i in 0..joystick::COUNT {
         mask |= (is_connected(i) as u8) << i;

@@ -67,12 +67,12 @@ impl Binary_Serializable for Event {
         match prelude {
             PRE_KEY_PRESSED => {
                 let code = input.read_u16()?;
-                let code = keyboard::num_to_key(code as usize).ok_or(io::ErrorKind::InvalidData)?;
+                let code = keyboard::num_to_key(code as _).ok_or(io::ErrorKind::InvalidData)?;
                 Ok(keyboard::sfml::keypressed(code))
             }
             PRE_KEY_RELEASED => {
                 let code = input.read_u16()?;
-                let code = keyboard::num_to_key(code as usize).ok_or(io::ErrorKind::InvalidData)?;
+                let code = keyboard::num_to_key(code as _).ok_or(io::ErrorKind::InvalidData)?;
                 Ok(keyboard::sfml::keyreleased(code))
             }
             PRE_JOY_PRESSED => {

@@ -12,9 +12,9 @@ use self::sfml as backend;
 #[cfg(feature = "win-glfw")]
 use self::glfw as backend;
 
-pub const JOY_COUNT: u32 = backend::JOY_COUNT;
+pub const JOY_COUNT: u8 = 8;
 
-pub type Joystick_Mask = u16;
+pub type Joystick_Mask = u8;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Joystick_Type {
