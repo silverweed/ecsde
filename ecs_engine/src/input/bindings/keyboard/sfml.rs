@@ -1,5 +1,5 @@
-use sfml::window::Event;
 use super::{Input_Raw_Event, Key};
+use sfml::window::Event;
 
 pub(super) type Framework_Key = sfml::window::Key;
 
@@ -40,7 +40,6 @@ pub fn keyreleased(code: Key) -> Event {
         system: false,
     }
 }
-
 
 pub(super) fn update_kb_state(kb_state: &mut super::Keyboard_State, events: &[Input_Raw_Event]) {
     use crate::input::bindings::modifiers::*;

@@ -1,5 +1,3 @@
-#![cfg(any(feature = "win-sfml", feature = "audio-sfml"))]
-
 // Used to wrap an SfBox inside a struct with a lifetime.
 // This is done to allow the external API to be as general as possible
 // (different backends may give an explicit lifetime to resources)

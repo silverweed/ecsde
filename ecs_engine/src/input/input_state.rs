@@ -66,8 +66,11 @@ pub fn create_input_state(env: &Env_Info) -> Input_State {
 #[cfg(feature = "win-sfml")]
 fn is_core_event(evt: &Event) -> bool {
     match evt {
-        Event::Resized { .. } | Event::Closed | Event::JoystickConnected { .. } | Event::JoystickDisconnected { .. } => true,
-        _ => false
+        Event::Resized { .. }
+        | Event::Closed
+        | Event::JoystickConnected { .. }
+        | Event::JoystickDisconnected { .. } => true,
+        _ => false,
     }
 }
 
@@ -75,7 +78,7 @@ fn is_core_event(evt: &Event) -> bool {
 fn is_core_event(evt: &Event) -> bool {
     match evt {
         Event::Size(..) | Event::Close => true,
-        _ => false
+        _ => false,
     }
 }
 
@@ -162,12 +165,12 @@ fn process_event_core_actions(
         Event::Resized { width, height } => processed
             .core_actions
             .push(Core_Action::Resize(width, height)),
-        Event::JoystickConnected { joystickid } => 
-            processed.core_actions.push(
-                Core_Action::Joystick_Connected { id: joystickid }),
-        Event::JoystickDisconnected { joystickid } => 
-            processed.core_actions.push(
-                Core_Action::Joystick_Disconnected { id: joystickid }),
+        Event::JoystickConnected { joystickid } => processed
+            .core_actions
+            .push(Core_Action::Joystick_Connected { id: joystickid }),
+        Event::JoystickDisconnected { joystickid } => processed
+            .core_actions
+            .push(Core_Action::Joystick_Disconnected { id: joystickid }),
         _ => {
             return false;
         }

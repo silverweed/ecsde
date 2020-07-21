@@ -374,15 +374,14 @@ pub fn handle_core_actions(
             Core_Action::Resize(new_width, new_height) => {
                 gfx::render_window::resize_keep_ratio(window, *new_width, *new_height);
             }
-            Core_Action::Joystick_Connected {
-                id
-            } => {
+            Core_Action::Joystick_Connected { id } => {
                 joystick_state::register_joystick(&mut engine_state.input_state.raw.joy_state, *id);
             }
-            Core_Action::Joystick_Disconnected {
-                id
-            } => {
-                joystick_state::unregister_joystick(&mut engine_state.input_state.raw.joy_state, *id);
+            Core_Action::Joystick_Disconnected { id } => {
+                joystick_state::unregister_joystick(
+                    &mut engine_state.input_state.raw.joy_state,
+                    *id,
+                );
             }
         }
     }

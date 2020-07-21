@@ -113,9 +113,9 @@ impl Binary_Serializable for Event {
 mod tests {
     use super::*;
     use keyboard::sfml::{keypressed, keyreleased};
+    use keyboard::Key;
     use mouse::sfml::{mousepressed, mousereleased};
     use sfml::window::mouse::Button;
-    use keyboard::Key;
 
     #[test]
     fn serialize_deserialize() {
