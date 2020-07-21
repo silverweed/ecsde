@@ -221,19 +221,19 @@ impl Console {
                                 self.move_one_char(1);
                             }
                         }
-                        Key::A => {
+                        Key::A if ctrl => {
                             self.cur_pos = 0;
                         }
                         Key::Home => {
                             self.cur_pos = 0;
                         }
-                        Key::E => {
+                        Key::E if ctrl => {
                             self.cur_pos = self.cur_line.len();
                         }
                         Key::End => {
                             self.cur_pos = self.cur_line.len();
                         }
-                        Key::W => {
+                        Key::W if ctrl => {
                             self.del_prev_word();
                             line_changed = true;
                         }
@@ -245,11 +245,11 @@ impl Console {
                             }
                             line_changed = true;
                         }
-                        Key::K => {
+                        Key::K if ctrl => {
                             self.cur_line.truncate(self.cur_pos);
                             line_changed = true;
                         }
-                        Key::D => {
+                        Key::D if ctrl => {
                             self.cur_line.clear();
                             self.cur_pos = 0;
                             line_changed = true;
