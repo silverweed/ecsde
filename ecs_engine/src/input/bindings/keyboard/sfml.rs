@@ -1,4 +1,5 @@
 use super::{Input_Raw_Event, Key};
+use crate::input::bindings::input_action_modifier_from_key;
 use sfml::window::Event;
 
 pub(super) type Framework_Key = sfml::window::Key;
@@ -42,38 +43,17 @@ pub fn keyreleased(code: Key) -> Event {
 }
 
 pub(super) fn update_kb_state(kb_state: &mut super::Keyboard_State, events: &[Input_Raw_Event]) {
-    use crate::input::bindings::modifiers::*;
     for evt in events {
         match evt {
             Input_Raw_Event::KeyPressed { code, .. } => {
                 if let Some(code) = framework_to_engine_key(*code) {
-                    match code {
-                        Key::LControl => kb_state.modifiers_pressed |= MOD_LCTRL,
-                        Key::RControl => kb_state.modifiers_pressed |= MOD_RCTRL,
-                        Key::LShift => kb_state.modifiers_pressed |= MOD_LSHIFT,
-                        Key::RShift => kb_state.modifiers_pressed |= MOD_RSHIFT,
-                        Key::LAlt => kb_state.modifiers_pressed |= MOD_LALT,
-                        Key::RAlt => kb_state.modifiers_pressed |= MOD_RALT,
-                        Key::LSystem => kb_state.modifiers_pressed |= MOD_LSUPER,
-                        Key::RSystem => kb_state.modifiers_pressed |= MOD_RSUPER,
-                        _ => {}
-                    }
+                    kb_state.modifiers_pressed |= input_action_modifier_from_key(code);
                     kb_state.keys_pressed.insert(code);
                 }
             }
             Input_Raw_Event::KeyReleased { code, .. } => {
                 if let Some(code) = framework_to_engine_key(*code) {
-                    match code {
-                        Key::LControl => kb_state.modifiers_pressed &= !MOD_LCTRL,
-                        Key::RControl => kb_state.modifiers_pressed &= !MOD_RCTRL,
-                        Key::LShift => kb_state.modifiers_pressed &= !MOD_LSHIFT,
-                        Key::RShift => kb_state.modifiers_pressed &= !MOD_RSHIFT,
-                        Key::LAlt => kb_state.modifiers_pressed &= !MOD_LALT,
-                        Key::RAlt => kb_state.modifiers_pressed &= !MOD_RALT,
-                        Key::LSystem => kb_state.modifiers_pressed &= !MOD_LSUPER,
-                        Key::RSystem => kb_state.modifiers_pressed &= !MOD_RSUPER,
-                        _ => {}
-                    }
+                    kb_state.modifiers_pressed &= !input_action_modifier_from_key(code);
                     kb_state.keys_pressed.remove(&code);
                 }
             }

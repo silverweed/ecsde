@@ -2,7 +2,7 @@ use super::axes;
 use super::bindings::joystick;
 use super::bindings::keyboard::{self, Keyboard_State};
 use super::bindings::mouse::{self, Mouse_State};
-use super::bindings::{Axis_Emulation_Type, Input_Bindings};
+use super::bindings::{Axis_Emulation_Type, Input_Bindings, Input_Action_Modifiers};
 use super::core_actions::Core_Action;
 use super::joystick_state::{self, Joystick_State};
 use crate::common::stringid::String_Id;
@@ -190,6 +190,7 @@ fn process_event_core_actions(
 
 fn handle_actions(actions: &mut Vec<Game_Action>, kind: Action_Kind, names: &[String_Id]) {
     for name in names.iter() {
+        ldebug!("action {:?}", name);
         actions.push((*name, kind));
     }
 }
@@ -216,6 +217,12 @@ fn process_event_game_actions(
     false
 }
 
+#[inline(always)]
+fn remove_modifier(original: Input_Action_Modifiers, to_remove: keyboard::Key) -> Input_Action_Modifiers {
+    use crate::input::bindings::input_action_modifier_from_key;
+    original & !input_action_modifier_from_key(to_remove)
+}
+
 #[cfg(feature = "win-sfml")]
 fn process_event_game_actions(
     event: Input_Raw_Event,
@@ -230,6 +237,7 @@ fn process_event_game_actions(
         // Game Actions
         Event::KeyPressed { code, .. } => {
             if let Some(code) = framework_to_engine_key(code) {
+                let modifiers = remove_modifier(modifiers, code);
                 if let Some(names) = bindings.get_key_actions(code, modifiers) {
                     handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
                 }
@@ -240,6 +248,7 @@ fn process_event_game_actions(
         }
         Event::KeyReleased { code, .. } => {
             if let Some(code) = framework_to_engine_key(code) {
+                let modifiers = remove_modifier(modifiers, code);
                 if let Some(names) = bindings.get_key_actions(code, modifiers) {
                     handle_actions(&mut processed.game_actions, Action_Kind::Released, names);
                 }

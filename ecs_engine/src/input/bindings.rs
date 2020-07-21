@@ -13,10 +13,11 @@ mod parsing;
 use self::modifiers::*;
 use joystick::Joystick_Button;
 use mouse::Mouse_Button;
+use keyboard::Key;
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum Input_Action_Simple {
-    Key(keyboard::Key),
+    Key(Key),
     Joystick(Joystick_Button),
     Mouse(Mouse_Button),
     Mouse_Wheel { up: bool },
@@ -93,7 +94,7 @@ impl Input_Bindings {
 
     pub(super) fn get_key_actions(
         &self,
-        code: keyboard::Key,
+        code: Key,
         modifiers: Input_Action_Modifiers,
     ) -> Option<&Vec<String_Id>> {
         self.action_bindings.get(&Input_Action::new_with_modifiers(
@@ -145,7 +146,7 @@ impl Input_Bindings {
 
     pub(super) fn get_key_emulated_axes(
         &self,
-        code: keyboard::Key,
+        code: Key,
     ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
         self.axis_bindings
             .emulated
@@ -191,7 +192,22 @@ impl Input_Bindings {
     }
 }
 
-type Input_Action_Modifiers = u8;
+pub type Input_Action_Modifiers = u8;
+
+// @WaitForStable: make this const
+pub fn input_action_modifier_from_key(key: Key) -> Input_Action_Modifiers {
+    match key {
+        Key::LControl => MOD_LCTRL,
+        Key::RControl => MOD_RCTRL,
+        Key::LShift => MOD_LSHIFT,
+        Key::RShift => MOD_RSHIFT,
+        Key::LAlt => MOD_LALT,
+        Key::RAlt => MOD_RALT,
+        Key::LSystem => MOD_LSUPER,
+        Key::RSystem => MOD_RSUPER,
+        _ => 0,
+    }
+}
 
 pub mod modifiers {
     use super::Input_Action_Modifiers;
@@ -289,5 +305,25 @@ impl Input_Action {
     #[inline]
     pub fn has_rsuper(&self) -> bool {
         (self.modifiers & MOD_RSUPER) != 0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use modifiers::*;
+
+    #[test]
+    fn modifier_from_key() {
+        assert_eq!(input_action_modifier_from_key(Key::LAlt), MOD_LALT);
+        assert_eq!(input_action_modifier_from_key(Key::RAlt), MOD_RALT);
+        assert_eq!(input_action_modifier_from_key(Key::LControl), MOD_LCTRL);
+        assert_eq!(input_action_modifier_from_key(Key::RControl), MOD_RCTRL);
+        assert_eq!(input_action_modifier_from_key(Key::LSystem), MOD_LSUPER);
+        assert_eq!(input_action_modifier_from_key(Key::RSystem), MOD_RSUPER);
+        assert_eq!(input_action_modifier_from_key(Key::LShift), MOD_LSHIFT);
+        assert_eq!(input_action_modifier_from_key(Key::RShift), MOD_RSHIFT);
+        assert_eq!(input_action_modifier_from_key(Key::Space), 0);
+        assert_eq!(input_action_modifier_from_key(Key::H), 0);
     }
 }
