@@ -482,7 +482,8 @@ fn prepare_colliders_and_gather_rigidbodies(
     }
 
     for body in &phys_world.bodies {
-        if let Some((cld_handle, phys_data)) = body.rigidbody_collider {
+        // @Incomplete :MultipleRigidbodies: handle multiple rigidbody colliders
+        if let Some(&(cld_handle, phys_data)) = body.rigidbody_colliders.get(0) {
             if let Some(rb_cld) = phys_world.get_collider(cld_handle) {
                 let spatial = world.get_component::<C_Spatial2D>(rb_cld.entity).unwrap();
                 let velocity = spatial.velocity;

@@ -88,9 +88,10 @@ impl Ground_Collision_Calculation_System {
                                     .unwrap()
                                     .transform
                                     .position();
+                                // @Incomplete :MultipleRigidbodies
                                 let body = phys_world.get_physics_body(body_handle).unwrap();
                                 chunks.add_collider(
-                                    body.rigidbody_collider.unwrap().0,
+                                    body.rigidbody_colliders[0].0,
                                     pos,
                                     shape.extent(),
                                 );

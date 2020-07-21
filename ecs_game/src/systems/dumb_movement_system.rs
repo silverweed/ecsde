@@ -31,7 +31,8 @@ pub fn update(
         //}
 
         let body_handle = ecs_world.get_component::<C_Collider>(entity).unwrap().handle;
-        let colliding_with = phys_world.get_rigidbody_collider(body_handle).map_or_else(SmallVec::default, |cld| cld.colliding_with.clone());
+        // @Incomplete :MultipleRigidbodies
+        let colliding_with = phys_world.get_first_rigidbody_collider(body_handle).map_or_else(SmallVec::default, |cld| cld.colliding_with.clone());
 
         let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
         if spatial.velocity.magnitude2() < 0.1 {
@@ -55,7 +56,8 @@ pub fn update(
             for to_destroy in colliding_with {
                 if ecs_world.is_valid_entity(to_destroy) {
                     if let Some(cld) = ecs_world.get_component::<C_Collider>(to_destroy) {
-                        if let Some((rb_handle, _)) = phys_world.get_physics_body(cld.handle).unwrap().rigidbody_collider {
+                        // @Incomplete :MultipleRigidbodies
+                        if let Some(&(rb_handle, _)) = phys_world.get_physics_body(cld.handle).unwrap().rigidbody_colliders.get(0) {
                             let rb = phys_world.get_collider(rb_handle).unwrap();
                             if rb.is_static {
                                 ecs_world.destroy_entity(to_destroy);

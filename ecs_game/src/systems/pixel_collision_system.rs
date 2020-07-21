@@ -175,7 +175,8 @@ impl Pixel_Collision_System {
             let spat = world.get_component::<C_Spatial2D>(entity).unwrap();
             let bh = world.get_component::<C_Collider>(entity).unwrap().handle;
             let body = phys_world.get_physics_body(bh).unwrap();
-            if let Some((ch, phys_data)) = body.rigidbody_collider {
+            // @Incomplete :MultipleRigidbodies
+            if let Some(&(ch, phys_data)) = body.rigidbody_colliders.get(0) {
                 let collider = phys_world.get_collider(ch).unwrap();
                 if !collider.is_static {
                     colliding_positions.push(Potential_Colliding_Entity_Info {

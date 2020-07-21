@@ -20,36 +20,32 @@ pub struct Phys_Data {
 /// Colliders is done externally, and the Physics_World is unaware of it.
 #[derive(Default, Debug, Clone)]
 pub struct Physics_Body {
-    pub rigidbody_collider: Option<(Collider_Handle, Phys_Data)>,
-    pub trigger_colliders: SmallVec<[Collider_Handle; 2]>,
+    pub rigidbody_colliders: SmallVec<[(Collider_Handle, Phys_Data); 1]>,
+    pub trigger_colliders: Vec<Collider_Handle>,
 }
 
 impl Physics_Body {
     pub fn all_colliders(&self) -> impl Iterator<Item = Collider_Handle> + '_ {
-        Physics_Body_Cld_Iter { body: self, i: -1 }
+        Physics_Body_Cld_Iter { body: self, i: 0 }
     }
 }
 
 struct Physics_Body_Cld_Iter<'a> {
     body: &'a Physics_Body,
-    i: isize,
+    i: usize,
 }
 
 impl Iterator for Physics_Body_Cld_Iter<'_> {
     type Item = Collider_Handle;
 
     fn next(&mut self) -> Option<Self::Item> {
-        debug_assert!(self.i >= -1);
-
-        if self.i < 0 {
-            self.i += 1;
-            if let Some((handle, _)) = self.body.rigidbody_collider {
-                return Some(handle);
-            }
+        let i = self.i as usize;
+        self.i += 1;
+        if i < self.body.rigidbody_colliders.len() {
+            Some(self.body.rigidbody_colliders[i].0)
+        } else {
+            self.body.trigger_colliders.get(i - self.body.rigidbody_colliders.len()).copied()
         }
-
-        debug_assert!(self.i >= 0);
-        self.body.trigger_colliders.get(self.i as usize).copied()
     }
 }
 
@@ -101,7 +97,7 @@ impl Physics_World {
         let cld_handle = self.add_collider(cld);
         let handle = self.new_physics_body();
         let body = self.get_physics_body_mut(handle).unwrap();
-        body.rigidbody_collider = Some((cld_handle, phys_data));
+        body.rigidbody_colliders.push((cld_handle, phys_data));
         handle
     }
 
@@ -253,10 +249,23 @@ impl Physics_World {
         })
     }
 
-    pub fn get_rigidbody_collider(&self, handle: Physics_Body_Handle) -> Option<&Collider> {
+    pub fn get_first_rigidbody_collider(&self, handle: Physics_Body_Handle) -> Option<&Collider> {
         self.get_physics_body(handle).and_then(|body| {
-            body.rigidbody_collider
-                .and_then(|(h, _)| self.get_collider(h))
+            body.rigidbody_colliders.get(0)
+                .and_then(|(h, _)| self.get_collider(*h))
+        })
+    }
+
+    pub fn get_rigidbody_colliders(&self, handle: Physics_Body_Handle) -> impl Iterator<Item=&Collider> + '_ {
+        let mut maybe_iter = self.get_physics_body(handle).and_then(move |body| {
+            Some(body.rigidbody_colliders.iter().map(move |(h, _)| self.get_collider(*h)))
+        });
+        std::iter::from_fn(move || {
+            if let Some(iter) = &mut maybe_iter {
+                iter.next()?
+            } else {
+                None
+            }
         })
     }
 }

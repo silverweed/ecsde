@@ -190,7 +190,6 @@ fn process_event_core_actions(
 
 fn handle_actions(actions: &mut Vec<Game_Action>, kind: Action_Kind, names: &[String_Id]) {
     for name in names.iter() {
-        ldebug!("action {:?}", name);
         actions.push((*name, kind));
     }
 }
