@@ -197,6 +197,7 @@ where
         }
     }
 
+    #[cfg(debug_assertions)]
     let debug_systems = &mut game_state.engine_state.debug_systems;
 
     {
