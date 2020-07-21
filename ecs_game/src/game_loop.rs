@@ -190,11 +190,14 @@ where
                 .core_actions
                 .split_off(0),
             &mut game_state.window,
+            &mut game_state.engine_state,
         ) {
             game_state.engine_state.should_close = true;
             return Ok(());
         }
     }
+
+    let debug_systems = &mut game_state.engine_state.debug_systems;
 
     {
         #[cfg(debug_assertions)]

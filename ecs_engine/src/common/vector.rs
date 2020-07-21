@@ -540,19 +540,6 @@ mod tests {
         let _ = Vec2f::new(0., 0.).normalized();
     }
 
-    #[cfg(feature = "win-sfml")]
-    #[test]
-    fn to_from_framework() {
-        let a = Vec2f::new(3., 2.);
-        let b: ::sfml::system::Vector2f = a.into();
-        assert_eq!(a.x, b.x);
-        assert_eq!(a.y, b.y);
-
-        let c: Vec2f = b.into();
-        assert_eq!(c.x, b.x);
-        assert_eq!(c.y, b.y);
-    }
-
     #[test]
     fn vector_distance_f32() {
         let a = Vec2f::new(0., 0.);

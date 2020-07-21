@@ -115,7 +115,7 @@ mod tests {
     use keyboard::sfml::{keypressed, keyreleased};
     use mouse::sfml::{mousepressed, mousereleased};
     use sfml::window::mouse::Button;
-    use sfml::window::Key;
+    use keyboard::Key;
 
     #[test]
     fn serialize_deserialize() {

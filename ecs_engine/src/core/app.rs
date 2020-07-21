@@ -363,14 +363,26 @@ pub fn init_engine_debug(
 pub fn handle_core_actions(
     actions: &[input::core_actions::Core_Action],
     window: &mut Render_Window_Handle,
+    engine_state: &mut Engine_State,
 ) -> bool {
     use input::core_actions::Core_Action;
+    use input::joystick_state;
 
     for action in actions.iter() {
         match action {
             Core_Action::Quit => return true,
             Core_Action::Resize(new_width, new_height) => {
-                gfx::render_window::resize_keep_ratio(window, *new_width, *new_height)
+                gfx::render_window::resize_keep_ratio(window, *new_width, *new_height);
+            }
+            Core_Action::Joystick_Connected {
+                id
+            } => {
+                joystick_state::register_joystick(&mut engine_state.input_state.raw.joy_state, *id);
+            }
+            Core_Action::Joystick_Disconnected {
+                id
+            } => {
+                joystick_state::unregister_joystick(&mut engine_state.input_state.raw.joy_state, *id);
             }
         }
     }

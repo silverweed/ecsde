@@ -15,6 +15,8 @@ use self::glfw as backend;
 pub const JOY_COUNT: u8 = 8;
 
 pub type Joystick_Mask = u8;
+pub type Joystick_Id = u32;
+pub type Button_Id = u32;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Joystick_Type {
@@ -23,7 +25,7 @@ pub enum Joystick_Type {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Joystick {
-    pub id: u32,
+    pub id: Joystick_Id,
     pub joy_type: Joystick_Type,
 }
 
@@ -127,12 +129,12 @@ pub fn string_to_joy_axis(s: &str) -> Option<Joystick_Axis> {
 }
 
 #[inline]
-pub fn is_joy_connected(id: u32) -> bool {
+pub fn is_joy_connected(id: Joystick_Id) -> bool {
     backend::is_connected(id)
 }
 
 #[inline]
-pub fn get_joy_type(id: u32) -> Result<Joystick_Type, &'static str> {
+pub fn get_joy_type(id: Joystick_Id) -> Result<Joystick_Type, &'static str> {
     backend::get_joy_type(id)
 }
 
@@ -141,26 +143,26 @@ pub fn get_connected_joysticks_mask() -> Joystick_Mask {
     backend::get_connected_joysticks_mask()
 }
 
-pub fn get_joy_btn_id(joystick: Joystick, button: Joystick_Button) -> Option<u32> {
+pub fn get_joy_btn_id(joystick: Joystick, button: Joystick_Button) -> Option<Button_Id> {
     match joystick.joy_type {
         Joystick_Type::XBox360 => get_joy_btn_id_xbox360(button),
     }
 }
 
 #[inline]
-fn get_joy_btn_id_xbox360(button: Joystick_Button) -> Option<u32> {
+fn get_joy_btn_id_xbox360(button: Joystick_Button) -> Option<Button_Id> {
     assert!((button as usize) < BUTTONS_TO_IDS_XBOX360.len());
     BUTTONS_TO_IDS_XBOX360[button as usize]
 }
 
-pub fn get_joy_btn_from_id(joystick: Joystick, btn_id: u32) -> Option<Joystick_Button> {
+pub fn get_joy_btn_from_id(joystick: Joystick, btn_id: Button_Id) -> Option<Joystick_Button> {
     match joystick.joy_type {
         Joystick_Type::XBox360 => get_joy_btn_from_id_xbox360(btn_id),
     }
 }
 
 #[inline]
-fn get_joy_btn_from_id_xbox360(btn_id: u32) -> Option<Joystick_Button> {
+fn get_joy_btn_from_id_xbox360(btn_id: Button_Id) -> Option<Joystick_Button> {
     if (btn_id as usize) < IDS_TO_BUTTONS_XBOX360.len() {
         Some(IDS_TO_BUTTONS_XBOX360[btn_id as usize])
     } else {
@@ -175,7 +177,7 @@ pub fn get_joy_axis_value(joystick: Joystick, axis: Joystick_Axis) -> f32 {
     }
 }
 
-fn get_joy_axis_value_xbox360(joystick_id: u32, axis: Joystick_Axis) -> f32 {
+fn get_joy_axis_value_xbox360(joystick_id: Joystick_Id, axis: Joystick_Axis) -> f32 {
     backend::get_axis_value_xbox360(joystick_id, axis)
 }
 
@@ -186,7 +188,7 @@ pub fn update_joysticks() {
 
 // Map (Joystick_Button as u8) => (button id)
 #[cfg(target_os = "linux")]
-const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = [
+const BUTTONS_TO_IDS_XBOX360: [Option<Button_Id>; Joystick_Button::_Count as usize] = [
     Some(3),  // Face_Top
     Some(1),  // Face_Right
     Some(0),  // Face_Bottom
@@ -207,7 +209,7 @@ const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = 
 ];
 
 #[cfg(target_os = "windows")]
-const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = [
+const BUTTONS_TO_IDS_XBOX360: [Option<Button_Id>; Joystick_Button::_Count as usize] = [
     Some(3),  // Face_Top
     Some(1),  // Face_Right
     Some(0),  // Face_Bottom
@@ -228,7 +230,7 @@ const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = 
 ];
 
 #[cfg(target_os = "macos")]
-const BUTTONS_TO_IDS_XBOX360: [Option<u32>; Joystick_Button::_Count as usize] = [
+const BUTTONS_TO_IDS_XBOX360: [Option<Button_Id>; Joystick_Button::_Count as usize] = [
     Some(3),  // Face_Top
     Some(2),  // Face_Right
     Some(1),  // Face_Bottom

@@ -63,6 +63,22 @@ pub fn create_input_state(env: &Env_Info) -> Input_State {
     }
 }
 
+#[cfg(feature = "win-sfml")]
+fn is_core_event(evt: &Event) -> bool {
+    match evt {
+        Event::Resized { .. } | Event::Closed | Event::JoystickConnected { .. } | Event::JoystickDisconnected { .. } => true,
+        _ => false
+    }
+}
+
+#[cfg(feature = "win-glfw")]
+fn is_core_event(evt: &Event) -> bool {
+    match evt {
+        Event::Size(..) | Event::Close => true,
+        _ => false
+    }
+}
+
 pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut Input_Raw_State) {
     let window = window.as_mut();
 
@@ -73,23 +89,10 @@ pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut
     raw_state.events.clear();
 
     while let Some(evt) = window::poll_event(window) {
-        match evt {
-            // @Cleanup: should these be handled later as core events?
-            #[cfg(features = "win-sfml")]
-            Event::JoystickConnected { joystickid } => {
-                joystick_state::register_joystick(&mut raw_state.joy_state, joystickid);
-            }
-            #[cfg(features = "win-sfml")]
-            Event::JoystickDisconnected { joystickid } => {
-                joystick_state::unregister_joystick(&mut raw_state.joy_state, joystickid);
-            }
-            #[cfg(features = "win-sfml")]
-            Event::Resized { .. } | Event::Closed => {
-                raw_state.core_events.push(evt);
-                raw_state.events.push(evt);
-            }
-            _ => raw_state.events.push(evt),
+        if is_core_event(&evt) {
+            raw_state.core_events.push(evt.clone());
         }
+        raw_state.events.push(evt);
     }
 
     keyboard::update_kb_state(&mut raw_state.kb_state, &raw_state.events);
@@ -159,6 +162,12 @@ fn process_event_core_actions(
         Event::Resized { width, height } => processed
             .core_actions
             .push(Core_Action::Resize(width, height)),
+        Event::JoystickConnected { joystickid } => 
+            processed.core_actions.push(
+                Core_Action::Joystick_Connected { id: joystickid }),
+        Event::JoystickDisconnected { joystickid } => 
+            processed.core_actions.push(
+                Core_Action::Joystick_Disconnected { id: joystickid }),
         _ => {
             return false;
         }

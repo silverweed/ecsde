@@ -1,4 +1,4 @@
-use super::bindings::joystick::{self, Joystick, Joystick_Axis, Joystick_Mask};
+use super::bindings::joystick::{self, Joystick, Joystick_Axis, Joystick_Mask, Joystick_Id};
 
 const JOY_COUNT: usize = joystick::JOY_COUNT as usize;
 
@@ -10,7 +10,9 @@ pub struct Joystick_State {
     pub values: [Real_Axes_Values; JOY_COUNT],
 }
 
-pub fn register_joystick(joy_state: &mut Joystick_State, joystick_id: u32) -> bool {
+pub fn register_joystick(joy_state: &mut Joystick_State, joystick_id: Joystick_Id) -> bool {
+    ldebug!("Registering joystick {}", joystick_id);
+
     match joystick::get_joy_type(joystick_id) {
         Ok(joy_type) => {
             joy_state.joysticks[joystick_id as usize] = Some(Joystick {
@@ -26,7 +28,8 @@ pub fn register_joystick(joy_state: &mut Joystick_State, joystick_id: u32) -> bo
     }
 }
 
-pub fn unregister_joystick(joy_state: &mut Joystick_State, joystick_id: u32) {
+pub fn unregister_joystick(joy_state: &mut Joystick_State, joystick_id: Joystick_Id) {
+    ldebug!("Unregistering joystick {}", joystick_id);
     joy_state.joysticks[joystick_id as usize] = None;
 }
 

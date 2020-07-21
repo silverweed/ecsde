@@ -23,3 +23,20 @@ impl From<sfml::system::Vector2i> for Vec2i {
         Vec2i::new(v.x, v.y)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::Vec2f;
+
+    #[test]
+    fn to_from_framework() {
+        let a = Vec2f::new(3., 2.);
+        let b: ::sfml::system::Vector2f = a.into();
+        assert_eq!(a.x, b.x);
+        assert_eq!(a.y, b.y);
+
+        let c: Vec2f = b.into();
+        assert_eq!(c.x, b.x);
+        assert_eq!(c.y, b.y);
+    }
+}
