@@ -12,8 +12,8 @@ mod parsing;
 
 use self::modifiers::*;
 use joystick::Joystick_Button;
-use mouse::Mouse_Button;
 use keyboard::Key;
+use mouse::Mouse_Button;
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum Input_Action_Simple {

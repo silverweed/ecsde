@@ -2,7 +2,7 @@ use super::axes;
 use super::bindings::joystick;
 use super::bindings::keyboard::{self, Keyboard_State};
 use super::bindings::mouse::{self, Mouse_State};
-use super::bindings::{Axis_Emulation_Type, Input_Bindings, Input_Action_Modifiers};
+use super::bindings::{Axis_Emulation_Type, Input_Action_Modifiers, Input_Bindings};
 use super::core_actions::Core_Action;
 use super::joystick_state::{self, Joystick_State};
 use crate::common::stringid::String_Id;
@@ -217,7 +217,10 @@ fn process_event_game_actions(
 }
 
 #[inline(always)]
-fn remove_modifier(original: Input_Action_Modifiers, to_remove: keyboard::Key) -> Input_Action_Modifiers {
+fn remove_modifier(
+    original: Input_Action_Modifiers,
+    to_remove: keyboard::Key,
+) -> Input_Action_Modifiers {
     use crate::input::bindings::input_action_modifier_from_key;
     original & !input_action_modifier_from_key(to_remove)
 }
