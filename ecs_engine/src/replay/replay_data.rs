@@ -4,7 +4,8 @@ use crate::common::serialize::{Binary_Serializable, Byte_Stream};
 use crate::core::rand::Default_Rng_Seed;
 use crate::input::bindings::joystick::{self, Joystick_Mask};
 use crate::input::bindings::mouse::Mouse_State;
-use crate::input::input_state::{Input_Raw_Event, Input_Raw_State};
+use crate::input::events::Input_Raw_Event;
+use crate::input::input_state::Input_Raw_State;
 use crate::input::joystick_state::Joystick_State;
 use crate::input::serialize;
 use std::default::Default;
@@ -63,7 +64,7 @@ impl Replay_Data_Point {
             frame_number,
             events: events
                 .iter()
-                .filter(|evt| serialize::should_event_be_serialized(&evt))
+                .filter(|evt| serialize::should_event_be_serialized(*evt))
                 .cloned()
                 .collect(),
             joy_data: *joy_data,

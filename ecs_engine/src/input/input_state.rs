@@ -4,13 +4,12 @@ use super::bindings::keyboard::{self, Keyboard_State};
 use super::bindings::mouse::{self, Mouse_State};
 use super::bindings::{Axis_Emulation_Type, Input_Action_Modifiers, Input_Bindings};
 use super::core_actions::Core_Action;
+use super::events::{self, Input_Raw_Event};
 use super::joystick_state::{self, Joystick_State};
 use crate::common::stringid::String_Id;
 use crate::core::env::Env_Info;
-use crate::gfx::window::{self, copy_event, Event, Window_Handle};
+use crate::gfx::window::{self, Window_Handle};
 use std::convert::TryInto;
-
-pub type Input_Raw_Event = Event;
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub enum Action_Kind {
@@ -63,25 +62,15 @@ pub fn create_input_state(env: &Env_Info) -> Input_State {
     }
 }
 
-#[cfg(feature = "win-sfml")]
-fn is_core_event(evt: &Event) -> bool {
+fn is_core_event(evt: &Input_Raw_Event) -> bool {
     match evt {
-        Event::Resized { .. }
-        | Event::Closed
-        | Event::JoystickConnected { .. }
-        | Event::JoystickDisconnected { .. } => true,
+        Input_Raw_Event::Resized(..)
+        | Input_Raw_Event::Quit
+        | Input_Raw_Event::Joy_Connected { .. }
+        | Input_Raw_Event::Joy_Disconnected { .. } => true,
         _ => false,
     }
 }
-
-#[cfg(feature = "win-glfw")]
-fn is_core_event(evt: &Event) -> bool {
-    match evt {
-        Event::Size(..) | Event::Close => true,
-        _ => false,
-    }
-}
-
 pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut Input_Raw_State) {
     let window = window.as_mut();
 
@@ -92,10 +81,12 @@ pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut
     raw_state.events.clear();
 
     while let Some(evt) = window::poll_event(window) {
-        if is_core_event(&evt) {
-            raw_state.core_events.push(copy_event(&evt));
+        if let Some(evt) = events::framework_to_engine_event(evt) {
+            if is_core_event(&evt) {
+                raw_state.core_events.push(evt);
+            }
+            raw_state.events.push(evt);
         }
-        raw_state.events.push(evt);
     }
 
     keyboard::update_kb_state(&mut raw_state.kb_state, &raw_state.events);
@@ -136,8 +127,8 @@ fn read_events_to_actions(
         process_event_core_actions
     };
 
-    for event in raw_state.events.iter() {
-        process_event_func(copy_event(&event), raw_state, bindings, processed);
+    for &event in raw_state.events.iter() {
+        process_event_func(event, raw_state, bindings, processed);
     }
 }
 
@@ -147,13 +138,12 @@ fn process_event_core_and_game_actions(
     bindings: &Input_Bindings,
     processed: &mut Processed_Input,
 ) -> bool {
-    if process_event_core_actions(copy_event(&event), raw_state, bindings, processed) {
+    if process_event_core_actions(event, raw_state, bindings, processed) {
         return true;
     }
     process_event_game_actions(event, raw_state, bindings, processed)
 }
 
-#[cfg(feature = "win-sfml")]
 fn process_event_core_actions(
     event: Input_Raw_Event,
     _raw_state: &Input_Raw_State,
@@ -161,30 +151,20 @@ fn process_event_core_actions(
     processed: &mut Processed_Input,
 ) -> bool {
     match event {
-        Event::Closed { .. } => processed.core_actions.push(Core_Action::Quit),
-        Event::Resized { width, height } => processed
+        Input_Raw_Event::Quit => processed.core_actions.push(Core_Action::Quit),
+        Input_Raw_Event::Resized(width, height) => processed
             .core_actions
             .push(Core_Action::Resize(width, height)),
-        Event::JoystickConnected { joystickid } => processed
+        Input_Raw_Event::Joy_Connected { id } => processed
             .core_actions
-            .push(Core_Action::Joystick_Connected { id: joystickid }),
-        Event::JoystickDisconnected { joystickid } => processed
+            .push(Core_Action::Joystick_Connected { id }),
+        Input_Raw_Event::Joy_Disconnected { id } => processed
             .core_actions
-            .push(Core_Action::Joystick_Disconnected { id: joystickid }),
+            .push(Core_Action::Joystick_Disconnected { id }),
         _ => {
             return false;
         }
     }
-    true
-}
-
-#[cfg(not(feature = "win-sfml"))]
-fn process_event_core_actions(
-    _event: Input_Raw_Event,
-    _raw_state: &Input_Raw_State,
-    _bindings: &Input_Bindings,
-    processed: &mut Processed_Input,
-) -> bool {
     true
 }
 
@@ -206,16 +186,6 @@ fn handle_axis_released(axes: &mut axes::Virtual_Axes, names: &[(String_Id, Axis
     }
 }
 
-#[cfg(not(feature = "win-sfml"))]
-fn process_event_game_actions(
-    _event: Input_Raw_Event,
-    _raw_state: &Input_Raw_State,
-    _bindings: &Input_Bindings,
-    _processed: &mut Processed_Input,
-) -> bool {
-    false
-}
-
 #[inline(always)]
 fn remove_modifier(
     original: Input_Action_Modifiers,
@@ -225,65 +195,64 @@ fn remove_modifier(
     original & !input_action_modifier_from_key(to_remove)
 }
 
-#[cfg(feature = "win-sfml")]
 fn process_event_game_actions(
     event: Input_Raw_Event,
     raw_state: &Input_Raw_State,
     bindings: &Input_Bindings,
     processed: &mut Processed_Input,
 ) -> bool {
-    use crate::input::bindings::keyboard::framework_to_engine_key;
-
     let modifiers = keyboard::get_modifiers_pressed(&raw_state.kb_state);
     match event {
         // Game Actions
-        Event::KeyPressed { code, .. } => {
-            if let Some(code) = framework_to_engine_key(code) {
-                let modifiers = remove_modifier(modifiers, code);
-                if let Some(names) = bindings.get_key_actions(code, modifiers) {
-                    handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
-                }
-                if let Some(names) = bindings.get_key_emulated_axes(code) {
-                    handle_axis_pressed(&mut processed.virtual_axes, names);
-                }
+        Input_Raw_Event::Key_Pressed { code } => {
+            let modifiers = remove_modifier(modifiers, code);
+            if let Some(names) = bindings.get_key_actions(code, modifiers) {
+                handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
+            }
+            if let Some(names) = bindings.get_key_emulated_axes(code) {
+                handle_axis_pressed(&mut processed.virtual_axes, names);
             }
         }
-        Event::KeyReleased { code, .. } => {
-            if let Some(code) = framework_to_engine_key(code) {
-                let modifiers = remove_modifier(modifiers, code);
-                if let Some(names) = bindings.get_key_actions(code, modifiers) {
-                    handle_actions(&mut processed.game_actions, Action_Kind::Released, names);
-                }
-                if let Some(names) = bindings.get_key_emulated_axes(code) {
-                    handle_axis_released(&mut processed.virtual_axes, names);
-                }
+        Input_Raw_Event::Key_Released { code } => {
+            let modifiers = remove_modifier(modifiers, code);
+            if let Some(names) = bindings.get_key_actions(code, modifiers) {
+                handle_actions(&mut processed.game_actions, Action_Kind::Released, names);
+            }
+            if let Some(names) = bindings.get_key_emulated_axes(code) {
+                handle_axis_released(&mut processed.virtual_axes, names);
             }
         }
-        Event::JoystickButtonPressed { joystickid, button } => {
+        Input_Raw_Event::Joy_Button_Pressed {
+            joystick_id,
+            button,
+        } => {
             if let Some(names) =
-                bindings.get_joystick_actions(joystickid, button, &raw_state.joy_state)
+                bindings.get_joystick_actions(joystick_id, button, &raw_state.joy_state)
             {
                 handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
             }
             if let Some(names) =
-                bindings.get_joystick_emulated_axes(joystickid, button, &raw_state.joy_state)
+                bindings.get_joystick_emulated_axes(joystick_id, button, &raw_state.joy_state)
             {
                 handle_axis_pressed(&mut processed.virtual_axes, names);
             }
         }
-        Event::JoystickButtonReleased { joystickid, button } => {
+        Input_Raw_Event::Joy_Button_Released {
+            joystick_id,
+            button,
+        } => {
             if let Some(names) =
-                bindings.get_joystick_actions(joystickid, button, &raw_state.joy_state)
+                bindings.get_joystick_actions(joystick_id, button, &raw_state.joy_state)
             {
                 handle_actions(&mut processed.game_actions, Action_Kind::Released, names);
             }
             if let Some(names) =
-                bindings.get_joystick_emulated_axes(joystickid, button, &raw_state.joy_state)
+                bindings.get_joystick_emulated_axes(joystick_id, button, &raw_state.joy_state)
             {
                 handle_axis_released(&mut processed.virtual_axes, names);
             }
         }
-        Event::MouseButtonPressed { button, .. } => {
+        Input_Raw_Event::Mouse_Button_Pressed { button } => {
             if let Some(names) = bindings.get_mouse_actions(button, modifiers) {
                 handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
             }
@@ -291,7 +260,7 @@ fn process_event_game_actions(
                 handle_axis_pressed(&mut processed.virtual_axes, names);
             }
         }
-        Event::MouseButtonReleased { button, .. } => {
+        Input_Raw_Event::Mouse_Button_Released { button } => {
             if let Some(names) = bindings.get_mouse_actions(button, modifiers) {
                 handle_actions(&mut processed.game_actions, Action_Kind::Released, names);
             }
@@ -299,7 +268,7 @@ fn process_event_game_actions(
                 handle_axis_released(&mut processed.virtual_axes, names);
             }
         }
-        Event::MouseWheelScrolled { delta, .. } => {
+        Input_Raw_Event::Mouse_Wheel_Scrolled { delta } => {
             if let Some(names) = bindings.get_mouse_wheel_actions(delta > 0., modifiers) {
                 // Note: MouseWheel actions always count as 'Pressed'.
                 handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);

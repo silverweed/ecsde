@@ -20,8 +20,8 @@ pub struct Window_Handle {
     handle: Window_Type,
     target_size: (u32, u32),
     vsync: bool,
-    glfw: glfw::Glfw,
-    event_receiver: std::sync::mpsc::Receiver<(f64, Event)>,
+    pub glfw: glfw::Glfw,
+    pub event_receiver: std::sync::mpsc::Receiver<(f64, Event)>,
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
@@ -30,7 +30,7 @@ pub fn create_window(
     target_size: (u32, u32),
     title: &str,
 ) -> Window_Handle {
-    let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+    let glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     // @Incomplete: allow setting mode?
     let (mut window, events) = glfw
         .create_window(

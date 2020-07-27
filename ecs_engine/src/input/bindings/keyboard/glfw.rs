@@ -1,6 +1,4 @@
 use super::Key;
-use crate::gfx::window::Event;
-use glfw::Action;
 
 pub(super) type Framework_Key = glfw::Key;
 
@@ -217,26 +215,4 @@ fn engine_to_framework_key(key: Key) -> Framework_Key {
         Key::F15 => Framework_Key::F15,
         Key::Pause => Framework_Key::Pause,
     }
-}
-
-#[inline(always)]
-// @WaitForStable: make this const
-pub fn keypressed(code: Key) -> Event {
-    Event::Key(
-        engine_to_framework_key(code),
-        0, // @Incomplete: scancode
-        Action::Press,
-        glfw::Modifiers::empty(),
-    )
-}
-
-// @WaitForStable: make this const
-#[inline(always)]
-pub fn keyreleased(code: Key) -> Event {
-    Event::Key(
-        engine_to_framework_key(code),
-        0, // @Incomplete: scancode
-        Action::Release,
-        glfw::Modifiers::empty(),
-    )
 }

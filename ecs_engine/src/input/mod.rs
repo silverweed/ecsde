@@ -1,6 +1,7 @@
 pub mod axes;
 pub mod bindings;
 pub mod core_actions;
+pub mod events;
 pub mod input_state;
 pub mod joystick_state;
 pub mod serialize;

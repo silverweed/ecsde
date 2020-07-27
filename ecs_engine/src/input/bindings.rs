@@ -123,10 +123,9 @@ impl Input_Bindings {
 
     pub(super) fn get_mouse_actions(
         &self,
-        button: mouse::Button,
+        button: mouse::Mouse_Button,
         modifiers: Input_Action_Modifiers,
     ) -> Option<&Vec<String_Id>> {
-        let button = mouse::get_mouse_btn(button)?;
         self.action_bindings.get(&Input_Action::new_with_modifiers(
             Input_Action_Simple::Mouse(button),
             modifiers,
@@ -174,9 +173,8 @@ impl Input_Bindings {
 
     pub(super) fn get_mouse_emulated_axes(
         &self,
-        button: mouse::Button,
+        button: mouse::Mouse_Button,
     ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
-        let button = mouse::get_mouse_btn(button)?;
         self.axis_bindings
             .emulated
             .get(&Input_Action::new(Input_Action_Simple::Mouse(button)))

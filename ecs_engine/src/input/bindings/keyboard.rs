@@ -1,5 +1,6 @@
 use super::Input_Action_Modifiers;
-use crate::input::input_state::Input_Raw_Event;
+use crate::input::bindings::input_action_modifier_from_key;
+use crate::input::events::Input_Raw_Event;
 use std::collections::HashSet;
 
 #[cfg(feature = "win-sfml")]
@@ -21,7 +22,19 @@ pub struct Keyboard_State {
 }
 
 pub fn update_kb_state(kb_state: &mut Keyboard_State, events: &[Input_Raw_Event]) {
-    backend::update_kb_state(kb_state, events);
+    for &evt in events {
+        match evt {
+            Input_Raw_Event::Key_Pressed { code } => {
+                kb_state.modifiers_pressed |= input_action_modifier_from_key(code);
+                kb_state.keys_pressed.insert(code);
+            }
+            Input_Raw_Event::Key_Released { code } => {
+                kb_state.modifiers_pressed &= !input_action_modifier_from_key(code);
+                kb_state.keys_pressed.remove(&code);
+            }
+            _ => (),
+        }
+    }
 }
 
 pub fn is_key_pressed(kb_state: &Keyboard_State, key: Key) -> bool {

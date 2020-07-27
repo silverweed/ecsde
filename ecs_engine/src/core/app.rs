@@ -13,7 +13,6 @@ use crate::input;
 use crate::resources::gfx::Gfx_Resources;
 use crate::resources::gfx::Shader_Cache;
 use crate::ui;
-use std::convert::TryInto;
 
 #[cfg(debug_assertions)]
 use {
@@ -26,6 +25,7 @@ use {
     crate::fs,
     crate::replay::{replay_data::Replay_Data, replay_input_provider::Replay_Input_Provider},
     crate::resources::{self},
+    std::convert::TryInto,
     std::time::Duration,
 };
 

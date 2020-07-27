@@ -5,8 +5,10 @@ use crate::common::vector::{Vec2f, Vec2i, Vec2u};
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
 use crate::gfx::render_window::Render_Window_Handle;
-use crate::gfx::window::{self, Event};
-use crate::input::input_state::Input_Raw_Event;
+use crate::gfx::window;
+use crate::input::bindings::keyboard::Key;
+use crate::input::bindings::mouse::Mouse_Button;
+use crate::input::events::Input_Raw_Event;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -90,12 +92,10 @@ impl Debug_Frame_Scroller {
                 .min(this.n_frames as u32) as _
         };
 
-        #[cfg(feature = "win-sfml")]
         for event in events {
             match event {
-                Event::MouseButtonPressed {
-                    button: sfml::window::mouse::Button::Left,
-                    ..
+                Input_Raw_Event::Mouse_Button_Pressed {
+                    button: Mouse_Button::Left,
                 } if self.hovered.is_some() => {
                     match self.hovered {
                         Some((Row::Frames, i)) => self.cur_frame = i,
@@ -107,17 +107,13 @@ impl Debug_Frame_Scroller {
                     }
                     self.manually_selected = true;
                 }
-                Event::MouseButtonPressed {
-                    button: sfml::window::mouse::Button::Right,
-                    ..
+                Input_Raw_Event::Mouse_Button_Pressed {
+                    button: Mouse_Button::Right,
                 } => {
                     self.manually_selected = false;
                 }
                 // @Incomplete: make this button configurable
-                Event::KeyPressed {
-                    code: sfml::window::Key::Period,
-                    ..
-                } => {
+                Input_Raw_Event::Key_Pressed { code: Key::Period } => {
                     if self.manually_selected {
                         if self.cur_second as u32 * self.n_frames as u32 + (self.cur_frame as u32)
                             < self.tot_scroller_filled_frames
@@ -135,10 +131,7 @@ impl Debug_Frame_Scroller {
                     }
                 }
                 // @Incomplete: make this button configurable
-                Event::KeyPressed {
-                    code: sfml::window::Key::Comma,
-                    ..
-                } => {
+                Input_Raw_Event::Key_Pressed { code: Key::Comma } => {
                     if self.manually_selected {
                         if self.cur_frame > 0 {
                             self.cur_frame -= 1;

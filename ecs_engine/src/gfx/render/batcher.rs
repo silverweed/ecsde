@@ -328,11 +328,14 @@ pub fn draw_batches(
                         n_shadow_vertices <= render::vbuf_max_vertices(&shadow_vbuffer.vbuf)
                     );
 
-                    if cfg!(debug_assertions) {
+                    #[cfg(debug_assertions)]
+                    {
                         for vert in shadow_vertices.iter_mut() {
                             *vert = invalid_vertex();
                         }
-                    } else {
+                    }
+                    #[cfg(not(debug_assertions))]
+                    {
                         for vert in shadow_vertices.iter_mut() {
                             *vert = null_vertex();
                         }

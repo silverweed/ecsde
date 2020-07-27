@@ -1,6 +1,4 @@
-use super::{Input_Raw_Event, Key};
-use crate::input::bindings::input_action_modifier_from_key;
-use sfml::window::Event;
+use super::Key;
 
 pub(super) type Framework_Key = sfml::window::Key;
 
@@ -16,48 +14,4 @@ pub(super) fn framework_to_engine_key(key: Framework_Key) -> Option<Key> {
 fn engine_to_framework_key(key: Key) -> Framework_Key {
     // Note: our Key enum is the same as SFML
     unsafe { std::mem::transmute(key as u32) }
-}
-
-// @WaitForStable: make this const
-#[inline(always)]
-pub fn keypressed(code: Key) -> Event {
-    Event::KeyPressed {
-        code: engine_to_framework_key(code),
-        alt: false,
-        ctrl: false,
-        shift: false,
-        system: false,
-    }
-}
-
-// @WaitForStable: make this const
-#[inline(always)]
-pub fn keyreleased(code: Key) -> Event {
-    Event::KeyReleased {
-        code: engine_to_framework_key(code),
-        alt: false,
-        ctrl: false,
-        shift: false,
-        system: false,
-    }
-}
-
-pub(super) fn update_kb_state(kb_state: &mut super::Keyboard_State, events: &[Input_Raw_Event]) {
-    for evt in events {
-        match evt {
-            Input_Raw_Event::KeyPressed { code, .. } => {
-                if let Some(code) = framework_to_engine_key(*code) {
-                    kb_state.modifiers_pressed |= input_action_modifier_from_key(code);
-                    kb_state.keys_pressed.insert(code);
-                }
-            }
-            Input_Raw_Event::KeyReleased { code, .. } => {
-                if let Some(code) = framework_to_engine_key(*code) {
-                    kb_state.modifiers_pressed &= !input_action_modifier_from_key(code);
-                    kb_state.keys_pressed.remove(&code);
-                }
-            }
-            _ => (),
-        }
-    }
 }

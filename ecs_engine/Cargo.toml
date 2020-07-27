@@ -36,7 +36,7 @@ default-features = false
 version = "0.39"
 optional = true
 default-features = false
-features = ["glfw-sys"]
+#features = ["glfw-sys"]
 
 [dependencies.smallvec]
 default-features = false

@@ -99,10 +99,3 @@ pub fn raw_mouse_pos_in_window<W: AsRef<Window_Handle>>(window: &W) -> Vec2i {
 pub fn set_key_repeat_enabled<W: AsMut<Window_Handle>>(window: &mut W, enabled: bool) {
     backend::set_key_repeat_enabled(window.as_mut(), enabled);
 }
-
-// Used to silence clippy warnings about clone on copy (Event may or may not be Copy depending on the backend)
-#[allow(clippy::clone_on_copy)]
-#[inline(always)]
-pub fn copy_event(evt: &Event) -> Event {
-    evt.clone()
-}

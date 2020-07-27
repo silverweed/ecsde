@@ -126,7 +126,7 @@ where
         if debug_systems.console.status == debug::console::Console_Status::Open {
             debug_systems
                 .console
-                .update(&game_state.engine_state.input_state.raw.events);
+                .update(&game_state.engine_state.input_state);
 
             let mut output = vec![];
             while let Some(cmd) = game_state
