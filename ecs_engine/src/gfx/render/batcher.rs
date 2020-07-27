@@ -279,17 +279,17 @@ pub fn draw_batches(
 
             let cast_shadows = material.cast_shadows;
             // @Temporary
-            let shadows =
+            let shadow_data =
                 collect_entity_shadow_data(lights, sprites.iter(), cast_shadows, frame_alloc);
 
             let n_sprites_per_chunk = cmp::min(n_sprites, n_sprites / n_threads + 1);
 
             let n_vertices_without_shadows = (n_sprites * 4) as u32;
             debug_assert!(
-                n_vertices_without_shadows as usize + (shadows.len() * 4 * SHADOWS_PER_ENTITY)
+                n_vertices_without_shadows as usize + (shadow_data.len() * 4 * SHADOWS_PER_ENTITY)
                     <= std::u32::MAX as usize
             );
-            let n_shadow_vertices = (shadows.len() * 4 * SHADOWS_PER_ENTITY) as u32;
+            let n_shadow_vertices = (shadow_data.len() * 4 * SHADOWS_PER_ENTITY) as u32;
             let n_vertices = n_vertices_without_shadows + n_shadow_vertices;
 
             // This buffer holds both regular vertices and shadow vertices
@@ -328,14 +328,11 @@ pub fn draw_batches(
                         n_shadow_vertices <= render::vbuf_max_vertices(&shadow_vbuffer.vbuf)
                     );
 
-                    #[cfg(debug_assertions)]
-                    {
+                    if cfg!(debug_assertions) {
                         for vert in shadow_vertices.iter_mut() {
                             *vert = invalid_vertex();
                         }
-                    }
-                    #[cfg(not(debug_assertions))]
-                    {
+                    } else {
                         for vert in shadow_vertices.iter_mut() {
                             *vert = null_vertex();
                         }
@@ -394,7 +391,7 @@ pub fn draw_batches(
                                 // @Incomplete: the shadow looks weird: it should be flipped in certain situations
                                 // and probably have some bias to not make the entity look like "floating"
                                 for (light_idx, light) in
-                                    shadows[i].nearby_point_lights.iter().enumerate()
+                                    shadow_data[i].nearby_point_lights.iter().enumerate()
                                 {
                                     debug_assert!(light_idx < 4);
                                     let light_pos = light.position;
@@ -443,7 +440,7 @@ pub fn draw_batches(
 
                                 #[cfg(debug_assertions)]
                                 {
-                                    for light_idx in shadows[i].nearby_point_lights.len()..4 {
+                                    for light_idx in shadow_data[i].nearby_point_lights.len()..4 {
                                         for v_idx in 0..4 {
                                             *shadow_chunk[4
                                                 * (SHADOWS_PER_ENTITY * v_idx + light_idx)
