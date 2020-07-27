@@ -12,8 +12,11 @@ use crate::gfx::render::{self, Shader, Texture, Vertex, Vertex_Buffer_Quads};
 use crate::gfx::render_window::Render_Window_Handle;
 use crate::resources::gfx::{Gfx_Resources, Shader_Cache};
 use rayon::prelude::*;
+use smallvec::SmallVec;
 use std::cmp;
 use std::collections::{BTreeMap, HashMap};
+
+const SHADOWS_PER_ENTITY: usize = 4;
 
 struct Sprite_Batch {
     pub vbuffer: Vertex_Buffer_Holder,
@@ -245,8 +248,6 @@ pub fn draw_batches(
 ) {
     trace!("draw_all_batches");
 
-    const SHADOWS_PER_ENTITY: usize = 4;
-
     let n_threads = rayon::current_num_threads();
 
     // for each Z-index...
@@ -278,26 +279,8 @@ pub fn draw_batches(
 
             let cast_shadows = material.cast_shadows;
             // @Temporary
-            // @Speed! We can't use the temp array as it's not Send! Maybe we should make it Send (at least a read-only version of it)?
-            let mut shadows = temp::excl_temp_array(frame_alloc); //vec![];
-            if cast_shadows {
-                for tex in sprites.iter() {
-                    let mut nearby_point_lights =
-                        smallvec::SmallVec::<[Point_Light; SHADOWS_PER_ENTITY]>::new();
-
-                    // @Speed: should lights be spatially accelerated?
-                    lights.get_all_point_lights_sorted_by_distance_within(
-                        tex.transform.position(),
-                        10000.,
-                        &mut nearby_point_lights,
-                        SHADOWS_PER_ENTITY,
-                    );
-                    nearby_point_lights.resize(4, Point_Light::default());
-                    shadows.push(nearby_point_lights);
-                }
-            }
-
-            let shadows = unsafe { shadows.into_read_only() };
+            let shadows =
+                collect_entity_shadow_data(lights, sprites.iter(), cast_shadows, frame_alloc);
 
             let n_sprites_per_chunk = cmp::min(n_sprites, n_sprites / n_threads + 1);
 
@@ -410,7 +393,9 @@ pub fn draw_batches(
 
                                 // @Incomplete: the shadow looks weird: it should be flipped in certain situations
                                 // and probably have some bias to not make the entity look like "floating"
-                                for (light_idx, light) in shadows[i].iter().enumerate() {
+                                for (light_idx, light) in
+                                    shadows[i].nearby_point_lights.iter().enumerate()
+                                {
                                     debug_assert!(light_idx < 4);
                                     let light_pos = light.position;
                                     let recp_radius2 = 1.0 / (light.radius * light.radius);
@@ -458,7 +443,7 @@ pub fn draw_batches(
 
                                 #[cfg(debug_assertions)]
                                 {
-                                    for light_idx in shadows[i].len()..4 {
+                                    for light_idx in shadows[i].nearby_point_lights.len()..4 {
                                         for v_idx in 0..4 {
                                             *shadow_chunk[4
                                                 * (SHADOWS_PER_ENTITY * v_idx + light_idx)
@@ -572,4 +557,37 @@ pub fn draw_batches(
             );
         }
     }
+}
+
+struct Entity_Shadow_Data {
+    pub nearby_point_lights: SmallVec<[Point_Light; SHADOWS_PER_ENTITY]>,
+}
+
+fn collect_entity_shadow_data<'a>(
+    lights: &Lights,
+    sprites: impl Iterator<Item = &'a Sprite>,
+    cast_shadows: bool,
+    frame_alloc: &mut temp::Temp_Allocator,
+) -> temp::Read_Only_Temp_Array<Entity_Shadow_Data> {
+    let mut shadow_data = temp::excl_temp_array(frame_alloc);
+    if cast_shadows {
+        for tex in sprites {
+            let mut nearby_point_lights = SmallVec::<[Point_Light; SHADOWS_PER_ENTITY]>::new();
+
+            // @Speed: should lights be spatially accelerated?
+            lights.get_all_point_lights_sorted_by_distance_within(
+                tex.transform.position(),
+                10000.,
+                &mut nearby_point_lights,
+                SHADOWS_PER_ENTITY,
+            );
+            debug_assert!(nearby_point_lights.len() <= SHADOWS_PER_ENTITY);
+            nearby_point_lights.resize(SHADOWS_PER_ENTITY, Point_Light::default());
+            shadow_data.push(Entity_Shadow_Data {
+                nearby_point_lights,
+            });
+        }
+    }
+
+    unsafe { shadow_data.into_read_only() }
 }

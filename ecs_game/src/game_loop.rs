@@ -830,20 +830,21 @@ fn update_joystick_debug_overlay(
 
     for (joy_id, axes) in real_axes.iter().enumerate() {
         if (joy_mask & (1 << joy_id)) != 0 {
-            debug_overlay.add_line_color(&format!("> Joy {} <", joy_id), colors::rgb(235, 52, 216));
+            debug_overlay
+                .add_line(&format!("> Joy {} <", joy_id))
+                .with_color(colors::rgb(235, 52, 216));
 
             for i in 0u8..joystick::Joystick_Axis::_Count as u8 {
                 let axis: joystick::Joystick_Axis = i.try_into().unwrap_or_else(|err| {
                     fatal!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
                 });
-                debug_overlay.add_line_color(
-                    &format!("{:?}: {:5.2}", axis, axes[i as usize]),
-                    if axes[i as usize].abs() > deadzone {
+                debug_overlay
+                    .add_line(&format!("{:?}: {:5.2}", axis, axes[i as usize]))
+                    .with_color(if axes[i as usize].abs() > deadzone {
                         colors::GREEN
                     } else {
                         colors::YELLOW
-                    },
-                );
+                    });
             }
         }
     }
@@ -853,16 +854,15 @@ fn update_joystick_debug_overlay(
 fn update_time_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, time: &time::Time) {
     debug_overlay.clear();
 
-    debug_overlay.add_line_color(
-        &format!(
+    debug_overlay
+        .add_line(&format!(
             "[time] game: {:.2}, real: {:.2}, scale: {:.2}, paused: {}",
             time.game_time().as_secs_f32(),
             time.real_time().as_secs_f32(),
             time.time_scale,
             if time.paused { "yes" } else { "no" }
-        ),
-        colors::rgb(100, 200, 200),
-    );
+        ))
+        .with_color(colors::rgb(100, 200, 200));
 }
 
 #[cfg(debug_assertions)]
@@ -873,15 +873,14 @@ fn update_fps_debug_overlay(
     vsync: bool,
 ) {
     debug_overlay.clear();
-    debug_overlay.add_line_color(
-        &format!(
+    debug_overlay
+        .add_line(&format!(
             "FPS: {} (target ~{}, vsync {})",
             fps.get_fps() as u32,
             target_fps,
             if vsync { "on" } else { "off" },
-        ),
-        colors::rgba(180, 180, 180, 200),
-    );
+        ))
+        .with_color(colors::rgba(180, 180, 180, 200));
 }
 
 #[cfg(debug_assertions)]
@@ -895,10 +894,9 @@ fn update_mouse_debug_overlay(
     debug_overlay.clear();
     let pos = window::mouse_pos_in_window(window);
     debug_overlay.position = Vec2f::from(pos) + v2!(0., -15.);
-    debug_overlay.add_line_color(
-        &format!("{},{}", pos.x, pos.y),
-        colors::rgba(220, 220, 220, 220),
-    );
+    debug_overlay
+        .add_line(&format!("{},{}", pos.x, pos.y))
+        .with_color(colors::rgba(220, 220, 220, 220));
 
     let color = colors::rgba(255, 255, 255, 150);
     let (win_w, win_h) = window::get_window_real_size(window);
@@ -932,13 +930,12 @@ fn update_win_debug_overlay(
     let tsize = window::get_window_target_size(window);
     let rsize = window::get_window_real_size(window);
     debug_overlay.clear();
-    debug_overlay.add_line_color(
-        &format!(
+    debug_overlay
+        .add_line(&format!(
             "WinSize: target = {}x{}, real = {}x{}",
             tsize.0, tsize.1, rsize.0, rsize.1
-        ),
-        colors::rgba(110, 190, 250, 220),
-    );
+        ))
+        .with_color(colors::rgba(110, 190, 250, 220));
 }
 
 #[cfg(debug_assertions)]
@@ -947,10 +944,9 @@ fn update_entities_debug_overlay(
     ecs_world: &Ecs_World,
 ) {
     debug_overlay.clear();
-    debug_overlay.add_line_color(
-        &format!("Entities: {}", ecs_world.entities().len()),
-        colors::rgba(220, 100, 180, 220),
-    );
+    debug_overlay
+        .add_line(&format!("Entities: {}", ecs_world.entities().len()))
+        .with_color(colors::rgba(220, 100, 180, 220));
 }
 
 #[cfg(debug_assertions)]
@@ -959,15 +955,14 @@ fn update_camera_debug_overlay(
     camera: &ecs_engine::ecs::components::gfx::C_Camera2D,
 ) {
     debug_overlay.clear();
-    debug_overlay.add_line_color(
-        &format!(
+    debug_overlay
+        .add_line(&format!(
             "[cam] pos: {:.2},{:.2}, scale: {:.1}",
             camera.transform.position().x,
             camera.transform.position().y,
             camera.transform.scale().x
-        ),
-        colors::rgba(220, 180, 100, 220),
-    );
+        ))
+        .with_color(colors::rgba(220, 180, 100, 220));
 }
 
 #[cfg(debug_assertions)]
@@ -977,14 +972,13 @@ fn update_physics_debug_overlay(
     chunks: &crate::spatial::World_Chunks,
 ) {
     debug_overlay.clear();
-    debug_overlay.add_line_color(
-        &format!(
+    debug_overlay
+        .add_line(&format!(
             "[phys] n_inter_tests: {}, n_chunks: {}",
             collision_data.n_intersection_tests,
             chunks.n_chunks(),
-        ),
-        colors::rgba(0, 173, 90, 220),
-    );
+        ))
+        .with_color(colors::rgba(0, 173, 90, 220));
 }
 
 #[cfg(debug_assertions)]
@@ -995,9 +989,13 @@ fn update_record_debug_overlay(
 ) {
     debug_overlay.clear();
     if replaying {
-        debug_overlay.add_line_color("REPLAYING", colors::rgb(30, 200, 30));
+        debug_overlay
+            .add_line("REPLAYING")
+            .with_color(colors::rgb(30, 200, 30));
     } else if recording {
-        debug_overlay.add_line_color("RECORDING", colors::rgb(200, 30, 30));
+        debug_overlay
+            .add_line("RECORDING")
+            .with_color(colors::rgb(200, 30, 30));
     }
 }
 

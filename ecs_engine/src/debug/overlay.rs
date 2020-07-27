@@ -2,18 +2,39 @@ use super::element::Debug_Element;
 use crate::alloc::temp;
 use crate::common::colors::{self, Color};
 use crate::common::rect::Rect;
+use crate::common::stringid::String_Id;
+use crate::common::variant::Variant;
 use crate::common::vector::Vec2f;
 use crate::gfx;
 use crate::gfx::align::Align;
 use crate::gfx::render_window::Render_Window_Handle;
 use crate::input::input_state::Input_State;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
+use std::collections::HashMap;
 
 pub struct Debug_Line {
     pub text: String,
     pub color: Color,
-    // (fill color, horizontal fill ratio)
-    pub bg_rect_fill: Option<(Color, f32)>, // @Cleanup: this is not very pretty
+    // Contains (fill_color, horizontal_fill_ratio 0-1)
+    pub bg_rect_fill: Option<(Color, f32)>,
+    pub metadata: HashMap<String_Id, Variant>,
+}
+
+impl Debug_Line {
+    pub fn with_color(&mut self, color: Color) -> &mut Self {
+        self.color = color;
+        self
+    }
+
+    pub fn with_bg_rect_fill(&mut self, color: Color, fill: f32) -> &mut Self {
+        self.bg_rect_fill = Some((color, fill));
+        self
+    }
+
+    pub fn with_metadata<T: Into<Variant>>(&mut self, key: String_Id, metadata: T) -> &mut Self {
+        self.metadata.insert(key, metadata.into());
+        self
+    }
 }
 
 #[derive(Copy, Clone, Default, Debug)]
@@ -224,32 +245,14 @@ impl Debug_Overlay {
         self.lines.clear();
     }
 
-    pub fn add_line(&mut self, line: &str) {
+    pub fn add_line(&mut self, line: &str) -> &mut Debug_Line {
         self.lines.push(Debug_Line {
             text: String::from(line),
             color: colors::WHITE,
             bg_rect_fill: None,
+            metadata: HashMap::default(),
         });
-    }
-
-    pub fn add_line_color(&mut self, line: &str, color: Color) {
-        self.lines.push(Debug_Line {
-            text: String::from(line),
-            color,
-            bg_rect_fill: None,
-        });
-    }
-
-    pub fn add_line_color_with_bg_fill(
-        &mut self,
-        line: &str,
-        color: Color,
-        bg_rect_fill: (Color, f32),
-    ) {
-        self.lines.push(Debug_Line {
-            text: String::from(line),
-            color,
-            bg_rect_fill: Some(bg_rect_fill),
-        });
+        let len = self.lines.len();
+        &mut self.lines[len - 1]
     }
 }

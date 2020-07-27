@@ -13,6 +13,7 @@ use crate::input;
 use crate::resources::gfx::Gfx_Resources;
 use crate::resources::gfx::Shader_Cache;
 use crate::ui;
+use std::convert::TryInto;
 
 #[cfg(debug_assertions)]
 use {
@@ -461,9 +462,13 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
             .clone();
         if trace_hover_data.just_selected {
             if let Some(tracer_selected_idx) = trace_hover_data.selected_line {
-                let line_text =
-                    &debug_systems.debug_ui.get_overlay(sid_trace).lines[tracer_selected_idx].text;
-                let fn_name = String::from(line_text.split(": ").next().unwrap().trim());
+                let fn_name: String = debug_systems.debug_ui.get_overlay(sid_trace).lines
+                    [tracer_selected_idx]
+                    .metadata
+                    .get(&String_Id::from("full_tag"))
+                    .map(|x| x.clone().try_into().ok())
+                    .flatten()
+                    .unwrap_or_else(String::default);
                 set_traced_fn(debug_systems, fn_name);
             } else {
                 set_traced_fn(debug_systems, String::default());

@@ -5,6 +5,7 @@ use crate::common::rect::Rect;
 use crate::common::shapes::Circle;
 use crate::common::stringid::String_Id;
 use crate::common::transform::Transform2D;
+use crate::common::variant::Variant;
 use crate::common::vector::{Vec2f, Vec2u};
 use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
@@ -15,10 +16,8 @@ use crate::input::input_state::Input_State;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::{HashMap, VecDeque};
 use std::convert::TryFrom;
+use std::iter::FromIterator;
 use std::ops::Range;
-
-// @Refactoring: probably move Cfg_Value to common::Variant
-use crate::cfg::Cfg_Value;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Grid_Step {
@@ -59,9 +58,10 @@ pub struct Debug_Graph_View {
 pub struct Debug_Graph {
     pub points: VecDeque<Vec2f>,
     pub x_range: Range<f32>,
-    pub points_metadata: HashMap<String_Id, VecDeque<Option<Cfg_Value>>>,
     pub max_y_value: Option<f32>,
     pub min_y_value: Option<f32>,
+
+    points_metadata: VecDeque<HashMap<String_Id, Variant>>,
 }
 
 impl Debug_Element for Debug_Graph_View {
@@ -323,7 +323,7 @@ impl Default for Debug_Graph {
     fn default() -> Self {
         Self {
             points: VecDeque::new(),
-            points_metadata: HashMap::new(),
+            points_metadata: VecDeque::new(),
             x_range: 0.0..0.0,
             max_y_value: None,
             min_y_value: None,
@@ -332,21 +332,12 @@ impl Default for Debug_Graph {
 }
 
 impl Debug_Graph {
-    pub fn add_point(&mut self, x: f32, y: f32, metadata: &[(String_Id, Cfg_Value)]) {
+    pub fn add_point(&mut self, x: f32, y: f32, metadata: &[(String_Id, Variant)]) {
         self.min_y_value = Some(self.min_y_value.unwrap_or(y).min(y));
         self.max_y_value = Some(self.max_y_value.unwrap_or(y).max(y));
         self.points.push_back(Vec2f::new(x, y));
-        let points_len = self.points.len();
-        for (key, val) in metadata {
-            self.points_metadata
-                .entry(*key)
-                .or_insert_with(|| {
-                    let mut vals = VecDeque::new();
-                    vals.resize(points_len - 1, None);
-                    vals
-                })
-                .push_back(Some(val.clone()));
-        }
+        self.points_metadata
+            .push_back(HashMap::from_iter(metadata.iter().cloned()));
     }
 
     pub fn remove_points_before_x_range(&mut self) {
@@ -360,25 +351,19 @@ impl Debug_Graph {
 
     pub fn get_point_metadata<T>(&self, point_index: usize, key: String_Id) -> Option<T>
     where
-        T: TryFrom<Cfg_Value>,
+        T: TryFrom<Variant>,
     {
-        self.points_metadata
-            .get(&key)
-            .map(|vals| {
-                let maybe_val = vals[point_index].as_ref();
-                maybe_val.map(|val| {
-                    T::try_from(val.clone()).unwrap_or_else(|_| {
-                        fatal!(
-                            "Failed to convert metadata {} for point {} into {:?} (was {:?})",
-                            key,
-                            point_index,
-                            std::any::type_name::<T>(),
-                            val
-                        )
-                    })
-                })
+        self.points_metadata[point_index].get(&key).map(|val| {
+            T::try_from(val.clone()).unwrap_or_else(|_| {
+                fatal!(
+                    "Failed to convert metadata {} for point {} into {:?} (was {:?})",
+                    key,
+                    point_index,
+                    std::any::type_name::<T>(),
+                    val
+                )
             })
-            .flatten()
+        })
     }
 }
 
@@ -396,7 +381,7 @@ pub fn add_point_and_scroll_with_metadata(
     now: std::time::Duration,
     time_limit: f32,
     point: f32,
-    metadata: &[(String_Id, Cfg_Value)],
+    metadata: &[(String_Id, Variant)],
 ) {
     let now = now.as_secs_f32();
     graph.data.x_range.end = now;

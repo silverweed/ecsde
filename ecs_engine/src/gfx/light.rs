@@ -94,6 +94,8 @@ impl Lights {
         result: &mut E,
         at_most: usize,
     ) {
+        trace!("get_all_point_lights_sorted_by_distance_within");
+
         let radius2 = radius * radius;
         // @Speed
         let mut lights = self

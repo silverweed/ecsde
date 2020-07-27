@@ -7,6 +7,7 @@ use crate::core::time;
 use crate::debug::graph;
 use crate::debug::overlay::Debug_Overlay;
 use crate::debug::tracer::{self, Trace_Tree, Tracer_Node_Final};
+use std::borrow::Cow;
 use std::time::Duration;
 
 fn add_tracer_node_line(
@@ -24,17 +25,27 @@ fn add_tracer_node_line(
         line.push(' ');
     }
     let duration_ms = time::to_ms_frac(&duration);
+    let width = 40 - indent;
+    let tag = if node.info.tag.len() <= width {
+        Cow::Borrowed(node.info.tag)
+    } else {
+        Cow::Owned(node.info.tag.chars().take(width - 1).collect::<String>() + "~")
+    };
     line.push_str(&format!(
         "{:width$}: {:>6.3}ms ({:3}%): {:>7}: {:6.3}ms",
-        node.info.tag,
+        tag,
         duration_ms,
         (ratio * 100.0) as u32,
         n_calls,
         duration_ms / n_calls as f32,
-        width = 40 - indent
+        width = width,
     ));
     let bg_col = colors::Color { a: 50, ..color };
-    overlay.add_line_color_with_bg_fill(&line, color, (bg_col, ratio));
+    overlay
+        .add_line(&line)
+        .with_color(color)
+        .with_bg_rect_fill(bg_col, ratio)
+        .with_metadata(String_Id::from("full_tag"), node.info.tag.to_string());
 }
 
 pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
@@ -80,24 +91,24 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
             .read(&engine_state.config);
     let prune_duration = Duration::from_secs_f32(prune_duration_ms * 0.001);
 
-    overlay.add_line_color(
-        &format!(
+    overlay
+        .add_line(&format!(
             "frame {} | debug_log_mem {} | temp_mem_max_usage {} / {}",
             frame,
             format_bytes_pretty(debug_log.mem_used),
             format_bytes_pretty(engine_state.frame_alloc.high_water_mark),
             format_bytes_pretty(engine_state.frame_alloc.cap)
-        ),
-        colors::rgb(144, 144, 144),
-    );
-    overlay.add_line_color(
-        &format!(
+        ))
+        .with_color(colors::rgb(144, 144, 144));
+    overlay
+        .add_line(&format!(
             "{:<39}: {:<15}: {:7}: {:>7}",
             "procedure_name", "tot_time", "n_calls", "t/call"
-        ),
-        colors::rgb(204, 0, 102),
-    );
-    overlay.add_line_color(&format!("{:─^80}", ""), colors::rgba(60, 60, 60, 180));
+        ))
+        .with_color(colors::rgb(204, 0, 102));
+    overlay
+        .add_line(&format!("{:─^80}", ""))
+        .with_color(colors::rgba(60, 60, 60, 180));
     for tree in &trace_trees {
         add_tree_lines(tree, &total_traced_time, 0, overlay, &prune_duration);
     }
@@ -124,24 +135,24 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
             .read(&engine_state.config);
     let prune_duration = Duration::from_secs_f32(prune_duration_ms * 0.001);
 
-    overlay.add_line_color(
-        &format!(
+    overlay
+        .add_line(&format!(
             "frame {} | debug_log_mem {} | temp_mem_max_usage {} / {}",
             frame,
             format_bytes_pretty(debug_log.mem_used),
             format_bytes_pretty(engine_state.frame_alloc.high_water_mark),
             format_bytes_pretty(engine_state.frame_alloc.cap)
-        ),
-        colors::rgb(144, 144, 144),
-    );
-    overlay.add_line_color(
-        &format!(
+        ))
+        .with_color(colors::rgb(144, 144, 144));
+    overlay
+        .add_line(&format!(
             "{:<39}: {:<15}: {:7}: {:>7}",
             "procedure_name", "tot_time", "n_calls", "t/call"
-        ),
-        colors::rgb(204, 0, 102),
-    );
-    overlay.add_line_color(&format!("{:─^80}", ""), colors::rgba(60, 60, 60, 180));
+        ))
+        .with_color(colors::rgb(204, 0, 102));
+    overlay
+        .add_line(&format!("{:─^80}", ""))
+        .with_color(colors::rgba(60, 60, 60, 180));
 
     let traces = &debug_log.get_frame(frame).unwrap().traces;
     let total_traced_time = tracer::total_traced_time(&traces);
@@ -178,7 +189,6 @@ pub fn update_graph_traced_fn(
         .sum();
 
     // @Robustness: we're demoting the u64 to a u32 just for laziness!
-    // If we refactor Cfg_Value to a Variant, make it support long integers!
     graph::add_point_and_scroll_with_metadata(
         graph,
         time,

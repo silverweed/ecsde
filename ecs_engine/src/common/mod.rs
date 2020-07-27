@@ -11,6 +11,7 @@ pub mod stringid;
 pub mod thread_safe_ptr;
 pub mod transform;
 pub mod units;
+pub mod variant;
 pub mod vector;
 
 pub type Maybe_Error = Result<(), Box<dyn std::error::Error>>;
