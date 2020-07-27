@@ -1,8 +1,14 @@
 #[cfg(feature = "audio-sfml")]
 mod sfml;
 
+#[cfg(feature = "audio-null")]
+mod null;
+
 #[cfg(feature = "audio-sfml")]
 use self::sfml as backend;
+
+#[cfg(feature = "audio-null")]
+use self::null as backend;
 
 pub type Sound_Buffer<'a> = backend::Sound_Buffer<'a>;
 pub type Sound<'a> = backend::Sound<'a>;

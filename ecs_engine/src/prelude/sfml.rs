@@ -11,7 +11,7 @@ macro_rules! sf_wrap {
 
         impl $typename<'_> {
             pub fn from_file(fname: &str) -> Option<Self> {
-                Some($typename {
+                Some(Self {
                     wrapped: <$sftypename>::from_file(fname)?,
                     _marker: &std::marker::PhantomData,
                 })

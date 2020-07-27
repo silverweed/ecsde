@@ -41,7 +41,7 @@ impl<'r> Audio_System<'r> {
         }
         let sound_buf = rsrc.get_sound(sound_handle);
         let mut sound = sound::create_sound_with_buffer(&sound_buf);
-        sound.play();
+        sound::play_sound(&mut sound);
         self.sounds_playing.push(sound);
     }
 

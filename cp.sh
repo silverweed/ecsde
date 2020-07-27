@@ -1,5 +1,6 @@
 #!/bin/bash
 
+mkdir -p target/{debug,release}/{cfg,assets/{textures,shaders}} && \
 cp assets/textures/* target/debug/assets/textures/ && \
 cp assets/textures/* target/release/assets/textures/ && \
 cp cfg/* target/debug/cfg/ && \

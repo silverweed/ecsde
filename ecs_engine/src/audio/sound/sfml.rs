@@ -1,6 +1,6 @@
 use sfml::audio as sfaud;
 
-pub(super) type Sound<'a> = sfaud::Sound<'a>;
+pub type Sound<'a> = sfaud::Sound<'a>;
 
 sf_wrap!(Sound_Buffer, sfml::audio::SoundBuffer);
 
