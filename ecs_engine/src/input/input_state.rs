@@ -7,7 +7,7 @@ use super::core_actions::Core_Action;
 use super::joystick_state::{self, Joystick_State};
 use crate::common::stringid::String_Id;
 use crate::core::env::Env_Info;
-use crate::gfx::window::{self, Event, Window_Handle};
+use crate::gfx::window::{self, copy_event, Event, Window_Handle};
 use std::convert::TryInto;
 
 pub type Input_Raw_Event = Event;
@@ -93,7 +93,7 @@ pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut
 
     while let Some(evt) = window::poll_event(window) {
         if is_core_event(&evt) {
-            raw_state.core_events.push(evt.clone());
+            raw_state.core_events.push(copy_event(&evt));
         }
         raw_state.events.push(evt);
     }
@@ -137,7 +137,7 @@ fn read_events_to_actions(
     };
 
     for event in raw_state.events.iter() {
-        process_event_func(event.clone(), raw_state, bindings, processed);
+        process_event_func(copy_event(&event), raw_state, bindings, processed);
     }
 }
 
@@ -147,7 +147,7 @@ fn process_event_core_and_game_actions(
     bindings: &Input_Bindings,
     processed: &mut Processed_Input,
 ) -> bool {
-    if process_event_core_actions(event.clone(), raw_state, bindings, processed) {
+    if process_event_core_actions(copy_event(&event), raw_state, bindings, processed) {
         return true;
     }
     process_event_game_actions(event, raw_state, bindings, processed)

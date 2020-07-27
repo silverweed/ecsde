@@ -1,5 +1,4 @@
 pub mod angle;
-pub mod thread_safe_ptr;
 pub mod bitset;
 pub mod colors;
 pub mod fixed_string;
@@ -9,6 +8,7 @@ pub mod rect;
 pub mod serialize;
 pub mod shapes;
 pub mod stringid;
+pub mod thread_safe_ptr;
 pub mod transform;
 pub mod units;
 pub mod vector;

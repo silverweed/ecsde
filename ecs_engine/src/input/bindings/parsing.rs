@@ -15,7 +15,7 @@ use std::vec::Vec;
 pub(super) fn parse_action_bindings_file(
     path: &Path,
 ) -> Result<HashMap<Input_Action, Vec<String_Id>>, String> {
-    let file = File::open(path).or_else(|_| Err(format!("Failed to open file {:?}!", path)))?;
+    let file = File::open(path).map_err(|_| format!("Failed to open file {:?}!", path))?;
     let lines = BufReader::new(file).lines().filter_map(|l| Some(l.ok()?));
     lok!("Parsed action bindings file {:?}", path);
     Ok(parse_action_bindings_lines(lines))
@@ -23,7 +23,7 @@ pub(super) fn parse_action_bindings_file(
 
 pub(super) fn parse_axis_bindings_file(path: &Path) -> Result<Axis_Bindings, String> {
     // @Cutnpaste from above
-    let file = File::open(path).or_else(|_| Err(format!("Failed to open file {:?}!", path)))?;
+    let file = File::open(path).map_err(|_| format!("Failed to open file {:?}!", path))?;
     let lines = BufReader::new(file).lines().filter_map(|l| Some(l.ok()?));
     lok!("Parsed axis bindings file {:?}", path);
     Ok(parse_axis_bindings_lines(lines))

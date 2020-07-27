@@ -264,12 +264,10 @@ impl Physics_World {
         &self,
         handle: Physics_Body_Handle,
     ) -> impl Iterator<Item = &Collider> + '_ {
-        let mut maybe_iter = self.get_physics_body(handle).and_then(move |body| {
-            Some(
-                body.rigidbody_colliders
-                    .iter()
-                    .map(move |(h, _)| self.get_collider(*h)),
-            )
+        let mut maybe_iter = self.get_physics_body(handle).map(move |body| {
+            body.rigidbody_colliders
+                .iter()
+                .map(move |(h, _)| self.get_collider(*h))
         });
         std::iter::from_fn(move || {
             if let Some(iter) = &mut maybe_iter {

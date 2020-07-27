@@ -1,8 +1,8 @@
 use super::temp_alloc::Temp_Allocator;
+use crate::common::thread_safe_ptr::Thread_Safe_Ptr;
+use std::marker::PhantomData;
 use std::mem::{align_of, size_of};
 use std::ops::{Deref, DerefMut, Index, IndexMut};
-use std::marker::PhantomData;
-use crate::common::thread_safe_ptr::Thread_Safe_Ptr;
 
 #[cfg(debug_assertions)]
 use super::temp_alloc::Gen_Type;
@@ -144,7 +144,7 @@ impl<T> Exclusive_Temp_Array<'_, T> {
     /// The data is safe to access otherwise.
     pub unsafe fn into_read_only(self) -> Read_Only_Temp_Array<T> {
         let arr = Read_Only_Temp_Array {
-            ptr: Thread_Safe_Ptr::from(self.ptr as *mut u8),
+            ptr: Thread_Safe_Ptr::from(self.ptr),
             n_elems: self.n_elems,
             _pd: PhantomData,
             #[cfg(debug_assertions)]
@@ -227,7 +227,7 @@ where
 }
 
 pub struct Read_Only_Temp_Array<T> {
-    ptr: Thread_Safe_Ptr<u8>,
+    ptr: Thread_Safe_Ptr<T>,
     n_elems: usize,
     _pd: PhantomData<T>,
 
@@ -249,7 +249,7 @@ impl<T> Drop for Read_Only_Temp_Array<T> {
         }
 
         if std::mem::needs_drop::<T>() {
-            let ptr: *mut T = self.ptr.raw_mut() as *mut _;
+            let ptr = self.ptr.raw_mut();
             for i in 0..self.n_elems {
                 unsafe {
                     ptr.add(i).drop_in_place();
@@ -261,7 +261,7 @@ impl<T> Drop for Read_Only_Temp_Array<T> {
 
 impl<T> Read_Only_Temp_Array<T> {
     pub fn as_slice(&self) -> &'_ [T] {
-        unsafe { std::slice::from_raw_parts(self.ptr.raw_mut() as *mut _, self.n_elems) }
+        unsafe { std::slice::from_raw_parts(self.ptr.raw_mut(), self.n_elems) }
     }
 }
 
@@ -278,7 +278,7 @@ impl<T> Index<usize> for Read_Only_Temp_Array<T> {
                 "Exclusive_Temp_Array accessed after free!"
             );
         }
-        let ptr = self.ptr.raw_mut() as *mut T;
+        let ptr = self.ptr.raw_mut();
         unsafe { &*ptr.add(idx) }
     }
 }

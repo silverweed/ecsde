@@ -104,6 +104,42 @@ fn init_demo_lights(lights: &mut Lights) {
         intensity: 2.0,
     };
     lights.add_point_light(light);
+
+    let light = Point_Light {
+        position: v2!(0., 60.),
+        radius: 150.,
+        attenuation: 0.0,
+        color: colors::BLUE,
+        intensity: 1.0,
+    };
+    lights.add_point_light(light);
+
+    let light = Point_Light {
+        position: v2!(-100., 0.),
+        radius: 150.,
+        attenuation: 0.0,
+        color: colors::YELLOW,
+        intensity: 1.0,
+    };
+    lights.add_point_light(light);
+
+    let light = Point_Light {
+        position: v2!(100., 100.),
+        radius: 150.,
+        attenuation: 0.0,
+        color: colors::RED,
+        intensity: 1.0,
+    };
+    lights.add_point_light(light);
+
+    let light = Point_Light {
+        position: v2!(0., 0.),
+        radius: 150.,
+        attenuation: 0.0,
+        color: colors::GREEN,
+        intensity: 1.0,
+    };
+    lights.add_point_light(light);
 }
 
 // @Temporary
