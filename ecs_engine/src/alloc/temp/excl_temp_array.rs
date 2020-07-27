@@ -1,6 +1,8 @@
 use super::temp_alloc::Temp_Allocator;
 use std::mem::{align_of, size_of};
 use std::ops::{Deref, DerefMut, Index, IndexMut};
+use std::marker::PhantomData;
+use crate::common::thread_safe_ptr::Thread_Safe_Ptr;
 
 #[cfg(debug_assertions)]
 use super::temp_alloc::Gen_Type;
@@ -142,10 +144,11 @@ impl<T> Exclusive_Temp_Array<'_, T> {
     /// The data is safe to access otherwise.
     pub unsafe fn into_read_only(self) -> Read_Only_Temp_Array<T> {
         let arr = Read_Only_Temp_Array {
-            ptr: self.ptr,
+            ptr: Thread_Safe_Ptr::from(self.ptr as *mut u8),
             n_elems: self.n_elems,
+            _pd: PhantomData,
             #[cfg(debug_assertions)]
-            parent_allocator: &*(self.parent_allocator as *const _),
+            parent_allocator: Thread_Safe_Ptr::from(self.parent_allocator as *const _ as *mut _),
             #[cfg(debug_assertions)]
             gen: self.gen,
         };
@@ -224,11 +227,12 @@ where
 }
 
 pub struct Read_Only_Temp_Array<T> {
-    ptr: *mut T,
+    ptr: Thread_Safe_Ptr<u8>,
     n_elems: usize,
+    _pd: PhantomData<T>,
 
     #[cfg(debug_assertions)]
-    parent_allocator: *const Temp_Allocator,
+    parent_allocator: Thread_Safe_Ptr<Temp_Allocator>,
     #[cfg(debug_assertions)]
     gen: Gen_Type,
 }
@@ -238,16 +242,17 @@ impl<T> Drop for Read_Only_Temp_Array<T> {
         #[cfg(debug_assertions)]
         {
             assert_eq!(
-                unsafe { (*self.parent_allocator).gen },
+                unsafe { (*self.parent_allocator.raw()).gen },
                 self.gen,
                 "Exclusive_Temp_Array accessed after free!"
             );
         }
 
         if std::mem::needs_drop::<T>() {
+            let ptr: *mut T = self.ptr.raw_mut() as *mut _;
             for i in 0..self.n_elems {
                 unsafe {
-                    self.ptr.add(i).drop_in_place();
+                    ptr.add(i).drop_in_place();
                 }
             }
         }
@@ -256,7 +261,7 @@ impl<T> Drop for Read_Only_Temp_Array<T> {
 
 impl<T> Read_Only_Temp_Array<T> {
     pub fn as_slice(&self) -> &'_ [T] {
-        unsafe { std::slice::from_raw_parts(self.ptr, self.n_elems) }
+        unsafe { std::slice::from_raw_parts(self.ptr.raw_mut() as *mut _, self.n_elems) }
     }
 }
 
@@ -268,12 +273,13 @@ impl<T> Index<usize> for Read_Only_Temp_Array<T> {
         #[cfg(debug_assertions)]
         {
             assert_eq!(
-                unsafe { (*self.parent_allocator).gen },
+                unsafe { (*self.parent_allocator.raw()).gen },
                 self.gen,
                 "Exclusive_Temp_Array accessed after free!"
             );
         }
-        unsafe { &*self.ptr.add(idx) }
+        let ptr = self.ptr.raw_mut() as *mut T;
+        unsafe { &*ptr.add(idx) }
     }
 }
 
@@ -293,6 +299,8 @@ impl<'a, T> IntoIterator for &'a Read_Only_Temp_Array<T> {
         self.iter()
     }
 }
+
+unsafe impl<T> Send for Read_Only_Temp_Array<T> {}
 
 #[cfg(test)]
 mod tests {

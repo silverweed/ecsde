@@ -279,10 +279,10 @@ pub fn draw_batches(
             let cast_shadows = material.cast_shadows;
             // @Temporary
             // @Speed! We can't use the temp array as it's not Send! Maybe we should make it Send (at least a read-only version of it)?
-            let mut shadows = vec![];
+            let mut shadows = temp::excl_temp_array(frame_alloc);//vec![];
             if cast_shadows {
                 for tex in sprites.iter() {
-                    let mut nearby_point_lights = Vec::with_capacity(SHADOWS_PER_ENTITY); // @Speed!
+                    let mut nearby_point_lights = smallvec::SmallVec::<[Point_Light; SHADOWS_PER_ENTITY]>::new();
 
                     // @Speed: should lights be spatially accelerated?
                     lights.get_all_point_lights_sorted_by_distance_within(
@@ -295,6 +295,8 @@ pub fn draw_batches(
                     shadows.push(nearby_point_lights);
                 }
             }
+
+            let shadows = unsafe { shadows.into_read_only() };
 
             let n_sprites_per_chunk = cmp::min(n_sprites, n_sprites / n_threads + 1);
 

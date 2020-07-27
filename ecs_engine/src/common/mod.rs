@@ -1,4 +1,5 @@
 pub mod angle;
+pub mod thread_safe_ptr;
 pub mod bitset;
 pub mod colors;
 pub mod fixed_string;
