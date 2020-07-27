@@ -1,6 +1,6 @@
-use crate::input::bindings::keyboard;
-use crate::input::bindings::mouse;
-//use crate::input::bindings::joystick::{Joystick_Id, Button_Id as Joystick_Button_Id};
+use crate::input::keyboard;
+use crate::input::mouse;
+//use crate::input::joystick::{Joystick_Id, Button_Id as Joystick_Button_Id};
 use super::Input_Raw_Event;
 use crate::gfx::window::Event as Win_Event;
 

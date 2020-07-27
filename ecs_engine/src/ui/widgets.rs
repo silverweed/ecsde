@@ -5,8 +5,8 @@ use crate::common::rect::Rectf;
 use crate::common::vector::Vec2f;
 use crate::gfx::render_window::Render_Window_Handle;
 use crate::gfx::window::mouse_pos_in_window;
-use crate::input::bindings::mouse::{mouse_went_down, mouse_went_up, Mouse_Button};
 use crate::input::input_state::Input_State;
+use crate::input::mouse::{mouse_went_down, mouse_went_up, Mouse_Button};
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
 pub struct By_Activeness<T> {

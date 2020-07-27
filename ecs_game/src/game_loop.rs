@@ -820,7 +820,7 @@ fn update_joystick_debug_overlay(
     input_cfg: crate::input_utils::Input_Config,
     cfg: &ecs_engine::cfg::Config,
 ) {
-    use input::bindings::joystick;
+    use input::joystick;
 
     debug_overlay.clear();
 

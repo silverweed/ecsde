@@ -1,19 +1,15 @@
+use super::joystick::{self, Joystick_Button};
 use super::joystick_state::Joystick_State;
+use super::keyboard::Key;
+use super::mouse::{self, Mouse_Button};
 use crate::common::stringid::String_Id;
 use std::collections::HashMap;
 use std::path::Path;
 use std::vec::Vec;
 
-pub mod joystick;
-pub mod keyboard;
-pub mod mouse;
-
 mod parsing;
 
 use self::modifiers::*;
-use joystick::Joystick_Button;
-use keyboard::Key;
-use mouse::Mouse_Button;
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum Input_Action_Simple {

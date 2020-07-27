@@ -1,10 +1,9 @@
-use super::joystick;
-use super::keyboard;
-use super::mouse;
 use super::{Input_Action, Input_Action_Modifiers, Input_Action_Simple};
 use crate::common::stringid::String_Id;
-use crate::input::bindings::Axis_Bindings;
-use crate::input::bindings::Axis_Emulation_Type;
+use crate::input::bindings::{Axis_Bindings, Axis_Emulation_Type};
+use crate::input::joystick;
+use crate::input::keyboard;
+use crate::input::mouse;
 use smallvec::*;
 use std::collections::HashMap;
 use std::fs::File;

@@ -1,4 +1,4 @@
-use super::bindings::joystick::{self, Joystick, Joystick_Axis, Joystick_Id, Joystick_Mask};
+use super::joystick::{self, Joystick, Joystick_Axis, Joystick_Id, Joystick_Mask};
 
 const JOY_COUNT: usize = joystick::JOY_COUNT as usize;
 

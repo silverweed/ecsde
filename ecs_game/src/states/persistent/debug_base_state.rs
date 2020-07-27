@@ -9,8 +9,8 @@ use ecs_engine::common::vector::{Vec2f, Vec2i};
 use ecs_engine::ecs::components::base::C_Spatial2D;
 use ecs_engine::ecs::entity_stream::new_entity_stream;
 use ecs_engine::gfx::{render, render_window, window};
-use ecs_engine::input::bindings::mouse;
 use ecs_engine::input::input_state::{Action_Kind, Game_Action};
+use ecs_engine::input::mouse;
 use std::time::Duration;
 
 pub struct Debug_Base_State {

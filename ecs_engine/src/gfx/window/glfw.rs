@@ -83,6 +83,8 @@ pub fn get_window_real_size<W: AsRef<Window_Handle>>(window: &W) -> (u32, u32) {
 
 pub fn poll_event<W: AsMut<Window_Handle>>(window: &mut W) -> Option<Event> {
     // @Incomplete
+    //window.glfw.poll_events_unbuffered(|_, evt| Some(evt));
+    //for (_, evt) in glfw::flush_messages(&window.event_receiver) {
     let window = window.as_mut();
     window.glfw.poll_events();
     glfw::flush_messages(&window.event_receiver)

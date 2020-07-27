@@ -1,4 +1,4 @@
-use crate::input::bindings::joystick::Joystick_Id;
+use crate::input::joystick::Joystick_Id;
 
 /// These actions are directly handled by the engine, without external configuration from data
 #[non_exhaustive]

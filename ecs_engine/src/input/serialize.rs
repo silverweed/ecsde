@@ -1,6 +1,6 @@
 use crate::common::serialize::{Binary_Serializable, Byte_Stream};
-use crate::input::bindings::{keyboard, mouse};
 use crate::input::events::Input_Raw_Event;
+use crate::input::{keyboard, mouse};
 use std::io;
 
 const PRE_KEY_PRESSED: u8 = 0x0;

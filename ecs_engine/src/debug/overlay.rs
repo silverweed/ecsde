@@ -195,7 +195,7 @@ impl Debug_Element for Debug_Overlay {
         input_state: &Input_State,
     ) {
         use crate::gfx::window;
-        use crate::input::bindings::mouse;
+        use crate::input::mouse;
 
         if !self.config.hoverable {
             return;

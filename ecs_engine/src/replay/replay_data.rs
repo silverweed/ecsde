@@ -2,11 +2,11 @@
 
 use crate::common::serialize::{Binary_Serializable, Byte_Stream};
 use crate::core::rand::Default_Rng_Seed;
-use crate::input::bindings::joystick::{self, Joystick_Mask};
-use crate::input::bindings::mouse::Mouse_State;
 use crate::input::events::Input_Raw_Event;
 use crate::input::input_state::Input_Raw_State;
+use crate::input::joystick::{self, Joystick_Mask};
 use crate::input::joystick_state::Joystick_State;
+use crate::input::mouse::Mouse_State;
 use crate::input::serialize;
 use std::default::Default;
 use std::fs::File;

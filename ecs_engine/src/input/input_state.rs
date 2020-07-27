@@ -1,11 +1,11 @@
 use super::axes;
-use super::bindings::joystick;
-use super::bindings::keyboard::{self, Keyboard_State};
-use super::bindings::mouse::{self, Mouse_State};
 use super::bindings::{Axis_Emulation_Type, Input_Action_Modifiers, Input_Bindings};
 use super::core_actions::Core_Action;
 use super::events::{self, Input_Raw_Event};
+use super::joystick;
 use super::joystick_state::{self, Joystick_State};
+use super::keyboard::{self, Keyboard_State};
+use super::mouse::{self, Mouse_State};
 use crate::common::stringid::String_Id;
 use crate::core::env::Env_Info;
 use crate::gfx::window::{self, Window_Handle};

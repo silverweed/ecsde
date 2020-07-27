@@ -6,9 +6,9 @@ use crate::gfx::paint_props::Paint_Properties;
 use crate::gfx::render;
 use crate::gfx::render_window::Render_Window_Handle;
 use crate::gfx::window;
-use crate::input::bindings::keyboard::Key;
-use crate::input::bindings::mouse::Mouse_Button;
 use crate::input::events::Input_Raw_Event;
+use crate::input::keyboard::Key;
+use crate::input::mouse::Mouse_Button;
 use crate::resources::gfx::{Font_Handle, Gfx_Resources};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
