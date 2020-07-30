@@ -67,13 +67,14 @@ impl Debug_Painter {
             .push((String::from(text), world_pos, font_size, props.into()));
     }
 
-    pub fn add_shaded_text<T>(
+    pub fn add_shaded_text_with_shade_distance<T>(
         &mut self,
         text: &str,
         world_pos: Vec2f,
         font_size: u16,
         props: T,
         shade_color: Color,
+        shade_distance: Vec2f,
     ) where
         T: Into<Paint_Properties>,
     {
@@ -84,12 +85,25 @@ impl Debug_Painter {
         };
         self.texts.push((
             String::from(text),
-            world_pos + v2!(1., 1.),
+            world_pos + shade_distance,
             font_size,
             shade_props,
         ));
         self.texts
             .push((String::from(text), world_pos, font_size, props));
+    }
+
+    pub fn add_shaded_text<T>(
+        &mut self,
+        text: &str,
+        world_pos: Vec2f,
+        font_size: u16,
+        props: T,
+        shade_color: Color,
+    ) where
+        T: Into<Paint_Properties>,
+    {
+        self.add_shaded_text_with_shade_distance(text, world_pos, font_size, props, shade_color, v2!(1., 1.));
     }
 
     pub fn add_line<T>(&mut self, line: Line, props: T)

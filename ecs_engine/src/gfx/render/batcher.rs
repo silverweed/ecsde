@@ -132,7 +132,7 @@ pub(super) fn add_texture_ws(
         &mut z_index_texmap
             .entry(material)
             .or_insert_with(|| {
-                ldebug!("creating buffer for material {:?}", material,);
+                ldebug!("creating buffer for material {:?}", material);
                 Sprite_Batch {
                     vbuffer: Vertex_Buffer_Holder::with_initial_vertex_count(
                         48,
@@ -173,16 +173,23 @@ pub fn clear_batches(batches: &mut Batches) {
 }
 
 #[inline(always)]
-// NOTE: we're only using 2 bytes out of the 4 we have: we may fit more data in the future! (maybe an indexed color?)
-fn encode_rot_as_color(rot: Angle) -> Color {
-    const MAX_ENCODED: u32 = std::u16::MAX as u32;
+// This returns the vec4 value that will be put into gl_Color.
+// It contains:
+//    r: rotation high byte
+//    g: rotation low byte
+//    b: empty
+//    a: vertex alpha 
+fn encode_rot_and_alpha_as_color(rot: Angle, alpha: u8) -> Color {
+    const TAU: f32 = std::f32::consts::PI * 2.0;
+    const MAX_ENCODED: u32 = u16::MAX as u32;
+
     let rad = rot.as_rad_0tau();
-    let encoded = (rad * MAX_ENCODED as f32 / std::f32::consts::PI * 0.5) as u32;
+    let encoded_rad = (rad * MAX_ENCODED as f32 / TAU) as u32;
     Color {
-        r: 0,
-        g: 0,
-        b: ((encoded >> 8) & 0xFF) as u8,
-        a: (encoded & 0xFF) as u8,
+        r: ((encoded_rad >> 8) & 0xFF) as u8,
+        g: (encoded_rad & 0xFF) as u8,
+        b: 0,
+        a: alpha
     }
 }
 
@@ -363,9 +370,8 @@ pub fn draw_batches(
                                     Vec2f::new(tex_rect.width as _, tex_rect.height as _);
                                 let render_transform = *transform;
 
-                                // Encode rotation in color
                                 let color = if has_shader {
-                                    encode_rot_as_color(transform.rotation())
+                                    encode_rot_and_alpha_as_color(transform.rotation(), color.a)
                                 } else {
                                     *color
                                 };
@@ -474,7 +480,7 @@ pub fn draw_batches(
 
                                 // Encode rotation in color
                                 let color = if has_shader {
-                                    encode_rot_as_color(transform.rotation())
+                                    encode_rot_and_alpha_as_color(transform.rotation(), color.a)
                                 } else {
                                     *color
                                 };

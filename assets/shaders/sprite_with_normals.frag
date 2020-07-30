@@ -30,17 +30,16 @@ varying vec2 world_pos;
 float decode_rot(vec4 color) {
     int r = int(255.0 * color.r);
     int g = int(255.0 * color.g);
-    int b = int(255.0 * color.b);
-    int a = int(255.0 * color.a);
 
-    return float((r << 24) | (g << 16) | (b << 8) | a) / float(MAX_ENCODED_ANGLE) * 2.0 * PI;
+    return float((r << 8) | g) / float(MAX_ENCODED_ANGLE) * 2.0 * PI;
 }
 
 void main() {
     vec4 pixel = texture2D(texture, gl_TexCoord[0].xy);
 
-    // Note: gl_Color contains the sprite's rotation
+    // Note: gl_Color.rg contains the sprite's rotation
     float sprite_rot = decode_rot(gl_Color);
+    float vert_alpha = gl_Color.a;
     vec3 color = vec3(1.0);
 
     color *= ambient_light.color * ambient_light.intensity;
@@ -80,5 +79,5 @@ void main() {
         color += result * atten;
     }
 
-    gl_FragColor = vec4(color.rgb * pixel.rgb, pixel.a);
+    gl_FragColor = vec4(color.rgb * pixel.rgb, pixel.a * vert_alpha);
 }

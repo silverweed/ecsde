@@ -1133,7 +1133,7 @@ fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs
         let comp_set = ecs_world.get_entity_comp_set(entity);
         let comp_set_b: &Bit_Set = comp_set.borrow();
         for (i, handle) in comp_set_b.into_iter().enumerate() {
-            debug_painter.add_shaded_text(
+            debug_painter.add_shaded_text_with_shade_distance(
                 &format!(
                     " {}",
                     ecs_world::component_name_from_handle(
@@ -1146,6 +1146,7 @@ fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs
                 6,
                 colors::WHITE,
                 colors::BLACK,
+                v2!(0.5, 0.5),
             );
         }
     });

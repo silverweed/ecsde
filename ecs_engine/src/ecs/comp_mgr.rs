@@ -18,9 +18,6 @@ pub(super) type Component_Handle = u32;
 pub struct Component_Manager {
     /// Note: storage is None for ZST components
     storages: Vec<Option<Component_Storage>>,
-    /// This is only used when dealing with components dynamically (e.g. remove_all_components)
-    /// since we cannot know the component size by its handle alone.
-    is_zst: Vec<bool>,
 
     last_comp_handle: Component_Handle,
     handles: HashMap<TypeId, Component_Handle>,
@@ -121,7 +118,6 @@ impl Component_Manager {
     pub fn new() -> Self {
         Self {
             storages: vec![],
-            is_zst: vec![],
             last_comp_handle: 0,
             handles: HashMap::new(),
             entity_comp_set: vec![],
@@ -145,7 +141,6 @@ impl Component_Manager {
         } else {
             None
         });
-        self.is_zst.push(size_of::<T>() == 0);
 
         #[cfg(debug_assertions)]
         {
@@ -246,7 +241,7 @@ impl Component_Manager {
     pub fn remove_all_components(&mut self, entity: Entity) {
         let comp_set = self.entity_comp_set[entity.index as usize].clone();
         for handle in &comp_set {
-            if !self.is_zst[handle as usize] {
+            if self.storages[handle as usize].is_some() {
                 unsafe {
                     self.must_get_storage_mut(handle as _)
                         .remove_component_dyn(entity);
