@@ -1,6 +1,7 @@
 #![allow(warnings)] // @Temporary
 
 use super::levels::{Level, Levels};
+use super::systems::entity_fade_system::Entity_Fade_System;
 use super::systems::controllable_system::{self, C_Controllable};
 use super::systems::dumb_movement_system;
 use super::systems::entity_preview_system::{self, C_Entity_Preview};
@@ -53,6 +54,7 @@ pub struct Gameplay_System {
 
     ground_collision_calc_system: Ground_Collision_Calculation_System,
     pub pixel_collision_system: Pixel_Collision_System,
+    entity_fade_system: Entity_Fade_System,
 
     pub cursor_entity: Option<Entity>,
 
@@ -75,6 +77,7 @@ impl Gameplay_System {
             cfg: Gameplay_System_Config::default(),
             ground_collision_calc_system: Ground_Collision_Calculation_System::new(),
             pixel_collision_system: Pixel_Collision_System::default(),
+            entity_fade_system: Entity_Fade_System::default(),
             cursor_entity: None,
             #[cfg(debug_assertions)]
             debug_data: Debug_Data::default(),
@@ -165,6 +168,7 @@ impl Gameplay_System {
         let levels = &self.levels;
         let input_cfg = self.input_cfg;
         let ground_collision_calc_system = &mut self.ground_collision_calc_system;
+        let entity_fade_system = &mut self.entity_fade_system;
         let frame_alloc = &mut engine_state.frame_alloc;
         let gres = &mut rsrc.gfx;
         let env = &engine_state.env;
@@ -199,6 +203,7 @@ impl Gameplay_System {
                 &actions,
                 cfg,
             );
+            entity_fade_system.update(&mut level.world, &level.phys_world, &dt);
 
             level.chunks.update(&mut level.world, &level.phys_world);
         });
@@ -463,7 +468,7 @@ fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration) {
             use ecs_engine::common::angle::deg;
             let speed = 90.0;
             //if i == 1 {
-            //t.transform.rotate(deg(dt_secs * speed));
+            t.transform.rotate(deg(dt_secs * speed));
             //}
             //let prev_pos = t.local_transform.position();
             //t.local_transform.set_position(
