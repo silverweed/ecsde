@@ -12,6 +12,7 @@ path = "../ecs_engine"
 
 [dependencies]
 rayon = "1.3"
+lazy_static = "1.3"
 
 [dependencies.smallvec]
 default-features = false

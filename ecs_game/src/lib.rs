@@ -6,6 +6,10 @@
 #[macro_use]
 extern crate ecs_engine;
 
+#[cfg(debug_assertions)]
+#[macro_use]
+extern crate lazy_static;
+
 mod cmdline;
 mod collisions;
 mod directions;

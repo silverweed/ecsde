@@ -18,7 +18,34 @@ use ecs_engine::gfx::render;
 use ecs_engine::resources::gfx::{shader_path, tex_path, Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
-use crate::debug::entity_debug::C_Debug_Data;
+use {
+    crate::debug::entity_debug::C_Debug_Data,
+    std::collections::HashMap,
+    std::sync::Mutex,
+};
+
+#[cfg(debug_assertions)]
+fn next_name(name: &'static str) -> String {
+    lazy_static! {
+        static ref N: Mutex<HashMap<&'static str, usize>> = Mutex::new(HashMap::new());
+    }
+
+    let mut guard = N.lock().unwrap();
+    let n_ref = guard.entry(&name).or_insert(0);
+    let n = *n_ref;
+    *n_ref += 1;
+    format!("{}_{}", name, n)
+
+}
+
+#[cfg(debug_assertions)]
+fn add_debug_data<'a>(world: &'a mut Ecs_World, entity: Entity, name: &'static str) -> &'a mut C_Debug_Data {
+    let debug = world.add_component(entity, C_Debug_Data::default());
+        debug
+            .entity_name
+            .set(&next_name(name));
+        debug
+}
 
 pub fn create_jelly(
     world: &mut Ecs_World,
@@ -92,15 +119,7 @@ pub fn create_jelly(
 
     #[cfg(debug_assertions)]
     {
-        static mut N_JELLIES: usize = 0;
-
-        let debug = world.add_component(entity, C_Debug_Data::default());
-        debug
-            .entity_name
-            .set(&format!("Jelly_{}", unsafe { N_JELLIES }));
-        unsafe {
-            N_JELLIES += 1;
-        }
+        add_debug_data(world, entity, "Jelly");
     }
 
     entity
@@ -226,15 +245,7 @@ pub fn create_drill(
 
     #[cfg(debug_assertions)]
     {
-        static mut N_DRILLS: usize = 0;
-
-        let debug = world.add_component(entity, C_Debug_Data::default());
-        debug
-            .entity_name
-            .set(&format!("Drill_{}", unsafe { N_DRILLS }));
-        unsafe {
-            N_DRILLS += 1;
-        }
+        add_debug_data(world, entity, "Drill");
     }
 
     entity
@@ -291,8 +302,7 @@ pub fn create_sky(
 
     #[cfg(debug_assertions)]
     {
-        let debug = world.add_component(sky, C_Debug_Data::default());
-        debug.entity_name.set("Sky");
+        add_debug_data(world, sky, "Sky");
     }
 }
 
@@ -330,8 +340,7 @@ pub fn create_terrain(
 
     #[cfg(debug_assertions)]
     {
-        let debug = world.add_component(gnd, C_Debug_Data::default());
-        debug.entity_name.set("Terrain");
+        add_debug_data(world, gnd, "Terrain");
     }
 }
 
@@ -359,7 +368,7 @@ pub fn create_background(
 
     #[cfg(debug_assertions)]
     {
-        let debug = world.add_component(ground, C_Debug_Data::default());
-        debug.entity_name.set("Background");
+        add_debug_data(world, ground, "Background");
     }
 }
+
