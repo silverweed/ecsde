@@ -1013,7 +1013,7 @@ fn debug_draw_colliders(
         for collider in phys_world.get_all_colliders(ecs_world.get_component::<C_Collider>(entity).unwrap().handle) {
             // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
             // @Incomplete: scale?
-            let mut transform = Transform2D::from_pos_rot_scale(collider.position + collider.offset, rad(0.), v2!(1., 1.));
+            let mut transform = Transform2D::from_pos_rot_scale(collider.position, rad(0.), v2!(1., 1.));
 
             let color = if !collider.colliding_with.is_empty() {
                 colors::rgba(255, 0, 0, 100)

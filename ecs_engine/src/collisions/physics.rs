@@ -23,6 +23,7 @@ struct Rigidbody {
     pub shape: Collision_Shape,
     pub entity: Entity,
     pub position: Vec2f,
+    pub offset: Vec2f,
     pub velocity: Vec2f,
     pub phys_data: Phys_Data,
 }
@@ -449,11 +450,12 @@ pub fn update_collisions<T_Spatial_Accelerator>(
                     position,
                     velocity,
                     entity,
+                    offset,
                     ..
                 } = objects[cld];
 
                 let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
-                spatial.transform.set_position_v(position);
+                spatial.transform.set_position_v(position - offset);
                 spatial.velocity = velocity;
             }
         }
@@ -477,7 +479,7 @@ fn prepare_colliders_and_gather_rigidbodies(
         let pos = spatial.transform.position();
         spatial.frame_starting_pos = pos;
 
-        collider.position = pos;
+        collider.position = pos + collider.offset;
         collider.colliding_with.clear();
     }
 
@@ -494,6 +496,7 @@ fn prepare_colliders_and_gather_rigidbodies(
                     Rigidbody {
                         entity: rb_cld.entity,
                         position: rb_cld.position,
+                        offset: rb_cld.offset,
                         velocity,
                         shape: rb_cld.shape,
                         phys_data,
