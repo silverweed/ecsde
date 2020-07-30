@@ -1,5 +1,6 @@
 use crate::entities;
 use crate::gameplay_system::Gameplay_System_Config;
+use crate::systems::entity_fade_system::C_Fade_On_Contact;
 use crate::gfx::multi_sprite_animation_system::C_Multi_Renderable_Animation;
 use crate::gfx::shaders::*;
 use crate::levels::Level;
@@ -84,6 +85,7 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Multi_Renderable>();
     world.register_component::<C_Multi_Renderable_Animation>();
     world.register_component::<C_Entity_Preview>();
+    world.register_component::<C_Fade_On_Contact>();
 
     #[cfg(debug_assertions)]
     {
@@ -222,6 +224,16 @@ fn init_demo_entities(
         env,
         cfg,
         &Transform2D::from_pos_rot_scale(v2!(10., 10.), rad(0.), v2!(0.2, 0.2)),
+    );
+
+    entities::create_tower(
+        &mut level.world,
+        &mut level.phys_world,
+        gres,
+        shader_cache,
+        env,
+        cfg,
+        &Transform2D::from_pos(v2!(-90., 0.)),
     );
 }
 

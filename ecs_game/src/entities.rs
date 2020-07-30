@@ -1,5 +1,7 @@
 use crate::collisions::Game_Collision_Layer;
 use crate::gfx::multi_sprite_animation_system::{Animation_Track, C_Multi_Renderable_Animation};
+use crate::systems::entity_fade_system::C_Fade_On_Contact;
+use std::time::Duration;
 use crate::gfx::shaders::*;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::pixel_collision_system::C_Texture_Collider;
@@ -18,11 +20,7 @@ use ecs_engine::gfx::render;
 use ecs_engine::resources::gfx::{shader_path, tex_path, Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
-use {
-    crate::debug::entity_debug::C_Debug_Data,
-    std::collections::HashMap,
-    std::sync::Mutex,
-};
+use {crate::debug::entity_debug::C_Debug_Data, std::collections::HashMap, std::sync::Mutex};
 
 #[cfg(debug_assertions)]
 fn next_name(name: &'static str) -> String {
@@ -35,16 +33,17 @@ fn next_name(name: &'static str) -> String {
     let n = *n_ref;
     *n_ref += 1;
     format!("{}_{}", name, n)
-
 }
 
 #[cfg(debug_assertions)]
-fn add_debug_data<'a>(world: &'a mut Ecs_World, entity: Entity, name: &'static str) -> &'a mut C_Debug_Data {
+fn add_debug_data<'a>(
+    world: &'a mut Ecs_World,
+    entity: Entity,
+    name: &'static str,
+) -> &'a mut C_Debug_Data {
     let debug = world.add_component(entity, C_Debug_Data::default());
-        debug
-            .entity_name
-            .set(&next_name(name));
-        debug
+    debug.entity_name.set(&next_name(name));
+    debug
 }
 
 pub fn create_jelly(
@@ -372,3 +371,85 @@ pub fn create_background(
     }
 }
 
+pub fn create_tower(
+    world: &mut Ecs_World,
+    phys_world: &mut Physics_World,
+    gres: &mut Gfx_Resources,
+    shader_cache: &mut Shader_Cache,
+    env: &Env_Info,
+    _cfg: &Config,
+    transform: &Transform2D,
+) {
+    let entity = world.new_entity();
+    let renderable = world.add_component(
+    entity,
+    C_Renderable::new_with_diffuse(gres, env, "tower.png")
+    .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS)
+    .with_normals(gres, env, "tower_n.png")
+    .with_cast_shadows(true)
+    .with_z_index(2),
+    );
+
+    let (sw, sh) = render::get_texture_size(gres.get_texture(renderable.material.texture));
+
+    world.add_component(
+        entity,
+        C_Spatial2D {
+            transform: *transform,
+            ..Default::default()
+        },
+    );
+
+    let width = sw as f32 * transform.scale().x;
+    let half_height = sh as f32 * transform.scale().y * 0.5;
+    let cld = Collider {
+        shape: Collision_Shape::Rect {
+            width,
+            height: half_height,
+        },
+        layer: Game_Collision_Layer::Entities as _,
+        entity,
+        offset: v2!(0., sh as f32 * transform.scale().y * 0.25),
+        ..Default::default()
+    };
+    let phys_body = phys_world.new_physics_body_with_rigidbody(cld, Phys_Data::default());
+    let radius = 100.;
+    let area_trigger = phys_world.add_collider(Collider {
+        shape: Collision_Shape::Circle { radius },
+        layer: Game_Collision_Layer::Entities as _,
+        entity,
+        offset: v2!(radius * 0.5, radius * 0.5),
+        ..Default::default()
+    });
+    phys_world
+        .get_physics_body_mut(phys_body)
+        .unwrap()
+        .trigger_colliders
+        .push(area_trigger);
+    let top_trigger = phys_world.add_collider(Collider {
+        shape: Collision_Shape::Rect {
+            width,
+            height: half_height,
+        },
+        layer: Game_Collision_Layer::Entities as _,
+        entity,
+        offset: v2!(0., -(sh as f32 * transform.scale().y * 0.25)),
+        ..Default::default()
+    });
+    phys_world
+        .get_physics_body_mut(phys_body)
+        .unwrap()
+        .trigger_colliders
+        .push(top_trigger);
+    world.add_component(entity, C_Collider { handle: phys_body });
+
+    world.add_component(entity, C_Fade_On_Contact {
+        trigger_handle: top_trigger,
+        fade_duration: Duration::from_millis(400)
+    });
+
+    #[cfg(debug_assertions)]
+    {
+        add_debug_data(world, entity, "Tower");
+    }
+}
