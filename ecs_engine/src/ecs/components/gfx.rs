@@ -125,6 +125,7 @@ impl C_Renderable {
 #[derive(Copy, Clone, Debug, Default)]
 pub struct C_Multi_Renderable {
     pub renderables: [C_Renderable; Self::MAX_RENDERABLES],
+    /// Local transforms relative to the entity
     pub rend_transforms: [Transform2D; Self::MAX_RENDERABLES],
     pub n_renderables: u8,
 }
@@ -136,6 +137,11 @@ impl C_Multi_Renderable {
         assert!((self.n_renderables as usize) < self.renderables.len());
         self.renderables[self.n_renderables as usize] = renderable;
         self.n_renderables += 1;
+    }
+
+    pub fn add_with_local_transform(&mut self, renderable: C_Renderable, transform: &Transform2D) {
+        self.add(renderable);
+        self.rend_transforms[self.n_renderables as usize - 1] = *transform;
     }
 }
 

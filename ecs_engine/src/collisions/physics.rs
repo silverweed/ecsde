@@ -8,10 +8,17 @@ use crate::common::math::clamp;
 use crate::common::vector::{sanity_check_v, Vec2f};
 use crate::ecs::components::base::C_Spatial2D;
 use crate::ecs::ecs_world::{Ecs_World, Entity};
+use crate::events::evt_register::{Event, Event_Register};
 use rayon::prelude::*;
 use std::collections::HashMap;
 
 type Rigidbodies = HashMap<usize, Rigidbody>;
+
+pub struct Evt_Collision_Happened;
+
+impl Event for Evt_Collision_Happened {
+    type Args = (Collider, Collider);
+}
 
 #[derive(Default)]
 pub struct Physics_Settings {
@@ -398,6 +405,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
     accelerator: &T_Spatial_Accelerator,
     phys_world: &mut Physics_World,
     settings: &Physics_Settings,
+    evt_register: &mut Event_Register,
     #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
 ) where
     T_Spatial_Accelerator: Spatial_Accelerator<Collider_Handle>,
@@ -415,8 +423,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
     // @Audit: this is super unsafe! Transmuting `usizes` back to pointers.
     // This should work fine, because Colliders should not be moved during the
     // collision update, so the addresses should stay valid. The scariest point
-    // is whether it is UB or not converting to mut ptrs, but - I mean - why should it?
-    // Right, guys? ...right?
+    // is whether it is UB or not converting to mut ptrs, but, I mean, why should it, right??
     //
     // !!! BY THE WAY !!!
     // Probably we don't want to parallelize this ever. That would just throw more
@@ -426,6 +433,11 @@ pub fn update_collisions<T_Spatial_Accelerator>(
         (*(info.cld1 as *mut Collider)).colliding_with.push(body2);
         let body1 = (*(info.cld1 as *const Collider)).entity;
         (*(info.cld2 as *mut Collider)).colliding_with.push(body1);
+
+        evt_register.raise::<Evt_Collision_Happened>((
+            (*(info.cld1 as *const Collider)).clone(),
+            (*(info.cld2 as *const Collider)).clone(),
+        ));
     });
 
     // Note: this can be parallel because we're not actually using pointers; they're just
@@ -464,7 +476,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
 
 /// Returns { collider => rigidbody }
 /// Note that some entities may have non-physical colliders (i.e. trigger colliders),
-/// but each entity must have at most 1 physical collider.
+/// but each entity must have at most 1 physical collider. // :MultipleRigidbodies: lift this restriction!
 fn prepare_colliders_and_gather_rigidbodies(
     world: &mut Ecs_World,
     phys_world: &mut Physics_World,
@@ -492,6 +504,8 @@ fn prepare_colliders_and_gather_rigidbodies(
                 sanity_check_v(velocity);
 
                 objects.insert(
+                    // @Audit: converting the memory address to a usize to use as an identifier.
+                    // If this turns out to be a bad idea, consider putting an ID inside the Collider struct.
                     rb_cld as *const _ as usize,
                     Rigidbody {
                         entity: rb_cld.entity,

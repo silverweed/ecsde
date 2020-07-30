@@ -346,6 +346,7 @@ where
         let levels = &gameplay_system.levels;
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
         let phys_settings = &game_state.engine_state.systems.physics_settings;
+        let evt_register = &mut game_state.engine_state.systems.evt_register;
         #[cfg(debug_assertions)]
         let debug_systems = &mut game_state.engine_state.debug_systems;
 
@@ -360,6 +361,7 @@ where
                 &level.chunks,
                 &mut level.phys_world,
                 phys_settings,
+                evt_register,
                 #[cfg(debug_assertions)]
                 coll_debug,
             );
