@@ -51,7 +51,7 @@ mod tests {
         let e = ecs_world.new_entity();
         {
             let mut r = ecs_world.add_component(e, C_Renderable::default());
-            r.material.texture = gres.load_texture(&tex_path(&env, "plant.png"));
+            r.material.texture = gres.load_texture(&tex_path(&env, "ground.png"));
             r.rect = Rect::new(0, 0, 96, 96);
         }
         {

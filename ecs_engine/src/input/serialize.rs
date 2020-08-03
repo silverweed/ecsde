@@ -98,17 +98,13 @@ impl Binary_Serializable for Input_Raw_Event {
                 let button = input.read_u8()?;
                 let button =
                     mouse::num_to_mouse_btn(button as usize).ok_or(io::ErrorKind::InvalidData)?;
-                Ok(Input_Raw_Event::Mouse_Button_Pressed {
-                    button: button.into(),
-                })
+                Ok(Input_Raw_Event::Mouse_Button_Pressed { button })
             }
             PRE_MOUSE_RELEASED => {
                 let button = input.read_u8()?;
                 let button =
                     mouse::num_to_mouse_btn(button as usize).ok_or(io::ErrorKind::InvalidData)?;
-                Ok(Input_Raw_Event::Mouse_Button_Released {
-                    button: button.into(),
-                })
+                Ok(Input_Raw_Event::Mouse_Button_Released { button })
             }
             PRE_WHEEL_SCROLLED => {
                 let delta = input.read_f32()?;
@@ -125,10 +121,8 @@ impl Binary_Serializable for Input_Raw_Event {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use keyboard::sfml::{keypressed, keyreleased};
     use keyboard::Key;
-    use mouse::sfml::{mousepressed, mousereleased};
-    use sfml::window::mouse::Button;
+    use mouse::Mouse_Button;
 
     #[test]
     fn serialize_deserialize() {
@@ -138,17 +132,17 @@ mod tests {
             Input_Raw_Event::Key_Pressed { code: Key::A },
             Input_Raw_Event::Key_Released { code: Key::Escape },
             Input_Raw_Event::Mouse_Button_Pressed {
-                button: Button::Right,
+                button: Mouse_Button::Right,
             },
             Input_Raw_Event::Mouse_Button_Released {
-                button: Button::Left,
+                button: Mouse_Button::Left,
             },
             Input_Raw_Event::Joy_Button_Pressed {
-                joystickid: 0,
+                joystick_id: 0,
                 button: 2,
             },
             Input_Raw_Event::Joy_Button_Released {
-                joystickid: 3,
+                joystick_id: 3,
                 button: 0,
             },
         ];

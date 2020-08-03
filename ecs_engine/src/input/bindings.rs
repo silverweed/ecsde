@@ -305,7 +305,6 @@ impl Input_Action {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use modifiers::*;
 
     #[test]
     fn modifier_from_key() {

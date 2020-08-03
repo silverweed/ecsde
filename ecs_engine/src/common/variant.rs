@@ -44,3 +44,42 @@ impl_variant!(i64 => ILong);
 impl_variant!(u64 => ULong);
 impl_variant!(f64 => Double);
 impl_variant!(String => String);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::convert::TryFrom;
+
+    #[test]
+    fn val_to_variant() {
+        assert_eq!(Variant::from(true), Variant::Bool(true));
+        assert_eq!(Variant::from(2), Variant::Int(2));
+        assert_eq!(Variant::from(2u32), Variant::UInt(2));
+        assert_eq!(Variant::from(2.0f32), Variant::Float(2.0));
+        assert_eq!(Variant::from(2.0), Variant::Double(2.0));
+        assert_eq!(
+            Variant::from("2".to_string()),
+            Variant::String("2".to_string())
+        );
+        assert_eq!(Variant::from(2i64), Variant::ILong(2));
+        assert_eq!(Variant::from(2u64), Variant::ULong(2));
+    }
+
+    #[test]
+    fn variant_to_val() {
+        assert_eq!(bool::try_from(Variant::Bool(true)), Ok(true));
+        assert_eq!(i32::try_from(Variant::Int(2)), Ok(2));
+        assert_eq!(u32::try_from(Variant::UInt(2)), Ok(2u32));
+        assert_eq!(f32::try_from(Variant::Float(2.0)), Ok(2.0));
+        assert_eq!(
+            String::try_from(Variant::String("2".to_string())),
+            Ok("2".to_string())
+        );
+        assert_eq!(i64::try_from(Variant::ILong(2)), Ok(2i64));
+        assert_eq!(u64::try_from(Variant::ULong(2)), Ok(2u64));
+
+        assert_eq!(i32::try_from(Variant::UInt(2)), Err(()));
+        assert_eq!(String::try_from(Variant::Int(2)), Err(()));
+        assert_eq!(u32::try_from(Variant::Bool(false)), Err(()));
+    }
+}

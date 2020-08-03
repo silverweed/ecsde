@@ -28,36 +28,3 @@ impl From<&str> for Cfg_Value {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn val_to_cfg_value() {
-        assert_eq!(Cfg_Value::from(true), Cfg_Value::Bool(true));
-        assert_eq!(Cfg_Value::from(2), Cfg_Value::Int(2));
-        assert_eq!(Cfg_Value::from(2u32), Cfg_Value::UInt(2));
-        assert_eq!(Cfg_Value::from(2.0), Cfg_Value::Float(2.0));
-        assert_eq!(
-            Cfg_Value::from("2".to_string()),
-            Cfg_Value::String("2".to_string())
-        );
-    }
-
-    #[test]
-    fn cfg_value_to_val() {
-        assert_eq!(bool::try_from(Cfg_Value::Bool(true)), Ok(true));
-        assert_eq!(i32::try_from(Cfg_Value::Int(2)), Ok(2));
-        assert_eq!(u32::try_from(Cfg_Value::UInt(2)), Ok(2u32));
-        assert_eq!(f32::try_from(Cfg_Value::Float(2.0)), Ok(2.0));
-        assert_eq!(
-            String::try_from(Cfg_Value::String("2".to_string())),
-            Ok("2".to_string())
-        );
-
-        assert_eq!(i32::try_from(Cfg_Value::UInt(2)), Err(()));
-        assert_eq!(String::try_from(Cfg_Value::Int(2)), Err(()));
-        assert_eq!(u32::try_from(Cfg_Value::Bool(false)), Err(()));
-    }
-}

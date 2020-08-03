@@ -99,6 +99,11 @@ fn parse_action_bindings_lines(
     bindings
 }
 
+// Converts a string like "ctrl + Num2" into one or more Input_Actions.
+// If the modifier is one that stands as one of multiple possible modifiers
+// (e.g. 'ctrl' stands for 'lctrl or rctrl'), one action per possible modifier
+// is returned. If several modifiers are added (like 'ctrl + shift'), their
+// cartesian product is returned.
 fn parse_action(mods_and_key: &str) -> SmallVec<[Input_Action; 2]> {
     let mods_and_key_split = mods_and_key.split('+').map(str::trim).collect::<Vec<_>>();
     let key_raw = mods_and_key_split[mods_and_key_split.len() - 1];
@@ -108,18 +113,41 @@ fn parse_action(mods_and_key: &str) -> SmallVec<[Input_Action; 2]> {
             // Note: certain modifier keys count as "either X or Y", so they produce
             // multiple results.
             let ms = parse_modifier(modif);
-            for i in 0..ms.len() {
-                if i < modifiers.len() {
-                    modifiers[i] |= ms[i];
-                } else {
-                    modifiers.push(ms[i]);
-                }
-            }
+            modifiers.push(ms);
         }
         if modifiers.is_empty() {
             smallvec![Input_Action::new(key)]
         } else {
-            modifiers
+            // Extract all the possible combinations of modifiers
+            let mut merged_modifiers = vec![];
+            let mut cursors = std::iter::repeat(0usize)
+                .take(modifiers.len())
+                .collect::<Vec<_>>();
+            loop {
+                let mut modif = 0;
+                for (i, &curs) in cursors.iter().enumerate() {
+                    modif |= modifiers[i][curs];
+                }
+                merged_modifiers.push(dbg!(modif));
+                let mut curs_idx = 0;
+                let mut all_maxed = true;
+                while curs_idx < cursors.len() {
+                    if cursors[curs_idx] == modifiers[curs_idx].len() - 1 {
+                        curs_idx += 1;
+                    } else {
+                        all_maxed = false;
+                        for curs in cursors.iter_mut().take(curs_idx) {
+                            *curs = 0;
+                        }
+                        cursors[curs_idx] += 1;
+                        break;
+                    }
+                }
+                if all_maxed {
+                    break;
+                }
+            }
+            merged_modifiers
                 .into_iter()
                 .map(|m| Input_Action::new_with_modifiers(key, m))
                 .collect()
@@ -333,7 +361,7 @@ mod tests {
             "# This is a sample file",
             "action1: Num0",
             "action2: Num1,ctrl+Num2#This is an action",
-            "   action3   :   SHIFT +  alt +Num3,",
+            "   action3   :   ctrl+SHIFT +  alt +Num3,",
             " action4:",
             "",
             "##############",
@@ -349,9 +377,9 @@ mod tests {
         .iter()
         .map(|&s| String::from(s))
         .collect();
-        let parsed = parse_action_bindings_lines(lines.into_iter());
+        let parsed = dbg!(parse_action_bindings_lines(lines.into_iter()));
 
-        assert_eq!(parsed.len(), 15);
+        assert_eq!(parsed.len(), 23);
         assert_eq!(
             parsed[&Input_Action::new(Input_Action_Simple::Key(Key::Num0))],
             vec![String_Id::from("action1"), String_Id::from("action6")]
@@ -362,13 +390,13 @@ mod tests {
         );
         assert_eq!(
             parsed
-                [&Input_Action::new_with_modifiers(Input_Action_Simple::Key(Key::Num2), MOD_CTRL)],
+                [&Input_Action::new_with_modifiers(Input_Action_Simple::Key(Key::Num2), MOD_LCTRL)],
             vec![String_Id::from("action2")]
         );
         assert_eq!(
             parsed[&Input_Action::new_with_modifiers(
                 Input_Action_Simple::Key(Key::Num3),
-                MOD_SHIFT | MOD_ALT
+                MOD_RSHIFT | MOD_LALT | MOD_RCTRL
             )],
             vec![String_Id::from("action3")]
         );

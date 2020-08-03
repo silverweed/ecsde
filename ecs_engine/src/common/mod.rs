@@ -2,6 +2,7 @@ pub mod angle;
 pub mod bitset;
 pub mod colors;
 pub mod fixed_string;
+pub mod iter_utils;
 pub mod math;
 pub mod matrix;
 pub mod rect;
