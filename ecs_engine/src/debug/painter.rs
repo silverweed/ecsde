@@ -103,7 +103,14 @@ impl Debug_Painter {
     ) where
         T: Into<Paint_Properties>,
     {
-        self.add_shaded_text_with_shade_distance(text, world_pos, font_size, props, shade_color, v2!(1., 1.));
+        self.add_shaded_text_with_shade_distance(
+            text,
+            world_pos,
+            font_size,
+            props,
+            shade_color,
+            v2!(1., 1.),
+        );
     }
 
     pub fn add_line<T>(&mut self, line: Line, props: T)

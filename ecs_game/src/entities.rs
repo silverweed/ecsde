@@ -1,9 +1,8 @@
 use crate::collisions::Game_Collision_Layer;
 use crate::gfx::multi_sprite_animation_system::{Animation_Track, C_Multi_Renderable_Animation};
-use crate::systems::entity_fade_system::C_Fade_On_Contact;
-use std::time::Duration;
 use crate::gfx::shaders::*;
 use crate::systems::controllable_system::C_Controllable;
+use crate::systems::entity_fade_system::C_Fade_On_Contact;
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use ecs_engine::cfg::{Cfg_Var, Config};
 use ecs_engine::collisions::collider::{C_Collider, Collider, Collision_Shape};
@@ -18,6 +17,7 @@ use ecs_engine::ecs::components::gfx::{
 use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
 use ecs_engine::gfx::render;
 use ecs_engine::resources::gfx::{shader_path, tex_path, Gfx_Resources, Shader_Cache};
+use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use {crate::debug::entity_debug::C_Debug_Data, std::collections::HashMap, std::sync::Mutex};
@@ -382,12 +382,12 @@ pub fn create_tower(
 ) {
     let entity = world.new_entity();
     let renderable = world.add_component(
-    entity,
-    C_Renderable::new_with_diffuse(gres, env, "tower.png")
-    .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS)
-    .with_normals(gres, env, "tower_n.png")
-    .with_cast_shadows(true)
-    .with_z_index(2),
+        entity,
+        C_Renderable::new_with_diffuse(gres, env, "tower.png")
+            .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS)
+            .with_normals(gres, env, "tower_n.png")
+            .with_cast_shadows(true)
+            .with_z_index(2),
     );
 
     let (sw, sh) = render::get_texture_size(gres.get_texture(renderable.material.texture));
@@ -443,10 +443,14 @@ pub fn create_tower(
         .push(top_trigger);
     world.add_component(entity, C_Collider { handle: phys_body });
 
-    world.add_component(entity, C_Fade_On_Contact {
-        trigger_handle: top_trigger,
-        fade_duration: Duration::from_millis(400)
-    });
+    world.add_component(
+        entity,
+        C_Fade_On_Contact {
+            trigger_handle: top_trigger,
+            fade_duration: Duration::from_millis(200),
+            min_alpha: 80,
+        },
+    );
 
     #[cfg(debug_assertions)]
     {

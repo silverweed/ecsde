@@ -1,12 +1,12 @@
 use crate::entities;
 use crate::gameplay_system::Gameplay_System_Config;
-use crate::systems::entity_fade_system::C_Fade_On_Contact;
 use crate::gfx::multi_sprite_animation_system::C_Multi_Renderable_Animation;
 use crate::gfx::shaders::*;
 use crate::levels::Level;
 use crate::spatial::World_Chunks;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::dumb_movement_system::C_Dumb_Movement;
+use crate::systems::entity_fade_system::C_Fade_On_Contact;
 use crate::systems::entity_preview_system::C_Entity_Preview;
 use crate::systems::ground_collision_calculation_system::C_Ground;
 use crate::systems::pixel_collision_system::C_Texture_Collider;

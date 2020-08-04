@@ -178,7 +178,7 @@ pub fn clear_batches(batches: &mut Batches) {
 //    r: rotation high byte
 //    g: rotation low byte
 //    b: empty
-//    a: vertex alpha 
+//    a: vertex alpha
 fn encode_rot_and_alpha_as_color(rot: Angle, alpha: u8) -> Color {
     const TAU: f32 = std::f32::consts::PI * 2.0;
     const MAX_ENCODED: u32 = u16::MAX as u32;
@@ -189,7 +189,7 @@ fn encode_rot_and_alpha_as_color(rot: Angle, alpha: u8) -> Color {
         r: ((encoded_rad >> 8) & 0xFF) as u8,
         g: (encoded_rad & 0xFF) as u8,
         b: 0,
-        a: alpha
+        a: alpha,
     }
 }
 

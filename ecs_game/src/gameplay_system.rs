@@ -1,9 +1,9 @@
 #![allow(warnings)] // @Temporary
 
 use super::levels::{Level, Levels};
-use super::systems::entity_fade_system::Entity_Fade_System;
 use super::systems::controllable_system::{self, C_Controllable};
 use super::systems::dumb_movement_system;
+use super::systems::entity_fade_system::Entity_Fade_System;
 use super::systems::entity_preview_system::{self, C_Entity_Preview};
 use super::systems::ground_collision_calculation_system::Ground_Collision_Calculation_System;
 use super::systems::pixel_collision_system::Pixel_Collision_System;
@@ -465,10 +465,10 @@ fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration) {
         //t.velocity = Vec2f::new(-50.0, 0.);
         //}
         {
-            use ecs_engine::common::angle::deg;
-            let speed = 90.0;
+            //use ecs_engine::common::angle::deg;
+            //let speed = 90.0;
             //if i == 1 {
-            t.transform.rotate(deg(dt_secs * speed));
+            //t.transform.rotate(deg(dt_secs * speed));
             //}
             //let prev_pos = t.local_transform.position();
             //t.local_transform.set_position(
