@@ -28,7 +28,7 @@ use {
         ecs::components::base::C_Spatial2D,
         ecs::ecs_world::{self, Ecs_World},
         gfx::paint_props::Paint_Properties,
-        gfx::window,
+        gfx::{window, render_window},
     },
     std::collections::HashMap,
 };
@@ -681,12 +681,15 @@ fn update_debug(
         .debug_cvars
         .draw_mouse_rulers
         .read(&engine_state.config);
+    // NOTE: this must be always cleared or the mouse position will remain after enabling and disabling the cfg var
+    debug_systems.debug_ui.get_overlay(sid_mouse).clear();
     if draw_mouse_rulers {
         let painter = &mut debug_systems.global_painter;
         update_mouse_debug_overlay(
             debug_systems.debug_ui.get_overlay(sid_mouse),
             painter,
             &game_state.window,
+            game_state.gameplay_system.levels.first_active_level().map(|level| level.get_camera().transform)
         );
     }
 
@@ -890,15 +893,21 @@ fn update_mouse_debug_overlay(
     debug_overlay: &mut debug::overlay::Debug_Overlay,
     painter: &mut Debug_Painter,
     window: &Render_Window_Handle,
+    camera: Option<Transform2D>,
 ) {
     use ecs_engine::common::shapes::Line;
 
-    debug_overlay.clear();
     let pos = window::mouse_pos_in_window(window);
     debug_overlay.position = Vec2f::from(pos) + v2!(0., -15.);
     debug_overlay
-        .add_line(&format!("{},{}", pos.x, pos.y))
+        .add_line(&format!("s {},{}", pos.x, pos.y))
         .with_color(colors::rgba(220, 220, 220, 220));
+    if let Some(camera) = camera {
+        let wpos = render_window::mouse_pos_in_world(window, &camera);
+        debug_overlay
+            .add_line(&format!("w {:.2},{:.2}", wpos.x, wpos.y))
+            .with_color(colors::rgba(200, 200, 200, 220));
+    }
 
     let color = colors::rgba(255, 255, 255, 150);
     let (win_w, win_h) = window::get_window_real_size(window);
@@ -1202,6 +1211,49 @@ fn debug_draw_lights(
             10,
             pl.color,
             if colors::to_hsv(pl.color).v > 0.5 {
+                colors::BLACK
+            } else {
+                colors::WHITE
+            },
+        );
+    }
+
+    for rl in &lights.rect_lights {
+        debug_painter.add_rect(
+            rl.rect.size(),
+            &Transform2D::from_pos(rl.rect.pos_min()),
+            colors::rgba(rl.color.r, rl.color.g, rl.color.b, 50),
+        );
+        debug_painter.add_rect(
+            rl.rect.size(),
+            &Transform2D::from_pos(rl.rect.pos_min()),
+            Paint_Properties {
+                color: colors::TRANSPARENT,
+                border_color: colors::WHITE,
+                border_thick: 1.,
+                ..Default::default()
+            },
+        );
+        // @Incomplete: we should actually add a capsule...add support for it in the painter!
+        debug_painter.add_rect(
+            v2!(rl.rect.width + 2. * rl.radius, rl.rect.height + 2. * rl.radius),
+            &Transform2D::from_pos(rl.rect.pos_min() - v2!(rl.radius, rl.radius)),
+            Paint_Properties {
+                color: colors::TRANSPARENT,
+                border_color: rl.color,
+                border_thick: 1.,
+                ..Default::default()
+            }
+        );
+        debug_painter.add_shaded_text(
+            &format!(
+                "radius: {}\natten: {}\nintens: {}",
+                rl.radius, rl.attenuation, rl.intensity
+            ),
+            rl.rect.pos_max(),
+            10,
+            rl.color,
+            if colors::to_hsv(rl.color).v > 0.5 {
                 colors::BLACK
             } else {
                 colors::WHITE
