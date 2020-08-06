@@ -11,20 +11,39 @@ struct Point_Light {
     float intensity;
 };
 
+struct Rect_Light {
+    vec3 color;
+    vec2 pos_min;
+    vec2 pos_max;
+    float radius;
+    float attenuation;
+    float intensity;
+};
+
 #define MAX_POINT_LIGHTS 64
+#define MAX_RECT_LIGHTS 64
 
 uniform sampler2D texture;
 uniform Ambient_Light ambient_light;
 uniform Point_Light point_lights[MAX_POINT_LIGHTS];
+uniform Rect_Light rect_lights[MAX_RECT_LIGHTS];
 
 varying vec2 world_pos;
 
+vec2 point_to_rect_vector(vec2 point_pos, vec2 rect_pos_min, vec2 rect_pos_max) {
+    vec2 pos_relative_to_rect = point_pos - rect_pos_min;
+
+    float rect_half_width = 0.5 * (rect_pos_max.x - rect_pos_min.x);
+    float dist_x = max(0.0, abs(pos_relative_to_rect.x - rect_half_width) - rect_half_width);
+
+    float rect_half_height = 0.5 * (rect_pos_max.y - rect_pos_min.y);
+    float dist_y = max(0.0, abs(pos_relative_to_rect.y - rect_half_height) - rect_half_height);
+    
+    return vec2(dist_x * sign(pos_relative_to_rect.x - rect_half_width), dist_y * sign(pos_relative_to_rect.y - rect_half_height));
+}
+
 void main() {
     vec4 pixel = texture2D(texture, gl_TexCoord[0].xy);
-
- //   if (gl_FragCoord.x < 800.0)
-        //pixel = vec4(pow(pixel.r, 1.0/2.2), pow(pixel.g, 1.0/2.2),pow(pixel.b, 1.0/2.2), pixel.a);
-        //pixel = vec4(pow(pixel.r, 2.2), pow(pixel.g, 2.2),pow(pixel.b, 2.2), pixel.a);
 
     vec3 color = vec3(1.0);
     color *= vec3(ambient_light.color) * ambient_light.intensity;
@@ -32,17 +51,26 @@ void main() {
     for (int i = 0; i < MAX_POINT_LIGHTS; ++i) {
         Point_Light light = point_lights[i];
         vec2 frag_to_light = light.position - world_pos;
+        vec3 diffuse = light.intensity * light.color;
+
+        float dist = length(frag_to_light);
+        float atten = max(0.0, mix(1.0, 0.0, dist / light.radius));
+
+        color += vec3(diffuse) * atten;
+    }
+
+    for (int i = 0; i < MAX_RECT_LIGHTS; ++i) {
+        Rect_Light light = rect_lights[i];
+
+        vec2 frag_to_light = point_to_rect_vector(world_pos, light.pos_min, light.pos_max);
         vec2 light_dir = normalize(frag_to_light);
         vec3 diffuse = light.intensity * light.color;
 
         float dist = length(frag_to_light);
-        //float atten = float(dist < light.radius) * 1.0 / (1.0 + dist * light.attenuation);
         float atten = max(0.0, mix(1.0, 0.0, dist / light.radius));
 
         color += vec3(diffuse) * atten;
     }
 
     gl_FragColor = vec4(color.rgb * pixel.rgb, pixel.a);
-    //if (gl_FragCoord.x < 800.0)
-    //    gl_FragColor = vec4(pow(gl_FragColor.r, 2.2), pow(gl_FragColor.g, 2.2),pow(gl_FragColor.b, 2.2), gl_FragColor.a);
 }

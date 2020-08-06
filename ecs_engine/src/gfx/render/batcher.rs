@@ -178,7 +178,7 @@ pub fn clear_batches(batches: &mut Batches) {
 //    r: rotation high byte
 //    g: rotation low byte
 //    b: empty
-//    a: vertex alpha 
+//    a: vertex alpha
 fn encode_rot_and_alpha_as_color(rot: Angle, alpha: u8) -> Color {
     const TAU: f32 = std::f32::consts::PI * 2.0;
     const MAX_ENCODED: u32 = u16::MAX as u32;
@@ -189,7 +189,7 @@ fn encode_rot_and_alpha_as_color(rot: Angle, alpha: u8) -> Color {
         r: ((encoded_rad >> 8) & 0xFF) as u8,
         g: (encoded_rad & 0xFF) as u8,
         b: 0,
-        a: alpha
+        a: alpha,
     }
 }
 
@@ -232,6 +232,30 @@ fn set_shader_uniforms(
             shader,
             &format!("point_lights[{}].intensity", i),
             pl.intensity,
+        );
+    }
+    for (i, rl) in lights.rect_lights.iter().enumerate() {
+        set_uniform_vec2(
+            shader,
+            &format!("rect_lights[{}].pos_min", i),
+            rl.rect.pos_min(),
+        );
+        set_uniform_vec2(
+            shader,
+            &format!("rect_lights[{}].pos_max", i),
+            rl.rect.pos_max(),
+        );
+        set_uniform_color(shader, &format!("rect_lights[{}].color", i), rl.color);
+        set_uniform_float(shader, &format!("rect_lights[{}].radius", i), rl.radius);
+        set_uniform_float(
+            shader,
+            &format!("rect_lights[{}].attenuation", i),
+            rl.attenuation,
+        );
+        set_uniform_float(
+            shader,
+            &format!("rect_lights[{}].intensity", i),
+            rl.intensity,
         );
     }
     set_uniform_float(

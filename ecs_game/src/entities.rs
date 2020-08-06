@@ -18,11 +18,7 @@ use ecs_engine::gfx::render;
 use ecs_engine::resources::gfx::{shader_path, tex_path, Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
-use {
-    crate::debug::entity_debug::C_Debug_Data,
-    std::collections::HashMap,
-    std::sync::Mutex,
-};
+use {crate::debug::entity_debug::C_Debug_Data, std::collections::HashMap, std::sync::Mutex};
 
 #[cfg(debug_assertions)]
 fn next_name(name: &'static str) -> String {
@@ -35,16 +31,17 @@ fn next_name(name: &'static str) -> String {
     let n = *n_ref;
     *n_ref += 1;
     format!("{}_{}", name, n)
-
 }
 
 #[cfg(debug_assertions)]
-fn add_debug_data<'a>(world: &'a mut Ecs_World, entity: Entity, name: &'static str) -> &'a mut C_Debug_Data {
+fn add_debug_data<'a>(
+    world: &'a mut Ecs_World,
+    entity: Entity,
+    name: &'static str,
+) -> &'a mut C_Debug_Data {
     let debug = world.add_component(entity, C_Debug_Data::default());
-        debug
-            .entity_name
-            .set(&next_name(name));
-        debug
+    debug.entity_name.set(&next_name(name));
+    debug
 }
 
 pub fn create_jelly(
@@ -371,4 +368,3 @@ pub fn create_background(
         add_debug_data(world, ground, "Background");
     }
 }
-

@@ -17,6 +17,7 @@ use ecs_engine::common::angle::rad;
 use ecs_engine::common::colors;
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::transform::Transform2D;
+use ecs_engine::common::rect::Rect;
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::rand;
@@ -25,7 +26,7 @@ use ecs_engine::ecs::components::gfx::{
     C_Animated_Sprite, C_Camera2D, C_Multi_Renderable, C_Renderable,
 };
 use ecs_engine::ecs::ecs_world::Ecs_World;
-use ecs_engine::gfx::light::{Lights, Point_Light};
+use ecs_engine::gfx::light::{Lights, Point_Light, Rect_Light};
 use ecs_engine::resources::gfx::{Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
@@ -96,50 +97,47 @@ fn init_demo_lights(lights: &mut Lights) {
     lights.ambient_light.color = colors::rgb(200, 140, 180);
     lights.ambient_light.intensity = 0.2;
 
-    let light = Point_Light {
-        position: v2!(0., -100.),
-        radius: 350.,
-        attenuation: 0.0,
+    let light = Rect_Light {
+        rect: Rect::new(-37., -140., 90., 30.),
+        radius: 300.,
+        attenuation: 2.5,
         color: colors::WHITE,
-        intensity: 2.0,
+        intensity: 2.5,
     };
-    lights.add_point_light(light);
+    lights.add_rect_light(light);
 
-    let light = Point_Light {
+    lights.add_point_light(Point_Light {
         position: v2!(0., 60.),
         radius: 150.,
         attenuation: 0.0,
         color: colors::BLUE,
         intensity: 1.0,
-    };
-    lights.add_point_light(light);
+    });
 
-    let light = Point_Light {
+    lights.add_point_light(Point_Light {
         position: v2!(-100., 0.),
         radius: 150.,
         attenuation: 0.0,
         color: colors::YELLOW,
         intensity: 1.0,
-    };
-    lights.add_point_light(light);
+    });
 
-    let light = Point_Light {
+    lights.add_point_light(Point_Light {
         position: v2!(100., 100.),
         radius: 150.,
         attenuation: 0.0,
         color: colors::RED,
         intensity: 1.0,
-    };
-    lights.add_point_light(light);
+    });
 
-    let light = Point_Light {
-        position: v2!(0., 0.),
-        radius: 150.,
-        attenuation: 0.0,
-        color: colors::GREEN,
-        intensity: 1.0,
-    };
-    lights.add_point_light(light);
+    //let light = Point_Light {
+        //position: v2!(0., 0.),
+        //radius: 150.,
+        //attenuation: 0.0,
+        //color: colors::GREEN,
+        //intensity: 1.0,
+    //};
+    //lights.add_point_light(light);
 }
 
 // @Temporary
