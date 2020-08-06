@@ -140,11 +140,14 @@ where
     }
 }
 
-impl<T> Rect<T> {
+impl<T> Rect<T>
+where
+    T: Add<Output = T> + Copy,
+{
     // @WaitForStable: make this const
     pub fn contains<V>(&self, pos: V) -> bool
     where
-        T: PartialOrd + Add<Output = T> + Copy,
+        T: PartialOrd,
         V: Into<Vector2<T>>,
     {
         let pos: Vector2<T> = pos.into();
@@ -152,5 +155,13 @@ impl<T> Rect<T> {
             && pos.x <= self.x + self.width
             && pos.y >= self.y
             && pos.y <= self.y + self.height
+    }
+
+    pub fn pos_min(&self) -> Vector2<T> {
+        v2!(self.x, self.y)
+    }
+
+    pub fn pos_max(&self) -> Vector2<T> {
+        v2!(self.x + self.width, self.y + self.height)
     }
 }
