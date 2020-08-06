@@ -23,6 +23,8 @@ use self::sfml as backend;
 pub enum Input_Raw_Event {
     Quit,
     Resized(u32, u32),
+    Focus_Gained,
+    Focus_Lost,
     Key_Pressed {
         code: Key,
     },

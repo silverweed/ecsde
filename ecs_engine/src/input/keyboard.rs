@@ -17,7 +17,7 @@ use self::glfw as backend;
 #[derive(Debug, Default, Clone)]
 pub struct Keyboard_State {
     keys_pressed: HashSet<Key>,
-    modifiers_pressed: Input_Action_Modifiers,
+    pub modifiers_pressed: Input_Action_Modifiers,
 }
 
 pub fn update_kb_state(kb_state: &mut Keyboard_State, events: &[Input_Raw_Event]) {
@@ -38,10 +38,6 @@ pub fn update_kb_state(kb_state: &mut Keyboard_State, events: &[Input_Raw_Event]
 
 pub fn is_key_pressed(kb_state: &Keyboard_State, key: Key) -> bool {
     kb_state.keys_pressed.contains(&key)
-}
-
-pub fn get_modifiers_pressed(kb_state: &Keyboard_State) -> Input_Action_Modifiers {
-    kb_state.modifiers_pressed
 }
 
 type Key_Underlying_Type = u8;

@@ -161,6 +161,9 @@ fn process_event_core_actions(
         Input_Raw_Event::Joy_Disconnected { id } => processed
             .core_actions
             .push(Core_Action::Joystick_Disconnected { id }),
+        Input_Raw_Event::Focus_Lost => processed
+            .core_actions
+            .push(Core_Action::Focus_Lost),
         _ => {
             return false;
         }
@@ -201,7 +204,7 @@ fn process_event_game_actions(
     bindings: &Input_Bindings,
     processed: &mut Processed_Input,
 ) -> bool {
-    let modifiers = keyboard::get_modifiers_pressed(&raw_state.kb_state);
+    let modifiers = raw_state.kb_state.modifiers_pressed;
     match event {
         // Game Actions
         Input_Raw_Event::Key_Pressed { code } => {

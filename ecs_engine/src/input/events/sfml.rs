@@ -11,6 +11,8 @@ pub(super) fn framework_to_engine_event(event: Win_Event) -> Option<Input_Raw_Ev
             width.max(1) as u32,
             height.max(1) as u32,
         )),
+        Win_Event::GainedFocus => Some(Input_Raw_Event::Focus_Gained),
+        Win_Event::LostFocus => Some(Input_Raw_Event::Focus_Lost),
         Win_Event::MouseButtonPressed { button, .. } => {
             if let Some(button) = mouse::get_mouse_btn(button) {
                 Some(Input_Raw_Event::Mouse_Button_Pressed { button })

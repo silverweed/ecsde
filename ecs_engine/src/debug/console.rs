@@ -132,7 +132,7 @@ impl Console {
         for event in &input_state.raw.events {
             self.process_event(
                 *event,
-                keyboard::get_modifiers_pressed(&input_state.raw.kb_state),
+                input_state.raw.kb_state.modifiers_pressed,
             );
         }
     }

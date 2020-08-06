@@ -230,7 +230,7 @@ pub fn init_engine_debug(
             .create_overlay(String_Id::from("mouse"), debug_overlay_config)
             .unwrap();
         mouse_overlay.config.horiz_align = Align::Begin;
-        mouse_overlay.config.vert_align = Align::Begin;
+        mouse_overlay.config.vert_align = Align::End;
 
         debug_overlay_config.background = colors::rgba(20, 20, 20, 220);
         debug_overlay_config.pad_y = 8. * ui_scale;
@@ -383,6 +383,9 @@ pub fn handle_core_actions(
                     &mut engine_state.input_state.raw.joy_state,
                     *id,
                 );
+            }
+            Core_Action::Focus_Lost => {
+                engine_state.input_state.raw.kb_state.modifiers_pressed = 0;
             }
         }
     }

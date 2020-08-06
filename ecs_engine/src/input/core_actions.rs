@@ -7,4 +7,5 @@ pub enum Core_Action {
     Resize(u32, u32),
     Joystick_Connected { id: Joystick_Id },
     Joystick_Disconnected { id: Joystick_Id },
+    Focus_Lost
 }
