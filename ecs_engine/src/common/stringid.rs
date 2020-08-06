@@ -12,7 +12,7 @@ lazy_static! {
 }
 
 impl String_Id {
-    pub fn from_u32(x: u32) -> String_Id {
+    pub const fn from_u32(x: u32) -> String_Id {
         String_Id(x)
     }
 }
@@ -85,7 +85,9 @@ impl std::fmt::Debug for String_Id {
             self.0,
             STRING_ID_MAP
                 .read()
-                .expect("[ ERROR ] Failed to lock STRING_ID_MAP")[self]
+                .expect("[ ERROR ] Failed to lock STRING_ID_MAP")
+                .get(self)
+                .map_or("??", |s| &s)
         )
     }
 }

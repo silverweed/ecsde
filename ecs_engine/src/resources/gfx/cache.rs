@@ -28,6 +28,22 @@ impl<'l> loaders::Resource_Loader<'l, Shader<'l>> for Shader_Loader {
     }
 }
 
+const ERROR_SHADER_KEY: String_Id = String_Id::from_u32(0);
+const ERROR_SHADER_VERT: &str = "
+    void main() {
+        gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    }
+";
+const ERROR_SHADER_FRAG: &str = "
+    void main() {
+        gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+    }
+";
+
+fn load_error_shader<'a>() -> Shader<'a> {
+    Shader::from_memory(Some(ERROR_SHADER_VERT), None, Some(ERROR_SHADER_FRAG)).unwrap()
+}
+
 pub(super) struct Shader_Cache<'l> {
     loader: &'l Shader_Loader,
     cache: HashMap<String_Id, Shader<'l>>,
@@ -39,10 +55,9 @@ impl<'l> Shader_Cache<'l> {
     }
 
     pub(super) fn new_with_loader(loader: &'l Shader_Loader) -> Self {
-        Shader_Cache {
-            cache: HashMap::new(),
-            loader,
-        }
+        let mut cache = HashMap::new();
+        cache.insert(ERROR_SHADER_KEY, load_error_shader());
+        Shader_Cache { cache, loader }
     }
 
     /// shader_name: the name of the shader(s) without extension.
@@ -62,7 +77,7 @@ impl<'l> Shader_Cache<'l> {
                     }
                     Err(err) => {
                         lerr!("Error loading {}: {}", shader_name, err);
-                        None
+                        Some(ERROR_SHADER_KEY)
                     }
                 }
             }
