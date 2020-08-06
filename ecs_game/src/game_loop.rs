@@ -28,7 +28,7 @@ use {
         ecs::components::base::C_Spatial2D,
         ecs::ecs_world::{self, Ecs_World},
         gfx::paint_props::Paint_Properties,
-        gfx::{window, render_window},
+        gfx::{render_window, window},
     },
     std::collections::HashMap,
 };
@@ -689,7 +689,11 @@ fn update_debug(
             debug_systems.debug_ui.get_overlay(sid_mouse),
             painter,
             &game_state.window,
-            game_state.gameplay_system.levels.first_active_level().map(|level| level.get_camera().transform)
+            game_state
+                .gameplay_system
+                .levels
+                .first_active_level()
+                .map(|level| level.get_camera().transform),
         );
     }
 
@@ -1236,14 +1240,17 @@ fn debug_draw_lights(
         );
         // @Incomplete: we should actually add a capsule...add support for it in the painter!
         debug_painter.add_rect(
-            v2!(rl.rect.width + 2. * rl.radius, rl.rect.height + 2. * rl.radius),
+            v2!(
+                rl.rect.width + 2. * rl.radius,
+                rl.rect.height + 2. * rl.radius
+            ),
             &Transform2D::from_pos(rl.rect.pos_min() - v2!(rl.radius, rl.radius)),
             Paint_Properties {
                 color: colors::TRANSPARENT,
                 border_color: rl.color,
                 border_thick: 1.,
                 ..Default::default()
-            }
+            },
         );
         debug_painter.add_shaded_text(
             &format!(

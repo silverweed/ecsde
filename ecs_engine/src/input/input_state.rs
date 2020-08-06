@@ -161,9 +161,7 @@ fn process_event_core_actions(
         Input_Raw_Event::Joy_Disconnected { id } => processed
             .core_actions
             .push(Core_Action::Joystick_Disconnected { id }),
-        Input_Raw_Event::Focus_Lost => processed
-            .core_actions
-            .push(Core_Action::Focus_Lost),
+        Input_Raw_Event::Focus_Lost => processed.core_actions.push(Core_Action::Focus_Lost),
         _ => {
             return false;
         }

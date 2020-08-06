@@ -15,9 +15,9 @@ use ecs_engine::collisions::collider::C_Collider;
 use ecs_engine::collisions::phys_world::Physics_World;
 use ecs_engine::common::angle::rad;
 use ecs_engine::common::colors;
+use ecs_engine::common::rect::Rect;
 use ecs_engine::common::stringid::String_Id;
 use ecs_engine::common::transform::Transform2D;
-use ecs_engine::common::rect::Rect;
 use ecs_engine::core::app::Engine_State;
 use ecs_engine::core::env::Env_Info;
 use ecs_engine::core::rand;
@@ -131,11 +131,11 @@ fn init_demo_lights(lights: &mut Lights) {
     });
 
     //let light = Point_Light {
-        //position: v2!(0., 0.),
-        //radius: 150.,
-        //attenuation: 0.0,
-        //color: colors::GREEN,
-        //intensity: 1.0,
+    //position: v2!(0., 0.),
+    //radius: 150.,
+    //attenuation: 0.0,
+    //color: colors::GREEN,
+    //intensity: 1.0,
     //};
     //lights.add_point_light(light);
 }

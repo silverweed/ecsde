@@ -130,10 +130,7 @@ impl Console {
 
     pub fn update(&mut self, input_state: &Input_State) {
         for event in &input_state.raw.events {
-            self.process_event(
-                *event,
-                input_state.raw.kb_state.modifiers_pressed,
-            );
+            self.process_event(*event, input_state.raw.kb_state.modifiers_pressed);
         }
     }
 
