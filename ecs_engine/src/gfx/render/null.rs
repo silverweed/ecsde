@@ -47,6 +47,10 @@ impl Font<'_> {
 }
 
 impl Shader<'_> {
+    pub fn from_memory(_: Option<&str>, _: Option<&str>, _: Option<&str>) -> Option<Self> {
+        Some(Self { _pd: PhantomData })
+    }
+
     pub fn from_file(_: Option<&str>, _: Option<&str>, _: Option<&str>) -> Option<Self> {
         Some(Self { _pd: PhantomData })
     }
