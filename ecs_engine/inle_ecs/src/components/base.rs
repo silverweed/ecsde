@@ -1,5 +1,5 @@
-use crate::common::transform::Transform2D;
-use crate::common::vector::Vec2f;
+use inle_math::transform::Transform2D;
+use inle_math::vector::Vec2f;
 
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct C_Spatial2D {

@@ -12,6 +12,6 @@ extern crate inle_math;
 
 pub mod components;
 pub mod light;
+pub mod material;
 pub mod render;
-pub mod render_system;
 pub mod render_window;

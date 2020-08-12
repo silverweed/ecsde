@@ -1,5 +1,5 @@
 use super::replay_data::{Replay_Data, Replay_Data_Iter};
-use crate::input::input_state::Input_Raw_State;
+use inle_input::input_state::Input_Raw_State;
 use std::iter::Peekable;
 
 pub struct Replay_Input_Provider {

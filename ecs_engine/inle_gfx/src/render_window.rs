@@ -1,9 +1,11 @@
-use super::window::{self, Window_Handle};
 use inle_common::colors::Color;
 use inle_gfx_backend::render_window::backend;
 use inle_math::rect::Rect;
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
+use inle_win::window::{self, Window_Handle};
+
+pub type Render_Window_Handle = backend::Render_Window_Handle;
 
 pub fn create_render_window(window: Window_Handle) -> Render_Window_Handle {
     backend::create_render_window(window)

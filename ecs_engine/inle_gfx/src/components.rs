@@ -1,7 +1,7 @@
 use crate::material::Material;
+use crate::render;
 use inle_common::colors;
 use inle_core::env::Env_Info;
-use inle_gfx::render;
 use inle_math::rect::Rect;
 use inle_math::transform::Transform2D;
 use inle_resources::gfx::{shader_path, tex_path, Gfx_Resources, Shader_Cache};

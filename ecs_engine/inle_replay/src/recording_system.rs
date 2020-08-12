@@ -1,12 +1,12 @@
 use super::recording_thread;
 use super::replay_data::{Replay_Data_Point, Replay_Joystick_Data};
-use crate::cfg::{self, Cfg_Var};
-use crate::common::Maybe_Error;
-use crate::core::env::Env_Info;
-use crate::core::rand::Default_Rng_Seed;
-use crate::input::input_state::Input_Raw_State;
-use crate::input::joystick::{self, Joystick_Axis};
-use crate::input::joystick_state::{self, Real_Axes_Values};
+use inle_cfg::{self, Cfg_Var};
+use inle_common::Maybe_Error;
+use inle_core::env::Env_Info;
+use inle_core::rand::Default_Rng_Seed;
+use inle_input::input_state::Input_Raw_State;
+use inle_input::joystick::{self, Joystick_Axis};
+use inle_input::joystick_state::{self, Real_Axes_Values};
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::JoinHandle;
@@ -37,7 +37,11 @@ impl Replay_Recording_System {
         }
     }
 
-    pub fn start_recording_thread(&mut self, env: &Env_Info, cfg: &cfg::Config) -> Maybe_Error {
+    pub fn start_recording_thread(
+        &mut self,
+        env: &Env_Info,
+        cfg: &inle_cfg::Config,
+    ) -> Maybe_Error {
         let data_rx = self
             .data_rx
             .take()

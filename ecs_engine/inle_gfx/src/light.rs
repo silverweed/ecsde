@@ -1,6 +1,6 @@
-use crate::common::colors::{self, Color};
-use crate::common::rect::Rectf;
-use crate::common::vector::Vec2f;
+use inle_common::colors::{self, Color};
+use inle_math::rect::Rectf;
+use inle_math::vector::Vec2f;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Point_Light {

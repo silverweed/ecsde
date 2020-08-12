@@ -1,13 +1,13 @@
 use super::ui_context::UI_Context;
-use crate::common::colors;
+use inle_common::colors;
 //use crate::gfx::align::Align;
 use super::widgets::*;
-use crate::common::rect::Rectf;
-use crate::common::vector::Vec2f;
-use crate::gfx::paint_props::Paint_Properties;
-use crate::gfx::render;
-use crate::gfx::render_window::Render_Window_Handle;
-use crate::resources::gfx::Gfx_Resources;
+use inle_gfx::paint_props::Paint_Properties;
+use inle_gfx::render;
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_math::rect::Rectf;
+use inle_math::vector::Vec2f;
+use inle_resources::gfx::Gfx_Resources;
 
 fn select_ac<T>(by_ac: &By_Activeness<T>, active: bool, hot: bool) -> &T {
     if active {

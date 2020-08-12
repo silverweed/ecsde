@@ -1,7 +1,7 @@
 use super::recording_system::Replay_Recording_System_Config;
 use super::replay_data::Replay_Data_Point;
-use crate::common::serialize::{Binary_Serializable, Byte_Stream};
-use crate::common::Maybe_Error;
+use inle_common::Maybe_Error;
+use inle_serialize::{Binary_Serializable, Byte_Stream};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;

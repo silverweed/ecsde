@@ -589,7 +589,7 @@ impl Component_Allocator {
                 };
                 painter.add_arrow(arrow, color);
             } else {
-                let off = crate::common::math::lerp(1., 50., (end.x - start.x) / 600.);
+                let off = inle_math::math::lerp(1., 50., (end.x - start.x) / 600.);
                 let sgn = (end.x - start.x).signum() as f32;
                 let dir1 = v2!(sgn * SIZE * 0.3, -off);
                 let dir2 = v2!(end.x - start.x - sgn * SIZE * 0.6, 0.);

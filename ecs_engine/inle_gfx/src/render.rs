@@ -1,17 +1,24 @@
-use crate::components::Material;
-use crate::render_window::Render_Window_Handle;
+use crate::material::Material;
 use inle_common::colors::Color;
 use inle_common::paint_props::Paint_Properties;
+use inle_gfx_backend::render_window::Render_Window_Handle;
 use inle_math::rect::Rect;
 use inle_math::shapes::Circle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
 
-use inle_gfx_backend::render::backend;
+use inle_gfx_backend::render::{backend, Render_Extra_Params};
 
 pub mod batcher;
 
 pub type Z_Index = i8;
+pub type Font<'a> = backend::Font<'a>;
+pub type Image = backend::Image;
+pub type Shader<'a> = backend::Shader<'a>;
+pub type Text<'a> = backend::Text<'a>;
+pub type Texture<'a> = backend::Texture<'a>;
+pub type Vertex_Buffer = backend::Vertex_Buffer;
+pub type Vertex = backend::Vertex;
 
 //////////////////////////// DRAWING //////////////////////////////////
 

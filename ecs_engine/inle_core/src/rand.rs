@@ -3,6 +3,8 @@ use inle_serialize::{Binary_Serializable, Byte_Stream};
 // Implementation derived from https://github.com/BareRose/ranxoshi256/blob/master/ranxoshi256.h
 
 pub type Default_Rng = Rand_Xoshiro256;
+
+#[derive(Copy, Clone, Default, Debug)]
 pub struct Default_Rng_Seed([u8; 32]);
 
 impl Binary_Serializable for Default_Rng_Seed {

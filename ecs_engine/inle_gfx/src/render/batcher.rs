@@ -1,16 +1,17 @@
 use super::backend;
-use crate::alloc::temp;
-use crate::common::angle::Angle;
-use crate::common::colors::{self, Color};
-use crate::common::math::{lerp, lerp_clamped};
-use crate::common::rect::Rect;
-use crate::common::transform::Transform2D;
-use crate::common::vector::Vec2f;
-use crate::ecs::components::gfx::Material;
-use crate::gfx::light::{Lights, Point_Light};
-use crate::gfx::render::{self, Shader, Texture, Vertex, Vertex_Buffer_Quads};
-use crate::gfx::render_window::Render_Window_Handle;
-use crate::resources::gfx::{Gfx_Resources, Shader_Cache};
+use crate::light::{Lights, Point_Light};
+use crate::material::Material;
+use crate::render::Vertex_Buffer_Quads;
+use inle_alloc::temp;
+use inle_common::colors::{self, Color};
+use inle_gfx_backend::render::{Shader, Texture, Vertex};
+use inle_gfx_backend::render_window::Render_Window_Handle;
+use inle_math::angle::Angle;
+use inle_math::math::{lerp, lerp_clamped};
+use inle_math::rect::Rect;
+use inle_math::transform::Transform2D;
+use inle_math::vector::Vec2f;
+use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
 use rayon::prelude::*;
 use smallvec::SmallVec;
 use std::cmp;
@@ -26,7 +27,7 @@ struct Sprite_Batch {
 
 #[derive(Default)]
 pub struct Batches {
-    textures_ws: BTreeMap<render::Z_Index, HashMap<Material, Sprite_Batch>>,
+    textures_ws: BTreeMap<super::Z_Index, HashMap<Material, Sprite_Batch>>,
 }
 
 struct Vertex_Buffer_Holder {
@@ -56,7 +57,7 @@ impl Vertex_Buffer_Holder {
         #[cfg(debug_assertions)] id: Material,
     ) -> Self {
         Self {
-            vbuf: render::start_draw_quads(initial_cap / 4),
+            vbuf: super::start_draw_quads(initial_cap / 4),
             #[cfg(debug_assertions)]
             id,
         }
@@ -68,23 +69,23 @@ impl Vertex_Buffer_Holder {
         debug_assert!(vertices.len() <= std::u32::MAX as usize);
 
         debug_assert!(
-            n_vertices <= render::vbuf_max_vertices(&self.vbuf),
+            n_vertices <= super::vbuf_max_vertices(&self.vbuf),
             "Can't hold all the vertices! {} / {}",
             n_vertices,
-            render::vbuf_max_vertices(&self.vbuf)
+            super::vbuf_max_vertices(&self.vbuf)
         );
 
         // Zero all the excess vertices
         for vertex in vertices
             .iter_mut()
-            .take(render::vbuf_cur_vertices(&self.vbuf) as usize)
+            .take(super::vbuf_cur_vertices(&self.vbuf) as usize)
             .skip(n_vertices as usize)
         {
             *vertex = null_vertex();
         }
 
         backend::update_vbuf(&mut self.vbuf, vertices, 0);
-        render::set_vbuf_cur_vertices(&mut self.vbuf, vertices.len() as u32);
+        super::set_vbuf_cur_vertices(&mut self.vbuf, vertices.len() as u32);
     }
 
     pub fn grow(&mut self, vertices_to_hold_at_least: u32) {
@@ -96,8 +97,8 @@ impl Vertex_Buffer_Holder {
             vertices_to_hold_at_least
         );
 
-        let mut new_vbuf = render::start_draw_quads(new_cap / 4);
-        let _res = render::swap_vbuf(&mut new_vbuf, &mut self.vbuf);
+        let mut new_vbuf = super::start_draw_quads(new_cap / 4);
+        let _res = super::swap_vbuf(&mut new_vbuf, &mut self.vbuf);
         #[cfg(debug_assertions)]
         {
             debug_assert!(_res, "Vertex Buffer copying failed ({:?})!", self.id);
@@ -117,7 +118,7 @@ pub(super) fn add_texture_ws(
     tex_rect: &Rect<i32>,
     color: Color,
     transform: &Transform2D,
-    z_index: render::Z_Index,
+    z_index: super::Z_Index,
 ) {
     let z_index_texmap = {
         trace!("get_z_texmap");
@@ -200,7 +201,7 @@ fn set_shader_uniforms(
     lights: &Lights,
     texture: &Texture,
 ) {
-    use render::{set_uniform_color, set_uniform_float, set_uniform_texture, set_uniform_vec2};
+    use super::{set_uniform_color, set_uniform_float, set_uniform_texture, set_uniform_vec2};
 
     if material.normals.is_some() {
         let normals = gres.get_texture(material.normals);
@@ -213,7 +214,7 @@ fn set_shader_uniforms(
         lights.ambient_light.intensity,
     );
     set_uniform_texture(shader, "texture", texture);
-    let (tex_w, tex_h) = render::get_texture_size(texture);
+    let (tex_w, tex_h) = super::get_texture_size(texture);
     set_uniform_vec2(shader, "texture_size", v2!(tex_w as f32, tex_h as f32));
     for (i, pl) in lights.point_lights.iter().enumerate() {
         set_uniform_vec2(
@@ -342,21 +343,21 @@ pub fn draw_batches(
             let vert_chunks = vertices.par_iter_mut().chunks(n_vert_per_chunk);
 
             // Ensure the vbuffer has enough room to write in
-            if n_vertices_without_shadows > render::vbuf_max_vertices(&vbuffer.vbuf) {
+            if n_vertices_without_shadows > super::vbuf_max_vertices(&vbuffer.vbuf) {
                 vbuffer.grow(n_vertices_without_shadows);
             }
-            debug_assert!(n_vertices_without_shadows <= render::vbuf_max_vertices(&vbuffer.vbuf));
+            debug_assert!(n_vertices_without_shadows <= super::vbuf_max_vertices(&vbuffer.vbuf));
 
             {
                 trace!("sprite_batch_ws");
 
                 if cast_shadows {
                     let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
-                    if n_shadow_vertices > render::vbuf_max_vertices(&shadow_vbuffer.vbuf) {
+                    if n_shadow_vertices > super::vbuf_max_vertices(&shadow_vbuffer.vbuf) {
                         shadow_vbuffer.grow(n_shadow_vertices);
                     }
                     debug_assert!(
-                        n_shadow_vertices <= render::vbuf_max_vertices(&shadow_vbuffer.vbuf)
+                        n_shadow_vertices <= super::vbuf_max_vertices(&shadow_vbuffer.vbuf)
                     );
 
                     #[cfg(debug_assertions)]
@@ -407,14 +408,14 @@ pub fn draw_batches(
                                 let p3 = render_transform * (sprite_size * v2!(0.5, 0.5));
                                 let p4 = render_transform * (sprite_size * v2!(-0.5, 0.5));
 
-                                let v1 = render::new_vertex(p1, color, v2!(uv.x, uv.y));
-                                let v2 = render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
-                                let v3 = render::new_vertex(
+                                let v1 = super::new_vertex(p1, color, v2!(uv.x, uv.y));
+                                let v2 = super::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
+                                let v3 = super::new_vertex(
                                     p3,
                                     color,
                                     v2!(uv.x + uv.width, uv.y + uv.height),
                                 );
-                                let v4 = render::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
+                                let v4 = super::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
 
                                 *vert_chunk[i * 4] = v1;
                                 *vert_chunk[i * 4 + 1] = v2;
@@ -516,14 +517,14 @@ pub fn draw_batches(
                                 let p3 = render_transform * (sprite_size * v2!(0.5, 0.5));
                                 let p4 = render_transform * (sprite_size * v2!(-0.5, 0.5));
 
-                                let v1 = render::new_vertex(p1, color, v2!(uv.x, uv.y));
-                                let v2 = render::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
-                                let v3 = render::new_vertex(
+                                let v1 = super::new_vertex(p1, color, v2!(uv.x, uv.y));
+                                let v2 = super::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
+                                let v3 = super::new_vertex(
                                     p3,
                                     color,
                                     v2!(uv.x + uv.width, uv.y + uv.height),
                                 );
-                                let v4 = render::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
+                                let v4 = super::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
 
                                 *vert_chunk[i * 4] = v1;
                                 *vert_chunk[i * 4 + 1] = v2;
@@ -565,7 +566,7 @@ pub fn draw_batches(
                     &shadow_vbuffer.vbuf,
                     &Transform2D::default(),
                     camera,
-                    render::Render_Extra_Params {
+                    inle_gfx_backend::render::Render_Extra_Params {
                         texture: Some(texture),
                         ..Default::default()
                     },
@@ -580,7 +581,7 @@ pub fn draw_batches(
                 &vbuffer.vbuf,
                 &Transform2D::default(),
                 camera,
-                render::Render_Extra_Params {
+                inle_gfx_backend::render::Render_Extra_Params {
                     texture: Some(texture),
                     shader,
                 },
