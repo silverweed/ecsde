@@ -3,6 +3,7 @@
 members = [
     "inle_alloc",
     "inle_audio",
+    "inle_audio_backend",
     "inle_cfg",
     "inle_common",
     "inle_core",
@@ -12,6 +13,7 @@ members = [
     "inle_events",
     "inle_fs",
     "inle_gfx",
+    "inle_gfx_backend",
     "inle_input",
     "inle_physics",
     "inle_replay",

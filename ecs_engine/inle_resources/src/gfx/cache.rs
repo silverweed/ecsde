@@ -1,8 +1,8 @@
 use super::Shader_Handle;
-use crate::common::stringid::String_Id;
-use crate::gfx::render::{Font, Shader, Texture};
-use crate::resources::loaders;
-use crate::resources::loaders::Resource_Loader;
+use crate::loaders;
+use crate::loaders::Resource_Loader;
+use inle_common::stringid::String_Id;
+use inle_gfx_backend::render::{Font, Shader, Texture};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 

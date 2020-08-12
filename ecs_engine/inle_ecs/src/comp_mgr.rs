@@ -1,8 +1,8 @@
 mod comp_alloc;
 
 use super::ecs_world::Entity;
-use inle_common::bitset::Bit_Set;
 use comp_alloc::Component_Allocator;
+use inle_common::bitset::Bit_Set;
 use std::any::{type_name, TypeId};
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::mem::size_of;
 
 #[cfg(debug_assertions)]
-use crate::debug::painter::Debug_Painter;
+use inle_debug::painter::Debug_Painter;
 
 // Note: must be visible to entity_stream
 pub(super) type Component_Handle = u32;

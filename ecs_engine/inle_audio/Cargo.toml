@@ -12,6 +12,8 @@ audio-sfml = ["sfml/audio"]
 default = ["audio-sfml"]
 
 [dependencies]
+inle_audio_backend = { path = "../inle_audio_backend" }
+inle_resources = { path = "../inle_resources" }
 
 [dependencies.sfml]
 version = "0.15.1"

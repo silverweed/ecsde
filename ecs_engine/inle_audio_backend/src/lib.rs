@@ -5,17 +5,6 @@
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
 #[macro_use]
-extern crate inle_diagnostics;
+extern crate inle_common;
 
-#[macro_use]
-pub mod prelude;
-
-pub mod angle;
-pub mod math;
-pub mod matrix;
-pub mod rect;
-pub mod shapes;
-pub mod transform;
-pub mod vector;
-
-pub use prelude::*;
+pub mod sound;

@@ -9,4 +9,6 @@ edition = "2018"
 [dependencies]
 inle_common = { path = "../inle_common" }
 inle_core = { path = "../inle_core" }
-inle_gfx = { path = "../inle_gfx" }
+inle_diagnostics = { path = "../inle_diagnostics" }
+inle_gfx_backend = { path = "../inle_gfx_backend" }
+inle_audio_backend = { path = "../inle_audio_backend" }

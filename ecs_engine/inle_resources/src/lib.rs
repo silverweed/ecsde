@@ -5,6 +5,9 @@
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
 #[macro_use]
+extern crate inle_diagnostics;
+
+#[macro_use]
 pub mod loaders;
 
 pub mod audio;

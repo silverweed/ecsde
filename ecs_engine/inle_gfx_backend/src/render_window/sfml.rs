@@ -1,8 +1,8 @@
-use crate::common::colors::{self, Color};
-use crate::common::rect::Rectf;
-use crate::common::transform::{sfml::to_matrix_sfml, Transform2D};
-use crate::common::vector::{Vec2f, Vec2i};
-use crate::gfx::window::Window_Handle;
+use inle_common::colors::{self, Color};
+use inle_math::rect::Rectf;
+use inle_math::transform::{sfml::to_matrix_sfml, Transform2D};
+use inle_math::vector::{Vec2f, Vec2i};
+use inle_win::window::Window_Handle;
 use sfml::graphics::{RenderTarget, RenderWindow};
 
 pub struct Render_Window_Handle {

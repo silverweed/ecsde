@@ -1,11 +1,11 @@
 use super::Render_Extra_Params;
-use crate::common::colors::Color;
-use crate::common::rect::Rect;
-use crate::common::shapes;
-use crate::common::transform::{sfml::to_matrix_sfml, Transform2D};
-use crate::common::vector::Vec2f;
-use crate::gfx::paint_props::Paint_Properties;
-use crate::gfx::render_window::Render_Window_Handle;
+use crate::render_window::Render_Window_Handle;
+use inle_common::colors::Color;
+use inle_common::paint_props::Paint_Properties;
+use inle_math::rect::Rect;
+use inle_math::shapes;
+use inle_math::transform::{sfml::to_matrix_sfml, Transform2D};
+use inle_math::vector::Vec2f;
 use sfml::graphics::{
     glsl, BlendMode, CircleShape, PrimitiveType, RectangleShape, RenderStates, RenderTarget, Shape,
     Transformable, VertexBuffer, VertexBufferUsage,

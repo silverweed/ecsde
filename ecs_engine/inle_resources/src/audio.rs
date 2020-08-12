@@ -2,8 +2,8 @@ mod cache;
 
 use super::asset_path;
 use super::loaders;
-use crate::audio::sound::Sound_Buffer;
-use crate::core::env::Env_Info;
+use inle_audio_backend::sound::Sound_Buffer;
+use inle_core::env::Env_Info;
 
 pub type Sound_Handle = loaders::Res_Handle;
 

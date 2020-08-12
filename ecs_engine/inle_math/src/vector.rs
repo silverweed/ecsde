@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-#[cfg(feature = "win-sfml")]
+#[cfg(feature = "gfx-sfml")]
 mod sfml;
 
 pub struct Vector2<T> {

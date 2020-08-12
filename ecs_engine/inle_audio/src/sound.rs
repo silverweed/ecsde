@@ -1,17 +1,7 @@
-#[cfg(feature = "audio-sfml")]
-mod sfml;
+use inle_audio_backend::sound::backend;
 
-#[cfg(feature = "audio-null")]
-mod null;
-
-#[cfg(feature = "audio-sfml")]
-use self::sfml as backend;
-
-#[cfg(feature = "audio-null")]
-use self::null as backend;
-
-pub type Sound_Buffer<'a> = backend::Sound_Buffer<'a>;
 pub type Sound<'a> = backend::Sound<'a>;
+pub type Sound_Buffer<'a> = backend::Sound_Buffer<'a>;
 
 pub fn play_sound(sound: &mut Sound) {
     backend::play_sound(sound);

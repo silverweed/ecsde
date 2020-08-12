@@ -16,6 +16,7 @@ pub mod prelude;
 pub mod bitset;
 pub mod colors;
 pub mod fixed_string;
+pub mod paint_props;
 pub mod stringid;
 pub mod thread_safe_ptr;
 pub mod units;

@@ -1,5 +1,5 @@
 [package]
-name = "inle_win"
+name = "inle_audio_backend"
 version = "0.1.0"
 authors = ["silverweed <silverweed1991@gmail.com>"]
 edition = "2018"
@@ -7,13 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-win-glfw = ["glfw"]
-win-sfml = ["sfml/window"]
-gfx-sfml = ["sfml/graphics"]
-default = ["win-sfml", "gfx-sfml"]
+audio-sfml = ["sfml/audio"]
+default = ["audio-sfml"]
 
 [dependencies]
-inle_math = { path = "../inle_math" }
+inle_common = { path = "../inle_common" }
 
 [dependencies.sfml]
 version = "0.15.1"
@@ -21,9 +19,3 @@ git = "https://github.com/jeremyletang/rust-sfml"
 rev = "9199dc4"
 optional = true
 default-features = false
-
-[dependencies.glfw]
-version = "0.39"
-optional = true
-default-features = false
-#features = ["glfw-sys"]

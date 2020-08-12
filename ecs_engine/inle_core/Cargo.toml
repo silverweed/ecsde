@@ -8,3 +8,6 @@ edition = "2018"
 
 [dependencies]
 inle_serialize = { path = "../inle_serialize" }
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+libc = "*"

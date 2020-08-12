@@ -1,6 +1,4 @@
-use crate::common::colors::{self, Color};
-use std::convert::From;
-use std::default::Default;
+use crate::colors::{self, Color};
 
 #[derive(Copy, Clone)]
 pub struct Paint_Properties {

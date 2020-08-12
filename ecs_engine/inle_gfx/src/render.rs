@@ -1,43 +1,17 @@
-use inle_common::paint_props::Paint_Properties;
+use crate::components::Material;
+use crate::render_window::Render_Window_Handle;
 use inle_common::colors::Color;
+use inle_common::paint_props::Paint_Properties;
 use inle_math::rect::Rect;
 use inle_math::shapes::Circle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use inle_ecs::components::gfx::Material;
-use crate::render_window::Render_Window_Handle;
-use std::convert::Into;
+
+use inle_gfx_backend::render::backend;
 
 pub mod batcher;
 
-#[cfg(feature = "gfx-sfml")]
-pub(self) mod sfml;
-
-#[cfg(feature = "gfx-null")]
-pub(self) mod null;
-
-#[cfg(feature = "gfx-sfml")]
-pub(self) use self::sfml as backend;
-
-#[cfg(feature = "gfx-null")]
-pub(self) use self::null as backend;
-
 pub type Z_Index = i8;
-
-pub type Text<'a> = backend::Text<'a>;
-pub type Font<'a> = backend::Font<'a>;
-pub type Texture<'a> = backend::Texture<'a>;
-pub type Shader<'a> = backend::Shader<'a>;
-pub type Image = backend::Image;
-
-pub type Vertex_Buffer = backend::Vertex_Buffer;
-pub type Vertex = backend::Vertex;
-
-#[derive(Default)]
-pub struct Render_Extra_Params<'t, 's> {
-    pub texture: Option<&'t Texture<'t>>,
-    pub shader: Option<&'s Shader<'s>>,
-}
 
 //////////////////////////// DRAWING //////////////////////////////////
 

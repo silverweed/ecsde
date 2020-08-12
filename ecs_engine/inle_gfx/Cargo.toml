@@ -7,23 +7,18 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-gfx-null = []
-gfx-sfml = ["sfml/graphics"]
-default = ["gfx-sfml"]
+#gfx-null = []
+#gfx-sfml = ["sfml/graphics"]
+#default = ["gfx-sfml"]
 
 [dependencies]
 inle_common = { path = "../inle_common" }
 inle_diagnostics = { path = "../inle_diagnostics" }
 inle_math = { path = "../inle_math" }
 inle_ecs = { path = "../inle_ecs" }
+inle_resources = { path = "../inle_resources" }
 
 [dependencies.smallvec]
 default-features = false
 version = "1.4"
 
-[dependencies.sfml]
-version = "0.15.1"
-git = "https://github.com/jeremyletang/rust-sfml"
-rev = "9199dc4"
-optional = true
-default-features = false

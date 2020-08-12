@@ -1,4 +1,4 @@
-use crate::common::vector::Vector2;
+use crate::vector::Vector2;
 use std::cmp::{Eq, Ordering, PartialEq};
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};

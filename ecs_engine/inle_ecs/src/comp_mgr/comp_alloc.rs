@@ -5,7 +5,7 @@ use std::mem;
 use std::ptr;
 
 #[cfg(debug_assertions)]
-use crate::debug::painter::Debug_Painter;
+use inle_debug::painter::Debug_Painter;
 
 // @Speed @Convenience: consider making this configurable
 const INITIAL_N_ELEMS: usize = 8;
@@ -538,11 +538,11 @@ impl Component_Allocator {
     }
 
     pub fn debug_draw<T: Copy>(&self, painter: &mut Debug_Painter) {
-        use crate::common::colors;
-        use crate::common::shapes::{Arrow, Circle};
-        use crate::common::transform::Transform2D;
-        use crate::common::vector::Vec2f;
-        use crate::gfx::paint_props::Paint_Properties;
+        use inle_common::colors;
+        use inle_common::paint_props::Paint_Properties;
+        use inle_math::shapes::{Arrow, Circle};
+        use inle_math::transform::Transform2D;
+        use inle_math::vector::Vec2f;
 
         let props = Paint_Properties {
             color: colors::rgba(150, 150, 150, 150),
