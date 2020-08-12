@@ -2,8 +2,8 @@ mod cache;
 
 use super::asset_path;
 use super::loaders;
-use crate::core::env::Env_Info;
-use crate::gfx::render::{self, Font, Shader, Texture};
+use inle_core::env::Env_Info;
+use inle_gfx::render::{self, Font, Shader, Texture};
 
 pub type Texture_Handle = loaders::Res_Handle;
 pub type Font_Handle = loaders::Res_Handle;

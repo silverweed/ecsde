@@ -1,6 +1,6 @@
 #[cfg(debug_assertions)]
 use {
-    crate::debug::tracer::Tracer,
+    crate::tracer::Tracer,
     std::sync::{Arc, Mutex},
 };
 
@@ -17,7 +17,7 @@ lazy_static! {
 macro_rules! trace {
     ($tag: expr) => {
         let _trace_var =
-            $crate::debug::tracer::debug_trace($tag, $crate::prelude::DEBUG_TRACER.clone());
+            $crate::tracer::debug_trace($tag, $crate::prelude::DEBUG_TRACER.clone());
     };
 }
 

@@ -2,7 +2,7 @@ use super::joystick::{self, Joystick_Button};
 use super::joystick_state::Joystick_State;
 use super::keyboard::Key;
 use super::mouse::{self, Mouse_Button};
-use crate::common::stringid::String_Id;
+use inle_common::stringid::String_Id;
 use std::collections::HashMap;
 use std::path::Path;
 use std::vec::Vec;

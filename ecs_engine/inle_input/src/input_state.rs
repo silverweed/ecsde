@@ -6,9 +6,9 @@ use super::joystick;
 use super::joystick_state::{self, Joystick_State};
 use super::keyboard::{self, Keyboard_State};
 use super::mouse::{self, Mouse_State};
-use crate::common::stringid::String_Id;
-use crate::core::env::Env_Info;
-use crate::gfx::window::{self, Window_Handle};
+use inle_common::stringid::String_Id;
+use inle_core::env::Env_Info;
+use inle_win::window::{self, Window_Handle};
 use std::convert::TryInto;
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
@@ -192,7 +192,7 @@ fn remove_modifier(
     original: Input_Action_Modifiers,
     to_remove: keyboard::Key,
 ) -> Input_Action_Modifiers {
-    use crate::input::bindings::input_action_modifier_from_key;
+    use crate::bindings::input_action_modifier_from_key;
     original & !input_action_modifier_from_key(to_remove)
 }
 

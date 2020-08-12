@@ -8,6 +8,9 @@
 extern crate lazy_static;
 
 #[macro_use]
+extern crate inle_diagnostics;
+
+#[macro_use]
 pub mod prelude;
 
 pub mod bitset;

@@ -1,5 +1,5 @@
-use crate::input::bindings::{input_action_modifier_from_key, Input_Action_Modifiers};
-use crate::input::events::Input_Raw_Event;
+use crate::bindings::{input_action_modifier_from_key, Input_Action_Modifiers};
+use crate::events::Input_Raw_Event;
 use std::collections::HashSet;
 
 #[cfg(feature = "win-sfml")]

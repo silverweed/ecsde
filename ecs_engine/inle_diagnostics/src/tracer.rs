@@ -1,5 +1,3 @@
-pub mod drawing;
-
 use crate::prelude::Debug_Tracer;
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -231,7 +229,8 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
     let mut tag_map: HashMap<u32, Tag_Map_Info> = HashMap::new();
 
     fn hash_node(nodes: &[Tracer_Node], node: &Tracer_Node) -> u32 {
-        use crate::common::stringid::{FNV1A_PRIME32, FNV1A_START32};
+        const FNV1A_PRIME32: u32 = 16_777_619;
+        const FNV1A_START32: u32 = 2_166_136_261;
 
         let mut result = FNV1A_START32;
         let mut node = node;

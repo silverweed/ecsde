@@ -5,6 +5,11 @@
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
 #[macro_use]
-extern crate inle_diagnostics;
+extern crate lazy_static;
 
-pub mod evt_register;
+#[macro_use]
+pub mod prelude;
+
+pub mod tracer;
+
+pub use prelude::*;

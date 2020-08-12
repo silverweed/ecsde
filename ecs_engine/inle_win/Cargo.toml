@@ -1,5 +1,5 @@
 [package]
-name = "inle_gfx"
+name = "inle_win"
 version = "0.1.0"
 authors = ["silverweed <silverweed1991@gmail.com>"]
 edition = "2018"
@@ -7,19 +7,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-gfx-null = []
-gfx-sfml = ["sfml/graphics"]
-default = ["gfx-sfml"]
+win-glfw = ["glfw"]
+win-sfml = ["sfml/window"]
+default = ["win-sfml"]
 
 [dependencies]
-inle_common = { path = "../inle_common" }
-inle_diagnostics = { path = "../inle_diagnostics" }
-inle_math = { path = "../inle_math" }
-inle_ecs = { path = "../inle_ecs" }
-
-[dependencies.smallvec]
-default-features = false
-version = "1.4"
+inle_math = { path = "../inle_math", features = ["win-sfml"] }
 
 [dependencies.sfml]
 version = "0.15.1"
@@ -27,3 +20,9 @@ git = "https://github.com/jeremyletang/rust-sfml"
 rev = "9199dc4"
 optional = true
 default-features = false
+
+[dependencies.glfw]
+version = "0.39"
+optional = true
+default-features = false
+#features = ["glfw-sys"]

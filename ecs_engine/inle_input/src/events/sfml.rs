@@ -1,8 +1,8 @@
-use crate::input::keyboard;
-use crate::input::mouse;
+use crate::keyboard;
+use crate::mouse;
 //use crate::input::joystick::{Joystick_Id, Button_Id as Joystick_Button_Id};
 use super::Input_Raw_Event;
-use crate::gfx::window::Event as Win_Event;
+use inle_win::window::Event as Win_Event;
 
 pub(super) fn framework_to_engine_event(event: Win_Event) -> Option<Input_Raw_Event> {
     match event {

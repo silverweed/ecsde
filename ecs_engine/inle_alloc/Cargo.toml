@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 inle_common = { path = "../inle_common" }
+inle_diagnostics = { path = "../inle_diagnostics" }

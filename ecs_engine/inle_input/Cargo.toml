@@ -6,4 +6,31 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+win-sfml = ["sfml/window"]
+win-glfw = ["glfw"]
+default = ["win-sfml"]
+
 [dependencies]
+inle_common = { path = "../inle_common" }
+inle_core = { path = "../inle_core" }
+inle_diagnostics = { path = "../inle_diagnostics" }
+inle_serialize = { path = "../inle_serialize" }
+inle_win = { path = "../inle_win" }
+
+[dependencies.smallvec]
+default-features = false
+version = "1.4"
+
+[dependencies.sfml]
+version = "0.15.1"
+git = "https://github.com/jeremyletang/rust-sfml"
+rev = "9199dc4"
+optional = true
+default-features = false
+
+[dependencies.glfw]
+version = "0.39"
+optional = true
+default-features = false
+#features = ["glfw-sys"]

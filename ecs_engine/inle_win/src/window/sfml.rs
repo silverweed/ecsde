@@ -1,6 +1,6 @@
 #![cfg(feature = "win-sfml")]
 
-use crate::common::vector::Vec2i;
+use inle_math::vector::Vec2i;
 use sfml::window as sfwin;
 
 pub type Event = sfml::window::Event;

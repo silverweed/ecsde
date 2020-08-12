@@ -5,7 +5,7 @@
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
 #[macro_use]
-extern crate inle_common;
+extern crate inle_diagnostics;
 
 pub mod file_watcher;
 pub mod utils;

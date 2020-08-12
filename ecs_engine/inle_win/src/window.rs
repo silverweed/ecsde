@@ -1,4 +1,4 @@
-use crate::common::vector::{Vec2f, Vec2i, Vec2u};
+use inle_math::vector::{Vec2f, Vec2i, Vec2u};
 
 #[cfg(feature = "win-sfml")]
 mod sfml;

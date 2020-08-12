@@ -23,8 +23,7 @@ where
     T: 'a,
 {
     fn from(s: T) -> String_Id {
-        // @Dependency: cyclic include!
-        //trace!("String_Id::from");
+        trace!("String_Id::from");
 
         let s: &str = s.into();
         let this = String_Id(fnv1a(s.as_bytes()));

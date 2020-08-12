@@ -1,11 +1,11 @@
-use super::paint_props::Paint_Properties;
-use crate::common::colors::Color;
-use crate::common::rect::Rect;
-use crate::common::shapes::Circle;
-use crate::common::transform::Transform2D;
-use crate::common::vector::Vec2f;
-use crate::ecs::components::gfx::Material;
-use crate::gfx::render_window::Render_Window_Handle;
+use inle_common::paint_props::Paint_Properties;
+use inle_common::colors::Color;
+use inle_math::rect::Rect;
+use inle_math::shapes::Circle;
+use inle_math::transform::Transform2D;
+use inle_math::vector::Vec2f;
+use inle_ecs::components::gfx::Material;
+use crate::render_window::Render_Window_Handle;
 use std::convert::Into;
 
 pub mod batcher;

@@ -1,5 +1,5 @@
 use super::bindings::Axis_Emulation_Type;
-use crate::common::stringid::String_Id;
+use inle_common::stringid::String_Id;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 

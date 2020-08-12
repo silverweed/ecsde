@@ -1,5 +1,5 @@
 use super::collider::Collider;
-use crate::alloc::gen_alloc::{Generational_Allocator, Generational_Index};
+use inle_alloc::gen_alloc::{Generational_Allocator, Generational_Index};
 use smallvec::SmallVec;
 
 pub type Collider_Handle = Generational_Index;

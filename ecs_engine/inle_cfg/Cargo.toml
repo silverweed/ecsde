@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 inle_common = { path = "../inle_common" }
 inle_core = { path = "../inle_core" }
+inle_diagnostics = { path = "../inle_diagnostics" }
 inle_fs = { path = "../inle_fs" }
 
 # Debug only
