@@ -1,0 +1,47 @@
+[package]
+edition = "2018"
+name = "ecs_engine"
+version = "0.1.0"
+authors = ["silverweed <silverweed1991@gmail.com>"]
+
+[features]
+win-glfw = ["glfw"]
+win-sfml = ["sfml/window"]
+audio-null = []
+audio-sfml = ["sfml/audio"]
+gfx-null = []
+gfx-sfml = ["sfml/graphics"]
+default = ["audio-sfml", "win-sfml", "gfx-sfml"]
+#default = ["audio-null", "win-glfw", "gfx-null"]
+
+[dependencies]
+byteorder = "1.3.2"
+rayon = "1.3"
+anymap = "0.12"
+
+# debug-only deps
+notify = "4.0"
+lazy_static = "1.3"
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+libc = "0.2"
+
+[dependencies.sfml]
+version = "0.15.1"
+git = "https://github.com/jeremyletang/rust-sfml"
+rev = "9199dc4"
+optional = true
+default-features = false
+
+[dependencies.glfw]
+version = "0.39"
+optional = true
+default-features = false
+#features = ["glfw-sys"]
+
+[dependencies.smallvec]
+default-features = false
+version = "1.4"
+
+[dev-dependencies]
+float-cmp = "0.5.2"

@@ -1,0 +1,15 @@
+[package]
+name = "inle_cfg"
+version = "0.1.0"
+authors = ["silverweed <silverweed1991@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+inle_common = { path = "../inle_common" }
+inle_core = { path = "../inle_core" }
+inle_fs = { path = "../inle_fs" }
+
+# Debug only
+notify = "4.0"

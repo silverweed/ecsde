@@ -1,0 +1,11 @@
+[package]
+name = "inle_events"
+version = "0.1.0"
+authors = ["silverweed <silverweed1991@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+inle_common = { path = "../inle_common" }
+anymap = "0.12"
