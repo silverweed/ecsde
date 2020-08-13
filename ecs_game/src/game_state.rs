@@ -2,24 +2,23 @@ use crate::cmdline;
 use crate::collisions;
 use crate::gameplay_system;
 use crate::states;
-use ecs_engine::cfg;
-use ecs_engine::cfg::Cfg_Var;
-use ecs_engine::common::stringid::String_Id;
-use ecs_engine::core::env::Env_Info;
-use ecs_engine::core::{app, app_config};
-use ecs_engine::gfx::{self as ngfx, render_window::Render_Window_Handle};
-use ecs_engine::resources;
+use inle_cfg::{self, Cfg_Var};
+use inle_common::stringid::String_Id;
+use inle_core::env::Env_Info;
+use inle_app::{app, app_config};
+use inle_gfx::{self, render_window::Render_Window_Handle};
+use inle_resources;
 use std::collections::HashMap;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
 #[rustfmt::skip]
-use ecs_engine::{
-    common::colors,
-    debug as ngdebug
+use {
+    inle_common::colors,
+    inle_debug 
 };
 
-pub type Level_Batches = HashMap<String_Id, ngfx::render::batcher::Batches>;
+pub type Level_Batches = HashMap<String_Id, inle_gfx::render::batcher::Batches>;
 
 #[repr(C)]
 pub struct Game_State<'a> {
@@ -40,7 +39,7 @@ pub struct Game_State<'a> {
     pub debug_cvars: Debug_CVars,
 
     #[cfg(debug_assertions)]
-    pub fps_debug: ngdebug::fps::Fps_Counter,
+    pub fps_debug: inle_debug::fps::Fps_Counter,
 }
 
 pub struct CVars {
@@ -83,8 +82,8 @@ pub struct Debug_CVars {
 
 #[repr(C)]
 pub struct Game_Resources<'a> {
-    pub gfx: resources::gfx::Gfx_Resources<'a>,
-    pub audio: resources::audio::Audio_Resources<'a>,
+    pub gfx: inle_resources::gfx::Gfx_Resources<'a>,
+    pub audio: inle_resources::audio::Audio_Resources<'a>,
 }
 
 #[repr(C)]
@@ -135,7 +134,7 @@ pub(super) fn internal_game_init<'a>(
         }
     }
 
-    game_state.sleep_granularity = ecs_engine::core::sleep::init_sleep()
+    game_state.sleep_granularity = inle_core::sleep::init_sleep()
         .ok()
         .map(|g| g.max(Duration::from_micros(1)));
 
@@ -156,7 +155,7 @@ fn create_game_state<'a>(
 ) -> Result<(Box<Game_State<'a>>, cmdline::Cmdline_Args), Box<dyn std::error::Error>> {
     // Load Config first, as it's needed to setup everything that follows.
     let env = Env_Info::gather().unwrap();
-    let config = cfg::Config::new_from_dir(&env.cfg_root);
+    let config = inle_cfg::Config::new_from_dir(&env.cfg_root);
 
     // Load initial App_Config (some values may be overwritten by cmdline args)
     let mut_in_debug!(app_config) = {
@@ -186,12 +185,12 @@ fn create_game_state<'a>(
     let cfg = &engine_state.config;
     let cvars = create_cvars(cfg);
 
-    let window_create_args = ngfx::window::Create_Window_Args {
+    let window_create_args = inle_win::window::Create_Window_Args {
         vsync: cvars.vsync.read(cfg),
     };
     let window =
-        ngfx::window::create_window(&window_create_args, appcfg.target_win_size, &appcfg.title);
-    let window = ngfx::render_window::create_render_window(window);
+        inle_win::window::create_window(&window_create_args, appcfg.target_win_size, &appcfg.title);
+    let window = inle_gfx::render_window::create_render_window(window);
 
     #[cfg(debug_assertions)]
     {
@@ -215,7 +214,7 @@ fn create_game_state<'a>(
         let ui_scale = Cfg_Var::<f32>::new("engine/debug/ui/ui_scale", &engine_state.config)
             .read(&engine_state.config);
         let font = Cfg_Var::<String>::new("engine/debug/ui/font", &engine_state.config);
-        let cfg = ngdebug::debug_ui::Debug_Ui_System_Config {
+        let cfg = inle_debug::debug_ui::Debug_Ui_System_Config {
             ui_scale,
             target_win_size: engine_state.app_config.target_win_size,
             font: font.read(&engine_state.config).to_string(),
@@ -223,7 +222,7 @@ fn create_game_state<'a>(
 
         app::init_engine_debug(&mut engine_state, &mut game_resources.gfx, cfg)?;
 
-        if ecs_engine::debug::console::load_console_hist(
+        if inle_debug::console::load_console_hist(
             &mut engine_state.debug_systems.console,
             &engine_state.env,
         )
@@ -263,13 +262,13 @@ fn create_game_state<'a>(
             #[cfg(debug_assertions)]
             debug_cvars,
             #[cfg(debug_assertions)]
-            fps_debug: ngdebug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(2)),
+            fps_debug: inle_debug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(2)),
         }),
         parsed_cmdline_args,
     ))
 }
 
-fn create_cvars(cfg: &ecs_engine::cfg::Config) -> CVars {
+fn create_cvars(cfg: &inle_cfg::Config) -> CVars {
     let gameplay_update_tick_ms = Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg);
     let clear_color = Cfg_Var::new("engine/rendering/clear_color", cfg);
     let vsync = Cfg_Var::new("engine/window/vsync", cfg);
@@ -284,7 +283,7 @@ fn create_cvars(cfg: &ecs_engine::cfg::Config) -> CVars {
 }
 
 #[cfg(debug_assertions)]
-fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
+fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     let draw_sprites_bg = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg", cfg);
     let draw_sprites_bg_color = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg_color", cfg);
     let draw_lights = Cfg_Var::new("engine/debug/rendering/draw_lights", cfg);
@@ -328,8 +327,8 @@ fn create_debug_cvars(cfg: &ecs_engine::cfg::Config) -> Debug_CVars {
 }
 
 fn create_game_resources<'a>() -> Result<Box<Game_Resources<'a>>, Box<dyn std::error::Error>> {
-    let gfx_resources = resources::gfx::Gfx_Resources::new();
-    let audio_resources = resources::audio::Audio_Resources::new();
+    let gfx_resources = inle_resources::gfx::Gfx_Resources::new();
+    let audio_resources = inle_resources::audio::Audio_Resources::new();
     Ok(Box::new(Game_Resources {
         gfx: gfx_resources,
         audio: audio_resources,
@@ -387,14 +386,14 @@ fn init_states(
 
 #[cfg(debug_assertions)]
 fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resources) {
-    use ecs_engine::common::vector::Vec2f;
-    use ecs_engine::debug::overlay::Debug_Overlay_Config;
-    use ecs_engine::gfx::align::Align;
+    use inle_math::vector::Vec2f;
+    use inle_debug::overlay::Debug_Overlay_Config;
+    use inle_common::vis_align::Align;
 
     const FONT: &str = "Hack-Regular.ttf";
 
     let debug_ui = &mut game_state.engine_state.debug_systems.debug_ui;
-    let font = game_resources.gfx.load_font(&resources::gfx::font_path(
+    let font = game_resources.gfx.load_font(&inle_resources::gfx::font_path(
         &game_state.engine_state.env,
         FONT,
     ));
@@ -471,7 +470,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
             .config
             .get_all_pairs()
             .filter_map(|(k, v)| {
-                if let cfg::Cfg_Value::Bool(_) = v {
+                if let inle_cfg::Cfg_Value::Bool(_) = v {
                     Some(k)
                 } else {
                     None

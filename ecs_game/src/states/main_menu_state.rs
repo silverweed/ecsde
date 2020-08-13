@@ -1,15 +1,15 @@
 use super::state::{Game_State, Game_State_Args, State_Transition};
-use ecs_engine::common::rect::Rect;
-use ecs_engine::common::vector::{lerp_v, Vec2f};
-use ecs_engine::gfx::render_window::Render_Window_Handle;
-use ecs_engine::gfx::window;
-use ecs_engine::ui;
+use inle_math::rect::Rect;
+use inle_math::vector::{lerp_v, Vec2f};
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_win::window;
+use inle_ui;
 use std::time::Duration;
 
 #[derive(Default)]
 struct Menu_Button {
-    pub id: ui::UI_Id,
-    pub props: ui::Button_Props,
+    pub id: inle_ui::UI_Id,
+    pub props: inle_ui::Button_Props,
     pub text: &'static str,
     pub size: Vec2f,
     pub start_pos: Vec2f,
@@ -28,7 +28,7 @@ impl Main_Menu_State {
         let mut buttons = vec![];
         let (ww, wh) = window::get_window_target_size(window);
         let (ww, wh) = (ww as f32, wh as f32);
-        let props = ui::Button_Props {
+        let props = inle_ui::Button_Props {
             font_size: 24,
             ..Default::default()
         };
@@ -89,7 +89,7 @@ impl Game_State for Main_Menu_State {
         );
         let rect = Rect::new(pos.x, pos.y, b.size.x, b.size.y);
         // Start game
-        if ui::button(window, gres, istate, ui_ctx, b.id, b.text, rect, &b.props) {
+        if inle_ui::button(window, gres, istate, ui_ctx, b.id, b.text, rect, &b.props) {
             return State_Transition::Push(
                 Box::new(super::in_game_state::In_Game_State::default()),
             );
@@ -103,7 +103,7 @@ impl Game_State for Main_Menu_State {
         );
         let rect = Rect::new(pos.x, pos.y, b.size.x, b.size.y);
         // Quit game
-        if ui::button(window, gres, istate, ui_ctx, b.id, b.text, rect, &b.props) {
+        if inle_ui::button(window, gres, istate, ui_ctx, b.id, b.text, rect, &b.props) {
             args.engine_state.should_close = true;
         }
 

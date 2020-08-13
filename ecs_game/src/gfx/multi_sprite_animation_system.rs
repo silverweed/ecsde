@@ -1,6 +1,6 @@
-use ecs_engine::alloc::temp::*;
-use ecs_engine::ecs::components::gfx::C_Multi_Renderable;
-use ecs_engine::ecs::ecs_world::Ecs_World;
+use inle_alloc::temp::*;
+use inle_gfx::components::C_Multi_Renderable;
+use inle_ecs::ecs_world::Ecs_World;
 use std::time::Duration;
 
 #[derive(Copy, Clone, Debug, PartialEq)]

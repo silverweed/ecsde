@@ -3,19 +3,20 @@ use crate::gfx::multi_sprite_animation_system::{Animation_Track, C_Multi_Rendera
 use crate::gfx::shaders::*;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::pixel_collision_system::C_Texture_Collider;
-use ecs_engine::cfg::{Cfg_Var, Config};
-use ecs_engine::collisions::collider::{C_Collider, Collider, Collision_Shape};
-use ecs_engine::collisions::phys_world::{Phys_Data, Physics_World};
-use ecs_engine::common::rect::Rect;
-use ecs_engine::common::transform::Transform2D;
-use ecs_engine::core::env::Env_Info;
-use ecs_engine::ecs::components::base::C_Spatial2D;
-use ecs_engine::ecs::components::gfx::{
-    C_Animated_Sprite, C_Multi_Renderable, C_Renderable, Material,
+use inle_cfg::{Cfg_Var, Config};
+use inle_physics::collider::{C_Collider, Collider, Collision_Shape};
+use inle_physics::phys_world::{Phys_Data, Physics_World};
+use inle_math::rect::Rect;
+use inle_math::transform::Transform2D;
+use inle_core::env::Env_Info;
+use inle_ecs::components::base::C_Spatial2D;
+use inle_gfx::components::{
+    C_Animated_Sprite, C_Multi_Renderable, C_Renderable, 
 };
-use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
-use ecs_engine::gfx::render;
-use ecs_engine::resources::gfx::{shader_path, tex_path, Gfx_Resources, Shader_Cache};
+use inle_gfx::material::Material;
+use inle_ecs::ecs_world::{Ecs_World, Entity};
+use inle_gfx::render;
+use inle_resources::gfx::{shader_path, tex_path, Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
 use {crate::debug::entity_debug::C_Debug_Data, std::collections::HashMap, std::sync::Mutex};

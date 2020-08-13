@@ -1,13 +1,13 @@
 use crate::directions;
 use crate::spatial::World_Chunks;
-use ecs_engine::collisions::collider::{C_Collider, Collider, Collision_Shape};
-use ecs_engine::collisions::phys_world::{Phys_Data, Physics_World};
-use ecs_engine::common::vector::Vec2i;
-use ecs_engine::core::app::Engine_State;
-use ecs_engine::ecs::components::base::C_Spatial2D;
-use ecs_engine::ecs::components::gfx::C_Renderable;
-use ecs_engine::ecs::ecs_world::{Ecs_World, Entity, Evt_Entity_Destroyed};
-use ecs_engine::events::evt_register::{with_cb_data, wrap_cb_data, Event_Callback_Data};
+use inle_physics::collider::{C_Collider, Collider, Collision_Shape};
+use inle_physics::phys_world::{Phys_Data, Physics_World};
+use inle_math::vector::Vec2i;
+use inle_app::app::Engine_State;
+use inle_ecs::components::base::C_Spatial2D;
+use inle_gfx::components::C_Renderable;
+use inle_ecs::ecs_world::{Ecs_World, Entity, Evt_Entity_Destroyed};
+use inle_events::evt_register::{with_cb_data, wrap_cb_data, Event_Callback_Data};
 
 #[derive(Copy, Clone, Default)]
 pub struct C_Ground {

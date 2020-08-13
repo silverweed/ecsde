@@ -1,17 +1,17 @@
 use super::state::{Game_State, Game_State_Args, State_Transition};
-use ecs_engine::common::rect::Rect;
-use ecs_engine::common::stringid::String_Id;
-use ecs_engine::common::vector::Vec2f;
-use ecs_engine::gfx::render_window::Render_Window_Handle;
-use ecs_engine::gfx::window;
-use ecs_engine::input::input_state::{Action_Kind, Game_Action};
-use ecs_engine::ui;
+use inle_math::rect::Rect;
+use inle_common::stringid::String_Id;
+use inle_math::vector::Vec2f;
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_win::window;
+use inle_input::input_state::{Action_Kind, Game_Action};
+use inle_ui;
 use std::time::Duration;
 
 #[derive(Default)]
 struct Menu_Button {
-    pub id: ui::UI_Id,
-    pub props: ui::Button_Props,
+    pub id: inle_ui::UI_Id,
+    pub props: inle_ui::Button_Props,
     pub text: &'static str,
     pub size: Vec2f,
     pub pos: Vec2f,
@@ -29,7 +29,7 @@ impl Pause_Menu_State {
         let (ww, wh) = window::get_window_target_size(window);
         let ww = ww as f32;
         let wh = wh as f32;
-        let props = ui::Button_Props {
+        let props = inle_ui::Button_Props {
             font_size: 24,
             ..Default::default()
         };
@@ -90,14 +90,14 @@ impl Game_State for Pause_Menu_State {
         let b = &self.buttons[0];
         let rect = Rect::new(b.pos.x, b.pos.y, b.size.x, b.size.y);
         // Resume game
-        if ui::button(window, gres, istate, ui_ctx, b.id, b.text, rect, &b.props) {
+        if inle_ui::button(window, gres, istate, ui_ctx, b.id, b.text, rect, &b.props) {
             return State_Transition::Pop;
         }
 
         let b = &self.buttons[1];
         let rect = Rect::new(b.pos.x, b.pos.y, b.size.x, b.size.y);
         // Quit to menu
-        if ui::button(window, gres, istate, ui_ctx, b.id, b.text, rect, &b.props) {
+        if inle_ui::button(window, gres, istate, ui_ctx, b.id, b.text, rect, &b.props) {
             return State_Transition::Flush_All_And_Replace(Box::new(
                 super::main_menu_state::Main_Menu_State::default(),
             ));
@@ -106,7 +106,7 @@ impl Game_State for Pause_Menu_State {
         let b = &self.buttons[2];
         let rect = Rect::new(b.pos.x, b.pos.y, b.size.x, b.size.y);
         // Quit game
-        if ui::button(window, gres, istate, ui_ctx, b.id, b.text, rect, &b.props) {
+        if inle_ui::button(window, gres, istate, ui_ctx, b.id, b.text, rect, &b.props) {
             args.engine_state.should_close = true;
         }
 

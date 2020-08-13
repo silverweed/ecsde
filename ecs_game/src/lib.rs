@@ -4,7 +4,16 @@
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
 #[macro_use]
-extern crate ecs_engine;
+extern crate inle_diagnostics;
+
+#[macro_use]
+extern crate inle_common;
+
+#[macro_use]
+extern crate inle_math;
+
+#[macro_use]
+extern crate inle_ecs;
 
 #[cfg(debug_assertions)]
 #[macro_use]
@@ -29,10 +38,10 @@ mod systems;
 #[cfg(debug_assertions)]
 mod debug;
 
-use ecs_engine::common::colors;
-use ecs_engine::common::stringid::String_Id;
-use ecs_engine::core::{app, sleep, time};
-use ecs_engine::gfx as ngfx;
+use inle_common::colors;
+use inle_common::stringid::String_Id;
+use inle_core::{sleep, time};
+use inle_app::app;
 use game_state::*;
 use std::convert::TryInto;
 use std::ffi::CStr;
@@ -114,7 +123,7 @@ where
 
     #[cfg(debug_assertions)]
     {
-        ecs_engine::prelude::DEBUG_TRACER
+        inle_diagnostics::prelude::DEBUG_TRACER
             .lock()
             .unwrap()
             .start_frame();
@@ -158,7 +167,7 @@ where
         INIT_CONSOLE_FN_NAME_HINTS.call_once(|| {
             let console = &mut game_state.engine_state.debug_systems.console;
             let fn_names: std::collections::HashSet<_> = {
-                let tracer = ecs_engine::prelude::DEBUG_TRACER.lock().unwrap();
+                let tracer = inle_diagnostics::prelude::DEBUG_TRACER.lock().unwrap();
                 tracer
                     .saved_traces
                     .iter()
@@ -178,7 +187,7 @@ where
 
     ///// !!! Must not use frame_alloc after this !!! /////
 
-    if !ngfx::window::has_vsync(&game_state.window) {
+    if !inle_win::window::has_vsync(&game_state.window) {
         let mut t_elapsed_for_work = t_before_work.elapsed();
         if t_elapsed_for_work < target_time_per_frame {
             while t_elapsed_for_work < target_time_per_frame {
@@ -228,7 +237,7 @@ pub unsafe extern "C" fn game_shutdown(
 
     #[cfg(debug_assertions)]
     {
-        use ecs_engine::debug::console::save_console_hist;
+        use inle_debug::console::save_console_hist;
         let engine_state = &(*game_state).engine_state;
         save_console_hist(&engine_state.debug_systems.console, &engine_state.env)
             .unwrap_or_else(|err| lwarn!("Failed to save console history: {}", err));

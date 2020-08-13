@@ -1,10 +1,10 @@
 use crate::input_utils::{get_movement_from_input, Input_Config};
-use ecs_engine::cfg::{self, Cfg_Var};
-use ecs_engine::common::vector::Vec2f;
-use ecs_engine::ecs::components::base::C_Spatial2D;
-use ecs_engine::ecs::ecs_world::Ecs_World;
-use ecs_engine::input::axes::Virtual_Axes;
-use ecs_engine::input::input_state::Game_Action;
+use inle_cfg::{self, Cfg_Var};
+use inle_math::vector::Vec2f;
+use inle_ecs::components::base::C_Spatial2D;
+use inle_ecs::ecs_world::Ecs_World;
+use inle_input::axes::Virtual_Axes;
+use inle_input::input_state::Game_Action;
 use std::time::Duration;
 
 #[derive(Copy, Clone, Debug)]
@@ -28,7 +28,7 @@ pub fn update(
     axes: &Virtual_Axes,
     ecs_world: &mut Ecs_World,
     input_cfg: Input_Config,
-    cfg: &cfg::Config,
+    cfg: &inle_cfg::Config,
 ) {
     let movement = get_movement_from_input(axes, input_cfg, cfg);
     let dt_secs = dt.as_secs_f32();

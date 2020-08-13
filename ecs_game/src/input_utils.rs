@@ -1,7 +1,7 @@
-use ecs_engine::cfg::{Cfg_Var, Config};
-use ecs_engine::common::stringid::String_Id;
-use ecs_engine::common::vector::Vec2f;
-use ecs_engine::input::axes::Virtual_Axes;
+use inle_cfg::{Cfg_Var, Config};
+use inle_common::stringid::String_Id;
+use inle_math::vector::Vec2f;
+use inle_input::axes::Virtual_Axes;
 
 #[derive(Copy, Clone, Default)]
 pub struct Input_Config {

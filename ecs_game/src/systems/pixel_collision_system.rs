@@ -1,18 +1,18 @@
 use crate::systems::controllable_system::C_Controllable;
-use ecs_engine::alloc::temp::*;
-use ecs_engine::collisions::collider::C_Collider;
-use ecs_engine::collisions::layers::{Collision_Layer, Collision_Matrix};
-use ecs_engine::collisions::phys_world::{Collider_Handle, Physics_World};
-use ecs_engine::common::colors::Color;
-use ecs_engine::common::math::clamp;
-use ecs_engine::common::rect::Rect;
-use ecs_engine::common::shapes::Circle;
-use ecs_engine::common::transform::Transform2D;
-use ecs_engine::common::vector::{Vec2f, Vec2i};
-use ecs_engine::ecs::components::base::C_Spatial2D;
-use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
-use ecs_engine::gfx::render::{self, Image};
-use ecs_engine::resources::gfx::{Gfx_Resources, Texture_Handle};
+use inle_alloc::temp::*;
+use inle_physics::collider::C_Collider;
+use inle_physics::layers::{Collision_Layer, Collision_Matrix};
+use inle_physics::phys_world::{Collider_Handle, Physics_World};
+use inle_common::colors::Color;
+use inle_math::math::clamp;
+use inle_math::rect::Rect;
+use inle_math::shapes::Circle;
+use inle_math::transform::Transform2D;
+use inle_math::vector::{Vec2f, Vec2i};
+use inle_ecs::components::base::C_Spatial2D;
+use inle_ecs::ecs_world::{Ecs_World, Entity};
+use inle_gfx::render::{self, Image};
+use inle_resources::gfx::{Gfx_Resources, Texture_Handle};
 use std::collections::HashMap;
 
 #[derive(Copy, Clone, Default)]
@@ -152,7 +152,7 @@ impl Pixel_Collision_System {
         collision_matrix: &Collision_Matrix,
         temp_alloc: &mut Temp_Allocator,
         // @Cleanup: move this in update_debug and use the C_Entity_Debug to store the needed debug data
-        #[cfg(debug_assertions)] _debug_painter: &mut ecs_engine::debug::painter::Debug_Painter,
+        #[cfg(debug_assertions)] _debug_painter: &mut inle_debug::painter::Debug_Painter,
     ) {
         trace!("pixel_collision::update");
 

@@ -1,16 +1,17 @@
 use crate::states::state::{Game_State_Args, Persistent_Game_State};
 use crate::systems::pixel_collision_system::C_Texture_Collider;
-use ecs_engine::cfg::{self, Cfg_Var};
-use ecs_engine::common::colors;
-use ecs_engine::common::math;
-use ecs_engine::common::rect::Rect;
-use ecs_engine::common::stringid::String_Id;
-use ecs_engine::common::vector::{Vec2f, Vec2i};
-use ecs_engine::ecs::components::base::C_Spatial2D;
-use ecs_engine::ecs::entity_stream::new_entity_stream;
-use ecs_engine::gfx::{render, render_window, window};
-use ecs_engine::input::input_state::{Action_Kind, Game_Action};
-use ecs_engine::input::mouse;
+use inle_cfg::{self, Cfg_Var};
+use inle_common::colors;
+use inle_math::math;
+use inle_math::rect::Rect;
+use inle_common::stringid::String_Id;
+use inle_math::vector::{Vec2f, Vec2i};
+use inle_ecs::components::base::C_Spatial2D;
+use inle_ecs::entity_stream::new_entity_stream;
+use inle_gfx::{render, render_window};
+use inle_win::window;
+use inle_input::input_state::{Action_Kind, Game_Action};
+use inle_input::mouse;
 use std::time::Duration;
 
 pub struct Debug_Base_State {
@@ -31,7 +32,7 @@ pub struct Debug_Base_State {
 const CHANGE_SPEED_DELTA: f32 = 0.1;
 
 impl Debug_Base_State {
-    pub fn new(cfg: &cfg::Config) -> Debug_Base_State {
+    pub fn new(cfg: &inle_cfg::Config) -> Debug_Base_State {
         Debug_Base_State {
             sid_game_speed_up: String_Id::from("game_speed_up"),
             sid_game_speed_down: String_Id::from("game_speed_down"),
@@ -112,7 +113,7 @@ impl Persistent_Game_State for Debug_Base_State {
                     engine_state.time.step(&step_delta);
                     gs.step(&step_delta, engine_state, game_resources, window);
                     gs.levels.foreach_active_level(|level| {
-                        use ecs_engine::collisions::physics;
+                        use inle_physics::physics;
                         let mut _ignored = physics::Collision_System_Debug_Data::default();
                         physics::update_collisions(
                             &mut level.world,
@@ -123,7 +124,7 @@ impl Persistent_Game_State for Debug_Base_State {
                             &mut _ignored,
                         );
                         let mut moved =
-                            ecs_engine::alloc::temp::excl_temp_array(&mut engine_state.frame_alloc);
+                            inle_alloc::temp::excl_temp_array(&mut engine_state.frame_alloc);
                         crate::movement_system::update(
                             &step_delta,
                             &mut level.world,
@@ -229,7 +230,7 @@ impl Persistent_Game_State for Debug_Base_State {
             {
                 pixel_collision_system.change_pixels_circle(
                     texture,
-                    ecs_engine::common::shapes::Circle {
+                    inle_math::shapes::Circle {
                         center: v2!(
                             (mpos.x + tex_w as i32 / 2) as f32,
                             (mpos.y + tex_h as i32 / 2) as f32

@@ -1,9 +1,9 @@
 use crate::gameplay_system::Gameplay_System;
-use ecs_engine::cfg::Cfg_Value;
-use ecs_engine::common::colors::{self, Color};
-use ecs_engine::common::stringid::String_Id;
-use ecs_engine::common::vector::Vec2f;
-use ecs_engine::core::app::Engine_State;
+use inle_cfg::Cfg_Value;
+use inle_common::colors::{self, Color};
+use inle_common::stringid::String_Id;
+use inle_math::vector::Vec2f;
+use inle_app::app::Engine_State;
 use std::borrow::Cow;
 use std::fmt;
 
@@ -125,7 +125,7 @@ fn execute_command(
             }
         }
         Console_Cmd::Trace_Fn { fn_name } => {
-            ecs_engine::core::app::set_traced_fn(&mut engine_state.debug_systems, fn_name);
+            inle_app::app::set_traced_fn(&mut engine_state.debug_systems, fn_name);
             None
         }
     }

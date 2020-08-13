@@ -1,5 +1,5 @@
 use super::state::{Game_State, Game_State_Args, Persistent_Game_State, State_Transition};
-use ecs_engine::input::input_state::Game_Action;
+use inle_input::input_state::Game_Action;
 use std::time::Duration;
 
 /// Manages a PDA of Game_States.

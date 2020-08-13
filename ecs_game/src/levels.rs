@@ -1,10 +1,10 @@
 use crate::spatial::World_Chunks;
-use ecs_engine::collisions::phys_world::Physics_World;
-use ecs_engine::common::stringid::String_Id;
-use ecs_engine::common::vector::Vec2f;
-use ecs_engine::ecs::components::gfx::C_Camera2D;
-use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
-use ecs_engine::gfx::light::Lights;
+use inle_physics::phys_world::Physics_World;
+use inle_common::stringid::String_Id;
+use inle_math::vector::Vec2f;
+use inle_gfx::components::C_Camera2D;
+use inle_ecs::ecs_world::{Ecs_World, Entity};
+use inle_gfx::light::Lights;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 // A Level is what gets loaded and unloaded

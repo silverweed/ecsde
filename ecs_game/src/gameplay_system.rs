@@ -12,30 +12,29 @@ use crate::load::load_system;
 use crate::movement_system;
 use crate::spatial::World_Chunks;
 use crate::Game_Resources;
-use ecs_engine::cfg::{self, Cfg_Var};
-use ecs_engine::collisions::collider;
-use ecs_engine::common;
-use ecs_engine::common::colors;
-use ecs_engine::common::rect::Rect;
-use ecs_engine::common::stringid::String_Id;
-use ecs_engine::common::transform::Transform2D;
-use ecs_engine::common::vector::Vec2f;
-use ecs_engine::core::app::Engine_State;
-use ecs_engine::core::env::Env_Info;
-use ecs_engine::core::rand;
-use ecs_engine::core::time;
-use ecs_engine::ecs::components::base::C_Spatial2D;
-use ecs_engine::ecs::components::gfx::{C_Animated_Sprite, C_Camera2D, C_Renderable};
-use ecs_engine::ecs::ecs_world::{Ecs_World, Entity};
-use ecs_engine::ecs::entity_stream::new_entity_stream;
-use ecs_engine::events::evt_register::Event_Register;
-use ecs_engine::gfx as ngfx;
-use ecs_engine::gfx::render::batcher::Batches;
-use ecs_engine::gfx::render_window::Render_Window_Handle;
-use ecs_engine::input::axes::Virtual_Axes;
-use ecs_engine::input::input_state::{Action_Kind, Game_Action, Input_State};
-use ecs_engine::input::keyboard;
-use ecs_engine::resources::gfx::{tex_path, Gfx_Resources};
+use inle_cfg::{self, Cfg_Var};
+use inle_physics::collider;
+use inle_common;
+use inle_common::colors;
+use inle_math::rect::Rect;
+use inle_common::stringid::String_Id;
+use inle_math::transform::Transform2D;
+use inle_math::vector::Vec2f;
+use inle_app::app::Engine_State;
+use inle_core::env::Env_Info;
+use inle_core::{rand, time};
+use inle_ecs::components::base::C_Spatial2D;
+use inle_gfx::components::{C_Animated_Sprite, C_Camera2D, C_Renderable};
+use inle_ecs::ecs_world::{Ecs_World, Entity};
+use inle_ecs::entity_stream::new_entity_stream;
+use inle_events::evt_register::Event_Register;
+use inle_gfx;
+use inle_gfx::render::batcher::Batches;
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_input::axes::Virtual_Axes;
+use inle_input::input_state::{Action_Kind, Game_Action, Input_State};
+use inle_input::keyboard;
+use inle_resources::gfx::{tex_path, Gfx_Resources};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
@@ -86,7 +85,7 @@ impl Gameplay_System {
         gres: &mut Gfx_Resources,
         engine_state: &mut Engine_State,
         gs_cfg: Gameplay_System_Config,
-    ) -> common::Maybe_Error {
+    ) -> inle_common::Maybe_Error {
         self.input_cfg = read_input_cfg(&engine_state.config);
         self.cfg = gs_cfg;
         self.ground_collision_calc_system.init(engine_state);
@@ -173,7 +172,7 @@ impl Gameplay_System {
         levels.foreach_active_level(|level| {
             let world = &mut level.world;
 
-            ngfx::animation_system::update(&dt, world);
+            inle_app::animation_system::update(&dt, world);
             controllable_system::update(&dt, actions, axes, world, input_cfg, cfg);
 
             let world = &mut level.world;
@@ -217,13 +216,13 @@ impl Gameplay_System {
         &mut self,
         real_dt: &Duration,
         input_state: &Input_State,
-        cfg: &cfg::Config,
+        cfg: &inle_cfg::Config,
     ) {
         trace!("gameplay_system::realtime_update");
         self.update_camera(real_dt, input_state, cfg);
     }
 
-    fn update_camera(&mut self, real_dt: &Duration, input_state: &Input_State, cfg: &cfg::Config) {
+    fn update_camera(&mut self, real_dt: &Duration, input_state: &Input_State, cfg: &inle_cfg::Config) {
         self.levels.foreach_active_level(|level| {
             let movement =
                 get_movement_from_input(&input_state.processed.virtual_axes, self.input_cfg, cfg);
@@ -375,7 +374,7 @@ impl Gameplay_System {
                 } else {
                     colors::WHITE
                 };
-                let (sw, sh) = ngfx::render::get_texture_size(rsrc.get_texture(rend.texture));
+                let (sw, sh) = inle_gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
                 rend.rect = Rect::new(0, 0, sw as i32 / (n_frames as i32), sh as i32);
                 (sw, sh)
             };
@@ -460,7 +459,7 @@ fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration) {
         //t.velocity = Vec2f::new(-50.0, 0.);
         //}
         {
-            use ecs_engine::common::angle::deg;
+            use inle_math::angle::deg;
             let speed = 90.0;
             //if i == 1 {
             //t.transform.rotate(deg(dt_secs * speed));
@@ -476,7 +475,7 @@ fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration) {
     });
 }
 
-fn read_input_cfg(cfg: &cfg::Config) -> Input_Config {
+fn read_input_cfg(cfg: &inle_cfg::Config) -> Input_Config {
     Input_Config {
         joy_deadzone: Cfg_Var::new("game/input/joystick/deadzone", cfg),
     }

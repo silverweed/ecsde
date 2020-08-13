@@ -1,14 +1,14 @@
 use crate::entities;
-use ecs_engine::cfg::Config;
-use ecs_engine::collisions::phys_world::Physics_World;
-use ecs_engine::common::stringid::String_Id;
-use ecs_engine::common::transform::Transform2D;
-use ecs_engine::core::env::Env_Info;
-use ecs_engine::ecs::components::base::C_Spatial2D;
-use ecs_engine::ecs::ecs_world::Ecs_World;
-use ecs_engine::gfx::render_window::{mouse_pos_in_world, Render_Window_Handle};
-use ecs_engine::input::input_state::{Action_Kind, Game_Action};
-use ecs_engine::resources::gfx::{Gfx_Resources, Shader_Cache};
+use inle_cfg::Config;
+use inle_physics::phys_world::Physics_World;
+use inle_common::stringid::String_Id;
+use inle_math::transform::Transform2D;
+use inle_core::env::Env_Info;
+use inle_ecs::components::base::C_Spatial2D;
+use inle_ecs::ecs_world::Ecs_World;
+use inle_gfx::render_window::{mouse_pos_in_world, Render_Window_Handle};
+use inle_input::input_state::{Action_Kind, Game_Action};
+use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct C_Entity_Preview;

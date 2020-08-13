@@ -1,35 +1,33 @@
 use super::{Game_Resources, Game_State};
 use crate::states::state::Game_State_Args;
-use ecs_engine::alloc::temp::*;
-use ecs_engine::collisions::physics;
-use ecs_engine::common::colors;
-use ecs_engine::common::transform::Transform2D;
-use ecs_engine::core::app;
-use ecs_engine::core::time;
-use ecs_engine::gfx;
-use ecs_engine::gfx::render_system;
-use ecs_engine::gfx::render_window::Render_Window_Handle;
-use ecs_engine::input;
-use ecs_engine::resources::gfx::Gfx_Resources;
-use ecs_engine::ui;
+use inle_alloc::temp::*;
+use inle_physics::physics;
+use inle_common::colors;
+use inle_math::transform::Transform2D;
+use inle_app::{app, render_system};
+use inle_core::time;
+use inle_gfx;
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_input;
+use inle_resources::gfx::Gfx_Resources;
+use inle_ui;
 use std::convert::TryInto;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use {
-    ecs_engine::{
-        collisions::phys_world::Physics_World,
-        common::angle::rad,
-        common::shapes::{Arrow, Circle},
-        common::stringid::String_Id,
-        common::vector::Vec2f,
-        debug,
-        debug::painter::Debug_Painter,
-        ecs::components::base::C_Spatial2D,
-        ecs::ecs_world::{self, Ecs_World},
-        gfx::paint_props::Paint_Properties,
-        gfx::{render_window, window},
-    },
+    inle_physics::phys_world::Physics_World,
+    inle_math::angle::rad,
+    inle_math::shapes::{Arrow, Circle},
+    inle_common::stringid::String_Id,
+    inle_math::vector::Vec2f,
+    inle_debug,
+    inle_debug::painter::Debug_Painter,
+    inle_ecs::components::base::C_Spatial2D,
+    inle_ecs::ecs_world::{self, Ecs_World},
+    inle_common::paint_props::Paint_Properties,
+    inle_gfx::render_window,
+    inle_win::window,
     std::collections::HashMap,
 };
 
@@ -70,7 +68,7 @@ where
         #[cfg(debug_assertions)]
         {
             process_game_actions =
-                debug_systems.console.status != debug::console::Console_Status::Open;
+                debug_systems.console.status != inle_debug::console::Console_Status::Open;
         }
         #[cfg(not(debug_assertions))]
         {
@@ -78,7 +76,7 @@ where
         }
 
         // Update the raw input. This may be overwritten later by replay data, but its core_events won't.
-        input::input_state::update_raw_input(
+        inle_input::input_state::update_raw_input(
             &mut game_state.window,
             &mut game_state.engine_state.input_state.raw,
         );
@@ -110,7 +108,7 @@ where
             }
         }
 
-        input::input_state::process_raw_input(
+        inle_input::input_state::process_raw_input(
             &game_state.engine_state.input_state.raw,
             &game_state.engine_state.input_state.bindings,
             &mut game_state.engine_state.input_state.processed,
@@ -123,7 +121,7 @@ where
         use crate::debug::console_executor;
 
         trace!("console::update");
-        if debug_systems.console.status == debug::console::Console_Status::Open {
+        if debug_systems.console.status == inle_debug::console::Console_Status::Open {
             debug_systems
                 .console
                 .update(&game_state.engine_state.input_state);
@@ -258,8 +256,8 @@ where
 
         #[cfg(debug_assertions)]
         {
-            use ecs_engine::debug::console::Console_Status;
-            use ecs_engine::input::input_state::Action_Kind;
+            use inle_debug::console::Console_Status;
+            use inle_input::input_state::Action_Kind;
 
             let actions = &game_state.engine_state.input_state.processed.game_actions;
 
@@ -412,9 +410,9 @@ where
     // We clear batches before update_debug, so debug can draw textures
     {
         trace!("clear_batches");
-        gfx::render::batcher::clear_batches(&mut game_state.engine_state.global_batches);
+        inle_gfx::render::batcher::clear_batches(&mut game_state.engine_state.global_batches);
         for batches in game_state.level_batches.values_mut() {
-            gfx::render::batcher::clear_batches(batches);
+            inle_gfx::render::batcher::clear_batches(batches);
         }
     }
 
@@ -435,7 +433,7 @@ where
 
     {
         trace!("display");
-        gfx::window::display(&mut game_state.window);
+        inle_win::window::display(&mut game_state.window);
     }
 
     Ok(())
@@ -447,7 +445,7 @@ fn update_ui(game_state: &mut Game_State, gres: &Gfx_Resources) {
     let window = &mut game_state.window;
     let ui_ctx = &mut game_state.engine_state.systems.ui;
 
-    ui::draw_all_ui(window, gres, ui_ctx);
+    inle_ui::draw_all_ui(window, gres, ui_ctx);
 }
 
 fn update_graphics<'a, 's, 'r>(game_state: &'a mut Game_State<'s>, gres: &'a mut Gfx_Resources<'r>)
@@ -461,10 +459,10 @@ where
 
     #[cfg(debug_assertions)]
     {
-        let cur_vsync = gfx::window::has_vsync(window);
+        let cur_vsync = inle_win::window::has_vsync(window);
         let desired_vsync = game_state.cvars.vsync.read(&game_state.engine_state.config);
         if desired_vsync != cur_vsync {
-            gfx::window::set_vsync(window, desired_vsync);
+            inle_win::window::set_vsync(window, desired_vsync);
         }
     }
 
@@ -477,8 +475,8 @@ where
                 .clear_color
                 .read(&game_state.engine_state.config),
         );
-        gfx::render_window::set_clear_color(window, clear_color);
-        gfx::render_window::clear(window);
+        inle_gfx::render_window::set_clear_color(window, clear_color);
+        inle_gfx::render_window::clear(window);
     }
 
     let cfg = &game_state.engine_state.config;
@@ -522,7 +520,7 @@ where
             .gameplay_system
             .levels
             .foreach_active_level(|level| {
-                gfx::render::batcher::draw_batches(
+                inle_gfx::render::batcher::draw_batches(
                     window,
                     &gres,
                     lv_batches.get_mut(&level.id).unwrap(),
@@ -533,13 +531,13 @@ where
                     frame_alloc,
                 );
             });
-        gfx::render::batcher::draw_batches(
+        inle_gfx::render::batcher::draw_batches(
             window,
             &gres,
             &mut game_state.engine_state.global_batches,
             shader_cache,
             &Transform2D::default(),
-            &ecs_engine::gfx::light::Lights::default(),
+            &inle_gfx::light::Lights::default(),
             enable_shaders,
             frame_alloc,
         );
@@ -813,8 +811,8 @@ fn update_debug(
             }
 
             if draw_comp_alloc_colliders {
-                use ecs_engine::collisions::collider::C_Collider;
-                ecs_engine::ecs::ecs_world::draw_comp_alloc::<C_Collider>(
+                use inle_physics::collider::C_Collider;
+                inle_ecs::ecs_world::draw_comp_alloc::<C_Collider>(
                     &level.world,
                     global_painter,
                 );
@@ -824,18 +822,18 @@ fn update_debug(
 
 #[cfg(debug_assertions)]
 fn update_joystick_debug_overlay(
-    debug_overlay: &mut debug::overlay::Debug_Overlay,
-    joy_state: &input::joystick_state::Joystick_State,
+    debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
+    joy_state: &inle_input::joystick_state::Joystick_State,
     input_cfg: crate::input_utils::Input_Config,
-    cfg: &ecs_engine::cfg::Config,
+    cfg: &inle_cfg::Config,
 ) {
-    use input::joystick;
+    use inle_input::joystick;
 
     debug_overlay.clear();
 
     let deadzone = input_cfg.joy_deadzone.read(cfg);
 
-    let (real_axes, joy_mask) = input::joystick_state::all_joysticks_values(joy_state);
+    let (real_axes, joy_mask) = inle_input::joystick_state::all_joysticks_values(joy_state);
 
     for (joy_id, axes) in real_axes.iter().enumerate() {
         if (joy_mask & (1 << joy_id)) != 0 {
@@ -860,7 +858,7 @@ fn update_joystick_debug_overlay(
 }
 
 #[cfg(debug_assertions)]
-fn update_time_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, time: &time::Time) {
+fn update_time_debug_overlay(debug_overlay: &mut inle_debug::overlay::Debug_Overlay, time: &time::Time) {
     debug_overlay.clear();
 
     debug_overlay
@@ -876,8 +874,8 @@ fn update_time_debug_overlay(debug_overlay: &mut debug::overlay::Debug_Overlay, 
 
 #[cfg(debug_assertions)]
 fn update_fps_debug_overlay(
-    debug_overlay: &mut debug::overlay::Debug_Overlay,
-    fps: &debug::fps::Fps_Counter,
+    debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
+    fps: &inle_debug::fps::Fps_Counter,
     target_fps: u64,
     vsync: bool,
 ) {
@@ -894,12 +892,12 @@ fn update_fps_debug_overlay(
 
 #[cfg(debug_assertions)]
 fn update_mouse_debug_overlay(
-    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     painter: &mut Debug_Painter,
     window: &Render_Window_Handle,
     camera: Option<Transform2D>,
 ) {
-    use ecs_engine::common::shapes::Line;
+    use inle_math::shapes::Line;
 
     let pos = window::mouse_pos_in_window(window);
     debug_overlay.position = Vec2f::from(pos) + v2!(0., -15.);
@@ -939,7 +937,7 @@ fn update_mouse_debug_overlay(
 
 #[cfg(debug_assertions)]
 fn update_win_debug_overlay(
-    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     window: &Render_Window_Handle,
 ) {
     let tsize = window::get_window_target_size(window);
@@ -955,7 +953,7 @@ fn update_win_debug_overlay(
 
 #[cfg(debug_assertions)]
 fn update_entities_debug_overlay(
-    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     ecs_world: &Ecs_World,
 ) {
     debug_overlay.clear();
@@ -966,8 +964,8 @@ fn update_entities_debug_overlay(
 
 #[cfg(debug_assertions)]
 fn update_camera_debug_overlay(
-    debug_overlay: &mut debug::overlay::Debug_Overlay,
-    camera: &ecs_engine::ecs::components::gfx::C_Camera2D,
+    debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
+    camera: &inle_gfx::components::C_Camera2D,
 ) {
     debug_overlay.clear();
     debug_overlay
@@ -982,7 +980,7 @@ fn update_camera_debug_overlay(
 
 #[cfg(debug_assertions)]
 fn update_physics_debug_overlay(
-    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     collision_data: &physics::Collision_System_Debug_Data,
     chunks: &crate::spatial::World_Chunks,
 ) {
@@ -998,7 +996,7 @@ fn update_physics_debug_overlay(
 
 #[cfg(debug_assertions)]
 fn update_record_debug_overlay(
-    debug_overlay: &mut debug::overlay::Debug_Overlay,
+    debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     recording: bool,
     replaying: bool,
 ) {
@@ -1021,7 +1019,7 @@ fn debug_draw_colliders(
     phys_world: &Physics_World,
 ) {
     use crate::collisions::Game_Collision_Layer;
-    use ecs_engine::collisions::collider::{C_Collider, Collision_Shape};
+    use inle_physics::collider::{C_Collider, Collision_Shape};
     use std::convert::TryFrom;
 
     foreach_entity!(ecs_world, +C_Collider, +C_Spatial2D, |entity| {
@@ -1126,7 +1124,7 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 #[cfg(debug_assertions)]
 fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
     use crate::debug::entity_debug::C_Debug_Data;
-    use ecs_engine::common::bitset::Bit_Set;
+    use inle_common::bitset::Bit_Set;
     use std::borrow::Borrow;
 
     foreach_entity!(ecs_world, |entity| {
@@ -1169,7 +1167,7 @@ fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs
 fn debug_draw_lights(
     screenspace_debug_painter: &mut Debug_Painter,
     debug_painter: &mut Debug_Painter,
-    lights: &ecs_engine::gfx::light::Lights,
+    lights: &inle_gfx::light::Lights,
 ) {
     screenspace_debug_painter.add_shaded_text(
         &format!(
@@ -1271,13 +1269,13 @@ fn debug_draw_lights(
 
 #[cfg(debug_assertions)]
 fn debug_draw_entities_prev_frame_ghost(
-    batches: &mut gfx::render::batcher::Batches,
+    batches: &mut inle_gfx::render::batcher::Batches,
     ecs_world: &mut Ecs_World,
 ) {
     use crate::debug::entity_debug::C_Debug_Data;
     use crate::systems::pixel_collision_system::C_Texture_Collider;
-    use ecs_engine::ecs::components::gfx::C_Renderable;
-    use ecs_engine::gfx::render;
+    use inle_gfx::components::C_Renderable;
+    use inle_gfx::render;
 
     foreach_entity!(ecs_world, +C_Spatial2D, +C_Renderable, +C_Debug_Data, ~C_Texture_Collider, |entity| {
         let frame_starting_pos = ecs_world.get_component::<C_Spatial2D>(entity).unwrap().frame_starting_pos;
@@ -1363,25 +1361,25 @@ fn debug_draw_grid(
 
 #[cfg(debug_assertions)]
 fn update_graph_fps(
-    graph: &mut debug::graph::Debug_Graph_View,
+    graph: &mut inle_debug::graph::Debug_Graph_View,
     time: &time::Time,
-    fps: &debug::fps::Fps_Counter,
+    fps: &inle_debug::fps::Fps_Counter,
 ) {
     const TIME_LIMIT: f32 = 60.0;
 
     let fps = fps.get_instant_fps();
-    debug::graph::add_point_and_scroll(graph, time.real_time(), TIME_LIMIT, fps);
+    inle_debug::graph::add_point_and_scroll(graph, time.real_time(), TIME_LIMIT, fps);
 }
 
 #[cfg(debug_assertions)]
 fn update_graph_prev_frame_t(
-    graph: &mut debug::graph::Debug_Graph_View,
+    graph: &mut inle_debug::graph::Debug_Graph_View,
     time: &time::Time,
     prev_frame_t: &Duration,
 ) {
     const TIME_LIMIT: f32 = 10.0;
 
-    debug::graph::add_point_and_scroll(
+    inle_debug::graph::add_point_and_scroll(
         graph,
         time.real_time(),
         TIME_LIMIT,

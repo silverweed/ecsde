@@ -1,17 +1,17 @@
-use ecs_engine::alloc::temp::*;
-use ecs_engine::collisions::collider::C_Collider;
-use ecs_engine::collisions::phys_world::{Collider_Handle, Physics_World};
-use ecs_engine::collisions::spatial::Spatial_Accelerator;
-use ecs_engine::common::vector::Vec2f;
-use ecs_engine::core::app::Engine_State;
-use ecs_engine::ecs::ecs_world::{Ecs_World, Entity, Evt_Entity_Destroyed};
-use ecs_engine::events::evt_register::{with_cb_data, wrap_cb_data, Event_Callback_Data};
+use inle_alloc::temp::*;
+use inle_physics::collider::C_Collider;
+use inle_physics::phys_world::{Collider_Handle, Physics_World};
+use inle_physics::spatial::Spatial_Accelerator;
+use inle_math::vector::Vec2f;
+use inle_app::app::Engine_State;
+use inle_ecs::ecs_world::{Ecs_World, Entity, Evt_Entity_Destroyed};
+use inle_events::evt_register::{with_cb_data, wrap_cb_data, Event_Callback_Data};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
 #[cfg(debug_assertions)]
 use {
-    ecs_engine::debug::painter::Debug_Painter, std::collections::HashSet, std::iter::FromIterator,
+    inle_debug::painter::Debug_Painter, std::collections::HashSet, std::iter::FromIterator,
 };
 
 // @Speed: tune these numbers
@@ -316,9 +316,9 @@ impl Spatial_Accelerator<Collider_Handle> for World_Chunks {
 #[cfg(debug_assertions)]
 impl World_Chunks {
     pub fn debug_draw(&self, painter: &mut Debug_Painter) {
-        use ecs_engine::common::colors;
-        use ecs_engine::common::transform::Transform2D;
-        use ecs_engine::gfx::paint_props::Paint_Properties;
+        use inle_common::colors;
+        use inle_math::transform::Transform2D;
+        use inle_common::paint_props::Paint_Properties;
 
         if self.chunks.is_empty() {
             return;

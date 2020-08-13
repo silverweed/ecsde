@@ -1,4 +1,4 @@
-use ecs_engine::collisions::layers::{Collision_Layer, Collision_Matrix};
+use inle_physics::layers::{Collision_Layer, Collision_Matrix};
 use std::convert::TryFrom;
 
 enum Collision_Type {

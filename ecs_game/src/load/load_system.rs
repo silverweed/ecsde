@@ -10,24 +10,24 @@ use crate::systems::entity_preview_system::C_Entity_Preview;
 use crate::systems::ground_collision_calculation_system::C_Ground;
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use crate::Game_Resources;
-use ecs_engine::cfg::{self, Cfg_Var};
-use ecs_engine::collisions::collider::C_Collider;
-use ecs_engine::collisions::phys_world::Physics_World;
-use ecs_engine::common::angle::rad;
-use ecs_engine::common::colors;
-use ecs_engine::common::rect::Rect;
-use ecs_engine::common::stringid::String_Id;
-use ecs_engine::common::transform::Transform2D;
-use ecs_engine::core::app::Engine_State;
-use ecs_engine::core::env::Env_Info;
-use ecs_engine::core::rand;
-use ecs_engine::ecs::components::base::C_Spatial2D;
-use ecs_engine::ecs::components::gfx::{
+use inle_cfg::{self, Cfg_Var};
+use inle_physics::collider::C_Collider;
+use inle_physics::phys_world::Physics_World;
+use inle_math::angle::rad;
+use inle_common::colors;
+use inle_math::rect::Rect;
+use inle_common::stringid::String_Id;
+use inle_math::transform::Transform2D;
+use inle_app::app::Engine_State;
+use inle_core::env::Env_Info;
+use inle_core::rand;
+use inle_ecs::components::base::C_Spatial2D;
+use inle_gfx::components::{
     C_Animated_Sprite, C_Camera2D, C_Multi_Renderable, C_Renderable,
 };
-use ecs_engine::ecs::ecs_world::Ecs_World;
-use ecs_engine::gfx::light::{Lights, Point_Light, Rect_Light};
-use ecs_engine::resources::gfx::{Gfx_Resources, Shader_Cache};
+use inle_ecs::ecs_world::Ecs_World;
+use inle_gfx::light::{Lights, Point_Light, Rect_Light};
+use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
 use crate::debug::entity_debug::C_Debug_Data;
@@ -146,13 +146,13 @@ fn init_demo_entities(
     shader_cache: &mut Shader_Cache,
     env: &Env_Info,
     rng: &mut rand::Default_Rng,
-    cfg: &cfg::Config,
+    cfg: &inle_cfg::Config,
     level: &mut Level,
     gs_cfg: Gameplay_System_Config,
 ) {
     #![allow(warnings)]
-    use ecs_engine::common::angle;
-    use ecs_engine::resources::gfx::shader_path;
+    use inle_math::angle;
+    use inle_resources::gfx::shader_path;
 
     let sprite_normal_shader =
         shader_cache.load_shader(&shader_path(&env, SHD_SPRITE_WITH_NORMALS));

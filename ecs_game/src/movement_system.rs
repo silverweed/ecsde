@@ -1,9 +1,9 @@
-use ecs_engine::alloc::temp::*;
-use ecs_engine::collisions::collider::C_Collider;
-use ecs_engine::collisions::phys_world::{Collider_Handle, Physics_World};
-use ecs_engine::common::vector::Vec2f;
-use ecs_engine::ecs::components::base::C_Spatial2D;
-use ecs_engine::ecs::ecs_world::Ecs_World;
+use inle_alloc::temp::*;
+use inle_physics::collider::C_Collider;
+use inle_physics::phys_world::{Collider_Handle, Physics_World};
+use inle_math::vector::Vec2f;
+use inle_ecs::components::base::C_Spatial2D;
+use inle_ecs::ecs_world::Ecs_World;
 use std::time::Duration;
 
 #[derive(Copy, Clone)]
