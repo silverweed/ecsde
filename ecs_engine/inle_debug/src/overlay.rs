@@ -1,15 +1,15 @@
 use super::element::Debug_Element;
-use crate::alloc::temp;
-use crate::common::colors::{self, Color};
-use crate::common::rect::Rect;
-use crate::common::stringid::String_Id;
-use crate::common::variant::Variant;
-use crate::common::vector::Vec2f;
-use crate::gfx;
-use crate::gfx::align::Align;
-use crate::gfx::render_window::Render_Window_Handle;
-use crate::input::input_state::Input_State;
-use crate::resources::gfx::{Font_Handle, Gfx_Resources};
+use inle_alloc::temp;
+use inle_common::colors::{self, Color};
+use inle_math::rect::Rect;
+use inle_common::stringid::String_Id;
+use inle_common::variant::Variant;
+use inle_math::vector::Vec2f;
+use inle_gfx;
+use inle_common::vis_align::Align;
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_input::input_state::Input_State;
+use inle_resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::HashMap;
 
 pub struct Debug_Line {
@@ -126,9 +126,9 @@ impl Debug_Element for Debug_Overlay {
         let font = gres.get_font(font);
         for line in self.lines.iter() {
             let Debug_Line { text, color, .. } = line;
-            let text = gfx::render::create_text(text, font, font_size);
+            let text = inle_gfx::render::create_text(text, font, font_size);
 
-            let txt_size = gfx::render::get_text_size(&text);
+            let txt_size = inle_gfx::render::get_text_size(&text);
             max_row_width = max_row_width.max(txt_size.x);
             max_row_height = max_row_height.max(txt_size.y);
 
@@ -141,7 +141,7 @@ impl Debug_Element for Debug_Overlay {
 
         // Draw background
 
-        gfx::render::render_rect(
+        inle_gfx::render::render_rect(
             window,
             Rect::new(
                 position.x + horiz_align.aligned_pos(0.0, 2.0 * pad_x + max_row_width),
@@ -168,7 +168,7 @@ impl Debug_Element for Debug_Overlay {
                         + (i as f32) * (max_row_height + row_spacing),
                 );
             let rect = Rect::new(pos.x, pos.y, bg_fill_ratio * max_row_width, max_row_height);
-            gfx::render::render_rect(window, rect, bg_col);
+            inle_gfx::render::render_rect(window, rect, bg_col);
         }
 
         // Draw texts
@@ -184,7 +184,7 @@ impl Debug_Element for Debug_Overlay {
                     *color = colors::WHITE;
                 }
             }
-            gfx::render::render_text(window, text, *color, position + pos);
+            inle_gfx::render::render_text(window, text, *color, position + pos);
         }
     }
 
@@ -194,8 +194,8 @@ impl Debug_Element for Debug_Overlay {
         window: &Render_Window_Handle,
         input_state: &Input_State,
     ) {
-        use crate::gfx::window;
-        use crate::input::mouse;
+        use inle_win::window;
+        use inle_input::mouse;
 
         if !self.config.hoverable {
             return;

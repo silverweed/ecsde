@@ -1,14 +1,14 @@
 use super::element::Debug_Element;
-use crate::alloc::temp;
-use crate::common::colors::{self, Color};
-use crate::common::rect::Rect;
-use crate::common::vector::Vec2f;
-use crate::core;
-use crate::gfx;
-use crate::gfx::align::Align;
-use crate::gfx::render_window::Render_Window_Handle;
-use crate::input::input_state::Input_State;
-use crate::resources::gfx::{Font_Handle, Gfx_Resources};
+use inle_alloc::temp;
+use inle_common::colors::{self, Color};
+use inle_math::rect::Rect;
+use inle_math::vector::Vec2f;
+use inle_core;
+use inle_gfx;
+use inle_common::vis_align::Align;
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_input::input_state::Input_State;
+use inle_resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
 use std::time::Duration;
 
@@ -95,12 +95,12 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         for line in self.fadeout_texts.iter() {
             let Fadeout_Text { text, color, time } = line;
 
-            let d = core::time::duration_ratio(&time, &fadeout_time);
+            let d = inle_core::time::duration_ratio(&time, &fadeout_time);
             let alpha = 255 - (d * d * 255.0f32) as u8;
-            let text = gfx::render::create_text(text, font, font_size);
+            let text = inle_gfx::render::create_text(text, font, font_size);
             let color = Color { a: alpha, ..*color };
 
-            let txt_size = gfx::render::get_text_size(&text);
+            let txt_size = inle_gfx::render::get_text_size(&text);
             max_row_width = max_row_width.max(txt_size.x);
             max_row_height = max_row_height.max(txt_size.y);
 
@@ -112,7 +112,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         let tot_height = max_row_height * n_texts_f + row_spacing * (n_texts_f - 1.0);
 
         // Draw background
-        gfx::render::render_rect(
+        inle_gfx::render::render_rect(
             window,
             Rect::new(
                 position.x + horiz_align.aligned_pos(0.0, 2.0 * pad_x + max_row_width),
@@ -130,7 +130,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
                 vert_align.aligned_pos(pad_y, tot_height)
                     + (i as f32) * (max_row_height + row_spacing),
             );
-            gfx::render::render_text(window, text, *color, position + pos);
+            inle_gfx::render::render_text(window, text, *color, position + pos);
         }
     }
 }

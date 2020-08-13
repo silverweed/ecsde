@@ -1,19 +1,19 @@
 use super::element::Debug_Element;
-use crate::alloc::temp;
-use crate::common::colors;
-use crate::common::rect::Rect;
-use crate::common::shapes::Circle;
-use crate::common::stringid::String_Id;
-use crate::common::transform::Transform2D;
-use crate::common::variant::Variant;
-use crate::common::vector::{Vec2f, Vec2u};
-use crate::gfx::paint_props::Paint_Properties;
-use crate::gfx::render;
-use crate::gfx::render_window::Render_Window_Handle;
-use crate::gfx::window;
-use crate::input::input_state::Input_State;
-use crate::input::mouse;
-use crate::resources::gfx::{Font_Handle, Gfx_Resources};
+use inle_alloc::temp;
+use inle_common::colors;
+use inle_math::rect::Rect;
+use inle_math::shapes::Circle;
+use inle_common::stringid::String_Id;
+use inle_math::transform::Transform2D;
+use inle_common::variant::Variant;
+use inle_math::vector::{Vec2f, Vec2u};
+use inle_common::paint_props::Paint_Properties;
+use inle_gfx::render;
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_win::window;
+use inle_input::input_state::Input_State;
+use inle_input::mouse;
+use inle_resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::{HashMap, VecDeque};
 use std::convert::TryFrom;
 use std::iter::FromIterator;
@@ -290,7 +290,7 @@ impl Debug_Graph_View {
     }
 
     fn get_coords_for(&self, point: Vec2f) -> Vec2f {
-        use crate::common::math::lerp;
+        use inle_math::math::lerp;
         let w = self.data.x_range.end - self.data.x_range.start;
         let yr = self.y_range();
         let h = yr.end - yr.start;

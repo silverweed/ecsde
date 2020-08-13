@@ -1,14 +1,14 @@
-use crate::common::colors;
-use crate::common::rect::Rect;
-use crate::common::vector::{Vec2f, Vec2u};
-use crate::core::env::Env_Info;
-use crate::gfx::render;
-use crate::gfx::render_window::Render_Window_Handle;
-use crate::input::bindings::Input_Action_Modifiers;
-use crate::input::events::Input_Raw_Event;
-use crate::input::input_state::Input_State;
-use crate::input::keyboard;
-use crate::resources::gfx;
+use inle_common::colors;
+use inle_math::rect::Rect;
+use inle_math::vector::{Vec2f, Vec2u};
+use inle_core::env::Env_Info;
+use inle_gfx::render;
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_input::bindings::Input_Action_Modifiers;
+use inle_input::events::Input_Raw_Event;
+use inle_input::input_state::Input_State;
+use inle_input::keyboard;
+use inle_resources::gfx;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
@@ -153,7 +153,7 @@ impl Console {
     }
 
     fn process_event(&mut self, event: Input_Raw_Event, modifiers: Input_Action_Modifiers) {
-        use crate::input::bindings::modifiers::*;
+        use inle_input::bindings::modifiers::*;
         use keyboard::Key;
 
         debug_assert!(self.cur_pos <= self.cur_line.len());

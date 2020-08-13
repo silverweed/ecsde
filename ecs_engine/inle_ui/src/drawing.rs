@@ -2,7 +2,7 @@ use super::ui_context::UI_Context;
 use inle_common::colors;
 //use crate::gfx::align::Align;
 use super::widgets::*;
-use inle_gfx::paint_props::Paint_Properties;
+use inle_common::paint_props::Paint_Properties;
 use inle_gfx::render;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::rect::Rectf;

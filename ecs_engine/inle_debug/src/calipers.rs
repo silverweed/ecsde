@@ -1,10 +1,10 @@
-use crate::common::colors;
-use crate::common::shapes::Arrow;
-use crate::common::transform::Transform2D;
-use crate::common::vector::Vec2f;
-use crate::debug::painter::Debug_Painter;
-use crate::gfx::render_window::{self, Render_Window_Handle};
-use crate::gfx::window;
+use inle_common::colors;
+use inle_math::shapes::Arrow;
+use inle_math::transform::Transform2D;
+use inle_math::vector::Vec2f;
+use crate::painter::Debug_Painter;
+use inle_gfx::render_window::{self, Render_Window_Handle};
+use inle_win::window;
 
 // Measures distances
 #[derive(Default)]

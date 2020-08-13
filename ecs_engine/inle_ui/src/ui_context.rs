@@ -1,6 +1,6 @@
 use super::drawing::Draw_Command;
-use crate::core::env::Env_Info;
-use crate::resources::gfx::{font_path, Font_Handle, Gfx_Resources};
+use inle_core::env::Env_Info;
+use inle_resources::gfx::{font_path, Font_Handle, Gfx_Resources};
 use std::collections::VecDeque;
 
 // Probably @Incomplete: we may want stuff like parent information here.

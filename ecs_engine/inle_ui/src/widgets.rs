@@ -1,13 +1,13 @@
 use super::drawing::*;
 use super::ui_context::*;
-use crate::common::colors::{self, Color};
-use crate::common::rect::Rectf;
-use crate::common::vector::Vec2f;
-use crate::gfx::render_window::Render_Window_Handle;
-use crate::gfx::window::mouse_pos_in_window;
-use crate::input::input_state::Input_State;
-use crate::input::mouse::{mouse_went_down, mouse_went_up, Mouse_Button};
-use crate::resources::gfx::{Font_Handle, Gfx_Resources};
+use inle_common::colors::{self, Color};
+use inle_math::rect::Rectf;
+use inle_math::vector::Vec2f;
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_win::window::mouse_pos_in_window;
+use inle_input::input_state::Input_State;
+use inle_input::mouse::{mouse_went_down, mouse_went_up, Mouse_Button};
+use inle_resources::gfx::{Font_Handle, Gfx_Resources};
 
 pub struct By_Activeness<T> {
     pub normal: T,

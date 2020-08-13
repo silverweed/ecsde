@@ -1,15 +1,15 @@
-use crate::common::angle::rad;
-use crate::common::colors::Color;
-use crate::common::rect::Rect;
-use crate::common::shapes::{Arrow, Circle, Line};
-use crate::common::transform::Transform2D;
-use crate::common::vector::Vec2f;
-use crate::core::env::Env_Info;
-use crate::gfx::paint_props::Paint_Properties;
-use crate::gfx::render;
-use crate::gfx::render::Vertex_Buffer_Quads;
-use crate::gfx::render_window::Render_Window_Handle;
-use crate::resources::gfx;
+use inle_math::angle::rad;
+use inle_common::colors::Color;
+use inle_math::rect::Rect;
+use inle_math::shapes::{Arrow, Circle, Line};
+use inle_math::transform::Transform2D;
+use inle_math::vector::Vec2f;
+use inle_core::env::Env_Info;
+use inle_common::paint_props::Paint_Properties;
+use inle_gfx::render;
+use inle_gfx::render::Vertex_Buffer_Quads;
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_resources::gfx;
 
 pub struct Debug_Painter {
     rects: Vec<(Vec2f, Transform2D, Paint_Properties)>,

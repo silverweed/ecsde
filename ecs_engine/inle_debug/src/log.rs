@@ -1,4 +1,4 @@
-use super::tracer::Tracer_Node_Final;
+use inle_diagnostics::tracer::Tracer_Node_Final;
 use std::collections::VecDeque;
 
 #[derive(Default)]
