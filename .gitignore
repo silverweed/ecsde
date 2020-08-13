@@ -18,3 +18,5 @@ perf_data/
 rusty-tags.vi
 .console_hist.txt
 *.zip
+deps.dot
+deps.png
