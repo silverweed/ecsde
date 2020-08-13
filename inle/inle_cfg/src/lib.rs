@@ -7,9 +7,9 @@
 #[macro_use]
 extern crate inle_diagnostics;
 
-pub mod sync;
 pub mod config;
 pub mod parsing;
+pub mod sync;
 pub mod value;
 pub mod var;
 

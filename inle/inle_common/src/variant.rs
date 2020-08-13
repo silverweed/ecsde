@@ -72,7 +72,6 @@ impl From<&str> for Variant {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

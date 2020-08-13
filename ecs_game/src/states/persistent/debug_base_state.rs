@@ -2,16 +2,16 @@ use crate::states::state::{Game_State_Args, Persistent_Game_State};
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use inle_cfg::{self, Cfg_Var};
 use inle_common::colors;
-use inle_math::math;
-use inle_math::rect::Rect;
 use inle_common::stringid::String_Id;
-use inle_math::vector::{Vec2f, Vec2i};
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::entity_stream::new_entity_stream;
 use inle_gfx::{render, render_window};
-use inle_win::window;
 use inle_input::input_state::{Action_Kind, Game_Action};
 use inle_input::mouse;
+use inle_math::math;
+use inle_math::rect::Rect;
+use inle_math::vector::{Vec2f, Vec2i};
+use inle_win::window;
 use std::time::Duration;
 
 pub struct Debug_Base_State {

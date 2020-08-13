@@ -12,28 +12,28 @@ use crate::load::load_system;
 use crate::movement_system;
 use crate::spatial::World_Chunks;
 use crate::Game_Resources;
+use inle_app::app::Engine_State;
 use inle_cfg::{self, Cfg_Var};
-use inle_physics::collider;
 use inle_common;
 use inle_common::colors;
-use inle_math::rect::Rect;
 use inle_common::stringid::String_Id;
-use inle_math::transform::Transform2D;
-use inle_math::vector::Vec2f;
-use inle_app::app::Engine_State;
 use inle_core::env::Env_Info;
 use inle_core::{rand, time};
 use inle_ecs::components::base::C_Spatial2D;
-use inle_gfx::components::{C_Animated_Sprite, C_Camera2D, C_Renderable};
 use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_ecs::entity_stream::new_entity_stream;
 use inle_events::evt_register::Event_Register;
 use inle_gfx;
+use inle_gfx::components::{C_Animated_Sprite, C_Camera2D, C_Renderable};
 use inle_gfx::render::batcher::Batches;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input::axes::Virtual_Axes;
 use inle_input::input_state::{Action_Kind, Game_Action, Input_State};
 use inle_input::keyboard;
+use inle_math::rect::Rect;
+use inle_math::transform::Transform2D;
+use inle_math::vector::Vec2f;
+use inle_physics::collider;
 use inle_resources::gfx::{tex_path, Gfx_Resources};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -222,7 +222,12 @@ impl Gameplay_System {
         self.update_camera(real_dt, input_state, cfg);
     }
 
-    fn update_camera(&mut self, real_dt: &Duration, input_state: &Input_State, cfg: &inle_cfg::Config) {
+    fn update_camera(
+        &mut self,
+        real_dt: &Duration,
+        input_state: &Input_State,
+        cfg: &inle_cfg::Config,
+    ) {
         self.levels.foreach_active_level(|level| {
             let movement =
                 get_movement_from_input(&input_state.processed.virtual_axes, self.input_cfg, cfg);

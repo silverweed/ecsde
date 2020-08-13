@@ -10,8 +10,8 @@ extern crate inle_diagnostics;
 #[macro_use]
 extern crate inle_ecs;
 
+pub mod animation_system;
 pub mod app;
 pub mod app_config;
-pub mod animation_system;
 pub mod render_system;
 pub mod systems;

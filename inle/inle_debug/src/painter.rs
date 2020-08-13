@@ -1,14 +1,14 @@
-use inle_math::angle::rad;
 use inle_common::colors::Color;
+use inle_common::paint_props::Paint_Properties;
+use inle_core::env::Env_Info;
+use inle_gfx::render;
+use inle_gfx::render::Vertex_Buffer_Quads;
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_math::angle::rad;
 use inle_math::rect::Rect;
 use inle_math::shapes::{Arrow, Circle, Line};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use inle_core::env::Env_Info;
-use inle_common::paint_props::Paint_Properties;
-use inle_gfx::render;
-use inle_gfx::render::Vertex_Buffer_Quads;
-use inle_gfx::render_window::Render_Window_Handle;
 use inle_resources::gfx;
 
 pub struct Debug_Painter {

@@ -4,8 +4,8 @@
 #![allow(non_camel_case_types)]
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
-pub mod byte_stream;
 pub mod binary_serializable;
+pub mod byte_stream;
 
-pub use byte_stream::Byte_Stream;
 pub use binary_serializable::Binary_Serializable;
+pub use byte_stream::Byte_Stream;

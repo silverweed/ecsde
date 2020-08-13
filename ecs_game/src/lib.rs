@@ -38,11 +38,11 @@ mod systems;
 #[cfg(debug_assertions)]
 mod debug;
 
+use game_state::*;
+use inle_app::app;
 use inle_common::colors;
 use inle_common::stringid::String_Id;
 use inle_core::{sleep, time};
-use inle_app::app;
-use game_state::*;
 use std::convert::TryInto;
 use std::ffi::CStr;
 use std::os::raw::c_char;

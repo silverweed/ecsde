@@ -1,15 +1,15 @@
 use super::log::Debug_Log;
 use inle_common::colors;
-use inle_math::rect;
-use inle_math::vector::{Vec2f, Vec2i, Vec2u};
 use inle_common::paint_props::Paint_Properties;
 use inle_gfx::render;
 use inle_gfx::render_window::Render_Window_Handle;
-use inle_win::window;
 use inle_input::events::Input_Raw_Event;
 use inle_input::keyboard::Key;
 use inle_input::mouse::Mouse_Button;
+use inle_math::rect;
+use inle_math::vector::{Vec2f, Vec2i, Vec2u};
 use inle_resources::gfx::{Font_Handle, Gfx_Resources};
+use inle_win::window;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum Row {

@@ -1,14 +1,14 @@
 mod tracer_drawing;
 
 use crate::app_config::App_Config;
-use inle_core::env::Env_Info;
-use inle_core::time;
+use crate::systems::Core_Systems;
 use inle_alloc::temp::Temp_Allocator;
 use inle_cfg;
 use inle_common::units::*;
 use inle_common::Maybe_Error;
+use inle_core::env::Env_Info;
 use inle_core::rand;
-use crate::systems::Core_Systems;
+use inle_core::time;
 use inle_gfx;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input;
@@ -18,10 +18,10 @@ use inle_ui;
 
 #[cfg(debug_assertions)]
 use {
+    crate::systems::Debug_Systems,
     inle_cfg::Cfg_Var,
     inle_common::colors,
     inle_common::stringid::String_Id,
-    crate::systems::Debug_Systems,
     inle_debug,
     inle_diagnostics::tracer,
     inle_fs,
@@ -153,11 +153,14 @@ pub fn init_engine_debug(
     gfx_resources: &mut Gfx_Resources<'_>,
     cfg: inle_debug::debug_ui::Debug_Ui_System_Config,
 ) -> Maybe_Error {
-    use inle_math::vector::{Vec2f, Vec2u};
     use inle_common::vis_align::Align;
     use inle_debug::{fadeout_overlay, graph, overlay};
+    use inle_math::vector::{Vec2f, Vec2u};
 
-    let font = gfx_resources.load_font(&inle_resources::gfx::font_path(&engine_state.env, &cfg.font));
+    let font = gfx_resources.load_font(&inle_resources::gfx::font_path(
+        &engine_state.env,
+        &cfg.font,
+    ));
 
     engine_state
         .debug_systems
@@ -389,7 +392,7 @@ pub fn handle_core_actions(
             Core_Action::Focus_Lost => {
                 engine_state.input_state.raw.kb_state.modifiers_pressed = 0;
             }
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 

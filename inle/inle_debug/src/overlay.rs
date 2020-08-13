@@ -1,14 +1,14 @@
 use super::element::Debug_Element;
 use inle_alloc::temp;
 use inle_common::colors::{self, Color};
-use inle_math::rect::Rect;
 use inle_common::stringid::String_Id;
 use inle_common::variant::Variant;
-use inle_math::vector::Vec2f;
-use inle_gfx;
 use inle_common::vis_align::Align;
+use inle_gfx;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input::input_state::Input_State;
+use inle_math::rect::Rect;
+use inle_math::vector::Vec2f;
 use inle_resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::HashMap;
 
@@ -194,8 +194,8 @@ impl Debug_Element for Debug_Overlay {
         window: &Render_Window_Handle,
         input_state: &Input_State,
     ) {
-        use inle_win::window;
         use inle_input::mouse;
+        use inle_win::window;
 
         if !self.config.hoverable {
             return;

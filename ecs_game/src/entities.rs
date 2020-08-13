@@ -4,18 +4,16 @@ use crate::gfx::shaders::*;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use inle_cfg::{Cfg_Var, Config};
-use inle_physics::collider::{C_Collider, Collider, Collision_Shape};
-use inle_physics::phys_world::{Phys_Data, Physics_World};
-use inle_math::rect::Rect;
-use inle_math::transform::Transform2D;
 use inle_core::env::Env_Info;
 use inle_ecs::components::base::C_Spatial2D;
-use inle_gfx::components::{
-    C_Animated_Sprite, C_Multi_Renderable, C_Renderable, 
-};
-use inle_gfx::material::Material;
 use inle_ecs::ecs_world::{Ecs_World, Entity};
+use inle_gfx::components::{C_Animated_Sprite, C_Multi_Renderable, C_Renderable};
+use inle_gfx::material::Material;
 use inle_gfx::render;
+use inle_math::rect::Rect;
+use inle_math::transform::Transform2D;
+use inle_physics::collider::{C_Collider, Collider, Collision_Shape};
+use inle_physics::phys_world::{Phys_Data, Physics_World};
 use inle_resources::gfx::{shader_path, tex_path, Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]

@@ -1,9 +1,9 @@
+use crate::painter::Debug_Painter;
 use inle_common::colors;
+use inle_gfx::render_window::{self, Render_Window_Handle};
 use inle_math::shapes::Arrow;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use crate::painter::Debug_Painter;
-use inle_gfx::render_window::{self, Render_Window_Handle};
 use inle_win::window;
 
 // Measures distances

@@ -1,6 +1,4 @@
 use inle_common::colors;
-use inle_math::rect::Rect;
-use inle_math::vector::{Vec2f, Vec2u};
 use inle_core::env::Env_Info;
 use inle_gfx::render;
 use inle_gfx::render_window::Render_Window_Handle;
@@ -8,6 +6,8 @@ use inle_input::bindings::Input_Action_Modifiers;
 use inle_input::events::Input_Raw_Event;
 use inle_input::input_state::Input_State;
 use inle_input::keyboard;
+use inle_math::rect::Rect;
+use inle_math::vector::{Vec2f, Vec2u};
 use inle_resources::gfx;
 use std::collections::HashMap;
 use std::fs::File;

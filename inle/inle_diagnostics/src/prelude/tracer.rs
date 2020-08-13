@@ -16,8 +16,7 @@ lazy_static! {
 #[macro_export]
 macro_rules! trace {
     ($tag: expr) => {
-        let _trace_var =
-            $crate::tracer::debug_trace($tag, $crate::prelude::DEBUG_TRACER.clone());
+        let _trace_var = $crate::tracer::debug_trace($tag, $crate::prelude::DEBUG_TRACER.clone());
     };
 }
 

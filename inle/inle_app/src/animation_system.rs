@@ -1,5 +1,5 @@
-use inle_gfx::components::{C_Animated_Sprite, C_Renderable};
 use inle_ecs::ecs_world::Ecs_World;
+use inle_gfx::components::{C_Animated_Sprite, C_Renderable};
 use std::time::Duration;
 
 pub fn update(dt: &Duration, ecs_world: &mut Ecs_World) {

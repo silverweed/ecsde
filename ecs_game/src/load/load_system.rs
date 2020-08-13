@@ -10,23 +10,21 @@ use crate::systems::entity_preview_system::C_Entity_Preview;
 use crate::systems::ground_collision_calculation_system::C_Ground;
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use crate::Game_Resources;
-use inle_cfg::{self, Cfg_Var};
-use inle_physics::collider::C_Collider;
-use inle_physics::phys_world::Physics_World;
-use inle_math::angle::rad;
-use inle_common::colors;
-use inle_math::rect::Rect;
-use inle_common::stringid::String_Id;
-use inle_math::transform::Transform2D;
 use inle_app::app::Engine_State;
+use inle_cfg::{self, Cfg_Var};
+use inle_common::colors;
+use inle_common::stringid::String_Id;
 use inle_core::env::Env_Info;
 use inle_core::rand;
 use inle_ecs::components::base::C_Spatial2D;
-use inle_gfx::components::{
-    C_Animated_Sprite, C_Camera2D, C_Multi_Renderable, C_Renderable,
-};
 use inle_ecs::ecs_world::Ecs_World;
+use inle_gfx::components::{C_Animated_Sprite, C_Camera2D, C_Multi_Renderable, C_Renderable};
 use inle_gfx::light::{Lights, Point_Light, Rect_Light};
+use inle_math::angle::rad;
+use inle_math::rect::Rect;
+use inle_math::transform::Transform2D;
+use inle_physics::collider::C_Collider;
+use inle_physics::phys_world::Physics_World;
 use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]

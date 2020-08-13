@@ -4,7 +4,7 @@
 #![allow(non_camel_case_types)]
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
+pub mod env;
 pub mod rand;
 pub mod sleep;
-pub mod env;
 pub mod time;

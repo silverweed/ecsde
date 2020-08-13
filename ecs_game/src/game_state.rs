@@ -2,10 +2,10 @@ use crate::cmdline;
 use crate::collisions;
 use crate::gameplay_system;
 use crate::states;
+use inle_app::{app, app_config};
 use inle_cfg::{self, Cfg_Var};
 use inle_common::stringid::String_Id;
 use inle_core::env::Env_Info;
-use inle_app::{app, app_config};
 use inle_gfx::{self, render_window::Render_Window_Handle};
 use inle_resources;
 use std::collections::HashMap;
@@ -386,17 +386,19 @@ fn init_states(
 
 #[cfg(debug_assertions)]
 fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resources) {
-    use inle_math::vector::Vec2f;
-    use inle_debug::overlay::Debug_Overlay_Config;
     use inle_common::vis_align::Align;
+    use inle_debug::overlay::Debug_Overlay_Config;
+    use inle_math::vector::Vec2f;
 
     const FONT: &str = "Hack-Regular.ttf";
 
     let debug_ui = &mut game_state.engine_state.debug_systems.debug_ui;
-    let font = game_resources.gfx.load_font(&inle_resources::gfx::font_path(
-        &game_state.engine_state.env,
-        FONT,
-    ));
+    let font = game_resources
+        .gfx
+        .load_font(&inle_resources::gfx::font_path(
+            &game_state.engine_state.env,
+            FONT,
+        ));
     let ui_scale = debug_ui.cfg.ui_scale;
     let (win_w, win_h) = game_state.engine_state.app_config.target_win_size;
 

@@ -4,11 +4,11 @@ use super::layers::Collision_Matrix;
 use super::phys_world::{Collider_Handle, Phys_Data, Physics_World};
 use super::spatial::Spatial_Accelerator;
 use crate::collider::{Collider, Collision_Shape};
-use inle_math::math::clamp;
-use inle_math::vector::{sanity_check_v, Vec2f};
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_events::evt_register::{Event, Event_Register};
+use inle_math::math::clamp;
+use inle_math::vector::{sanity_check_v, Vec2f};
 use rayon::prelude::*;
 use std::collections::HashMap;
 

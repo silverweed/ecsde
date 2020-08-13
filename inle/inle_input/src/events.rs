@@ -1,7 +1,7 @@
-use inle_win::window::Event as Win_Event;
 use crate::joystick::{Button_Id as Joystick_Button_Id, Joystick_Id};
 use crate::keyboard::Key;
 use crate::mouse::Mouse_Button;
+use inle_win::window::Event as Win_Event;
 use std::convert::TryFrom;
 
 #[cfg(feature = "win-glfw")]

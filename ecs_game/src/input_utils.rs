@@ -1,7 +1,7 @@
 use inle_cfg::{Cfg_Var, Config};
 use inle_common::stringid::String_Id;
-use inle_math::vector::Vec2f;
 use inle_input::axes::Virtual_Axes;
+use inle_math::vector::Vec2f;
 
 #[derive(Copy, Clone, Default)]
 pub struct Input_Config {

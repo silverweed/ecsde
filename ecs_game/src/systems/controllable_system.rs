@@ -1,10 +1,10 @@
 use crate::input_utils::{get_movement_from_input, Input_Config};
 use inle_cfg::{self, Cfg_Var};
-use inle_math::vector::Vec2f;
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::Ecs_World;
 use inle_input::axes::Virtual_Axes;
 use inle_input::input_state::Game_Action;
+use inle_math::vector::Vec2f;
 use std::time::Duration;
 
 #[derive(Copy, Clone, Debug)]

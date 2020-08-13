@@ -1,18 +1,16 @@
 use inle_alloc::temp::*;
-use inle_physics::collider::C_Collider;
-use inle_physics::phys_world::{Collider_Handle, Physics_World};
-use inle_physics::spatial::Spatial_Accelerator;
-use inle_math::vector::Vec2f;
 use inle_app::app::Engine_State;
 use inle_ecs::ecs_world::{Ecs_World, Entity, Evt_Entity_Destroyed};
 use inle_events::evt_register::{with_cb_data, wrap_cb_data, Event_Callback_Data};
+use inle_math::vector::Vec2f;
+use inle_physics::collider::C_Collider;
+use inle_physics::phys_world::{Collider_Handle, Physics_World};
+use inle_physics::spatial::Spatial_Accelerator;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
 #[cfg(debug_assertions)]
-use {
-    inle_debug::painter::Debug_Painter, std::collections::HashSet, std::iter::FromIterator,
-};
+use {inle_debug::painter::Debug_Painter, std::collections::HashSet, std::iter::FromIterator};
 
 // @Speed: tune these numbers
 const CHUNK_WIDTH: f32 = 200.;
@@ -317,8 +315,8 @@ impl Spatial_Accelerator<Collider_Handle> for World_Chunks {
 impl World_Chunks {
     pub fn debug_draw(&self, painter: &mut Debug_Painter) {
         use inle_common::colors;
-        use inle_math::transform::Transform2D;
         use inle_common::paint_props::Paint_Properties;
+        use inle_math::transform::Transform2D;
 
         if self.chunks.is_empty() {
             return;

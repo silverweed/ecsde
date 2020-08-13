@@ -1,14 +1,14 @@
 use super::{Game_Resources, Game_State};
 use crate::states::state::Game_State_Args;
 use inle_alloc::temp::*;
-use inle_physics::physics;
-use inle_common::colors;
-use inle_math::transform::Transform2D;
 use inle_app::{app, render_system};
+use inle_common::colors;
 use inle_core::time;
 use inle_gfx;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input;
+use inle_math::transform::Transform2D;
+use inle_physics::physics;
 use inle_resources::gfx::Gfx_Resources;
 use inle_ui;
 use std::convert::TryInto;
@@ -16,17 +16,17 @@ use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use {
-    inle_physics::phys_world::Physics_World,
-    inle_math::angle::rad,
-    inle_math::shapes::{Arrow, Circle},
+    inle_common::paint_props::Paint_Properties,
     inle_common::stringid::String_Id,
-    inle_math::vector::Vec2f,
     inle_debug,
     inle_debug::painter::Debug_Painter,
     inle_ecs::components::base::C_Spatial2D,
     inle_ecs::ecs_world::{self, Ecs_World},
-    inle_common::paint_props::Paint_Properties,
     inle_gfx::render_window,
+    inle_math::angle::rad,
+    inle_math::shapes::{Arrow, Circle},
+    inle_math::vector::Vec2f,
+    inle_physics::phys_world::Physics_World,
     inle_win::window,
     std::collections::HashMap,
 };
@@ -812,10 +812,7 @@ fn update_debug(
 
             if draw_comp_alloc_colliders {
                 use inle_physics::collider::C_Collider;
-                inle_ecs::ecs_world::draw_comp_alloc::<C_Collider>(
-                    &level.world,
-                    global_painter,
-                );
+                inle_ecs::ecs_world::draw_comp_alloc::<C_Collider>(&level.world, global_painter);
             }
         });
 }
@@ -858,7 +855,10 @@ fn update_joystick_debug_overlay(
 }
 
 #[cfg(debug_assertions)]
-fn update_time_debug_overlay(debug_overlay: &mut inle_debug::overlay::Debug_Overlay, time: &time::Time) {
+fn update_time_debug_overlay(
+    debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
+    time: &time::Time,
+) {
     debug_overlay.clear();
 
     debug_overlay
