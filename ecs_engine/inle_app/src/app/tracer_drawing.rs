@@ -1,12 +1,12 @@
-use crate::cfg;
-use crate::common::colors;
-use crate::common::stringid::String_Id;
-use crate::common::units::format_bytes_pretty;
-use crate::core::app::Engine_State;
-use crate::core::time;
-use crate::debug::graph;
-use crate::debug::overlay::Debug_Overlay;
-use crate::debug::tracer::{self, Trace_Tree, Tracer_Node_Final};
+use inle_cfg;
+use inle_common::colors;
+use inle_common::stringid::String_Id;
+use inle_common::units::format_bytes_pretty;
+use crate::app::Engine_State;
+use inle_core::time;
+use inle_debug::graph;
+use inle_debug::overlay::Debug_Overlay;
+use inle_diagnostics::tracer::{self, Trace_Tree, Tracer_Node_Final};
 use std::borrow::Cow;
 use std::time::Duration;
 
@@ -82,12 +82,12 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
     let mut trace_trees = tracer::build_trace_trees(traces);
     tracer::sort_trace_trees(&mut trace_trees);
 
-    let font_size = cfg::Cfg_Var::<i32>::new("engine/debug/trace/font_size", &engine_state.config)
+    let font_size = inle_cfg::Cfg_Var::<i32>::new("engine/debug/trace/font_size", &engine_state.config)
         .read(&engine_state.config);
     overlay.config.font_size = (font_size as f32 * ui_scale) as _;
 
     let prune_duration_ms =
-        cfg::Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config)
+        inle_cfg::Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config)
             .read(&engine_state.config);
     let prune_duration = Duration::from_secs_f32(prune_duration_ms * 0.001);
 
@@ -126,12 +126,12 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
 
     overlay.clear();
 
-    let font_size = cfg::Cfg_Var::<i32>::new("engine/debug/trace/font_size", &engine_state.config)
+    let font_size = inle_cfg::Cfg_Var::<i32>::new("engine/debug/trace/font_size", &engine_state.config)
         .read(&engine_state.config);
     overlay.config.font_size = (font_size as f32 * ui_scale) as _;
 
     let prune_duration_ms =
-        cfg::Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config)
+        inle_cfg::Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config)
             .read(&engine_state.config);
     let prune_duration = Duration::from_secs_f32(prune_duration_ms * 0.001);
 

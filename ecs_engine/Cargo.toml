@@ -2,6 +2,7 @@
 
 members = [
     "inle_alloc",
+    "inle_app",
     "inle_audio",
     "inle_audio_backend",
     "inle_cfg",

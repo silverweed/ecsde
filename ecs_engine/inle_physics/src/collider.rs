@@ -1,7 +1,7 @@
 use super::layers::Collision_Layer;
 use super::phys_world::Physics_Body_Handle;
-use crate::common::vector::Vec2f;
-use crate::ecs::ecs_world::Entity;
+use inle_math::vector::Vec2f;
+use inle_ecs::ecs_world::Entity;
 use smallvec::SmallVec;
 
 #[derive(Copy, Clone, Debug, PartialEq)]

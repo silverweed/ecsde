@@ -10,8 +10,13 @@ extern crate inle_diagnostics;
 #[macro_use]
 extern crate inle_math;
 
+#[macro_use]
+pub mod prelude;
+
 mod comp_mgr;
 
 pub mod components;
 pub mod ecs_world;
 pub mod entity_stream;
+
+pub use prelude::*;

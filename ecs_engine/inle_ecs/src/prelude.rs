@@ -1,7 +1,7 @@
 #[macro_export]
 macro_rules! foreach_entity {
     ($world: expr, $(+$req: ty,)* $(~$exc: ty,)* $fn: expr) => {
-        let mut entity_stream = $crate::ecs::entity_stream::new_entity_stream($world);
+        let mut entity_stream = $crate::entity_stream::new_entity_stream($world);
         $(entity_stream = entity_stream.require::<$req>();)*
         $(entity_stream = entity_stream.exclude::<$exc>();)*
 
@@ -22,7 +22,7 @@ macro_rules! foreach_entity {
 #[macro_export]
 macro_rules! foreach_entity_enumerate {
     ($world: expr, $(+$req: ty,)* $(~$exc: ty,)* $fn: expr) => {
-        let mut entity_stream = $crate::ecs::entity_stream::new_entity_stream($world);
+        let mut entity_stream = $crate::entity_stream::new_entity_stream($world);
         $(entity_stream = entity_stream.require::<$req>();)*
         $(entity_stream = entity_stream.exclude::<$exc>();)*
 

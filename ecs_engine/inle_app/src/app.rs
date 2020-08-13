@@ -1,30 +1,32 @@
-use super::app_config::App_Config;
-use super::env::Env_Info;
-use super::time;
-use crate::alloc::temp::Temp_Allocator;
-use crate::cfg;
-use crate::common::units::*;
-use crate::common::Maybe_Error;
-use crate::core::rand;
-use crate::core::systems::Core_Systems;
-use crate::gfx;
-use crate::gfx::render_window::Render_Window_Handle;
-use crate::input;
-use crate::resources::gfx::Gfx_Resources;
-use crate::resources::gfx::Shader_Cache;
-use crate::ui;
+mod tracer_drawing;
+
+use crate::app_config::App_Config;
+use inle_core::env::Env_Info;
+use inle_core::time;
+use inle_alloc::temp::Temp_Allocator;
+use inle_cfg;
+use inle_common::units::*;
+use inle_common::Maybe_Error;
+use inle_core::rand;
+use crate::systems::Core_Systems;
+use inle_gfx;
+use inle_gfx::render_window::Render_Window_Handle;
+use inle_input;
+use inle_resources::gfx::Gfx_Resources;
+use inle_resources::gfx::Shader_Cache;
+use inle_ui;
 
 #[cfg(debug_assertions)]
 use {
-    crate::cfg::Cfg_Var,
-    crate::common::colors,
-    crate::common::stringid::String_Id,
-    crate::core::systems::Debug_Systems,
-    crate::debug,
-    crate::debug::tracer,
-    crate::fs,
-    crate::replay::{replay_data::Replay_Data, replay_input_provider::Replay_Input_Provider},
-    crate::resources::{self},
+    inle_cfg::Cfg_Var,
+    inle_common::colors,
+    inle_common::stringid::String_Id,
+    crate::systems::Debug_Systems,
+    inle_debug,
+    inle_diagnostics::tracer,
+    inle_fs,
+    inle_replay::{replay_data::Replay_Data, replay_input_provider::Replay_Input_Provider},
+    inle_resources,
     std::convert::TryInto,
     std::time::Duration,
 };
@@ -35,19 +37,19 @@ pub struct Engine_State<'r> {
     pub cur_frame: u64,
 
     pub env: Env_Info,
-    pub config: cfg::Config,
+    pub config: inle_cfg::Config,
     pub app_config: App_Config,
 
     pub time: time::Time,
 
     pub rng: rand::Default_Rng,
 
-    pub input_state: input::input_state::Input_State,
+    pub input_state: inle_input::input_state::Input_State,
     pub systems: Core_Systems<'r>,
 
     pub frame_alloc: Temp_Allocator,
 
-    pub global_batches: gfx::render::batcher::Batches,
+    pub global_batches: inle_gfx::render::batcher::Batches,
 
     pub shader_cache: Shader_Cache<'r>,
 
@@ -63,11 +65,11 @@ pub struct Engine_State<'r> {
 
 pub fn create_engine_state<'r>(
     env: Env_Info,
-    config: cfg::Config,
+    config: inle_cfg::Config,
     app_config: App_Config,
 ) -> Result<Engine_State<'r>, Box<dyn std::error::Error>> {
     let systems = Core_Systems::new();
-    let input_state = input::input_state::create_input_state(&env);
+    let input_state = inle_input::input_state::create_input_state(&env);
     let time = time::Time::default();
     let seed;
     #[cfg(debug_assertions)]
@@ -83,8 +85,8 @@ pub fn create_engine_state<'r>(
         seed = rand::new_random_seed()?;
     }
     #[cfg(debug_assertions)]
-    let debug_systems = Debug_Systems::new(&config, seed);
-    let rng = rand::new_rng_with_seed(seed);
+    let debug_systems = Debug_Systems::new(&config, rand::Default_Rng_Seed(seed));
+    let rng = rand::new_rng_with_seed(rand::Default_Rng_Seed(seed));
 
     Ok(Engine_State {
         should_close: false,
@@ -96,7 +98,7 @@ pub fn create_engine_state<'r>(
         rng,
         input_state,
         systems,
-        global_batches: gfx::render::batcher::Batches::default(),
+        global_batches: inle_gfx::render::batcher::Batches::default(),
         shader_cache: Shader_Cache::new(),
         frame_alloc: Temp_Allocator::with_capacity(megabytes(10)),
         #[cfg(debug_assertions)]
@@ -109,15 +111,15 @@ pub fn create_engine_state<'r>(
 }
 
 #[cfg(debug_assertions)]
-pub fn start_config_watch(env: &Env_Info, config: &mut cfg::Config) -> Maybe_Error {
+pub fn start_config_watch(env: &Env_Info, config: &mut inle_cfg::Config) -> Maybe_Error {
     use notify::RecursiveMode;
 
-    let config_watcher = Box::new(cfg::sync::Config_Watch_Handler::new(config));
-    let config_watcher_cfg = fs::file_watcher::File_Watch_Config {
+    let config_watcher = Box::new(inle_cfg::sync::Config_Watch_Handler::new(config));
+    let config_watcher_cfg = inle_fs::file_watcher::File_Watch_Config {
         interval: Duration::from_secs(1),
         recursive_mode: RecursiveMode::Recursive,
     };
-    fs::file_watcher::start_file_watch(
+    inle_fs::file_watcher::start_file_watch(
         env.cfg_root.to_path_buf(),
         config_watcher_cfg,
         vec![config_watcher],
@@ -129,8 +131,8 @@ pub fn init_engine_systems(
     engine_state: &mut Engine_State,
     gres: &mut Gfx_Resources,
 ) -> Maybe_Error {
-    input::joystick_state::init_joysticks(&mut engine_state.input_state.raw.joy_state);
-    ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
+    inle_input::joystick_state::init_joysticks(&mut engine_state.input_state.raw.joy_state);
+    inle_ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
 
     linfo!("Number of Rayon threads: {}", rayon::current_num_threads());
 
@@ -149,13 +151,13 @@ pub fn start_recording(engine_state: &mut Engine_State) -> Maybe_Error {
 pub fn init_engine_debug(
     engine_state: &mut Engine_State<'_>,
     gfx_resources: &mut Gfx_Resources<'_>,
-    cfg: debug::debug_ui::Debug_Ui_System_Config,
+    cfg: inle_debug::debug_ui::Debug_Ui_System_Config,
 ) -> Maybe_Error {
-    use crate::common::vector::{Vec2f, Vec2u};
-    use crate::gfx::align::Align;
-    use debug::{fadeout_overlay, graph, overlay};
+    use inle_math::vector::{Vec2f, Vec2u};
+    use inle_common::vis_align::Align;
+    use inle_debug::{fadeout_overlay, graph, overlay};
 
-    let font = gfx_resources.load_font(&resources::gfx::font_path(&engine_state.env, &cfg.font));
+    let font = gfx_resources.load_font(&inle_resources::gfx::font_path(&engine_state.env, &cfg.font));
 
     engine_state
         .debug_systems
@@ -177,7 +179,7 @@ pub fn init_engine_debug(
         scroller.pos.x = (win_w * 0.125) as _;
         scroller.size.y = 35;
         scroller.pos.y = 15;
-        scroller.cfg = debug::frame_scroller::Debug_Frame_Scroller_Config {
+        scroller.cfg = inle_debug::frame_scroller::Debug_Frame_Scroller_Config {
             font,
             font_size: (7. * ui_scale) as _,
         };
@@ -332,7 +334,7 @@ pub fn init_engine_debug(
     }
 
     {
-        use crate::input::bindings::{Input_Action, Input_Action_Simple};
+        use inle_input::bindings::{Input_Action, Input_Action_Simple};
 
         let console = &mut engine_state.debug_systems.console;
         console.size = Vec2u::new(win_w as _, win_h as u32 / 2);
@@ -362,18 +364,18 @@ pub fn init_engine_debug(
 
 /// Returns true if the engine should quit
 pub fn handle_core_actions(
-    actions: &[input::core_actions::Core_Action],
+    actions: &[inle_input::core_actions::Core_Action],
     window: &mut Render_Window_Handle,
     engine_state: &mut Engine_State,
 ) -> bool {
-    use input::core_actions::Core_Action;
-    use input::joystick_state;
+    use inle_input::core_actions::Core_Action;
+    use inle_input::joystick_state;
 
     for action in actions.iter() {
         match action {
             Core_Action::Quit => return true,
             Core_Action::Resize(new_width, new_height) => {
-                gfx::render_window::resize_keep_ratio(window, *new_width, *new_height);
+                inle_gfx::render_window::resize_keep_ratio(window, *new_width, *new_height);
             }
             Core_Action::Joystick_Connected { id } => {
                 joystick_state::register_joystick(&mut engine_state.input_state.raw.joy_state, *id);
@@ -387,6 +389,7 @@ pub fn handle_core_actions(
             Core_Action::Focus_Lost => {
                 engine_state.input_state.raw.kb_state.modifiers_pressed = 0;
             }
+            _ => unimplemented!()
         }
     }
 
@@ -411,7 +414,7 @@ pub fn set_replay_data(engine_state: &mut Engine_State, replay_data: Replay_Data
 
 #[cfg(debug_assertions)]
 pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
-    use crate::prelude;
+    use inle_diagnostics::prelude;
 
     let debug_log = &mut engine_state.debug_systems.log;
     let traces = {
@@ -440,9 +443,9 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
                 Cfg_Var::<bool>::new("engine/debug/trace/view_flat", &engine_state.config)
                     .read(&engine_state.config);
             if trace_view_flat {
-                tracer::drawing::update_trace_flat_overlay(engine_state);
+                tracer_drawing::update_trace_flat_overlay(engine_state);
             } else {
-                tracer::drawing::update_trace_tree_overlay(engine_state);
+                tracer_drawing::update_trace_tree_overlay(engine_state);
             }
             engine_state.debug_systems.trace_overlay_update_t =
                 refresh_rate.read(&engine_state.config);
@@ -488,7 +491,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
                 .get_graph(String_Id::from("fn_profile"));
 
             let flattened_traces = tracer::flatten_traces(&final_traces);
-            tracer::drawing::update_graph_traced_fn(
+            tracer_drawing::update_graph_traced_fn(
                 &flattened_traces,
                 graph,
                 if trace_realtime {

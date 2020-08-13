@@ -1,25 +1,25 @@
-use crate::audio::audio_system;
-use crate::collisions;
-use crate::events::evt_register;
-use crate::ui;
+use inle_audio::audio_system;
+use inle_physics;
+use inle_events::evt_register;
+use inle_ui;
 
 #[cfg(debug_assertions)]
 use {
-    crate::cfg,
-    crate::common::stringid::String_Id,
-    crate::core::env::Env_Info,
-    crate::core::rand::Default_Rng_Seed,
-    crate::debug::{calipers, console, debug_ui, log, painter::Debug_Painter},
-    crate::replay::recording_system,
-    crate::resources::gfx::Gfx_Resources,
+    inle_cfg,
+    inle_common::stringid::String_Id,
+    inle_core::env::Env_Info,
+    inle_core::rand::Default_Rng_Seed,
+    inle_debug::{calipers, console, debug_ui, log, painter::Debug_Painter},
+    inle_replay::recording_system,
+    inle_resources::gfx::Gfx_Resources,
     std::collections::HashMap,
 };
 
 pub struct Core_Systems<'r> {
     pub audio_system: audio_system::Audio_System<'r>,
     pub evt_register: evt_register::Event_Register,
-    pub ui: ui::UI_Context,
-    pub physics_settings: collisions::physics::Physics_Settings,
+    pub ui: inle_ui::UI_Context,
+    pub physics_settings: inle_physics::physics::Physics_Settings,
 }
 
 #[cfg(debug_assertions)]
@@ -46,19 +46,19 @@ impl Core_Systems<'_> {
                 max_concurrent_sounds: 10,
             }),
             evt_register: evt_register::Event_Register::new(),
-            ui: ui::UI_Context::default(),
-            physics_settings: collisions::physics::Physics_Settings::default(),
+            ui: inle_ui::UI_Context::default(),
+            physics_settings: inle_physics::physics::Physics_Settings::default(),
         }
     }
 }
 
 #[cfg(debug_assertions)]
 impl Debug_Systems {
-    pub fn new(cfg: &cfg::Config, rng_seed: Default_Rng_Seed) -> Debug_Systems {
+    pub fn new(cfg: &inle_cfg::Config, rng_seed: Default_Rng_Seed) -> Debug_Systems {
         let ms_per_frame =
-            cfg::Cfg_Var::<f32>::new("engine/gameplay/gameplay_update_tick_ms", cfg).read(cfg);
+            inle_cfg::Cfg_Var::<f32>::new("engine/gameplay/gameplay_update_tick_ms", cfg).read(cfg);
         let debug_log_size =
-            cfg::Cfg_Var::<i32>::new("engine/debug/log/hist_size_seconds", cfg).read(cfg);
+            inle_cfg::Cfg_Var::<i32>::new("engine/debug/log/hist_size_seconds", cfg).read(cfg);
         let fps = (1000. / ms_per_frame + 0.5) as i32;
         Debug_Systems {
             debug_ui: debug_ui::Debug_Ui_System::new(),

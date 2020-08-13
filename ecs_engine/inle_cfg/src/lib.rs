@@ -7,11 +7,11 @@
 #[macro_use]
 extern crate inle_diagnostics;
 
-mod sync;
-mod config;
-mod parsing;
-mod value;
-mod var;
+pub mod sync;
+pub mod config;
+pub mod parsing;
+pub mod value;
+pub mod var;
 
 use inle_core::env::Env_Info;
 use std::path::PathBuf;

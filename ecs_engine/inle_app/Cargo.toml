@@ -7,3 +7,22 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+inle_alloc = { path = "../inle_alloc" }
+inle_audio = { path = "../inle_audio" }
+inle_cfg = { path = "../inle_cfg" }
+inle_core = { path = "../inle_core" }
+inle_common = { path = "../inle_common" }
+inle_debug = { path = "../inle_debug" }
+inle_diagnostics = { path = "../inle_diagnostics" }
+inle_ecs = { path = "../inle_ecs" }
+inle_events = { path = "../inle_events" }
+inle_fs = { path = "../inle_fs" }
+inle_gfx = { path = "../inle_gfx" }
+inle_input = { path = "../inle_input" }
+inle_math = { path = "../inle_math" }
+inle_physics = { path = "../inle_physics" }
+inle_replay = { path = "../inle_replay" }
+inle_resources = { path = "../inle_resources" }
+inle_ui = { path = "../inle_ui" }
+notify = "4.0"
+rayon = "1.3"
