@@ -6,7 +6,7 @@ use std::any::type_name;
 use std::collections::HashSet;
 
 #[cfg(debug_assertions)]
-use crate::debug::painter::Debug_Painter;
+use inle_debug::painter::Debug_Painter;
 
 pub type Entity = Generational_Index;
 pub type Component_Handle = comp_mgr::Component_Handle;
