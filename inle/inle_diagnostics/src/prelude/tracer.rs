@@ -1,18 +1,18 @@
-#[cfg(debug_assertions)]
+#[cfg(feature = "tracer")]
 use {
     crate::tracer::Tracer,
     std::sync::{Arc, Mutex},
 };
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "tracer")]
 pub type Debug_Tracer = Arc<Mutex<Tracer>>;
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "tracer")]
 lazy_static! {
     pub static ref DEBUG_TRACER: Debug_Tracer = Arc::new(Mutex::new(Tracer::new()));
 }
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "tracer")]
 #[macro_export]
 macro_rules! trace {
     ($tag: expr) => {
@@ -20,7 +20,7 @@ macro_rules! trace {
     };
 }
 
-#[cfg(not(debug_assertions))]
+#[cfg(not(feature = "tracer"))]
 #[macro_export]
 macro_rules! trace {
     ($tag: expr) => {};

@@ -160,7 +160,6 @@ pub fn framework_to_engine_key(key: backend::Framework_Key) -> Option<Key> {
     backend::framework_to_engine_key(key)
 }
 
-#[cfg(debug_assertions)]
 #[allow(clippy::cognitive_complexity)]
 // Note: this assumes an english layout
 pub fn key_to_char(key: Key, maiusc: bool) -> Option<char> {

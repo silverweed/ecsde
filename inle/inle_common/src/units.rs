@@ -14,7 +14,6 @@ pub const fn gigabytes(bytes: usize) -> usize {
     megabytes(bytes) * 1024
 }
 
-#[cfg(debug_assertions)]
 pub fn format_bytes_pretty(bytes: usize) -> String {
     if bytes < kilobytes(1) {
         format!("{} B", bytes)

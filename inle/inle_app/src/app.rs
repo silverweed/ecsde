@@ -1,3 +1,4 @@
+#[cfg(debug_assertions)]
 mod tracer_drawing;
 
 use crate::app_config::App_Config;
@@ -74,19 +75,19 @@ pub fn create_engine_state<'r>(
     let seed;
     #[cfg(debug_assertions)]
     {
-        seed = [
+        seed = rand::Default_Rng_Seed([
             0x12, 0x23, 0x33, 0x44, 0x44, 0xab, 0xbc, 0xcc, 0x45, 0x21, 0x72, 0x21, 0xfe, 0x31,
             0xdf, 0x46, 0xfe, 0xb4, 0x2a, 0xa9, 0x47, 0xdd, 0xd1, 0x37, 0x80, 0xfc, 0x22, 0xa1,
             0xa2, 0xb3, 0xc0, 0xfe,
-        ];
+        ]);
     }
     #[cfg(not(debug_assertions))]
     {
         seed = rand::new_random_seed()?;
     }
     #[cfg(debug_assertions)]
-    let debug_systems = Debug_Systems::new(&config, rand::Default_Rng_Seed(seed));
-    let rng = rand::new_rng_with_seed(rand::Default_Rng_Seed(seed));
+    let debug_systems = Debug_Systems::new(&config, seed);
+    let rng = rand::new_rng_with_seed(seed);
 
     Ok(Engine_State {
         should_close: false,

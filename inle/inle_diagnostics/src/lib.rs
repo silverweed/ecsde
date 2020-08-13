@@ -4,12 +4,14 @@
 #![allow(non_camel_case_types)]
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
+#[cfg(feature = "tracer")]
 #[macro_use]
 extern crate lazy_static;
 
 #[macro_use]
 pub mod prelude;
 
+#[cfg(feature = "tracer")]
 pub mod tracer;
 
 pub use prelude::*;
