@@ -392,6 +392,7 @@ pub fn handle_core_actions(
             }
             Core_Action::Focus_Lost => {
                 engine_state.input_state.raw.kb_state.modifiers_pressed = 0;
+                inle_input::mouse::reset_mouse_state(&mut engine_state.input_state.raw.mouse_state);
             }
             _ => unimplemented!(),
         }

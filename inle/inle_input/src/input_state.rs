@@ -75,7 +75,6 @@ pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut
     let window = window.as_mut();
 
     joystick::update_joysticks();
-    mouse::update_mouse_state(&mut raw_state.mouse_state);
 
     raw_state.core_events.clear();
     raw_state.events.clear();
@@ -89,6 +88,7 @@ pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut
         }
     }
 
+    mouse::update_mouse_state(&mut raw_state.mouse_state, &raw_state.events);
     keyboard::update_kb_state(&mut raw_state.kb_state, &raw_state.events);
 
     for joy_id in 0..joystick::JOY_COUNT {

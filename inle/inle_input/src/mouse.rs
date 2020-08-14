@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use crate::events::Input_Raw_Event;
 
 #[cfg(feature = "win-sfml")]
 pub mod sfml;
@@ -43,18 +44,39 @@ pub struct Mouse_State {
     is_pressed: [bool; 3],
 }
 
-pub fn update_mouse_state(state: &mut Mouse_State) {
-    for i in 0..state.was_pressed_latest_frame.len() {
-        state.was_pressed_latest_frame[i] = state.is_pressed[i];
-        state.is_pressed[i] =
-            backend::is_mouse_btn_pressed(Mouse_Button::try_from(i as u8).unwrap());
+pub fn reset_mouse_state(state: &mut Mouse_State) {
+    // @WaitForStable: use const_assert if const len() ever becomes a thing
+    debug_assert!(state.is_pressed.len() == state.was_pressed_latest_frame.len());
+    for i in 0..state.is_pressed.len() {
+        state.was_pressed_latest_frame[i] = false;
+        state.is_pressed[i] = false;
     }
 }
 
+pub fn update_mouse_state(state: &mut Mouse_State, events: &[Input_Raw_Event]) {
+    for i in 0..state.was_pressed_latest_frame.len() {
+        state.was_pressed_latest_frame[i] = state.is_pressed[i];
+    }
+
+    for &evt in events {
+        match evt {
+            Input_Raw_Event::Mouse_Button_Pressed { button } => {
+                state.is_pressed[button as usize] = true;
+            }
+            Input_Raw_Event::Mouse_Button_Released { button } => {
+                state.is_pressed[button as usize] = false;
+            }
+            _ => (),
+        }
+    }
+}
+
+#[inline]
 pub fn mouse_went_up(state: &Mouse_State, button: Mouse_Button) -> bool {
     state.was_pressed_latest_frame[button as usize] && !is_mouse_btn_pressed(state, button)
 }
 
+#[inline]
 pub fn mouse_went_down(state: &Mouse_State, button: Mouse_Button) -> bool {
     !state.was_pressed_latest_frame[button as usize] && is_mouse_btn_pressed(state, button)
 }
