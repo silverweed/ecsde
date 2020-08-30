@@ -175,13 +175,14 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cfg;
-    use crate::test_common::*;
+    use crate::config::Config;
+    use inle_test::env as test_env;
+    use inle_test::test_common::*;
 
     #[test]
     fn cfg_var_load() {
         let (_, _, env) = create_test_resources_and_env();
-        let config = cfg::Config::new_from_dir(env.get_test_cfg_root());
+        let config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
 
         let entry_int = Cfg_Var::<i32>::new("test/entry_int", &config);
         assert_eq!(entry_int.read(&config), 42);
@@ -206,7 +207,7 @@ mod tests {
     #[should_panic]
     fn cfg_read_invalid() {
         let (_, _, env) = create_test_resources_and_env();
-        let config = cfg::Config::new_from_dir(env.get_test_cfg_root());
+        let config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
 
         let entry_nonexisting = Cfg_Var::<i32>::new("entry non existing", &config);
         let _ = entry_nonexisting.read(&config);
@@ -215,7 +216,7 @@ mod tests {
     #[test]
     fn cfg_new_from_val() {
         let (_, _, env) = create_test_resources_and_env();
-        let mut config = cfg::Config::new_from_dir(env.get_test_cfg_root());
+        let mut config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
 
         let var: Cfg_Var<i32> = Cfg_Var::new_from_val(42, &mut config);
         assert_eq!(var.read(&config), 42);
@@ -228,7 +229,7 @@ mod tests {
     #[should_panic]
     fn cfg_incompatible_type() {
         let (_, _, env) = create_test_resources_and_env();
-        let config = cfg::Config::new_from_dir(env.get_test_cfg_root());
+        let config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
 
         let entry_float_mistyped = Cfg_Var::<i32>::new("test/entry_float", &config);
         let _ = entry_float_mistyped.read(&config);

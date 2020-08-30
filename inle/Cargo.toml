@@ -44,6 +44,7 @@ inle_gfx = { path = "inle_gfx" }
 inle_input = { path = "inle_input" }
 inle_math = { path = "inle_math" }
 inle_physics = { path = "inle_physics" }
+inle_test = { path = "inle_test" }
 inle_replay = { path = "inle_replay" }
 inle_resources = { path = "inle_resources" }
 inle_ui = { path = "inle_ui" }

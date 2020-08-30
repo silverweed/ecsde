@@ -52,8 +52,8 @@ impl<'r> Audio_System<'r> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::resources::audio::sound_path;
-    use crate::test_common;
+    use inle_resources::audio::sound_path;
+    use inle_test::test_common;
 
     #[test]
     fn max_concurrent_sounds() {

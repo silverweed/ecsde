@@ -1,5 +1,5 @@
 [package]
-name = "inle_cfg"
+name = "inle_test"
 version = "0.1.0"
 authors = ["silverweed <silverweed1991@gmail.com>"]
 edition = "2018"
@@ -7,13 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-inle_common = { path = "../inle_common" }
 inle_core = { path = "../inle_core" }
-inle_diagnostics = { path = "../inle_diagnostics" }
-inle_fs = { path = "../inle_fs" }
-
-# Debug only
-notify = "4.0"
-
-[dev-dependencies]
-inle_test = { path = "../inle_test" }
+inle_resources = { path = "../inle_resources" }
+float-cmp = "0.8"

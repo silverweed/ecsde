@@ -152,9 +152,9 @@ impl Angle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_common::*;
+    use inle_test::*;
 
-    impl Approx_Eq_Testable for Angle {
+    impl approx_eq_testable::Approx_Eq_Testable for Angle {
         fn cmp_list(&self) -> Vec<f32> {
             vec![self.0]
         }

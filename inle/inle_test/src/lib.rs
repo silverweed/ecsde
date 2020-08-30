@@ -4,22 +4,13 @@
 #![allow(non_camel_case_types)]
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
-#[cfg(test)]
-#[macro_use]
-extern crate inle_test;
-
-#[macro_use]
-extern crate inle_diagnostics;
+pub extern crate float_cmp;
 
 #[macro_use]
 pub mod prelude;
 
-pub mod angle;
-pub mod math;
-pub mod matrix;
-pub mod rect;
-pub mod shapes;
-pub mod transform;
-pub mod vector;
+pub mod approx_eq_testable;
+pub mod env;
+pub mod test_common;
 
 pub use prelude::*;

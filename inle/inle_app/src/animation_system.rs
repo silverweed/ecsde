@@ -37,9 +37,9 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::rect::Rect;
-    use crate::resources::gfx::tex_path;
-    use crate::test_common;
+    use inle_math::rect::Rect;
+    use inle_resources::gfx::tex_path;
+    use inle_test::test_common;
 
     #[test]
     fn animation_system() {

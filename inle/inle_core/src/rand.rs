@@ -4,7 +4,7 @@ use inle_serialize::{Binary_Serializable, Byte_Stream};
 
 pub type Default_Rng = Rand_Xoshiro256;
 
-#[derive(Copy, Clone, Default, Debug)]
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq)]
 pub struct Default_Rng_Seed(pub [u8; 32]);
 
 impl Binary_Serializable for Default_Rng_Seed {

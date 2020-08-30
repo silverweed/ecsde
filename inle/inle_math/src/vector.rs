@@ -328,7 +328,7 @@ impl<T: Copy + Div<Output = T>> DivAssign<T> for Vector2<T> {
 }
 
 #[cfg(test)]
-impl crate::test_common::Approx_Eq_Testable for Vec2f {
+impl inle_test::approx_eq_testable::Approx_Eq_Testable for Vec2f {
     fn cmp_list(&self) -> Vec<f32> {
         vec![self.x, self.y]
     }

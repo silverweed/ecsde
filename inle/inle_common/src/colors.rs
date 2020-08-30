@@ -148,7 +148,8 @@ pub fn to_gray_scale(c: Color) -> Color {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_common::*;
+    use inle_test::approx_eq_testable::Approx_Eq_Testable;
+    use inle_test::*;
 
     impl Approx_Eq_Testable for Color_Hsv {
         fn cmp_list(&self) -> Vec<f32> {

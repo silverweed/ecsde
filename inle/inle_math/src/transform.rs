@@ -159,7 +159,7 @@ impl std::ops::Mul<Vec2f> for Transform2D {
 }
 
 #[cfg(test)]
-impl crate::test_common::Approx_Eq_Testable for Transform2D {
+impl inle_test::approx_eq_testable::Approx_Eq_Testable for Transform2D {
     fn cmp_list(&self) -> Vec<f32> {
         vec![
             self.position.x,

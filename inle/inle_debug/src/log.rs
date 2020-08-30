@@ -62,7 +62,7 @@ impl Debug_Log {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::debug::tracer::*;
+    use inle_diagnostics::tracer::*;
     use std::time::*;
 
     #[test]

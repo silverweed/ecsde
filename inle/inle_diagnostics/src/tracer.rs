@@ -68,15 +68,13 @@ impl Drop for Scope_Trace {
 }
 
 /// A trimmed-down version of Tracer_Node used to store data with lower memory footprint
-#[derive(Copy, Clone, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Tracer_Node_Final {
     pub info: Scope_Trace_Info_Final,
     pub parent_idx: Option<u16>,
 }
 
-#[derive(Copy, Clone, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Scope_Trace_Info_Final {
     pub tag: &'static str,
 
@@ -86,7 +84,7 @@ pub struct Scope_Trace_Info_Final {
 }
 
 impl Scope_Trace_Info_Final {
-    pub(super) fn new(tag: &'static str, n_calls: u32, tot_duration: Duration) -> Self {
+    pub fn new(tag: &'static str, n_calls: u32, tot_duration: Duration) -> Self {
         let n_calls = n_calls.min(1 << 24);
         let tot_duration_nanos = tot_duration.as_nanos().min(1 << 40) as u64;
         if tot_duration_nanos as u128 != tot_duration.as_nanos() {

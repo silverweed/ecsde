@@ -21,3 +21,7 @@ git = "https://github.com/jeremyletang/rust-sfml"
 rev = "9199dc4"
 optional = true
 default-features = false
+
+[dev-dependencies]
+inle_test = { path = "../inle_test" }
+float-cmp = "0.8"
