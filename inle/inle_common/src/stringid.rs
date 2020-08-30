@@ -26,29 +26,45 @@ where
         trace!("String_Id::from");
 
         let s: &str = s.into();
-        let this = String_Id(fnv1a(s.as_bytes()));
-        #[cfg(debug_assertions)]
+        sid_from_str(s)
+    }
+}
+
+#[cfg(debug_assertions)]
+fn sid_from_str(s: &str) -> String_Id {
+    let this = String_Id(fnv1a(s.as_bytes()));
+    {
+        match STRING_ID_MAP
+            .write()
+            .expect("[ ERROR ] Failed to lock STRING_ID_MAP")
+            .entry(this)
         {
-            match STRING_ID_MAP
-                .write()
-                .expect("[ ERROR ] Failed to lock STRING_ID_MAP")
-                .entry(this)
-            {
-                Entry::Occupied(o) => {
-                    let old = o.get().as_str();
-                    assert_eq!(
-                        old, s,
-                        "Two strings map to the same SID: {} and {}!",
-                        old, s
-                    );
-                }
-                Entry::Vacant(v) => {
-                    v.insert(String::from(s));
-                }
+            Entry::Occupied(o) => {
+                let old = o.get().as_str();
+                assert_eq!(
+                    old, s,
+                    "Two strings map to the same SID: {} and {}!",
+                    old, s
+                );
+            }
+            Entry::Vacant(v) => {
+                v.insert(String::from(s));
             }
         }
-        this
     }
+    this
+}
+
+#[cfg(not(debug_assertions))]
+const fn sid_from_str(s: &str) -> String_Id {
+    String_Id(fnv1a(s.as_bytes()))
+}
+
+#[macro_export]
+macro_rules! sid {
+    ($str: expr) => {
+        sid_from_str($str)
+    };
 }
 
 impl std::fmt::Display for String_Id {
@@ -95,11 +111,14 @@ impl std::fmt::Debug for String_Id {
 pub const FNV1A_PRIME32: u32 = 16_777_619;
 pub const FNV1A_START32: u32 = 2_166_136_261;
 
-fn fnv1a(bytes: &[u8]) -> u32 {
+const fn fnv1a(bytes: &[u8]) -> u32 {
     let mut result = FNV1A_START32;
-    for &b in bytes {
-        result ^= u32::from(b);
+    let mut i = 0;
+    while i < bytes.len() {
+        let b = bytes[i];
+        result ^= b as u32;
         result = result.wrapping_mul(FNV1A_PRIME32);
+        i += 1;
     }
     result
 }
@@ -110,6 +129,7 @@ mod tests {
 
     #[test]
     fn test_fnv1a() {
+        const_assert!(fnv1a(b"A test string") == 943117577);
         assert_eq!(fnv1a(b"A test string"), 0x3836d509);
         assert_eq!(fnv1a(b"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor \
                          incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud \
