@@ -1,5 +1,4 @@
 use inle_cfg::{Cfg_Var, Config};
-use inle_common::stringid::String_Id;
 use inle_input::axes::Virtual_Axes;
 use inle_math::vector::Vec2f;
 
@@ -15,8 +14,8 @@ pub fn get_movement_from_input(
 ) -> Vec2f {
     // @Speed @WaitForStable: compute these StringIds at compile-time
     let deadzone = input_cfg.joy_deadzone.read(cfg).abs();
-    let x = axes.get_axis_value(String_Id::from("horizontal"));
-    let y = axes.get_axis_value(String_Id::from("vertical"));
+    let x = axes.get_axis_value(sid!("horizontal"));
+    let y = axes.get_axis_value(sid!("vertical"));
     Vec2f::new(
         if x.abs() > deadzone { x } else { 0.0 },
         if y.abs() > deadzone { y } else { 0.0 },

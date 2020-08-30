@@ -1,7 +1,6 @@
 use crate::app::Engine_State;
 use inle_cfg;
 use inle_common::colors;
-use inle_common::stringid::String_Id;
 use inle_common::units::format_bytes_pretty;
 use inle_core::time;
 use inle_debug::graph;
@@ -45,7 +44,7 @@ fn add_tracer_node_line(
         .add_line(&line)
         .with_color(color)
         .with_bg_rect_fill(bg_col, ratio)
-        .with_metadata(String_Id::from("full_tag"), node.info.tag.to_string());
+        .with_metadata(sid!("full_tag"), node.info.tag.to_string());
 }
 
 pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
@@ -74,7 +73,7 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
     let overlay = engine_state
         .debug_systems
         .debug_ui
-        .get_overlay(String_Id::from("trace"));
+        .get_overlay(sid!("trace"));
 
     overlay.clear();
 
@@ -123,7 +122,7 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
     let overlay = engine_state
         .debug_systems
         .debug_ui
-        .get_overlay(String_Id::from("trace"));
+        .get_overlay(sid!("trace"));
 
     overlay.clear();
 
@@ -196,6 +195,6 @@ pub fn update_graph_traced_fn(
         time,
         TIME_LIMIT,
         fn_tot_time,
-        &[(String_Id::from("real_frame"), (cur_frame as u32).into())],
+        &[(sid!("real_frame"), (cur_frame as u32).into())],
     );
 }

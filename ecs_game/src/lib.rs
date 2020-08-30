@@ -41,7 +41,6 @@ mod debug;
 use game_state::*;
 use inle_app::app;
 use inle_common::colors;
-use inle_common::stringid::String_Id;
 use inle_core::{sleep, time};
 use std::convert::TryInto;
 use std::ffi::CStr;
@@ -273,6 +272,6 @@ pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mu
         .engine_state
         .debug_systems
         .debug_ui
-        .get_fadeout_overlay(String_Id::from("msg"))
+        .get_fadeout_overlay(sid!("msg"))
         .add_line_color("+++ GAME RELOADED +++", colors::rgb(255, 128, 0));
 }

@@ -204,9 +204,7 @@ where
             let input_state = &game_state.engine_state.input_state;
 
             update_joystick_debug_overlay(
-                debug_systems
-                    .debug_ui
-                    .get_overlay(String_Id::from("joysticks")),
+                debug_systems.debug_ui.get_overlay(sid!("joysticks")),
                 &input_state.raw.joy_state,
                 game_state.gameplay_system.input_cfg,
                 &game_state.engine_state.config,
@@ -221,9 +219,7 @@ where
             }
 
             update_record_debug_overlay(
-                debug_systems
-                    .debug_ui
-                    .get_overlay(String_Id::from("record")),
+                debug_systems.debug_ui.get_overlay(sid!("record")),
                 recording,
                 replaying,
             );
@@ -261,11 +257,11 @@ where
 
             let actions = &game_state.engine_state.input_state.processed.game_actions;
 
-            if actions.contains(&(String_Id::from("toggle_console"), Action_Kind::Pressed)) {
+            if actions.contains(&(sid!("toggle_console"), Action_Kind::Pressed)) {
                 game_state.engine_state.debug_systems.console.toggle();
             }
 
-            if actions.contains(&(String_Id::from("calipers"), Action_Kind::Pressed)) {
+            if actions.contains(&(sid!("calipers"), Action_Kind::Pressed)) {
                 if let Some(level) = game_state.gameplay_system.levels.first_active_level() {
                     game_state
                         .engine_state
@@ -273,7 +269,7 @@ where
                         .calipers
                         .start_measuring_dist(&game_state.window, &level.get_camera().transform);
                 }
-            } else if actions.contains(&(String_Id::from("calipers"), Action_Kind::Released)) {
+            } else if actions.contains(&(sid!("calipers"), Action_Kind::Released)) {
                 game_state
                     .engine_state
                     .debug_systems
@@ -587,9 +583,7 @@ fn update_debug_graphics<'a, 's, 'r>(
     {
         trace!("debug_ui::update");
         let debug_ui = &mut game_state.engine_state.debug_systems.debug_ui;
-        let prev_selected = debug_ui
-            .get_graph(String_Id::from("fn_profile"))
-            .get_selected_point();
+        let prev_selected = debug_ui.get_graph(sid!("fn_profile")).get_selected_point();
         debug_ui.update_and_draw(
             &real_dt,
             &mut game_state.window,
@@ -599,17 +593,17 @@ fn update_debug_graphics<'a, 's, 'r>(
             &mut game_state.engine_state.frame_alloc,
         );
 
-        let profile_graph = debug_ui.get_graph(String_Id::from("fn_profile"));
+        let profile_graph = debug_ui.get_graph(sid!("fn_profile"));
         let cur_selected = profile_graph.get_selected_point();
         if cur_selected != prev_selected {
             game_state.engine_state.time.paused = cur_selected.is_some();
             debug_ui.frame_scroller.manually_selected = cur_selected.is_some();
             if let Some(sel) = cur_selected {
-                let profile_graph = debug_ui.get_graph(String_Id::from("fn_profile"));
+                let profile_graph = debug_ui.get_graph(sid!("fn_profile"));
                 // @Robustness @Refactoring: this should be a u64
                 let real_frame: u32 = profile_graph
                     .data
-                    .get_point_metadata(sel.index, String_Id::from("real_frame"))
+                    .get_point_metadata(sel.index, sid!("real_frame"))
                     .expect("Failed to get point frame metadata!");
                 debug_ui
                     .frame_scroller
@@ -637,35 +631,14 @@ fn update_debug(
     let engine_state = &mut game_state.engine_state;
     let debug_systems = &mut engine_state.debug_systems;
 
-    // @Speed @WaitForStable: these should all be computed at compile time.
-    let (
-        sid_time,
-        sid_fps,
-        sid_entities,
-        sid_camera,
-        sid_mouse,
-        sid_window,
-        sid_prev_frame_time,
-        sid_physics,
-    ) = (
-        String_Id::from("time"),
-        String_Id::from("fps"),
-        String_Id::from("entities"),
-        String_Id::from("camera"),
-        String_Id::from("mouse"),
-        String_Id::from("window"),
-        String_Id::from("prev_frame_time"),
-        String_Id::from("physics"),
-    );
-
     // Overlays
     update_time_debug_overlay(
-        debug_systems.debug_ui.get_overlay(sid_time),
+        debug_systems.debug_ui.get_overlay(sid!("time")),
         &engine_state.time,
     );
 
     update_fps_debug_overlay(
-        debug_systems.debug_ui.get_overlay(sid_fps),
+        debug_systems.debug_ui.get_overlay(sid!("fps")),
         &game_state.fps_debug,
         (1000.
             / game_state
@@ -680,11 +653,11 @@ fn update_debug(
         .draw_mouse_rulers
         .read(&engine_state.config);
     // NOTE: this must be always cleared or the mouse position will remain after enabling and disabling the cfg var
-    debug_systems.debug_ui.get_overlay(sid_mouse).clear();
+    debug_systems.debug_ui.get_overlay(sid!("mouse")).clear();
     if draw_mouse_rulers {
         let painter = &mut debug_systems.global_painter;
         update_mouse_debug_overlay(
-            debug_systems.debug_ui.get_overlay(sid_mouse),
+            debug_systems.debug_ui.get_overlay(sid!("mouse")),
             painter,
             &game_state.window,
             game_state
@@ -696,7 +669,7 @@ fn update_debug(
     }
 
     update_win_debug_overlay(
-        debug_systems.debug_ui.get_overlay(sid_window),
+        debug_systems.debug_ui.get_overlay(sid!("window")),
         &game_state.window,
     );
 
@@ -706,10 +679,10 @@ fn update_debug(
         .read(&engine_state.config);
     debug_systems
         .debug_ui
-        .set_graph_enabled(sid_fps, draw_fps_graph);
+        .set_graph_enabled(sid!("fps"), draw_fps_graph);
     if draw_fps_graph {
         update_graph_fps(
-            debug_systems.debug_ui.get_graph(sid_fps),
+            debug_systems.debug_ui.get_graph(sid!("fps")),
             &engine_state.time,
             &game_state.fps_debug,
         );
@@ -721,10 +694,10 @@ fn update_debug(
         .read(&engine_state.config);
     debug_systems
         .debug_ui
-        .set_graph_enabled(sid_prev_frame_time, draw_prev_frame_t_graph);
+        .set_graph_enabled(sid!("prev_frame_time"), draw_prev_frame_t_graph);
     if draw_prev_frame_t_graph {
         update_graph_prev_frame_t(
-            debug_systems.debug_ui.get_graph(sid_prev_frame_time),
+            debug_systems.debug_ui.get_graph(sid!("prev_frame_time")),
             &engine_state.time,
             &engine_state.prev_frame_time,
         );
@@ -760,12 +733,12 @@ fn update_debug(
                 .get_mut(&level.id)
                 .unwrap_or_else(|| fatal!("Debug painter not found for level {:?}", level.id));
 
-            update_entities_debug_overlay(debug_ui.get_overlay(sid_entities), &level.world);
+            update_entities_debug_overlay(debug_ui.get_overlay(sid!("entities")), &level.world);
 
-            update_camera_debug_overlay(debug_ui.get_overlay(sid_camera), &level.get_camera());
+            update_camera_debug_overlay(debug_ui.get_overlay(sid!("camera")), &level.get_camera());
 
             update_physics_debug_overlay(
-                debug_ui.get_overlay(sid_physics),
+                debug_ui.get_overlay(sid!("physics")),
                 &collision_debug_data[&level.id],
                 &level.chunks,
             );

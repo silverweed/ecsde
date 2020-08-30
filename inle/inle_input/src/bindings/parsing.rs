@@ -382,64 +382,64 @@ mod tests {
         assert_eq!(parsed.len(), 23);
         assert_eq!(
             parsed[&Input_Action::new(Input_Action_Simple::Key(Key::Num0))],
-            vec![String_Id::from("action1"), String_Id::from("action6")]
+            vec![sid!("action1"), sid!("action6")]
         );
         assert_eq!(
             parsed[&Input_Action::new(Input_Action_Simple::Key(Key::Num1))],
-            vec![String_Id::from("action2"), String_Id::from("action9")]
+            vec![sid!("action2"), sid!("action9")]
         );
         assert_eq!(
             parsed
                 [&Input_Action::new_with_modifiers(Input_Action_Simple::Key(Key::Num2), MOD_LCTRL)],
-            vec![String_Id::from("action2")]
+            vec![sid!("action2")]
         );
         assert_eq!(
             parsed[&Input_Action::new_with_modifiers(
                 Input_Action_Simple::Key(Key::Num3),
                 MOD_RSHIFT | MOD_LALT | MOD_RCTRL
             )],
-            vec![String_Id::from("action3")]
+            vec![sid!("action3")]
         );
         assert_eq!(
             parsed[&Input_Action::new(Input_Action_Simple::Key(Key::Num4))],
-            vec![String_Id::from("action5")],
+            vec![sid!("action5")],
         );
         assert_eq!(
             parsed[&Input_Action::new(Input_Action_Simple::Key(Key::Num5))],
-            vec![String_Id::from("action5")],
+            vec![sid!("action5")],
         );
         assert_eq!(
             parsed[&Input_Action::new(Input_Action_Simple::Key(Key::Num6))],
-            vec![String_Id::from("action5")],
+            vec![sid!("action5")],
         );
         assert_eq!(
             parsed[&Input_Action::new(Input_Action_Simple::Mouse(Mouse_Button::Left))],
-            vec![String_Id::from("action8")],
+            vec![sid!("action8")],
         );
         assert_eq!(
             parsed[&Input_Action::new(Input_Action_Simple::Mouse(Mouse_Button::Right))],
-            vec![String_Id::from("action8")],
+            vec![sid!("action8")],
         );
         assert_eq!(
             parsed[&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Face_Bottom))],
-            vec![String_Id::from("action10")],
+            vec![sid!("action10")],
         );
         assert_eq!(
             parsed
                 [&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Special_Left))],
-            vec![String_Id::from("action10")],
+            vec![sid!("action10")],
         );
         assert_eq!(
             parsed[&Input_Action::new(Input_Action_Simple::Key(Key::J))],
-            vec![String_Id::from("action11")],
+            vec![sid!("action11")],
         );
         assert_eq!(
             parsed[&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Stick_Right))],
-            vec![String_Id::from("action11")],
+            vec![sid!("action11")],
         );
         assert_eq!(
             parsed[&Input_Action::new(Input_Action_Simple::Mouse(Mouse_Button::Middle))],
-            vec![String_Id::from("action11")],
+            vec![sid!("action11")],
         );
     }
 
@@ -470,27 +470,27 @@ mod tests {
         assert_eq!(axes_names.len(), 4);
         assert_eq!(
             real[J::Stick_Right_V as usize],
-            vec![String_Id::from("axis1")]
+            vec![sid!("axis1")]
         );
         assert_eq!(
             real[J::Stick_Left_H as usize],
-            vec![String_Id::from("axis1"), String_Id::from("axis3")]
+            vec![sid!("axis1"), sid!("axis3")]
         );
         assert_eq!(
             emulated[&Input_Action::new(Input_Action_Simple::Key(Key::D))],
             vec![
-                (String_Id::from("axis2"), Axis_Emulation_Type::Max),
-                (String_Id::from("axis5"), Axis_Emulation_Type::Min)
+                (sid!("axis2"), Axis_Emulation_Type::Max),
+                (sid!("axis5"), Axis_Emulation_Type::Min)
             ]
         );
         assert_eq!(
             emulated
                 [&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Stick_Right))],
-            vec![(String_Id::from("axis3"), Axis_Emulation_Type::Max)]
+            vec![(sid!("axis3"), Axis_Emulation_Type::Max)]
         );
         assert_eq!(
             real[J::Trigger_Right as usize],
-            vec![String_Id::from("axis3")]
+            vec![sid!("axis3")]
         );
     }
 }

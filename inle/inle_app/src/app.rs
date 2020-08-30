@@ -22,7 +22,6 @@ use {
     crate::systems::Debug_Systems,
     inle_cfg::Cfg_Var,
     inle_common::colors,
-    inle_common::stringid::String_Id,
     inle_debug,
     inle_diagnostics::tracer,
     inle_fs,
@@ -202,7 +201,7 @@ pub fn init_engine_debug(
         };
 
         let mut joy_overlay = debug_ui
-            .create_overlay(String_Id::from("joysticks"), debug_overlay_config)
+            .create_overlay(sid!("joysticks"), debug_overlay_config)
             .unwrap();
         joy_overlay.config.horiz_align = Align::End;
         joy_overlay.config.vert_align = Align::Middle;
@@ -210,21 +209,21 @@ pub fn init_engine_debug(
 
         debug_overlay_config.font_size = (13.0 * ui_scale) as _;
         let time_overlay = debug_ui
-            .create_overlay(String_Id::from("time"), debug_overlay_config)
+            .create_overlay(sid!("time"), debug_overlay_config)
             .unwrap();
         time_overlay.config.horiz_align = Align::End;
         time_overlay.config.vert_align = Align::End;
         time_overlay.position = Vec2f::new(win_w, win_h);
 
         let win_overlay = debug_ui
-            .create_overlay(String_Id::from("window"), debug_overlay_config)
+            .create_overlay(sid!("window"), debug_overlay_config)
             .unwrap();
         win_overlay.config.horiz_align = Align::End;
         win_overlay.config.vert_align = Align::End;
         win_overlay.position = Vec2f::new(win_w, win_h - 20. * ui_scale);
 
         let fps_overlay = debug_ui
-            .create_overlay(String_Id::from("fps"), debug_overlay_config)
+            .create_overlay(sid!("fps"), debug_overlay_config)
             .unwrap();
         fps_overlay.config.vert_align = Align::End;
         fps_overlay.position = Vec2f::new(0.0, win_h);
@@ -233,7 +232,7 @@ pub fn init_engine_debug(
         debug_overlay_config.pad_y = 0.;
         debug_overlay_config.background = colors::TRANSPARENT;
         let mouse_overlay = debug_ui
-            .create_overlay(String_Id::from("mouse"), debug_overlay_config)
+            .create_overlay(sid!("mouse"), debug_overlay_config)
             .unwrap();
         mouse_overlay.config.horiz_align = Align::Begin;
         mouse_overlay.config.vert_align = Align::End;
@@ -241,20 +240,20 @@ pub fn init_engine_debug(
         debug_overlay_config.background = colors::rgba(20, 20, 20, 220);
         debug_overlay_config.pad_y = 8. * ui_scale;
         let trace_overlay = debug_ui
-            .create_overlay(String_Id::from("trace"), debug_overlay_config)
+            .create_overlay(sid!("trace"), debug_overlay_config)
             .unwrap();
         trace_overlay.config.vert_align = Align::Middle;
         trace_overlay.config.horiz_align = Align::Middle;
         trace_overlay.config.hoverable = true;
         trace_overlay.position = Vec2f::new(win_w * 0.5, win_h * 0.5);
         // Trace overlay starts disabled
-        debug_ui.set_overlay_enabled(String_Id::from("trace"), false);
+        debug_ui.set_overlay_enabled(sid!("trace"), false);
 
         debug_overlay_config.background = colors::TRANSPARENT;
         debug_overlay_config.pad_y = 0.;
         debug_overlay_config.font_size = (14.0 * ui_scale) as _;
         let record_overlay = debug_ui
-            .create_overlay(String_Id::from("record"), debug_overlay_config)
+            .create_overlay(sid!("record"), debug_overlay_config)
             .unwrap();
         record_overlay.config.vert_align = Align::Begin;
         record_overlay.config.horiz_align = Align::Begin;
@@ -276,7 +275,7 @@ pub fn init_engine_debug(
         };
 
         let fadeout_overlay = debug_ui
-            .create_fadeout_overlay(String_Id::from("msg"), fadeout_overlay_config)
+            .create_fadeout_overlay(sid!("msg"), fadeout_overlay_config)
             .unwrap();
         fadeout_overlay.config.horiz_align = Align::Begin;
         fadeout_overlay.position = Vec2f::new(0.0, 0.0);
@@ -302,7 +301,7 @@ pub fn init_engine_debug(
         let graph = engine_state
             .debug_systems
             .debug_ui
-            .create_graph(String_Id::from("fps"), graph_config.clone())
+            .create_graph(sid!("fps"), graph_config.clone())
             .unwrap();
 
         graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
@@ -316,7 +315,7 @@ pub fn init_engine_debug(
         let graph = engine_state
             .debug_systems
             .debug_ui
-            .create_graph(String_Id::from("prev_frame_time"), graph_config.clone())
+            .create_graph(sid!("prev_frame_time"), graph_config.clone())
             .unwrap();
         graph.pos.y = (0.15 * win_h) as u32;
         graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
@@ -331,7 +330,7 @@ pub fn init_engine_debug(
         let graph = engine_state
             .debug_systems
             .debug_ui
-            .create_graph(String_Id::from("fn_profile"), graph_config)
+            .create_graph(sid!("fn_profile"), graph_config)
             .unwrap();
         graph.pos.y = (0.3 * win_h) as u32;
         graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
@@ -346,7 +345,7 @@ pub fn init_engine_debug(
         console.toggle_console_keys = engine_state
             .input_state
             .bindings
-            .get_all_actions_triggering(String_Id::from("toggle_console"))
+            .get_all_actions_triggering(sid!("toggle_console"))
             .iter()
             .filter_map(|action| {
                 if let Input_Action {
@@ -464,7 +463,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
 
     // Function trace graph
     if trace_realtime || !engine_state.time.paused {
-        let sid_trace = String_Id::from("trace");
+        let sid_trace = sid!("trace");
         let debug_systems = &mut engine_state.debug_systems;
         let trace_hover_data = debug_systems
             .debug_ui
@@ -476,7 +475,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
                 let fn_name: String = debug_systems.debug_ui.get_overlay(sid_trace).lines
                     [tracer_selected_idx]
                     .metadata
-                    .get(&String_Id::from("full_tag"))
+                    .get(&sid!("full_tag"))
                     .map(|x| x.clone().try_into().ok())
                     .flatten()
                     .unwrap_or_else(String::default);
@@ -489,11 +488,9 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
         if !debug_systems.traced_fn.is_empty() {
             debug_systems
                 .debug_ui
-                .set_graph_enabled(String_Id::from("fn_profile"), true);
+                .set_graph_enabled(sid!("fn_profile"), true);
 
-            let graph = debug_systems
-                .debug_ui
-                .get_graph(String_Id::from("fn_profile"));
+            let graph = debug_systems.debug_ui.get_graph(sid!("fn_profile"));
 
             let flattened_traces = tracer::flatten_traces(&final_traces);
             tracer_drawing::update_graph_traced_fn(
@@ -510,7 +507,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
         } else {
             debug_systems
                 .debug_ui
-                .set_graph_enabled(String_Id::from("fn_profile"), false);
+                .set_graph_enabled(sid!("fn_profile"), false);
         }
     }
 }
@@ -518,9 +515,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
 #[cfg(debug_assertions)]
 pub fn set_traced_fn(debug_systems: &mut Debug_Systems, fn_name: String) {
     debug_systems.traced_fn = fn_name.clone();
-    let graph = debug_systems
-        .debug_ui
-        .get_graph(String_Id::from("fn_profile"));
+    let graph = debug_systems.debug_ui.get_graph(sid!("fn_profile"));
     graph.config.title = Some(fn_name);
     graph.data.points.clear();
     graph.selected_point = None;

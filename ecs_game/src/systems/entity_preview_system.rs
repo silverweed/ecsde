@@ -1,6 +1,5 @@
 use crate::entities;
 use inle_cfg::Config;
-use inle_common::stringid::String_Id;
 use inle_core::env::Env_Info;
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::Ecs_World;
@@ -29,7 +28,7 @@ pub fn update(
         let mpos = mouse_pos_in_world(window, camera);
         spatial.transform.set_position_v(mpos);
 
-        if actions.contains(&(String_Id::from("place_entity"), Action_Kind::Pressed)) {
+        if actions.contains(&(sid!("place_entity"), Action_Kind::Pressed)) {
             let transform = spatial.transform;
             // @Temporary
             entities::create_drill(world, phys_world, gres, shader_cache, env, cfg, &transform);

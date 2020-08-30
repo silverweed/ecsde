@@ -34,14 +34,14 @@ const CHANGE_SPEED_DELTA: f32 = 0.1;
 impl Debug_Base_State {
     pub fn new(cfg: &inle_cfg::Config) -> Debug_Base_State {
         Debug_Base_State {
-            sid_game_speed_up: String_Id::from("game_speed_up"),
-            sid_game_speed_down: String_Id::from("game_speed_down"),
-            sid_pause_toggle: String_Id::from("pause_toggle"),
-            sid_step_sim: String_Id::from("step_sim"),
-            sid_print_em_debug_info: String_Id::from("print_em_debug_info"),
-            sid_toggle_trace_overlay: String_Id::from("toggle_trace_overlay"),
-            sid_move_camera_to_origin: String_Id::from("move_camera_to_origin"),
-            sid_debug_dig: String_Id::from("debug_dig"),
+            sid_game_speed_up: sid!("game_speed_up"),
+            sid_game_speed_down: sid!("game_speed_down"),
+            sid_pause_toggle: sid!("pause_toggle"),
+            sid_step_sim: sid!("step_sim"),
+            sid_print_em_debug_info: sid!("print_em_debug_info"),
+            sid_toggle_trace_overlay: sid!("toggle_trace_overlay"),
+            sid_move_camera_to_origin: sid!("move_camera_to_origin"),
+            sid_debug_dig: sid!("debug_dig"),
             gameplay_update_tick_ms: Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg),
             digging: false,
         }
@@ -53,7 +53,7 @@ macro_rules! add_msg {
         $engine_state
             .debug_systems
             .debug_ui
-            .get_fadeout_overlay(String_Id::from("msg"))
+            .get_fadeout_overlay(sid!("msg"))
             .add_line($msg)
     };
 }
@@ -152,7 +152,7 @@ impl Persistent_Game_State for Debug_Base_State {
                     engine_state
                         .debug_systems
                         .debug_ui
-                        .set_overlay_enabled(String_Id::from("trace"), *show_trace);
+                        .set_overlay_enabled(sid!("trace"), *show_trace);
                 }
                 (name, Action_Kind::Pressed) if *name == self.sid_move_camera_to_origin => {
                     gs.levels

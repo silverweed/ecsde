@@ -100,7 +100,7 @@ impl Gameplay_System {
         game_res: &mut Game_Resources,
         level_batches: &mut HashMap<String_Id, Batches>,
     ) {
-        let level_id = String_Id::from("test");
+        let level_id = sid!("test");
         let mut level = load_system::level_load_sync(level_id, engine_state, game_res, self.cfg);
 
         level.chunks.init(engine_state);
@@ -261,12 +261,12 @@ impl Gameplay_System {
 
             for action in &input_state.processed.game_actions {
                 match action {
-                    (name, Action_Kind::Pressed) if *name == String_Id::from("camera_zoom_up") => {
+                    (name, Action_Kind::Pressed) if *name == sid!("camera_zoom_up") => {
                         add_scale.x -= BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
                         add_scale.y = add_scale.x;
                     }
                     (name, Action_Kind::Pressed)
-                        if *name == String_Id::from("camera_zoom_down") =>
+                        if *name == sid!("camera_zoom_down") =>
                     {
                         add_scale.x += BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
                         add_scale.y = add_scale.x;

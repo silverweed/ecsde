@@ -1,5 +1,4 @@
 use super::state::{Game_State, Game_State_Args, State_Transition};
-use inle_common::stringid::String_Id;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input::input_state::{Action_Kind, Game_Action};
 use inle_math::rect::Rect;
@@ -116,7 +115,7 @@ impl Game_State for Pause_Menu_State {
     fn handle_actions(&mut self, actions: &[Game_Action], _args: &mut Game_State_Args) {
         for action in actions {
             match action {
-                (name, Action_Kind::Pressed) if *name == String_Id::from("open_pause_menu") => {
+                (name, Action_Kind::Pressed) if *name == sid!("open_pause_menu") => {
                     self.should_close = true;
                 }
                 _ => (),

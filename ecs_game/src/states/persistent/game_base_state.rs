@@ -9,7 +9,7 @@ pub struct Game_Base_State {
 impl Game_Base_State {
     pub fn new() -> Game_Base_State {
         Game_Base_State {
-            sid_quit: String_Id::from("quit"),
+            sid_quit: sid!("quit"),
         }
     }
 }

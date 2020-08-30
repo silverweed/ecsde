@@ -15,6 +15,10 @@ impl String_Id {
     pub const fn from_u32(x: u32) -> String_Id {
         String_Id(x)
     }
+
+    pub const fn val(self) -> u32 {
+        self.0
+    }
 }
 
 impl<'a, T> From<T> for String_Id
@@ -31,7 +35,7 @@ where
 }
 
 #[cfg(debug_assertions)]
-fn sid_from_str(s: &str) -> String_Id {
+pub fn sid_from_str(s: &str) -> String_Id {
     let this = String_Id(fnv1a(s.as_bytes()));
     {
         match STRING_ID_MAP
@@ -56,14 +60,14 @@ fn sid_from_str(s: &str) -> String_Id {
 }
 
 #[cfg(not(debug_assertions))]
-const fn sid_from_str(s: &str) -> String_Id {
+pub const fn sid_from_str(s: &str) -> String_Id {
     String_Id(fnv1a(s.as_bytes()))
 }
 
 #[macro_export]
 macro_rules! sid {
     ($str: expr) => {
-        sid_from_str($str)
+        $crate::stringid::sid_from_str($str)
     };
 }
 
@@ -141,14 +145,14 @@ mod tests {
 
     #[test]
     fn stringid_from_str() {
-        assert_eq!(String_Id::from("A test string"), String_Id(943117577));
-        assert_eq!(String_Id::from("A test string").0, fnv1a(b"A test string"));
+        assert_eq!(sid!("A test string"), String_Id(943117577));
+        assert_eq!(sid!("A test string").0, fnv1a(b"A test string"));
     }
 
     #[test]
     fn stringid_to_str() {
         assert_eq!(
-            String_Id::from("Another test string").to_string(),
+            sid!("Another test string").to_string(),
             String::from("Another test string")
         );
     }
