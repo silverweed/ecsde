@@ -109,6 +109,8 @@ impl Pixel_Collision_System {
             )
         });
 
+        // @Incomplete: properly handle borders!
+
         let r = circle.radius as i32;
         let Vec2i { x: cx, y: cy } = Vec2i::from(circle.center);
         let size = render::get_image_size(img);
@@ -131,10 +133,6 @@ impl Pixel_Collision_System {
         }
 
         let texture = gres.get_texture_mut(texture);
-        debug_assert!(
-            render::get_texture_size(&texture).0 >= (r + cx) as u32
-                && render::get_texture_size(&texture).1 >= (r + cy) as u32
-        );
         let rect = Rect::new(
             clamp(cx - r, 0, size.0 as i32) as u32,
             clamp(cy - r, 0, size.1 as i32) as u32,
