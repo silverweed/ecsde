@@ -9,6 +9,12 @@ impl<T> Clone for Thread_Safe_Ptr<T> {
     }
 }
 
+impl<T> std::fmt::Pointer for Thread_Safe_Ptr<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:p}", self.0)
+    }
+}
+
 impl<T> Copy for Thread_Safe_Ptr<T> {}
 
 unsafe impl<T> Send for Thread_Safe_Ptr<T> {}
@@ -33,5 +39,19 @@ impl<T> From<Thread_Safe_Ptr<T>> for *mut T {
 impl<T> From<*mut T> for Thread_Safe_Ptr<T> {
     fn from(ptr: *mut T) -> Self {
         Self(ptr)
+    }
+}
+
+impl<T> std::ops::Deref for Thread_Safe_Ptr<T> {
+    type Target = *mut T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> std::ops::DerefMut for Thread_Safe_Ptr<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }

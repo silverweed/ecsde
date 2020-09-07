@@ -113,6 +113,9 @@ where
         fatal!("game_update: game state and/or resources are null!");
     }
 
+    inle_ecs::system::dothething();
+    return false;
+
     let game_state = &mut *game_state;
     if game_state.engine_state.should_close {
         return false;
