@@ -14,7 +14,6 @@ use crate::spatial::World_Chunks;
 use crate::Game_Resources;
 use inle_app::app::Engine_State;
 use inle_cfg::{self, Cfg_Var};
-use inle_common;
 use inle_common::colors;
 use inle_common::stringid::String_Id;
 use inle_core::env::Env_Info;
@@ -23,7 +22,6 @@ use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_ecs::entity_stream::new_entity_stream;
 use inle_events::evt_register::Event_Register;
-use inle_gfx;
 use inle_gfx::components::{C_Animated_Sprite, C_Camera2D, C_Renderable};
 use inle_gfx::render::batcher::Batches;
 use inle_gfx::render_window::Render_Window_Handle;
@@ -265,9 +263,7 @@ impl Gameplay_System {
                         add_scale.x -= BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
                         add_scale.y = add_scale.x;
                     }
-                    (name, Action_Kind::Pressed)
-                        if *name == sid!("camera_zoom_down") =>
-                    {
+                    (name, Action_Kind::Pressed) if *name == sid!("camera_zoom_down") => {
                         add_scale.x += BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
                         add_scale.y = add_scale.x;
                     }

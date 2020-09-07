@@ -468,10 +468,7 @@ mod tests {
 
         assert_eq!(emulated.len(), 2);
         assert_eq!(axes_names.len(), 4);
-        assert_eq!(
-            real[J::Stick_Right_V as usize],
-            vec![sid!("axis1")]
-        );
+        assert_eq!(real[J::Stick_Right_V as usize], vec![sid!("axis1")]);
         assert_eq!(
             real[J::Stick_Left_H as usize],
             vec![sid!("axis1"), sid!("axis3")]
@@ -488,9 +485,6 @@ mod tests {
                 [&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Stick_Right))],
             vec![(sid!("axis3"), Axis_Emulation_Type::Max)]
         );
-        assert_eq!(
-            real[J::Trigger_Right as usize],
-            vec![sid!("axis3")]
-        );
+        assert_eq!(real[J::Trigger_Right as usize], vec![sid!("axis3")]);
     }
 }

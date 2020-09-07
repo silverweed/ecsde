@@ -1,5 +1,5 @@
-use std::convert::TryFrom;
 use crate::events::Input_Raw_Event;
+use std::convert::TryFrom;
 
 #[cfg(feature = "win-sfml")]
 pub mod sfml;

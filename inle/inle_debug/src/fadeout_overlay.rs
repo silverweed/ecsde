@@ -2,8 +2,6 @@ use super::element::Debug_Element;
 use inle_alloc::temp;
 use inle_common::colors::{self, Color};
 use inle_common::vis_align::Align;
-use inle_core;
-use inle_gfx;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input::input_state::Input_State;
 use inle_math::rect::Rect;

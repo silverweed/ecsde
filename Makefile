@@ -23,7 +23,7 @@ tags:
 	rusty-tags vi
 
 fmt:
-	find ecs_engine/src ecs_game/src ecs_runner/src -type f -name \*.rs -exec rustfmt {} +
+	find ecs_game/src ecs_runner/src inle/ -type f -name \*.rs -exec rustfmt {} +
 
 test:
 	cargo test

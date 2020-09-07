@@ -7,7 +7,6 @@ use inle_cfg::{self, Cfg_Var};
 use inle_common::stringid::String_Id;
 use inle_core::env::Env_Info;
 use inle_gfx::{self, render_window::Render_Window_Handle};
-use inle_resources;
 use std::collections::HashMap;
 use std::time::Duration;
 
