@@ -1,4 +1,5 @@
 use inle_serialize::{Binary_Serializable, Byte_Stream};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 // Implementation derived from https://github.com/BareRose/ranxoshi256/blob/master/ranxoshi256.h
 
@@ -129,5 +130,48 @@ fn get_entropy_from_os(buf: &mut [u8]) -> std::io::Result<()> {
             std::io::ErrorKind::Other,
             "RtlGenRandom call failed.",
         ))
+    }
+}
+
+/// Recycles a pool of precomputed random numbers with internal mutability.
+/// Used to generate random numbers where immutability is needed.
+pub struct Precomputed_Rand_Pool {
+    pool: Vec<u64>,
+    cur_idx: AtomicUsize,
+}
+
+impl Default for Precomputed_Rand_Pool {
+    fn default() -> Self {
+        Self {
+            pool: vec![],
+            cur_idx: AtomicUsize::default(),
+        }
+    }
+}
+
+impl Precomputed_Rand_Pool {
+    pub fn with_size(rng: &mut Default_Rng, n: usize) -> Self {
+        let mut pool = Vec::with_capacity(n);
+        for _ in 0..n {
+            pool.push(rng.next());
+        }
+        Self {
+            pool,
+            cur_idx: AtomicUsize::new(0),
+        }
+    }
+
+    pub fn next(&self) -> u64 {
+        let idx = self.cur_idx.fetch_add(1, Ordering::Relaxed);
+        self.pool[idx % self.pool.len()]
+    }
+
+    pub fn rand_01(&self) -> f32 {
+        (self.next() >> 32) as f32 / u32::max_value() as f32
+    }
+
+    pub fn rand_range(&self, min: f32, max: f32) -> f32 {
+        assert!(min <= max);
+        min + self.rand_01() * (max - min)
     }
 }

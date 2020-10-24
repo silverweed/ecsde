@@ -17,7 +17,8 @@ impl Game_State for In_Game_State {
     }
 
     fn on_end(&mut self, args: &mut Game_State_Args) {
-        args.gameplay_system.unload_test_level(args.engine_state);
+        args.gameplay_system
+            .unload_test_level(args.engine_state, args.level_batches);
     }
 
     fn update(

@@ -23,6 +23,7 @@ use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_ecs::entity_stream::new_entity_stream;
 use inle_events::evt_register::Event_Register;
 use inle_gfx::components::{C_Animated_Sprite, C_Camera2D, C_Renderable};
+use inle_gfx::particles::Particle_Manager;
 use inle_gfx::render::batcher::Batches;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input::axes::Virtual_Axes;
@@ -116,6 +117,10 @@ impl Gameplay_System {
             .push(self.levels.loaded_levels.len() - 1);
 
         level_batches.insert(level_id, Batches::default());
+        engine_state
+            .systems
+            .particle_mgrs
+            .insert(level_id, Particle_Manager::default());
 
         #[cfg(debug_assertions)]
         {
@@ -125,16 +130,63 @@ impl Gameplay_System {
                 &engine_state.env,
             );
         }
+
+        // @Temporary
+        {
+            use inle_gfx::particles;
+            use inle_math::angle;
+
+            let props = particles::Particle_Props {
+                n_particles: 100,
+                spread: angle::deg(50.0),
+                initial_speed: 50.0..200.0,
+                initial_rotation: angle::deg(0.0)..angle::deg(180.0),
+                lifetime: Duration::from_millis(100)..Duration::from_secs(3),
+                acceleration: -50.0,
+                ..Default::default()
+            };
+            let rng = &mut engine_state.rng;
+            let handle = engine_state
+                .systems
+                .particle_mgrs
+                .get_mut(&level_id)
+                .unwrap()
+                .add_particles(&props, rng);
+            //engine_state
+            //.systems
+            //.particle_mgr
+            //.get_particles_mut(handle)
+            //.position = v2!(200.0, 200.0);
+        }
     }
 
     // @Temporary
-    pub fn unload_test_level(&mut self, engine_state: &mut Engine_State) {
-        self.levels.loaded_levels.clear();
-        self.levels.active_levels.clear();
+    pub fn unload_test_level(
+        &mut self,
+        engine_state: &mut Engine_State,
+        level_batches: &mut HashMap<String_Id, Batches>,
+    ) {
+        let level_id = sid!("test");
+
+        if let Some(idx) = self
+            .levels
+            .loaded_levels
+            .iter()
+            .position(|lv| lv.lock().unwrap().id == level_id)
+        {
+            self.levels.loaded_levels.remove(idx);
+            if let Some(idxx) = self.levels.active_levels.iter().position(|i| *i == idx) {
+                self.levels.active_levels.remove(idxx);
+            }
+        }
+
         #[cfg(debug_assertions)]
         {
-            engine_state.debug_systems.painters.clear();
+            engine_state.debug_systems.painters.remove(&level_id);
         }
+
+        level_batches.remove(&level_id);
+        engine_state.systems.particle_mgrs.remove(&level_id);
     }
 
     pub fn update(

@@ -346,6 +346,12 @@ impl Vec2f {
         let dy = self.y - other.y;
         dx * dx + dy * dy
     }
+
+    #[inline(always)]
+    pub fn from_polar(r: f32, theta: f32) -> Self {
+        let (s, c) = theta.sin_cos();
+        Self { x: r * c, y: r * s }
+    }
 }
 
 impl Vec2i {

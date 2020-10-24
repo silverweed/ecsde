@@ -1,5 +1,6 @@
 use inle_audio::audio_system;
 use inle_events::evt_register;
+use inle_gfx;
 
 #[cfg(debug_assertions)]
 use {
@@ -18,6 +19,8 @@ pub struct Core_Systems<'r> {
     pub evt_register: evt_register::Event_Register,
     pub ui: inle_ui::UI_Context,
     pub physics_settings: inle_physics::physics::Physics_Settings,
+    // One particle manager per level
+    pub particle_mgrs: HashMap<String_Id, inle_gfx::particles::Particle_Manager>,
 }
 
 #[cfg(debug_assertions)]
@@ -46,6 +49,7 @@ impl Core_Systems<'_> {
             evt_register: evt_register::Event_Register::new(),
             ui: inle_ui::UI_Context::default(),
             physics_settings: inle_physics::physics::Physics_Settings::default(),
+            particle_mgrs: HashMap::new(),
         }
     }
 }
