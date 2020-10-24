@@ -4,8 +4,8 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 #[derive(Copy, Clone, Default)]
 pub struct Angle(f32); // The wrapped angle is in radians.
 
-const PI: f32 = std::f32::consts::PI;
-const TAU: f32 = 2.0 * PI;
+pub const PI: f32 = std::f32::consts::PI;
+pub const TAU: f32 = 2.0 * PI;
 
 impl PartialEq for Angle {
     fn eq(&self, other: &Self) -> bool {
@@ -44,6 +44,13 @@ impl Mul<f32> for Angle {
     type Output = Self;
     fn mul(self, other: f32) -> Self::Output {
         Angle(self.0 * other)
+    }
+}
+
+impl Mul<Angle> for f32 {
+    type Output = Angle;
+    fn mul(self, other: Angle) -> Self::Output {
+        Angle(self * other.0)
     }
 }
 

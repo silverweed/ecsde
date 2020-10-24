@@ -8,6 +8,7 @@ use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::transform::Transform2D;
 use inle_physics::physics;
 use inle_resources::gfx::Gfx_Resources;
+use rayon::prelude::*;
 use std::convert::TryInto;
 use std::time::Duration;
 
@@ -39,9 +40,10 @@ where
     trace!("tick_game");
 
     game_state.engine_state.cur_frame += 1;
-    game_state.engine_state.time.update();
-    let dt = game_state.engine_state.time.dt();
-    let real_dt = game_state.engine_state.time.real_dt();
+    let time = &mut game_state.engine_state.time;
+    time.update();
+    let dt = time.dt();
+    let real_dt = time.real_dt();
 
     let target_time_per_frame = Duration::from_micros(
         (game_state
@@ -49,6 +51,11 @@ where
             .gameplay_update_tick_ms
             .read(&game_state.engine_state.config)
             * 1000.0) as u64,
+    );
+
+    let update_dt = time::mul_duration(
+        &target_time_per_frame,
+        time.time_scale * (!time.paused as u32 as f32),
     );
 
     #[cfg(debug_assertions)]
@@ -304,13 +311,8 @@ where
                 game_state.state_mgr.update(&mut args, &dt, &real_dt);
             }
 
-            let time = &game_state.engine_state.time;
             // @Cleanup @Soundness: either pass to the update the "actual" dt or accumulate the extra time to
             // have a really fixed time step. That depends if we care about being deterministic or not.
-            let update_dt = time::mul_duration(
-                &target_time_per_frame,
-                time.time_scale * (!time.paused as u32 as f32),
-            );
             game_state.gameplay_system.update(
                 &update_dt,
                 &mut game_state.engine_state,
@@ -329,10 +331,6 @@ where
 
         let gameplay_system = &mut game_state.gameplay_system;
         let time = &game_state.engine_state.time;
-        let update_dt = time::mul_duration(
-            &target_time_per_frame,
-            time.time_scale * (!time.paused as u32 as f32),
-        );
         let pixel_collision_system = &mut gameplay_system.pixel_collision_system;
         let levels = &gameplay_system.levels;
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
@@ -399,6 +397,15 @@ where
         trace!("audio_system_update");
         game_state.engine_state.systems.audio_system.update();
     }
+
+    game_state
+        .engine_state
+        .systems
+        .particle_mgrs
+        .par_iter_mut()
+        .for_each(|(_, particle_mgr)| {
+            particle_mgr.update(&update_dt);
+        });
 
     // We clear batches before update_debug, so debug can draw textures
     {
@@ -501,13 +508,14 @@ where
         });
     }
 
-    // Draw texture batches
+    // Draw texture batches and particle systems
     {
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
         let lv_batches = &mut game_state.level_batches;
         let window = &mut game_state.window;
         let shader_cache = &mut game_state.engine_state.shader_cache;
         let enable_shaders = game_state.cvars.enable_shaders.read(cfg);
+        let particle_mgrs = &game_state.engine_state.systems.particle_mgrs;
 
         game_state
             .gameplay_system
@@ -523,6 +531,8 @@ where
                     enable_shaders,
                     frame_alloc,
                 );
+
+                particle_mgrs[&level.id].render(window, &level.get_camera().transform);
             });
         inle_gfx::render::batcher::draw_batches(
             window,
