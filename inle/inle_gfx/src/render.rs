@@ -1,13 +1,14 @@
 use crate::material::Material;
 use inle_common::colors::Color;
 use inle_common::paint_props::Paint_Properties;
+use inle_gfx_backend::render::backend;
 use inle_gfx_backend::render_window::Render_Window_Handle;
 use inle_math::rect::Rect;
 use inle_math::shapes::Circle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
 
-use inle_gfx_backend::render::{backend, Render_Extra_Params};
+pub use inle_gfx_backend::render::Render_Extra_Params;
 
 pub mod batcher;
 

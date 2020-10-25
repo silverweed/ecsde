@@ -330,7 +330,6 @@ where
         trace!("physics::update");
 
         let gameplay_system = &mut game_state.gameplay_system;
-        let time = &game_state.engine_state.time;
         let pixel_collision_system = &mut gameplay_system.pixel_collision_system;
         let levels = &gameplay_system.levels;
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
@@ -532,7 +531,7 @@ where
                     frame_alloc,
                 );
 
-                particle_mgrs[&level.id].render(window, &level.get_camera().transform);
+                particle_mgrs[&level.id].render(window, &gres, &level.get_camera().transform);
             });
         inle_gfx::render::batcher::draw_batches(
             window,
