@@ -136,27 +136,32 @@ impl Gameplay_System {
             use inle_gfx::particles;
             use inle_math::angle;
 
-            let props = particles::Particle_Props {
-                n_particles: 100,
-                spread: angle::deg(50.0),
-                initial_speed: 50.0..200.0,
-                initial_rotation: angle::deg(0.0)..angle::deg(180.0),
-                lifetime: Duration::from_millis(100)..Duration::from_secs(3),
-                acceleration: -50.0,
-                ..Default::default()
-            };
-            let rng = &mut engine_state.rng;
-            let handle = engine_state
-                .systems
-                .particle_mgrs
-                .get_mut(&level_id)
-                .unwrap()
-                .add_particles(&props, rng);
-            //engine_state
-            //.systems
-            //.particle_mgr
-            //.get_particles_mut(handle)
-            //.position = v2!(200.0, 200.0);
+            for i in 0..20 {
+                let props = particles::Particle_Props {
+                    n_particles: 100,
+                    spread: angle::deg(50.0),
+                    initial_speed: 50.0..200.0,
+                    initial_rotation: angle::deg(0.0)..angle::deg(180.0),
+                    lifetime: Duration::from_millis(100)..Duration::from_secs(3),
+                    acceleration: -50.0,
+                    ..Default::default()
+                };
+                let rng = &mut engine_state.rng;
+                let particle_mgr = engine_state
+                    .systems
+                    .particle_mgrs
+                    .get_mut(&level_id)
+                    .unwrap();
+                let handle = particle_mgr.add_particles(&props, rng);
+                particle_mgr
+                    .get_particles_mut(handle)
+                    .transform
+                    .set_position(i as f32 * 20.0, 0.0);
+                particle_mgr
+                    .get_particles_mut(handle)
+                    .transform
+                    .set_rotation(inle_math::angle::rad(i as f32 * 0.2));
+            }
         }
     }
 

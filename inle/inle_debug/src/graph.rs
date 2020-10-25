@@ -40,7 +40,7 @@ pub struct Debug_Graph_View_Config {
     pub high_threshold: Option<(f32, colors::Color)>,
     pub fixed_y_range: Option<Range<f32>>,
     pub hoverable: bool,
-    pub show_avg: bool,
+    pub show_average: bool,
 }
 
 #[derive(Default)]
@@ -206,6 +206,7 @@ impl Debug_Element for Debug_Graph_View {
             let vpos = self.get_coords_for(point);
             let col = self.get_color_for(point);
             let vertex = render::new_vertex(vpos, col, Vec2f::default());
+            avg += point.y;
             render::add_vertex(&mut vbuf, &vertex);
 
             // Draw selection line
@@ -267,20 +268,28 @@ impl Debug_Element for Debug_Graph_View {
             }
         }
 
-        if self.config.show_avg {
-            let n_points = drawn_points.len();
-            if n_points > 0 {
-                avg /= n_points as f32;
-            }
-            let color = colors::rgb(95, 180, 255);
-            let vpos1 = self.get_coords_for(Vec2f::new(self.data.x_range.start, avg));
-            let v1 = render::new_vertex(pos + vpos1, color, Vec2f::default());
-            let vpos2 = self.get_coords_for(Vec2f::new(self.data.x_range.end, avg));
-            let v2 = render::new_vertex(pos + vpos2, color, Vec2f::default());
-            render::render_line(window, &v1, &v2);
-
-            let mut text = render::create_text(&format!("avg {:.2?}", avg), font, 12);
-            render::render_text(window, &mut text, color, pos + vpos1 + v2!(40., -25.));
+        // Draw average
+        if self.config.show_average {
+            avg /= drawn_points.len() as f32;
+            let avg_line_col = colors::rgb(149, 206, 255);
+            let start = render::new_vertex(
+                pos + self.get_coords_for(v2!(self.data.x_range.start, avg)),
+                avg_line_col,
+                v2!(0.0, 0.0),
+            );
+            let end = render::new_vertex(
+                pos + self.get_coords_for(v2!(self.data.x_range.end, avg)),
+                avg_line_col,
+                v2!(0.0, 0.0),
+            );
+            render::render_line(window, &start, &end);
+            let mut text = render::create_text(&format!("{:.2}", avg), font, 12);
+            render::render_text(
+                window,
+                &mut text,
+                avg_line_col,
+                pos + self.get_coords_for(v2!(self.data.x_range.start, avg)) + v2!(40.0, -25.0),
+            );
         }
 
         render::render_vbuf(window, &vbuf, &Transform2D::from_pos(self.pos.into()));

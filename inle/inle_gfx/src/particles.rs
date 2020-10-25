@@ -128,50 +128,39 @@ fn init_particle(
 pub fn update_particles(particles: &mut Particles, dt: &Duration) {
     trace!("update_particles");
 
-    // Update lifetime and remove expired ones
-    //{
-    //let mut n_removed = 0;
-    //let len = particles.remaining_life.len();
-    //let head = particles.remaining_life.as_ptr();
-    //for (i, rem_life) in particles.remaining_life.iter_mut().enumerate() {
-    //if rem_life.checked_sub(*dt).is_none() {
-    //if i < len - 1 {
-    //let last_elem = unsafe { *head.add(len - n_removed - 1) };
-    //*rem_life = last_elem;
-    //let last_pos = particles.positions[len - n_removed - 1];
-    //particles.positions[i] = last_pos;
-    //let last_vel = particles.velocities[len - n_removed - 1];
-    //particles.velocities[i] = last_vel;
-    //}
-    //n_removed += 1;
-    //}
-    //}
-    //particles.positions.truncate(len - n_removed);
-    //particles.velocities.truncate(len - n_removed);
-    //particles.remaining_life.truncate(len - n_removed);
-    //}
+    // @Speed: find out the best chunk size.
+    // It looks like if the particles are few, updating them in singlethread is much faster than
+    // multithread. However, if they are a lot, multithread wins.
+    // Probably we should setup a thread pool and keep it in the Particle_Manager rather
+    // than creating one each frame (duh).
+    const CHUNK_SIZE: usize = 50;
 
     let precomp_rng = &particles.precomp_rng;
     let props = &particles.props;
     let iter = particles
         .transforms
-        .par_iter_mut()
-        .zip_eq(particles.velocities.par_iter_mut())
-        .zip_eq(particles.remaining_life.par_iter_mut());
-    iter.for_each(|((transform, velocity), rem_life)| {
-        if let Some(life) = rem_life.checked_sub(*dt) {
-            let dt = dt.as_secs_f32();
-            let old_pos = transform.position();
-            let old_vel = *velocity;
-            let old_speed = old_vel.magnitude();
-            *rem_life = life;
-            transform.set_position_v(old_pos + old_vel * dt);
-            *velocity = old_vel.normalized_or_zero() * (old_speed + props.acceleration * dt);
-        } else {
-            let (transf, vel, life) = init_particle(props, precomp_rng);
-            *transform = transf;
-            *velocity = vel;
-            *rem_life = life;
+        .par_chunks_mut(CHUNK_SIZE)
+        .zip_eq(particles.velocities.par_chunks_mut(CHUNK_SIZE))
+        .zip_eq(particles.remaining_life.par_chunks_mut(CHUNK_SIZE));
+    iter.for_each(|((transforms, velocities), rem_lifes)| {
+        for i in 0..transforms.len() {
+            let transform = &mut transforms[i];
+            let velocity = &mut velocities[i];
+            let rem_life = &mut rem_lifes[i];
+            if let Some(life) = rem_life.checked_sub(*dt) {
+                let dt = dt.as_secs_f32();
+                let old_pos = transform.position();
+                let old_vel = *velocity;
+                let old_speed = old_vel.magnitude();
+                *rem_life = life;
+                transform.set_position_v(old_pos + old_vel * dt);
+                *velocity = old_vel.normalized_or_zero() * (old_speed + props.acceleration * dt);
+            } else {
+                let (transf, vel, life) = init_particle(props, precomp_rng);
+                *transform = transf;
+                *velocity = vel;
+                *rem_life = life;
+            }
         }
     });
 }
@@ -185,7 +174,7 @@ pub fn render_particles(
 
     use inle_common::colors;
     use inle_math::rect::{Rect, Rectf};
-    // @Temporary
+    // @Temporary: of course we want to use instanced drawing for these
     for transf in &particles.transforms {
         let rect = Rect::new(-1.0, -1.0, 2.0, 2.0);
         let transform = particles.transform.combine(transf);
