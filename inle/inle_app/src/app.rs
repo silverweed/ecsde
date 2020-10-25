@@ -290,6 +290,7 @@ pub fn init_engine_debug(
             high_threshold: Some((55.0, colors::GREEN)),
             fixed_y_range: Some(0. ..120.),
             hoverable: false,
+            show_average: true,
             font,
         };
 

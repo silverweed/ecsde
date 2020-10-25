@@ -40,6 +40,7 @@ pub struct Debug_Graph_View_Config {
     pub high_threshold: Option<(f32, colors::Color)>,
     pub fixed_y_range: Option<Range<f32>>,
     pub hoverable: bool,
+    pub show_average: bool,
 }
 
 #[derive(Default)]
@@ -197,10 +198,12 @@ impl Debug_Element for Debug_Graph_View {
             .filter(|Vec2f { x, y }| xr.contains(x) && yr.contains(y))
             .collect::<Vec<_>>();
         let mut vbuf = render::start_draw_linestrip(drawn_points.len() as _);
+        let mut avg = 0.0;
         for (i, &&point) in drawn_points.iter().enumerate() {
             let vpos = self.get_coords_for(point);
             let col = self.get_color_for(point);
             let vertex = render::new_vertex(vpos, col, Vec2f::default());
+            avg += point.y;
             render::add_vertex(&mut vbuf, &vertex);
 
             // Draw selection line
@@ -251,6 +254,30 @@ impl Debug_Element for Debug_Graph_View {
                     );
                 }
             }
+        }
+
+        // Draw average
+        if self.config.show_average {
+            avg /= drawn_points.len() as f32;
+            let avg_line_col = colors::rgb(149, 206, 255);
+            let start = render::new_vertex(
+                pos + self.get_coords_for(v2!(self.data.x_range.start, avg)),
+                avg_line_col,
+                v2!(0.0, 0.0),
+            );
+            let end = render::new_vertex(
+                pos + self.get_coords_for(v2!(self.data.x_range.end, avg)),
+                avg_line_col,
+                v2!(0.0, 0.0),
+            );
+            render::render_line(window, &start, &end);
+            let mut text = render::create_text(&format!("{:.2}", avg), font, 12);
+            render::render_text(
+                window,
+                &mut text,
+                avg_line_col,
+                pos + self.get_coords_for(v2!(self.data.x_range.start, avg)) + v2!(40.0, -25.0),
+            );
         }
 
         render::render_vbuf(window, &vbuf, &Transform2D::from_pos(self.pos.into()));
