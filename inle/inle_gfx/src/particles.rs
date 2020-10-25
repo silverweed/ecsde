@@ -1,9 +1,10 @@
+use crate::render;
 use crate::render_window::Render_Window_Handle;
 use inle_core::rand::{Default_Rng, Precomputed_Rand_Pool};
 use inle_math::angle::{self, Angle};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use inle_resources::gfx::Texture_Handle;
+use inle_resources::gfx::{Gfx_Resources, Texture_Handle};
 use rayon::prelude::*;
 use std::ops::Range;
 use std::time::Duration;
@@ -26,6 +27,10 @@ impl Particles {
             .par_iter_mut()
             .zip_eq(self.velocities.par_iter_mut())
             .zip_eq(self.remaining_life.par_iter_mut())
+    }
+
+    pub fn count(&self) -> usize {
+        self.transforms.len()
     }
 }
 
@@ -133,7 +138,7 @@ pub fn update_particles(particles: &mut Particles, dt: &Duration) {
     // multithread. However, if they are a lot, multithread wins.
     // Probably we should setup a thread pool and keep it in the Particle_Manager rather
     // than creating one each frame (duh).
-    const CHUNK_SIZE: usize = 50;
+    const CHUNK_SIZE: usize = 64;
 
     let precomp_rng = &particles.precomp_rng;
     let props = &particles.props;
@@ -168,6 +173,7 @@ pub fn update_particles(particles: &mut Particles, dt: &Duration) {
 pub fn render_particles(
     particles: &Particles,
     window: &mut Render_Window_Handle,
+    gres: &Gfx_Resources,
     camera: &Transform2D,
 ) {
     trace!("render_particles");
@@ -175,11 +181,40 @@ pub fn render_particles(
     use inle_common::colors;
     use inle_math::rect::{Rect, Rectf};
     // @Temporary: of course we want to use instanced drawing for these
-    for transf in &particles.transforms {
+    let mut vbuf = render::start_draw_quads(particles.count() as _);
+    let texture = particles
+        .props
+        .texture
+        .map(|tex| gres.get_texture(Some(tex)));
+    let (tex_w, tex_h) = if let Some(tex) = texture {
+        render::get_texture_size(tex)
+    } else {
+        (0, 0)
+    };
+    let uv = Rect::new(0.0, 0.0, tex_w as f32, tex_h as f32);
+    let col = colors::WHITE;
+    for &transf in &particles.transforms {
         let rect = Rect::new(-1.0, -1.0, 2.0, 2.0);
-        let transform = particles.transform.combine(transf);
-        crate::render::render_rect_ws(window, rect, colors::RED, &transform, camera);
+        let v1 = render::new_vertex(transf * v2!(-1.0, -1.0), col, v2!(uv.x, uv.y));
+        let v2 = render::new_vertex(transf * v2!(1.0, -1.0), col, v2!(uv.x + uv.width, uv.y));
+        let v3 = render::new_vertex(
+            transf * v2!(1.0, 1.0),
+            col,
+            v2!(uv.x + uv.width, uv.y + uv.height),
+        );
+        let v4 = render::new_vertex(transf * v2!(-1.0, 1.0), col, v2!(uv.x, uv.y + uv.height));
+        render::add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
     }
+    render::render_vbuf_ws_ex(
+        window,
+        &vbuf,
+        &particles.transform,
+        &camera,
+        render::Render_Extra_Params {
+            texture,
+            ..Default::default()
+        },
+    );
 }
 
 fn random_pos_in(shape: &Emission_Shape, rng: &Precomputed_Rand_Pool) -> Vec2f {
@@ -229,9 +264,14 @@ impl Particle_Manager {
         });
     }
 
-    pub fn render(&self, window: &mut Render_Window_Handle, camera: &Transform2D) {
+    pub fn render(
+        &self,
+        window: &mut Render_Window_Handle,
+        gres: &Gfx_Resources,
+        camera: &Transform2D,
+    ) {
         for particles in &self.active_particles {
-            render_particles(particles, window, camera);
+            render_particles(particles, window, gres, camera);
         }
     }
 }

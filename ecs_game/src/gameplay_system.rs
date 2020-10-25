@@ -136,6 +136,9 @@ impl Gameplay_System {
             use inle_gfx::particles;
             use inle_math::angle;
 
+            let texture = game_res
+                .gfx
+                .load_texture(&tex_path(&engine_state.env, "yv.png"));
             for i in 0..20 {
                 let props = particles::Particle_Props {
                     n_particles: 100,
@@ -144,6 +147,7 @@ impl Gameplay_System {
                     initial_rotation: angle::deg(0.0)..angle::deg(180.0),
                     lifetime: Duration::from_millis(100)..Duration::from_secs(3),
                     acceleration: -50.0,
+                    texture,
                     ..Default::default()
                 };
                 let rng = &mut engine_state.rng;
