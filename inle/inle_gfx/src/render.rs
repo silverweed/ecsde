@@ -271,6 +271,10 @@ pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
     backend::swap_vbuf(a, b)
 }
 
+pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
+    backend::update_vbuf(vbuf, vertices, offset);
+}
+
 pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {
     trace!("set_image_pixels");
     backend::set_image_pixel(image, x, y, val);

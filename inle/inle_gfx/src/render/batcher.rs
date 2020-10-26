@@ -1,7 +1,8 @@
-use super::backend;
 use crate::light::{Lights, Point_Light};
 use crate::material::Material;
+use crate::render;
 use crate::render::Vertex_Buffer_Quads;
+use crate::vbuf_holder::Vertex_Buffer_Holder;
 use inle_alloc::temp;
 use inle_common::colors::{self, Color};
 use inle_gfx_backend::render::{Shader, Texture, Vertex};
@@ -30,80 +31,17 @@ pub struct Batches {
     textures_ws: BTreeMap<super::Z_Index, HashMap<Material, Sprite_Batch>>,
 }
 
-struct Vertex_Buffer_Holder {
-    pub vbuf: Vertex_Buffer_Quads,
-    #[cfg(debug_assertions)]
-    id: Material,
-}
-
-// @WaitForStable make this const
 fn null_vertex() -> Vertex {
-    backend::new_vertex(v2!(0., 0.), colors::TRANSPARENT, v2!(0., 0.))
+    render::new_vertex(v2!(0., 0.), colors::TRANSPARENT, v2!(0., 0.))
 }
 
-// @WaitForStable make this const
 #[cfg(debug_assertions)]
 fn invalid_vertex() -> Vertex {
-    backend::new_vertex(
+    render::new_vertex(
         v2!(-12_345.67, 9_876.543),
         colors::rgba(42, 42, 42, 42),
         v2!(42., 42.),
     )
-}
-
-impl Vertex_Buffer_Holder {
-    pub fn with_initial_vertex_count(
-        initial_cap: u32,
-        #[cfg(debug_assertions)] id: Material,
-    ) -> Self {
-        Self {
-            vbuf: super::start_draw_quads(initial_cap / 4),
-            #[cfg(debug_assertions)]
-            id,
-        }
-    }
-
-    pub fn update(&mut self, vertices: &mut [Vertex], n_vertices: u32) {
-        trace!("vbuf_update");
-
-        debug_assert!(vertices.len() <= std::u32::MAX as usize);
-
-        debug_assert!(
-            n_vertices <= super::vbuf_max_vertices(&self.vbuf),
-            "Can't hold all the vertices! {} / {}",
-            n_vertices,
-            super::vbuf_max_vertices(&self.vbuf)
-        );
-
-        // Zero all the excess vertices
-        for vertex in vertices
-            .iter_mut()
-            .take(super::vbuf_cur_vertices(&self.vbuf) as usize)
-            .skip(n_vertices as usize)
-        {
-            *vertex = null_vertex();
-        }
-
-        backend::update_vbuf(&mut self.vbuf, vertices, 0);
-        super::set_vbuf_cur_vertices(&mut self.vbuf, vertices.len() as u32);
-    }
-
-    pub fn grow(&mut self, vertices_to_hold_at_least: u32) {
-        let new_cap = vertices_to_hold_at_least.next_power_of_two();
-        ldebug!(
-            "Growing Vertex_Buffer_Holder {:?} to hold {} vertices ({} requested).",
-            self.id,
-            new_cap,
-            vertices_to_hold_at_least
-        );
-
-        let mut new_vbuf = super::start_draw_quads(new_cap / 4);
-        let _res = super::swap_vbuf(&mut new_vbuf, &mut self.vbuf);
-        #[cfg(debug_assertions)]
-        {
-            debug_assert!(_res, "Vertex Buffer copying failed ({:?})!", self.id);
-        }
-    }
 }
 
 struct Sprite {
@@ -561,7 +499,7 @@ pub fn draw_batches(
                 let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
                 shadow_vbuffer.update(shadow_vertices, n_shadow_vertices);
 
-                backend::render_vbuf_ws_ex(
+                render::render_vbuf_ws_ex(
                     window,
                     &shadow_vbuffer.vbuf,
                     &Transform2D::default(),
@@ -576,7 +514,7 @@ pub fn draw_batches(
             vbuffer.update(vertices, n_vertices_without_shadows);
 
             let shader = shader.map(|s| s as &_);
-            backend::render_vbuf_ws_ex(
+            render::render_vbuf_ws_ex(
                 window,
                 &vbuffer.vbuf,
                 &Transform2D::default(),
