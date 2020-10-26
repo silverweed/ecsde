@@ -243,6 +243,7 @@ impl Debug_Element for Debug_Graph_View {
                         color,
                         Vec2f::default(),
                     );
+                    let circle_col = colors::rgb(10, 255, 200);
                     render::render_line(window, &v1, &v2);
                     render::render_circle(
                         window,
@@ -250,7 +251,15 @@ impl Debug_Element for Debug_Graph_View {
                             center: pos + vpos,
                             radius: 4.0,
                         },
-                        colors::rgb(10, 255, 200),
+                        circle_col,
+                    );
+                    let mut text =
+                        render::create_text(&format!("{:.2}", self.data.points[x].y), font, 12);
+                    render::render_text(
+                        window,
+                        &mut text,
+                        circle_col,
+                        pos + vpos + v2!(30.0, -30.0),
                     );
                 }
             }
