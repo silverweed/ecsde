@@ -16,3 +16,4 @@ pub mod material;
 pub mod particles;
 pub mod render;
 pub mod render_window;
+pub mod vbuf_holder;
