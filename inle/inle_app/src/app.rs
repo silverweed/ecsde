@@ -421,7 +421,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
         // Note: we unlock the tracer asap to prevent deadlocks.
         // We're not keeping any reference to it anyway.
         let mut tracer = prelude::DEBUG_TRACER.lock().unwrap();
-        tracer.saved_traces.split_off(0)
+        std::mem::take(&mut tracer.saved_traces)
     };
     let final_traces = tracer::collate_traces(&traces);
 

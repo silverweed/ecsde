@@ -284,8 +284,7 @@ impl std::iter::Iterator for Replay_Data_Iter {
         if self.idx == self.replay.data.len() {
             None
         } else {
-            let mut item = Replay_Data_Point::default();
-            std::mem::swap(&mut item, &mut self.replay.data[self.idx]);
+            let item = std::mem::take(&mut self.replay.data[self.idx]);
             self.idx += 1;
             Some(item)
         }

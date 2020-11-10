@@ -68,7 +68,7 @@ impl Ecs_World {
             self.component_manager.remove_all_components(entity);
             self.entity_manager.destroy_entity(entity);
         }
-        let destroyed = self.entities_pending_destroy.split_off(0);
+        let destroyed = std::mem::take(&mut self.entities_pending_destroy);
         self.entities_pending_destroy = self.entities_pending_destroy_notify.drain().collect();
         destroyed
     }
