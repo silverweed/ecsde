@@ -340,7 +340,7 @@ pub fn draw_batches(
             }
 
             let n_vert_per_chunk = n_sprites_per_chunk * 4;
-            let vert_chunks = vertices.par_iter_mut().chunks(n_vert_per_chunk);
+            let vert_chunks = vertices.par_chunks_mut(n_vert_per_chunk);
 
             // Ensure the vbuffer has enough room to write in
             if n_vertices_without_shadows > super::vbuf_max_vertices(&vbuffer.vbuf) {
@@ -375,14 +375,14 @@ pub fn draw_batches(
 
                     debug_assert_eq!(shadow_vertices.len(), n_shadow_vertices as usize);
                     let shadows_per_chunk = n_vert_per_chunk * SHADOWS_PER_ENTITY;
-                    let shadow_chunks = shadow_vertices.par_iter_mut().chunks(shadows_per_chunk);
+                    let shadow_chunks = shadow_vertices.par_chunks_mut(shadows_per_chunk);
 
-                    let sprite_chunks = sprites.par_iter().chunks(n_sprites_per_chunk);
+                    let sprite_chunks = sprites.par_chunks(n_sprites_per_chunk);
                     debug_assert_eq!(sprite_chunks.len(), vert_chunks.len());
                     debug_assert_eq!(sprite_chunks.len(), shadow_chunks.len());
 
                     sprite_chunks.zip(vert_chunks).zip(shadow_chunks).for_each(
-                        |((sprite_chunk, mut vert_chunk), mut shadow_chunk)| {
+                        |((sprite_chunk, vert_chunk), shadow_chunk)| {
                             for (i, sprite) in sprite_chunk.iter().enumerate() {
                                 let Sprite {
                                     tex_rect,
@@ -417,10 +417,10 @@ pub fn draw_batches(
                                 );
                                 let v4 = super::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
 
-                                *vert_chunk[i * 4] = v1;
-                                *vert_chunk[i * 4 + 1] = v2;
-                                *vert_chunk[i * 4 + 2] = v3;
-                                *vert_chunk[i * 4 + 3] = v4;
+                                vert_chunk[i * 4] = v1;
+                                vert_chunk[i * 4 + 1] = v2;
+                                vert_chunk[i * 4 + 2] = v3;
+                                vert_chunk[i * 4 + 3] = v4;
 
                                 // @Incomplete: the shadow looks weird: it should be flipped in certain situations
                                 // and probably have some bias to not make the entity look like "floating"
@@ -466,7 +466,7 @@ pub fn draw_batches(
                                         )
                                         .into();
 
-                                        *shadow_chunk
+                                        shadow_chunk
                                             [4 * (SHADOWS_PER_ENTITY * i + light_idx) + v_idx] =
                                             v[v_idx];
                                     }
@@ -476,7 +476,7 @@ pub fn draw_batches(
                                 {
                                     for light_idx in shadow_data[i].nearby_point_lights.len()..4 {
                                         for v_idx in 0..4 {
-                                            *shadow_chunk[4
+                                            shadow_chunk[4
                                                 * (SHADOWS_PER_ENTITY * v_idx + light_idx)
                                                 + v_idx] = null_vertex();
                                         }
@@ -487,10 +487,9 @@ pub fn draw_batches(
                     );
                 } else {
                     sprites
-                        .par_iter()
-                        .chunks(n_sprites_per_chunk)
+                        .par_chunks(n_sprites_per_chunk)
                         .zip(vert_chunks)
-                        .for_each(|(sprite_chunk, mut vert_chunk)| {
+                        .for_each(|(sprite_chunk, vert_chunk)| {
                             for (i, sprite) in sprite_chunk.iter().enumerate() {
                                 let Sprite {
                                     tex_rect,
@@ -526,10 +525,10 @@ pub fn draw_batches(
                                 );
                                 let v4 = super::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
 
-                                *vert_chunk[i * 4] = v1;
-                                *vert_chunk[i * 4 + 1] = v2;
-                                *vert_chunk[i * 4 + 2] = v3;
-                                *vert_chunk[i * 4 + 3] = v4;
+                                vert_chunk[i * 4] = v1;
+                                vert_chunk[i * 4 + 1] = v2;
+                                vert_chunk[i * 4 + 2] = v3;
+                                vert_chunk[i * 4 + 3] = v4;
                             }
                         });
                 }
