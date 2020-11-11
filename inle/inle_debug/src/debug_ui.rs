@@ -224,7 +224,7 @@ impl Debug_Ui_System {
         }
 
         self.frame_scroller.update(window, log);
-        self.frame_scroller.draw(window, gres);
+        self.frame_scroller.draw(window, gres, log);
     }
 }
 

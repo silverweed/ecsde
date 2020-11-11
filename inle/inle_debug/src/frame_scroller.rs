@@ -10,6 +10,7 @@ use inle_math::rect;
 use inle_math::vector::{Vec2f, Vec2i, Vec2u};
 use inle_resources::gfx::{Font_Handle, Gfx_Resources};
 use inle_win::window;
+use std::time::Duration;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum Row {
@@ -58,6 +59,8 @@ struct Row_Props {
     pub filled: u16,
     pub show_labels: bool,
 }
+
+const DRAW_COLOR_HIGH_THRESHOLD_MS: u64 = 70;
 
 impl Debug_Frame_Scroller {
     pub fn update(&mut self, window: &Render_Window_Handle, log: &Debug_Log) {
@@ -194,14 +197,25 @@ impl Debug_Frame_Scroller {
         }
     }
 
-    pub fn draw(&self, window: &mut Render_Window_Handle, gres: &mut Gfx_Resources) {
+    pub fn draw(
+        &self,
+        window: &mut Render_Window_Handle,
+        gres: &mut Gfx_Resources,
+        debug_log: &Debug_Log,
+    ) {
         trace!("frame_scroller::draw");
 
-        self.draw_row(window, gres, Row::Seconds);
-        self.draw_row(window, gres, Row::Frames);
+        self.draw_row(window, gres, Row::Seconds, debug_log);
+        self.draw_row(window, gres, Row::Frames, debug_log);
     }
 
-    fn draw_row(&self, window: &mut Render_Window_Handle, gres: &Gfx_Resources, row: Row) {
+    fn draw_row(
+        &self,
+        window: &mut Render_Window_Handle,
+        gres: &Gfx_Resources,
+        row: Row,
+        debug_log: &Debug_Log,
+    ) {
         let Row_Props {
             y,
             height,
@@ -229,84 +243,148 @@ impl Debug_Frame_Scroller {
             render::render_rect(window, row_r, paint_props);
         }
 
-        let (filled_col, outline_col) = if row_hovered || self.manually_selected {
-            (70, 200)
-        } else {
-            (30, 60)
-        };
-        if subdivs > 0 {
-            let subdiv_w = self.size.x as f32 / subdivs as f32 - 1.;
-            for i in 0..subdivs {
-                let subdiv_rect = rect::Rectf::new(
-                    self.pos.x as f32 + i as f32 * (1. + subdiv_w),
-                    y,
-                    subdiv_w,
-                    height,
-                );
-                let hovered = self.hovered == Some((row, i));
-                let color = if i as u16 != cur {
-                    let c = if hovered {
-                        160
-                    } else if i < filled {
-                        filled_col
-                    } else {
-                        20
-                    };
-                    colors::rgba(
-                        c,
-                        c,
-                        c,
-                        if hovered {
-                            250
-                        } else if i < filled {
-                            120
-                        } else {
-                            20
-                        },
-                    )
-                } else {
-                    colors::rgba(40, 100, 200, 240)
-                };
-                let paint_props = Paint_Properties {
-                    color,
-                    border_thick: 1.0,
-                    border_color: colors::rgba(outline_col, outline_col, outline_col, color.a),
-                    ..Default::default()
-                };
-                render::render_rect(window, subdiv_rect, paint_props);
-            }
+        if subdivs == 0 {
+            return;
+        }
 
-            if show_labels {
-                let font = gres.get_font(self.cfg.font);
-                let text_col = if row_hovered || self.manually_selected {
-                    colors::WHITE
+        let outline_col = if row_hovered || self.manually_selected {
+            200
+        } else {
+            60
+        };
+        let subdiv_w = self.size.x as f32 / subdivs as f32 - 1.;
+
+        for i in 0..subdivs {
+            let subdiv_rect = rect::Rectf::new(
+                self.pos.x as f32 + i as f32 * (1. + subdiv_w),
+                y,
+                subdiv_w,
+                height,
+            );
+            let hovered = self.hovered == Some((row, i));
+
+            let rgb = if row == Row::Seconds {
+                self.calc_slot_color_seconds(debug_log, i)
+            } else {
+                self.calc_slot_color_frame(debug_log, i)
+            };
+            let color = if i as u16 != cur {
+                let alpha = if hovered {
+                    220
+                } else if i < filled {
+                    if self.manually_selected {
+                        180
+                    } else if row_hovered {
+                        120
+                    } else {
+                        70
+                    }
                 } else {
-                    colors::rgba(120, 120, 120, 180)
+                    20
                 };
-                for i in 0..filled {
-                    let x = self.pos.x as f32 + i as f32 * (1. + subdiv_w);
-                    // The very_first_frame is initially 1, but it can change if the game is paused and resumed
-                    // (in which case the debug log will drop old history and restart from a later frame).
-                    // It can also change simply due to the scroller filling up.
-                    let very_first_frame =
-                        self.real_cur_frame - self.tot_scroller_filled_frames as u64;
-                    let row_first_frame = (self.n_frames as u64 * i as u64) + very_first_frame;
-                    let mut text = render::create_text(
-                        &(row_first_frame + 1).to_string(),
-                        font,
-                        self.cfg.font_size,
-                    );
-                    render::render_text(window, &mut text, text_col, Vec2f::new(x, y));
-                }
+                colors::rgba(rgb.r, rgb.g, rgb.b, alpha)
+            } else {
+                colors::rgba(40, 100, 200, 240)
+            };
+            let paint_props = Paint_Properties {
+                color,
+                border_thick: 1.0,
+                border_color: colors::rgba(outline_col, outline_col, outline_col, color.a),
+                ..Default::default()
+            };
+            render::render_rect(window, subdiv_rect, paint_props);
+        }
+
+        if show_labels {
+            let font = gres.get_font(self.cfg.font);
+            let text_col = if row_hovered || self.manually_selected {
+                colors::WHITE
+            } else {
+                colors::rgba(120, 120, 120, 180)
+            };
+            for i in 0..filled {
+                let x = self.pos.x as f32 + i as f32 * (1. + subdiv_w);
+                // The very_first_frame is initially 1, but it can change if the game is paused and resumed
+                // (in which case the debug log will drop old history and restart from a later frame).
+                // It can also change simply due to the scroller filling up.
+                let very_first_frame = self.real_cur_frame - self.tot_scroller_filled_frames as u64;
+                let row_first_frame = (self.n_frames as u64 * i as u64) + very_first_frame;
+                let mut text = render::create_text(
+                    &(row_first_frame + 1).to_string(),
+                    font,
+                    self.cfg.font_size,
+                );
+                render::render_text(window, &mut text, text_col, Vec2f::new(x, y));
             }
         }
     }
 
-    pub fn get_real_selected_frame(&self) -> u64 {
+    fn calc_slot_color_seconds(&self, debug_log: &Debug_Log, slot_idx: u16) -> colors::Color {
         let very_first_frame = self.real_cur_frame - self.tot_scroller_filled_frames as u64;
-        let selected_scroller_frame =
-            self.cur_second as u32 * self.n_frames as u32 + self.cur_frame as u32 + 1;
-        very_first_frame + selected_scroller_frame as u64
+        let subdiv_first_frame = very_first_frame
+            + if slot_idx > 0 {
+                (slot_idx - 1) * self.n_frames
+            } else {
+                0
+            } as u64;
+        let subdiv_last_frame = subdiv_first_frame
+            + if slot_idx == self.n_filled_seconds {
+                self.n_filled_frames
+            } else {
+                self.n_frames
+            } as u64;
+        let tot_duration = (subdiv_first_frame..=subdiv_last_frame)
+            .map(|n_frame| {
+                debug_log.get_frame(n_frame).map(|frame| {
+                    frame
+                        .traces
+                        .get(0)
+                        .map(|t| t.info.tot_duration())
+                        .unwrap_or_else(Duration::default)
+                })
+            })
+            .flatten()
+            .sum();
+        colors::lerp_col(
+            colors::GREEN,
+            colors::RED,
+            inle_core::time::duration_ratio(
+                &tot_duration,
+                &Duration::from_millis(DRAW_COLOR_HIGH_THRESHOLD_MS * self.n_frames as u64),
+            ),
+        )
+    }
+
+    fn calc_slot_color_frame(&self, debug_log: &Debug_Log, frame_idx: u16) -> colors::Color {
+        debug_log
+            .get_frame(self.map_frame_index_to_real_frame(frame_idx))
+            .map(|frame| {
+                frame
+                    .traces
+                    .get(0)
+                    .map(|t| t.info.tot_duration())
+                    .map(|frame_time| {
+                        colors::lerp_col(
+                            colors::GREEN,
+                            colors::RED,
+                            inle_core::time::duration_ratio(
+                                &frame_time,
+                                &Duration::from_millis(DRAW_COLOR_HIGH_THRESHOLD_MS),
+                            ),
+                        )
+                    })
+            })
+            .flatten()
+            .unwrap_or(colors::rgb(100, 100, 100))
+    }
+
+    fn map_frame_index_to_real_frame(&self, idx: u16) -> u64 {
+        let very_first_frame = self.real_cur_frame - self.tot_scroller_filled_frames as u64;
+        very_first_frame + self.cur_second as u64 * self.n_frames as u64 + idx as u64 + 1
+    }
+
+    pub fn get_real_selected_frame(&self) -> u64 {
+        self.map_frame_index_to_real_frame(self.cur_frame)
     }
 
     pub fn set_real_selected_frame(&mut self, real_frame: u64) {
