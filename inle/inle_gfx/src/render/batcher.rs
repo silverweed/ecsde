@@ -267,6 +267,21 @@ fn set_shader_uniforms(
     set_uniform_color(shader, "specular_color", material.specular_color);
 }
 
+#[derive(Copy, Clone)]
+pub struct Batcher_Draw_Params {
+    pub enable_shaders: bool,
+    pub enable_shadows: bool,
+}
+
+impl Default for Batcher_Draw_Params {
+    fn default() -> Self {
+        Self {
+            enable_shaders: true,
+            enable_shadows: true,
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn draw_batches(
     window: &mut Render_Window_Handle,
@@ -275,7 +290,7 @@ pub fn draw_batches(
     shader_cache: &mut Shader_Cache,
     camera: &Transform2D,
     lights: &Lights,
-    enable_shaders: bool,
+    draw_params: Batcher_Draw_Params,
     frame_alloc: &mut temp::Temp_Allocator,
 ) {
     trace!("draw_all_batches");
@@ -298,7 +313,7 @@ pub fn draw_batches(
 
             let texture = gres.get_texture(material.texture);
 
-            let shader = if enable_shaders {
+            let shader = if draw_params.enable_shaders {
                 material.shader.map(|id| {
                     let shader = shader_cache.get_shader_mut(Some(id));
                     set_shader_uniforms(shader, material, gres, lights, texture);
@@ -309,7 +324,7 @@ pub fn draw_batches(
             };
             let has_shader = shader.is_some();
 
-            let cast_shadows = material.cast_shadows;
+            let cast_shadows = draw_params.enable_shadows && material.cast_shadows;
             // @Temporary
             let shadow_data =
                 collect_entity_shadow_data(lights, sprites.iter(), cast_shadows, frame_alloc);

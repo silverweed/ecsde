@@ -20,3 +20,4 @@ rusty-tags.vi
 *.zip
 deps.dot
 deps.png
+chrome_profiler.json

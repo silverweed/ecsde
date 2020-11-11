@@ -17,7 +17,7 @@ run_release: release
 	cargo run --release
 
 watch:
-	cargo watch -w ecs_engine/src -w ecs_game/src -x 'build --all'
+	cargo watch -w inle -w ecs_game/src -x 'build --all'
 
 tags:
 	rusty-tags vi

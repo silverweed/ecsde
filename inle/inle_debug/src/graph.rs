@@ -40,6 +40,7 @@ pub struct Debug_Graph_View_Config {
     pub high_threshold: Option<(f32, colors::Color)>,
     pub fixed_y_range: Option<Range<f32>>,
     pub hoverable: bool,
+    pub show_avg: bool,
 }
 
 #[derive(Default)]
@@ -197,7 +198,9 @@ impl Debug_Element for Debug_Graph_View {
             .filter(|Vec2f { x, y }| xr.contains(x) && yr.contains(y))
             .collect::<Vec<_>>();
         let mut vbuf = render::start_draw_linestrip(drawn_points.len() as _);
+        let mut avg = 0.0;
         for (i, &&point) in drawn_points.iter().enumerate() {
+            avg += point.y;
             let vpos = self.get_coords_for(point);
             let col = self.get_color_for(point);
             let vertex = render::new_vertex(vpos, col, Vec2f::default());
@@ -260,6 +263,22 @@ impl Debug_Element for Debug_Graph_View {
                     );
                 }
             }
+        }
+
+        if self.config.show_avg {
+            let n_points = drawn_points.len();
+            if n_points > 0 {
+                avg /= n_points as f32;
+            }
+            let color = colors::rgb(95, 180, 255);
+            let vpos1 = self.get_coords_for(Vec2f::new(self.data.x_range.start, avg));
+            let v1 = render::new_vertex(pos + vpos1, color, Vec2f::default());
+            let vpos2 = self.get_coords_for(Vec2f::new(self.data.x_range.end, avg));
+            let v2 = render::new_vertex(pos + vpos2, color, Vec2f::default());
+            render::render_line(window, &v1, &v2);
+
+            let mut text = render::create_text(&format!("avg {:.2?}", avg), font, 12);
+            render::render_text(window, &mut text, color, pos + vpos1 + v2!(40., -25.));
         }
 
         render::render_vbuf(window, &vbuf, &Transform2D::from_pos(self.pos.into()));
@@ -398,4 +417,5 @@ pub fn add_point_and_scroll_with_metadata(
         graph.data.x_range.start = graph.data.x_range.end - time_limit;
     }
     graph.data.add_point(now, point, metadata);
+    graph.data.remove_points_before_x_range();
 }

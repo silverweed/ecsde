@@ -503,35 +503,44 @@ where
 
     // Draw texture batches
     {
+        use inle_gfx::render::batcher;
+
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
         let lv_batches = &mut game_state.level_batches;
         let window = &mut game_state.window;
         let shader_cache = &mut game_state.engine_state.shader_cache;
         let enable_shaders = game_state.cvars.enable_shaders.read(cfg);
+        let enable_shadows = game_state.cvars.enable_shadows.read(cfg);
 
         game_state
             .gameplay_system
             .levels
             .foreach_active_level(|level| {
-                inle_gfx::render::batcher::draw_batches(
+                batcher::draw_batches(
                     window,
                     &gres,
                     lv_batches.get_mut(&level.id).unwrap(),
                     shader_cache,
                     &level.get_camera().transform,
                     &level.lights,
-                    enable_shaders,
+                    batcher::Batcher_Draw_Params {
+                        enable_shaders,
+                        enable_shadows,
+                    },
                     frame_alloc,
                 );
             });
-        inle_gfx::render::batcher::draw_batches(
+        batcher::draw_batches(
             window,
             &gres,
             &mut game_state.engine_state.global_batches,
             shader_cache,
             &Transform2D::default(),
             &inle_gfx::light::Lights::default(),
-            enable_shaders,
+            batcher::Batcher_Draw_Params {
+                enable_shaders,
+                enable_shadows,
+            },
             frame_alloc,
         );
     }

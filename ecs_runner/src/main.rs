@@ -44,6 +44,8 @@ macro_rules! get_argc_argv {
 
 #[cfg(feature = "hotload")]
 fn main() -> std::io::Result<()> {
+    eprintln!("Running with hotload ENABLED");
+
     // Convert rust args to C args, since our game API expects that.
     get_argc_argv!(argc, argv);
 
@@ -96,6 +98,8 @@ fn main() -> std::io::Result<()> {
 
 #[cfg(not(feature = "hotload"))]
 fn main() -> std::io::Result<()> {
+    eprintln!("Running with hotload DISABLED");
+
     // Convert rust args to C args, since our game API expects that.
     get_argc_argv!(argc, argv);
 

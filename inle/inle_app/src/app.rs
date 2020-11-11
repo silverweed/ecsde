@@ -290,6 +290,7 @@ pub fn init_engine_debug(
             high_threshold: Some((55.0, colors::GREEN)),
             fixed_y_range: Some(0. ..120.),
             hoverable: false,
+            show_avg: false,
             font,
         };
 
@@ -303,6 +304,7 @@ pub fn init_engine_debug(
         graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
 
         // Prev frame time before display
+        graph_config.show_avg = true;
         graph_config.grid_ystep = Some(graph::Grid_Step::Fixed_Subdivs(4));
         graph_config.fixed_y_range = None;
         graph_config.title = Some(String::from("PrevFrameTime"));
