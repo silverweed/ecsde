@@ -45,6 +45,8 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         _window: &Render_Window_Handle,
         _input_state: &Input_State,
     ) {
+        trace!("debug::fadeout_overlay::update");
+
         let fadeout_time = self.config.fadeout_time;
         let mut n_drained = 0;
         for (i, text) in self.fadeout_texts.iter_mut().enumerate().rev() {
@@ -67,7 +69,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         gres: &mut Gfx_Resources,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
-        trace!("fadeout_overlay::draw");
+        trace!("debug::fadeout_overlay::draw");
 
         if self.fadeout_texts.is_empty() {
             return;

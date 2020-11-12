@@ -101,7 +101,7 @@ impl Debug_Element for Debug_Overlay {
         gres: &mut Gfx_Resources,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
-        trace!("overlay::draw");
+        trace!("debug::overlay::draw");
 
         if self.lines.is_empty() {
             return;
@@ -195,6 +195,8 @@ impl Debug_Element for Debug_Overlay {
     ) {
         use inle_input::mouse;
         use inle_win::window;
+
+        trace!("debug::overlay::update");
 
         if !self.config.hoverable {
             return;

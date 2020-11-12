@@ -64,6 +64,8 @@ const DRAW_COLOR_HIGH_THRESHOLD_MS: u64 = 70;
 
 impl Debug_Frame_Scroller {
     pub fn update(&mut self, window: &Render_Window_Handle, log: &Debug_Log) {
+        trace!("frame_scroller::update");
+
         if !self.manually_selected {
             self.update_frame(log);
         }
@@ -172,6 +174,8 @@ impl Debug_Frame_Scroller {
     }
 
     fn check_hovered_row(&mut self, row: Row, mpos: Vec2i) {
+        trace!("frame_scroller::check_hovered_row");
+
         let Row_Props {
             y,
             height,

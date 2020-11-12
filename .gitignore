@@ -21,3 +21,4 @@ rusty-tags.vi
 deps.dot
 deps.png
 chrome_profiler.json
+*.dll

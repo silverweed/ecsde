@@ -4,4 +4,7 @@
 #![allow(non_camel_case_types)]
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
+#[macro_use]
+extern crate inle_diagnostics;
+
 pub mod window;

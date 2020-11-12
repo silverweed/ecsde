@@ -208,6 +208,8 @@ impl Debug_Ui_System {
         log: &Debug_Log,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
+        trace!("debug_ui::update_and_draw");
+
         for elem in &mut self.graphs.actives {
             elem.update(dt, window, input_state);
             elem.draw(window, gres, frame_alloc);

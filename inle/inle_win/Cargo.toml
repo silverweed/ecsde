@@ -14,6 +14,7 @@ default = ["win-sfml", "gfx-sfml"]
 
 [dependencies]
 inle_math = { path = "../inle_math" }
+inle_diagnostics = { path = "../inle_diagnostics" }
 
 [dependencies.sfml]
 version = "0.15.1"

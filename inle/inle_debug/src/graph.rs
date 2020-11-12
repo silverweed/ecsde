@@ -72,6 +72,8 @@ impl Debug_Element for Debug_Graph_View {
         window: &Render_Window_Handle,
         input_state: &Input_State,
     ) {
+        trace!("debug::graph::update");
+
         if !self.config.hoverable {
             return;
         }
@@ -109,7 +111,7 @@ impl Debug_Element for Debug_Graph_View {
         gres: &mut Gfx_Resources,
         _frame_alloc: &mut temp::Temp_Allocator,
     ) {
-        trace!("graph::draw");
+        trace!("debug::graph::draw");
 
         // Draw background
         {
