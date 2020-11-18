@@ -32,6 +32,7 @@ pub struct Scope_Trace_Info {
 }
 
 impl Scope_Trace_Info {
+    #[inline(always)]
     pub fn duration(&self) -> Duration {
         self.end_t.duration_since(self.start_t)
     }
@@ -55,6 +56,7 @@ pub struct Scope_Trace {
 }
 
 impl Scope_Trace {
+    #[inline(always)]
     pub fn new(tracer: Debug_Tracer, tag: &'static str) -> Self {
         tracer.lock().unwrap().push_scope_trace(tag);
         Self { tracer }
@@ -62,6 +64,7 @@ impl Scope_Trace {
 }
 
 impl Drop for Scope_Trace {
+    #[inline(always)]
     fn drop(&mut self) {
         self.tracer.lock().unwrap().pop_scope_trace();
     }
@@ -84,6 +87,7 @@ pub struct Scope_Trace_Info_Final {
 }
 
 impl Scope_Trace_Info_Final {
+    #[inline(always)]
     pub fn new(tag: &'static str, n_calls: u32, tot_duration: Duration) -> Self {
         let n_calls = n_calls.min(1 << 24);
         let tot_duration_nanos = tot_duration.as_nanos().min(1 << 40) as u64;
@@ -101,17 +105,19 @@ impl Scope_Trace_Info_Final {
         }
     }
 
+    #[inline(always)]
     pub fn tot_duration(&self) -> Duration {
         let duration_nanos = self.n_calls_and_tot_duration & 0xFF_FFFF_FFFF;
         Duration::from_nanos(duration_nanos as _)
     }
 
+    #[inline(always)]
     pub fn n_calls(&self) -> u32 {
         (self.n_calls_and_tot_duration >> 40) as _
     }
 }
 
-#[inline]
+#[inline(always)]
 pub fn debug_trace(tag: &'static str, tracer: Debug_Tracer) -> Scope_Trace {
     Scope_Trace::new(tracer, tag)
 }
@@ -123,6 +129,7 @@ pub struct Trace_Tree<'a> {
 }
 
 impl Trace_Tree<'_> {
+    #[inline(always)]
     pub fn new(node: &Tracer_Node_Final) -> Trace_Tree {
         Trace_Tree {
             node,
@@ -142,6 +149,7 @@ impl Tracer {
     // NOTE: don't do any kind of hard work here, or the tracing will
     // be too intrusive! Prefer delaying work until later, when processing
     // the traces.
+    #[inline(always)]
     fn push_scope_trace(&mut self, tag: &'static str) {
         let now = Instant::now();
         self.saved_traces.push(Tracer_Node {
@@ -157,6 +165,7 @@ impl Tracer {
         self.cur_active = Some(self.saved_traces.len() - 1);
     }
 
+    #[inline(always)]
     fn pop_scope_trace(&mut self) {
         let now = Instant::now();
         let mut active_node = &mut self.saved_traces[self
@@ -171,6 +180,7 @@ impl Tracer {
         self.cur_active = None;
     }
 
+    #[cold]
     pub fn debug_print(&self) {
         for node in &self.saved_traces {
             println!(
@@ -182,6 +192,7 @@ impl Tracer {
     }
 }
 
+#[inline(always)]
 pub fn total_traced_time(traces: &[Tracer_Node_Final]) -> Duration {
     traces
         .par_iter()
@@ -195,7 +206,9 @@ pub fn total_traced_time(traces: &[Tracer_Node_Final]) -> Duration {
         .reduce(Duration::default, |acc, x| acc + x)
 }
 
+#[inline(always)]
 pub fn sort_trace_trees(trees: &mut [Trace_Tree]) {
+    #[inline(always)]
     fn sort_tree_internal(tree: &mut Trace_Tree) {
         tree.children
             .sort_by(|a, b| b.node.info.tot_duration().cmp(&a.node.info.tot_duration()));
@@ -226,6 +239,7 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
     // or the trace will only show the call under the first caller).
     let mut tag_map: HashMap<u32, Tag_Map_Info> = HashMap::new();
 
+    #[inline(always)]
     fn hash_node(nodes: &[Tracer_Node], node: &Tracer_Node) -> u32 {
         const FNV1A_PRIME32: u32 = 16_777_619;
         const FNV1A_START32: u32 = 2_166_136_261;
@@ -293,7 +307,7 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
 
 // Given some Tracer_Node_Final, merges all the ones with the same tag into a single one,
 // accumulating duration and n_calls. All parent information is lost.
-pub fn flatten_traces(traces: &[Tracer_Node_Final]) -> Vec<Tracer_Node_Final> {
+pub fn flatten_traces(traces: &[Tracer_Node_Final]) -> impl Iterator<Item=Tracer_Node_Final> + '_ {
     let mut flat_traces = HashMap::new();
     for trace in traces {
         let accum = flat_traces
@@ -308,7 +322,7 @@ pub fn flatten_traces(traces: &[Tracer_Node_Final]) -> Vec<Tracer_Node_Final> {
             accum.info.tot_duration() + trace.info.tot_duration(),
         );
     }
-    flat_traces.into_iter().map(|(_, v)| v).collect()
+    flat_traces.into_iter().map(|(_, v)| v)
 }
 
 /// Construct a forest of Trace_Trees from the saved_traces array.

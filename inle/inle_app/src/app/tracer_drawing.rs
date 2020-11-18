@@ -156,7 +156,7 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
 
     let traces = &debug_log.get_frame(frame).unwrap().traces;
     let total_traced_time = tracer::total_traced_time(&traces);
-    let mut traces = tracer::flatten_traces(traces);
+    let mut traces = tracer::flatten_traces(traces).collect::<Vec<_>>();
     traces.sort_by(|a, b| b.info.tot_duration().cmp(&a.info.tot_duration()));
 
     for node in traces
@@ -168,7 +168,7 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
 }
 
 pub fn update_graph_traced_fn(
-    traces: &[Tracer_Node_Final], // NOTE: these must be flattened!
+    traces: impl Iterator<Item=Tracer_Node_Final>, // NOTE: these must be flattened!
     graph: &mut graph::Debug_Graph_View,
     time: Duration,
     traced_fn: &str,
@@ -178,7 +178,6 @@ pub fn update_graph_traced_fn(
     const TIME_LIMIT: f32 = 20.0;
 
     let fn_tot_time = traces
-        .iter()
         .filter_map(|t| {
             if t.info.tag == traced_fn {
                 Some(t.info.tot_duration().as_secs_f32() * 1000.)

@@ -492,7 +492,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
 
             let flattened_traces = tracer::flatten_traces(&final_traces);
             tracer_drawing::update_graph_traced_fn(
-                &flattened_traces,
+                flattened_traces,
                 graph,
                 if trace_realtime {
                     engine_state.time.real_time()
