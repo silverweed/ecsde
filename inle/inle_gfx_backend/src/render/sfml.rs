@@ -241,6 +241,18 @@ pub fn start_draw_linestrip(n_vertices: u32) -> Vertex_Buffer {
 }
 
 #[inline(always)]
+pub fn start_draw_points(n_vertices: u32) -> Vertex_Buffer {
+    Vertex_Buffer {
+        buf: VertexBuffer::new(
+            PrimitiveType::Points,
+            n_vertices,
+            VertexBufferUsage::Stream,
+        ),
+        cur_vertices: 0,
+    }
+}
+
+#[inline(always)]
 pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
     debug_assert!(vbuf.cur_vertices + 4 <= vbuf.buf.vertex_count());
     vbuf.buf.update(&[*v1, *v2, *v3, *v4], vbuf.cur_vertices);
@@ -425,6 +437,11 @@ pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[
 #[inline(always)]
 pub fn shaders_are_available() -> bool {
     Shader::is_available()
+}
+
+#[inline(always)]
+pub fn geom_shaders_are_available() -> bool {
+    Shader::is_geometry_available()
 }
 
 #[inline(always)]

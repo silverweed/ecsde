@@ -1,10 +1,12 @@
 use crate::render;
 use crate::render_window::Render_Window_Handle;
 use inle_core::rand::{Default_Rng, Precomputed_Rand_Pool};
+use inle_core::env::Env_Info;
 use inle_math::angle::{self, Angle};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use inle_resources::gfx::{Gfx_Resources, Texture_Handle};
+use inle_resources::gfx::{shader_path, Gfx_Resources, Texture_Handle, Shader_Handle, Shader_Cache};
+use crate::render::Shader;
 use rayon::prelude::*;
 use std::ops::Range;
 use std::time::Duration;
@@ -174,14 +176,15 @@ pub fn render_particles(
     particles: &Particles,
     window: &mut Render_Window_Handle,
     gres: &Gfx_Resources,
+    shader: &Shader,
     camera: &Transform2D,
 ) {
     trace!("render_particles");
 
     use inle_common::colors;
     use inle_math::rect::{Rect, Rectf};
-    // @Temporary: of course we want to use instanced drawing for these
-    let mut vbuf = render::start_draw_quads(particles.count() as _);
+
+    let mut vbuf = render::start_draw_points(particles.count() as _);
     let texture = particles
         .props
         .texture
@@ -194,16 +197,7 @@ pub fn render_particles(
     let uv = Rect::new(0.0, 0.0, tex_w as f32, tex_h as f32);
     let col = colors::WHITE;
     for &transf in &particles.transforms {
-        let rect = Rect::new(-1.0, -1.0, 2.0, 2.0);
-        let v1 = render::new_vertex(transf * v2!(-1.0, -1.0), col, v2!(uv.x, uv.y));
-        let v2 = render::new_vertex(transf * v2!(1.0, -1.0), col, v2!(uv.x + uv.width, uv.y));
-        let v3 = render::new_vertex(
-            transf * v2!(1.0, 1.0),
-            col,
-            v2!(uv.x + uv.width, uv.y + uv.height),
-        );
-        let v4 = render::new_vertex(transf * v2!(-1.0, 1.0), col, v2!(uv.x, uv.y + uv.height));
-        render::add_quad(&mut vbuf, &v1, &v2, &v3, &v4);
+        render::add_point(&mut vbuf, &render::new_vertex(transf.position(), col, Vec2f::default()));
     }
     render::render_vbuf_ws_ex(
         window,
@@ -212,6 +206,7 @@ pub fn render_particles(
         &camera,
         render::Render_Extra_Params {
             texture,
+            shader: Some(shader),
             ..Default::default()
         },
     );
@@ -237,12 +232,20 @@ impl Particles_Handle {
     }
 }
 
-#[derive(Default)]
 pub struct Particle_Manager {
+    particle_shader: Shader_Handle,
     active_particles: Vec<Particles>,
 }
 
 impl Particle_Manager {
+    pub fn new(shader_cache: &mut Shader_Cache, env: &Env_Info) -> Self {
+        let particle_shader = shader_cache.load_shader_with_geom(&shader_path(env, "particles"));
+        Self {
+            particle_shader,
+            active_particles: vec![],
+        }
+    }
+
     pub fn add_particles(
         &mut self,
         props: &Particle_Props,
@@ -268,10 +271,16 @@ impl Particle_Manager {
         &self,
         window: &mut Render_Window_Handle,
         gres: &Gfx_Resources,
+        shader_cache: &mut Shader_Cache,
         camera: &Transform2D,
     ) {
+        let shader = shader_cache.get_shader_mut(self.particle_shader);
+        let (ww, wh) = inle_win::window::get_window_real_size(window);
+        render::set_uniform_float(shader, "quad_half_width", 0.001);
+        render::set_uniform_float(shader, "camera_scale", 1.0 / camera.scale().x);
+        render::set_uniform_float(shader, "window_ratio", ww as f32 / wh as f32);
         for particles in &self.active_particles {
-            render_particles(particles, window, gres, camera);
+            render_particles(particles, window, gres, shader, camera);
         }
     }
 }
