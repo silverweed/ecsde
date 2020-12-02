@@ -26,3 +26,4 @@ pub struct Render_Extra_Params<'t, 's> {
 }
 
 pub use backend::shaders_are_available;
+pub use backend::geom_shaders_are_available;

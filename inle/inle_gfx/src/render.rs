@@ -175,6 +175,10 @@ pub fn shaders_are_available() -> bool {
     backend::shaders_are_available()
 }
 
+pub fn geom_shaders_are_available() -> bool {
+    backend::geom_shaders_are_available()
+}
+
 pub fn vbuf_cur_vertices(vbuf: &Vertex_Buffer) -> u32 {
     backend::vbuf_cur_vertices(vbuf)
 }
@@ -214,6 +218,7 @@ simple_wrap!(Vertex_Buffer_Quads, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Triangles, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Linestrip, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Lines, Vertex_Buffer);
+simple_wrap!(Vertex_Buffer_Points, Vertex_Buffer);
 
 pub fn start_draw_quads(n_quads: u32) -> Vertex_Buffer_Quads {
     trace!("start_draw_quads");
@@ -233,6 +238,11 @@ pub fn start_draw_linestrip(n_vertices: u32) -> Vertex_Buffer_Linestrip {
 pub fn start_draw_lines(n_vertices: u32) -> Vertex_Buffer_Lines {
     trace!("start_draw_lines");
     Vertex_Buffer_Lines(backend::start_draw_lines(n_vertices))
+}
+
+pub fn start_draw_points(n_vertices: u32) -> Vertex_Buffer_Points {
+    trace!("start_draw_points");
+    Vertex_Buffer_Points(backend::start_draw_points(n_vertices))
 }
 
 ///////////////////////////////// UPDATING ///////////////////////////////////
@@ -256,6 +266,10 @@ pub fn add_line(vbuf: &mut Vertex_Buffer_Lines, from: &Vertex, to: &Vertex) {
 }
 
 pub fn add_vertex(vbuf: &mut Vertex_Buffer_Linestrip, v: &Vertex) {
+    backend::add_vertex(vbuf, v);
+}
+
+pub fn add_point(vbuf: &mut Vertex_Buffer_Points, v: &Vertex) {
     backend::add_vertex(vbuf, v);
 }
 

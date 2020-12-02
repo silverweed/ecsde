@@ -531,7 +531,7 @@ where
                     frame_alloc,
                 );
 
-                particle_mgrs[&level.id].render(window, &gres, &level.get_camera().transform);
+                particle_mgrs[&level.id].render(window, &gres, shader_cache, &level.get_camera().transform);
             });
         inle_gfx::render::batcher::draw_batches(
             window,

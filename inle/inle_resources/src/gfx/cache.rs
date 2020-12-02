@@ -66,16 +66,15 @@ impl<'l> Shader_Cache<'l> {
     }
 
     /// shader_name: the name of the shader(s) without extension.
-    /// shader_name.vs and shader_name.fs will automatically be looked for.
-    pub fn load(&mut self, shader_name: &str) -> Shader_Handle {
+    pub fn load(&mut self, shader_name: &str, with_geom: bool) -> Shader_Handle {
         let id = String_Id::from(shader_name);
         match self.cache.entry(id) {
             Entry::Occupied(_) => Some(id),
             Entry::Vacant(v) => {
                 let vs_name = format!("{}.vert", shader_name);
                 let fs_name = format!("{}.frag", shader_name);
-                // @Incomplete: allow loading the geometry shader
-                match self.loader.load(&(vs_name, fs_name, None)) {
+                let gs_name = if with_geom { Some(format!("{}.geom", shader_name)) } else { None };
+                match self.loader.load(&(vs_name, fs_name, gs_name)) {
                     Ok(res) => {
                         v.insert(res);
                         lok!("Loaded shader {}", shader_name);

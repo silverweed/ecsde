@@ -18,6 +18,8 @@ impl<'l> Gfx_Resources<'l> {
     pub fn new() -> Self {
         if !render::shaders_are_available() {
             lwarn!("This platform does not support shaders.");
+        } else if !render::geom_shaders_are_available() {
+            lwarn!("This platform does not support geometry shaders.");
         }
 
         Gfx_Resources {
@@ -60,7 +62,15 @@ impl<'l> Shader_Cache<'l> {
 
     pub fn load_shader(&mut self, fname: &str) -> Shader_Handle {
         if render::shaders_are_available() {
-            self.0.load(fname)
+            self.0.load(fname, false)
+        } else {
+            None
+        }
+    }
+
+    pub fn load_shader_with_geom(&mut self, fname: &str) -> Shader_Handle {
+        if render::geom_shaders_are_available() {
+            self.0.load(fname, true)
         } else {
             None
         }

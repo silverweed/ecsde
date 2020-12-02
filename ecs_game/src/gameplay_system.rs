@@ -120,7 +120,7 @@ impl Gameplay_System {
         engine_state
             .systems
             .particle_mgrs
-            .insert(level_id, Particle_Manager::default());
+            .insert(level_id, Particle_Manager::new(&mut engine_state.shader_cache, &engine_state.env));
 
         #[cfg(debug_assertions)]
         {
