@@ -1,7 +1,6 @@
 use crate::light::{Lights, Point_Light};
 use crate::material::Material;
-use crate::render;
-use crate::render::Vertex_Buffer_Quads;
+use crate::render::{self, Primitive_Type};
 use crate::vbuf_holder::Vertex_Buffer_Holder;
 use inle_alloc::temp;
 use inle_common::colors::{self, Color};
@@ -74,15 +73,17 @@ pub(super) fn add_texture_ws(
                 ldebug!("creating buffer for material {:?}", material);
                 Sprite_Batch {
                     vbuffer: Vertex_Buffer_Holder::with_initial_vertex_count(
-                        48,
+                        4 * 48,
+                        Primitive_Type::Quads,
                         #[cfg(debug_assertions)]
-                        material,
+                        format!("{:?}", material),
                     ),
                     shadow_vbuffer: if material.cast_shadows {
                         Some(Vertex_Buffer_Holder::with_initial_vertex_count(
-                            48 * 4,
+                            4 * 4 * 48,
+                            Primitive_Type::Quads,
                             #[cfg(debug_assertions)]
-                            material,
+                            format!("{:?}", material),
                         ))
                     } else {
                         None

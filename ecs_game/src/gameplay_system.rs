@@ -148,6 +148,7 @@ impl Gameplay_System {
                     lifetime: Duration::from_millis(100)..Duration::from_secs(3),
                     acceleration: -50.0,
                     texture,
+                    color: colors::BLUE,
                     ..Default::default()
                 };
                 let rng = &mut engine_state.rng;

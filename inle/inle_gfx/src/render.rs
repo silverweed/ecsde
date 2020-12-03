@@ -20,6 +20,7 @@ pub type Text<'a> = backend::Text<'a>;
 pub type Texture<'a> = backend::Texture<'a>;
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
+pub type Primitive_Type = backend::Primitive_Type;
 
 //////////////////////////// DRAWING //////////////////////////////////
 
@@ -220,6 +221,13 @@ simple_wrap!(Vertex_Buffer_Linestrip, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Lines, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Points, Vertex_Buffer);
 
+pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
+    backend::new_vbuf(primitive, n_vertices)
+}
+
+pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
+    backend::vbuf_primitive_type(vbuf)
+}
 pub fn start_draw_quads(n_quads: u32) -> Vertex_Buffer_Quads {
     trace!("start_draw_quads");
     Vertex_Buffer_Quads(backend::start_draw_quads(n_quads))
