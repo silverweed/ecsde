@@ -120,7 +120,7 @@ impl Gameplay_System {
         engine_state
             .systems
             .particle_mgrs
-            .insert(level_id, Particle_Manager::new(&mut engine_state.shader_cache, &engine_state.env));
+            .insert(level_id, Particle_Manager::new(&mut engine_state.shader_cache, &engine_state.env, &engine_state.config));
 
         #[cfg(debug_assertions)]
         {
@@ -139,7 +139,7 @@ impl Gameplay_System {
             let texture = game_res
                 .gfx
                 .load_texture(&tex_path(&engine_state.env, "yv.png"));
-            for i in 0..20 {
+            for i in 0..100 {
                 let props = particles::Particle_Props {
                     n_particles: 100,
                     spread: angle::deg(50.0),

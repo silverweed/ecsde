@@ -202,7 +202,6 @@ impl Debug_Element for Debug_Graph_View {
         let mut vbuf = render::start_draw_linestrip(drawn_points.len() as _);
         let mut avg = 0.0;
         for (i, &&point) in drawn_points.iter().enumerate() {
-            avg += point.y;
             let vpos = self.get_coords_for(point);
             let col = self.get_color_for(point);
             let vertex = render::new_vertex(vpos, col, Vec2f::default());

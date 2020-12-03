@@ -5,6 +5,7 @@ use inle_alloc::temp;
 use inle_core::rand::{Default_Rng, Precomputed_Rand_Pool};
 use inle_core::env::Env_Info;
 use inle_common::colors;
+use inle_cfg::{Cfg_Var, self};
 use inle_math::angle::{self, Angle};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
@@ -20,11 +21,12 @@ pub struct Particles {
     pub velocities: Vec<Vec2f>,
     pub remaining_life: Vec<Duration>,
     pub props: Particle_Props,
+
     precomp_rng: Precomputed_Rand_Pool,
 }
 
 impl Particles {
-    pub fn par_iter_mut(
+    fn par_iter_mut(
         &mut self,
     ) -> impl rayon::iter::ParallelIterator<Item = ((&mut Transform2D, &mut Vec2f), &mut Duration)>
     {
@@ -140,21 +142,20 @@ fn init_particle(
     )
 }
 
-pub fn update_particles(particles: &mut Particles, dt: &Duration) {
+pub fn update_particles(particles: &mut Particles, dt: &Duration, chunk_size: usize) {
     trace!("update_particles");
 
     // @Speed: find out the best chunk size.
     // It looks like if the particles are few, updating them in singlethread is much faster than
     // multithread. However, if they are a lot, multithread wins.
-    const CHUNK_SIZE: usize = 64;
 
     let precomp_rng = &particles.precomp_rng;
     let props = &particles.props;
     let iter = particles
         .transforms
-        .par_chunks_mut(CHUNK_SIZE)
-        .zip_eq(particles.velocities.par_chunks_mut(CHUNK_SIZE))
-        .zip_eq(particles.remaining_life.par_chunks_mut(CHUNK_SIZE));
+        .par_chunks_mut(chunk_size)
+        .zip_eq(particles.velocities.par_chunks_mut(chunk_size))
+        .zip_eq(particles.remaining_life.par_chunks_mut(chunk_size));
     iter.for_each(|((transforms, velocities), rem_lifes)| {
         for i in 0..transforms.len() {
             let transform = &mut transforms[i];
@@ -240,15 +241,19 @@ pub struct Particle_Manager {
     active_particles: Vec<Particles>,
     // This is in a separate array because we want Particles to be processable in parallel
     active_particles_vbufs: Vec<Vertex_Buffer_Holder>,
+    coarse_chunk_size: Cfg_Var<i32>,
+    narrow_chunk_size: Cfg_Var<i32>,
 }
 
 impl Particle_Manager {
-    pub fn new(shader_cache: &mut Shader_Cache, env: &Env_Info) -> Self {
+    pub fn new(shader_cache: &mut Shader_Cache, env: &Env_Info, cfg: &inle_cfg::Config) -> Self {
         let particle_shader = shader_cache.load_shader_with_geom(&shader_path(env, "particles"));
         Self {
             particle_shader,
             active_particles: vec![],
             active_particles_vbufs: vec![],
+            coarse_chunk_size: Cfg_Var::new("engine/particles/update_coarse_chunk_size", cfg),
+            narrow_chunk_size: Cfg_Var::new("engine/particles/update_narrow_chunk_size", cfg),
         }
     }
 
@@ -277,9 +282,13 @@ impl Particle_Manager {
         &mut self.active_particles[handle.0 as usize]
     }
 
-    pub fn update(&mut self, dt: &Duration) {
-        self.active_particles.par_iter_mut().for_each(|particles| {
-            update_particles(particles, dt);
+    pub fn update(&mut self, dt: &Duration, cfg: &inle_cfg::Config) {
+        let coarse_chunk_size = self.coarse_chunk_size.read(cfg) as usize;
+        let narrow_chunk_size = self.narrow_chunk_size.read(cfg) as usize;
+        self.active_particles.par_chunks_mut(coarse_chunk_size).for_each(|chunk| {
+            for particles in chunk {
+                update_particles(particles, dt, narrow_chunk_size);
+            }
         });
     }
 

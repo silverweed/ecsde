@@ -396,13 +396,14 @@ where
         game_state.engine_state.systems.audio_system.update();
     }
 
+    let cfg = &game_state.engine_state.config;
     game_state
         .engine_state
         .systems
         .particle_mgrs
         .iter_mut()
         .for_each(|(_, particle_mgr)| {
-            particle_mgr.update(&update_dt);
+            particle_mgr.update(&update_dt, cfg);
         });
 
     // We clear batches before update_debug, so debug can draw textures
