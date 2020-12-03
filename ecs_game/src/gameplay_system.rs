@@ -105,11 +105,11 @@ impl Gameplay_System {
         level.chunks.init(engine_state);
 
         // @Temporary
-        self.cursor_entity = Some(create_cursor_entity(
-            &mut game_res.gfx,
-            &mut engine_state.env,
-            &mut level.world,
-        ));
+        //self.cursor_entity = Some(create_cursor_entity(
+        //    &mut game_res.gfx,
+        //    &mut engine_state.env,
+        //    &mut level.world,
+        //));
 
         self.levels.loaded_levels.push(Arc::new(Mutex::new(level)));
         self.levels

@@ -397,14 +397,16 @@ where
     }
 
     let cfg = &game_state.engine_state.config;
-    game_state
-        .engine_state
-        .systems
-        .particle_mgrs
-        .iter_mut()
-        .for_each(|(_, particle_mgr)| {
-            particle_mgr.update(&update_dt, cfg);
-        });
+    if game_state.cvars.enable_particles.read(cfg) {
+        game_state
+            .engine_state
+            .systems
+            .particle_mgrs
+            .iter_mut()
+            .for_each(|(_, particle_mgr)| {
+                particle_mgr.update(&update_dt, cfg);
+            });
+    }
 
     // We clear batches before update_debug, so debug can draw textures
     {
@@ -517,6 +519,7 @@ where
         let shader_cache = &mut game_state.engine_state.shader_cache;
         let enable_shaders = game_state.cvars.enable_shaders.read(cfg);
         let enable_shadows = game_state.cvars.enable_shadows.read(cfg);
+        let enable_particles = game_state.cvars.enable_particles.read(cfg);
         let particle_mgrs = &mut game_state.engine_state.systems.particle_mgrs;
 
         game_state
@@ -537,8 +540,11 @@ where
                     frame_alloc,
                 );
 
-                particle_mgrs.get_mut(&level.id).unwrap().render(window, &gres, shader_cache, &level.get_camera().transform, frame_alloc);
+                if enable_particles {
+                    particle_mgrs.get_mut(&level.id).unwrap().render(window, &gres, shader_cache, &level.get_camera().transform, frame_alloc);
+                }
             });
+
         batcher::draw_batches(
             window,
             &gres,

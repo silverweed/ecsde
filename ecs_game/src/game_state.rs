@@ -47,6 +47,7 @@ pub struct CVars {
     pub clear_color: Cfg_Var<u32>,
     pub enable_shaders: Cfg_Var<bool>,
     pub enable_shadows: Cfg_Var<bool>,
+    pub enable_particles: Cfg_Var<bool>,
 }
 
 #[cfg(debug_assertions)]
@@ -274,6 +275,7 @@ fn create_cvars(cfg: &inle_cfg::Config) -> CVars {
     let vsync = Cfg_Var::new("engine/window/vsync", cfg);
     let enable_shaders = Cfg_Var::new("engine/rendering/enable_shaders", cfg);
     let enable_shadows = Cfg_Var::new("engine/rendering/enable_shadows", cfg);
+    let enable_particles = Cfg_Var::new("engine/rendering/enable_particles", cfg);
 
     CVars {
         gameplay_update_tick_ms,
@@ -281,6 +283,7 @@ fn create_cvars(cfg: &inle_cfg::Config) -> CVars {
         vsync,
         enable_shaders,
         enable_shadows,
+        enable_particles,
     }
 }
 

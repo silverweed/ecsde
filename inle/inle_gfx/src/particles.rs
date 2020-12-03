@@ -262,7 +262,7 @@ impl Particle_Manager {
         props: &Particle_Props,
         rng: &mut Default_Rng,
     ) -> Particles_Handle {
-        assert!(props.n_particles < std::u32::MAX as usize);
+        debug_assert!(props.n_particles < std::u32::MAX as usize);
         self.active_particles.push(create_particles(props, rng));
         self.active_particles_vbufs.push(
             Vertex_Buffer_Holder::with_initial_vertex_count(
@@ -273,12 +273,12 @@ impl Particle_Manager {
         ));
         debug_assert_eq!(self.active_particles.len(), self.active_particles_vbufs.len());
 
-        assert!(self.active_particles.len() < std::isize::MAX as usize);
+        debug_assert!(self.active_particles.len() < std::isize::MAX as usize);
         Particles_Handle(self.active_particles.len() as isize - 1)
     }
 
     pub fn get_particles_mut(&mut self, handle: Particles_Handle) -> &mut Particles {
-        assert!(handle.is_valid());
+        debug_assert!(handle.is_valid());
         &mut self.active_particles[handle.0 as usize]
     }
 
