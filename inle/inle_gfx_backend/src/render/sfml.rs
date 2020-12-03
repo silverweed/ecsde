@@ -12,7 +12,6 @@ use sfml::graphics::{
 };
 use sfml::system::Vector2f;
 
-// @Speed: probably replace this with a VertexBuffer
 pub struct Vertex_Buffer {
     buf: sfml::graphics::VertexBuffer,
     cur_vertices: u32,
@@ -27,6 +26,7 @@ impl std::fmt::Debug for Vertex_Buffer {
 pub type Vertex = sfml::graphics::Vertex;
 pub type Image = sfml::graphics::Image;
 pub type Shader<'texture> = sfml::graphics::Shader<'texture>;
+pub type Primitive_Type = PrimitiveType;
 
 sf_wrap!(Texture, sfml::graphics::Texture);
 sf_wrap!(Font, sfml::graphics::Font);
@@ -198,6 +198,19 @@ pub fn get_image_size(image: &sfml::graphics::Image) -> (u32, u32) {
 pub fn get_text_size(text: &sfml::graphics::Text<'_>) -> Vec2f {
     let Rect { width, height, .. } = text.local_bounds().into();
     v2!(width, height)
+}
+
+#[inline(always)]
+pub fn new_vbuf(primitive: PrimitiveType, n_vertices: u32) -> Vertex_Buffer {
+    Vertex_Buffer {
+        buf: VertexBuffer::new(primitive, n_vertices, VertexBufferUsage::Stream),
+        cur_vertices: 0,
+    }
+}
+
+#[inline(always)]
+pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
+    vbuf.buf.primitive_type()
 }
 
 #[inline(always)]

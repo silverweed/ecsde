@@ -1,7 +1,10 @@
-use crate::render;
+use crate::render::{self, Primitive_Type};
 use crate::render_window::Render_Window_Handle;
+use crate::vbuf_holder::Vertex_Buffer_Holder;
+use inle_alloc::temp;
 use inle_core::rand::{Default_Rng, Precomputed_Rand_Pool};
 use inle_core::env::Env_Info;
+use inle_common::colors;
 use inle_math::angle::{self, Angle};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
@@ -48,11 +51,15 @@ pub struct Particle_Props {
     pub lifetime: Range<Duration>,
     pub emission_shape: Emission_Shape,
     pub initial_speed: Range<f32>,
+    // @Incomplete: currently unused
     pub initial_rotation: Range<Angle>,
+    // @Incomplete: currently unused
     pub initial_scale: Range<f32>,
     pub spread: Angle,
     pub acceleration: f32,
     pub texture: Texture_Handle,
+    // @Incomplete: this is unused in the shader!
+    pub color: colors::Color,
 }
 
 impl Default for Particle_Props {
@@ -67,6 +74,7 @@ impl Default for Particle_Props {
             spread: Angle::default(),
             texture: None,
             acceleration: 0.0,
+            color: colors::WHITE,
         }
     }
 }
@@ -138,8 +146,6 @@ pub fn update_particles(particles: &mut Particles, dt: &Duration) {
     // @Speed: find out the best chunk size.
     // It looks like if the particles are few, updating them in singlethread is much faster than
     // multithread. However, if they are a lot, multithread wins.
-    // Probably we should setup a thread pool and keep it in the Particle_Manager rather
-    // than creating one each frame (duh).
     const CHUNK_SIZE: usize = 64;
 
     let precomp_rng = &particles.precomp_rng;
@@ -178,30 +184,27 @@ pub fn render_particles(
     gres: &Gfx_Resources,
     shader: &Shader,
     camera: &Transform2D,
+    vbuf: &mut Vertex_Buffer_Holder,
+    frame_alloc: &mut temp::Temp_Allocator,
 ) {
     trace!("render_particles");
 
-    use inle_common::colors;
-    use inle_math::rect::{Rect, Rectf};
-
-    let mut vbuf = render::start_draw_points(particles.count() as _);
     let texture = particles
         .props
         .texture
         .map(|tex| gres.get_texture(Some(tex)));
-    let (tex_w, tex_h) = if let Some(tex) = texture {
-        render::get_texture_size(tex)
-    } else {
-        (0, 0)
-    };
-    let uv = Rect::new(0.0, 0.0, tex_w as f32, tex_h as f32);
-    let col = colors::WHITE;
+
+    let mut vertices = temp::excl_temp_array(frame_alloc);
     for &transf in &particles.transforms {
-        render::add_point(&mut vbuf, &render::new_vertex(transf.position(), col, Vec2f::default()));
+        // @Incomplete or @Redundant: passing the vertex color is useless right now
+        vertices.push(render::new_vertex(transf.position(), particles.props.color, Vec2f::default()));
     }
+
+    vbuf.update(&mut vertices, particles.transforms.len() as u32);
+
     render::render_vbuf_ws_ex(
         window,
-        &vbuf,
+        &vbuf.vbuf,
         &particles.transform,
         &camera,
         render::Render_Extra_Params {
@@ -235,6 +238,8 @@ impl Particles_Handle {
 pub struct Particle_Manager {
     particle_shader: Shader_Handle,
     active_particles: Vec<Particles>,
+    // This is in a separate array because we want Particles to be processable in parallel
+    active_particles_vbufs: Vec<Vertex_Buffer_Holder>,
 }
 
 impl Particle_Manager {
@@ -243,6 +248,7 @@ impl Particle_Manager {
         Self {
             particle_shader,
             active_particles: vec![],
+            active_particles_vbufs: vec![],
         }
     }
 
@@ -251,7 +257,17 @@ impl Particle_Manager {
         props: &Particle_Props,
         rng: &mut Default_Rng,
     ) -> Particles_Handle {
+        assert!(props.n_particles < std::u32::MAX as usize);
         self.active_particles.push(create_particles(props, rng));
+        self.active_particles_vbufs.push(
+            Vertex_Buffer_Holder::with_initial_vertex_count(
+                props.n_particles as u32,
+                Primitive_Type::Points,
+                #[cfg(debug_assertions)]
+                format!("{:?}", props)
+        ));
+        debug_assert_eq!(self.active_particles.len(), self.active_particles_vbufs.len());
+
         assert!(self.active_particles.len() < std::isize::MAX as usize);
         Particles_Handle(self.active_particles.len() as isize - 1)
     }
@@ -268,19 +284,33 @@ impl Particle_Manager {
     }
 
     pub fn render(
-        &self,
+        &mut self,
         window: &mut Render_Window_Handle,
         gres: &Gfx_Resources,
         shader_cache: &mut Shader_Cache,
         camera: &Transform2D,
+        frame_alloc: &mut temp::Temp_Allocator,
     ) {
         let shader = shader_cache.get_shader_mut(self.particle_shader);
         let (ww, wh) = inle_win::window::get_window_real_size(window);
-        render::set_uniform_float(shader, "quad_half_width", 0.001);
         render::set_uniform_float(shader, "camera_scale", 1.0 / camera.scale().x);
-        render::set_uniform_float(shader, "window_ratio", ww as f32 / wh as f32);
-        for particles in &self.active_particles {
-            render_particles(particles, window, gres, shader, camera);
+
+        for (particles, vbuf) in self.active_particles.iter().zip(self.active_particles_vbufs.iter_mut()) {
+            // @Incomplete: we must handle the case where the texture is unset.
+            if let Some(tex) = particles.props.texture.map(|tex| gres.get_texture(Some(tex))) {
+                let (tw, th) = render::get_texture_size(tex);
+                render::set_uniform_vec2(shader, "tex_size_normalized", v2!(tw as f32 / ww as f32, th as f32 / wh as f32));
+            }
+
+            // @Speed: we *may* want to run this in parallel and see if it gives benefits.
+            // We could prealloc an Excl_Temp_Array (we know the exact size we need) and split it
+            // as needed for every active Particles we need to render.
+            // Then we could fill those arrays in parallel and only after copy the memory to the
+            // vbufs (sequentially).
+            // This doesn't look very promising though, as the big chunk of work is probably the
+            // memory transfer, so I doubt this would give a noticeable improvement (in fact it
+            // may make things worse).
+            render_particles(particles, window, gres, shader, camera, vbuf, frame_alloc);
         }
     }
 }

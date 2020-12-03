@@ -8,7 +8,6 @@ use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::transform::Transform2D;
 use inle_physics::physics;
 use inle_resources::gfx::Gfx_Resources;
-use rayon::prelude::*;
 use std::convert::TryInto;
 use std::time::Duration;
 
@@ -401,7 +400,7 @@ where
         .engine_state
         .systems
         .particle_mgrs
-        .par_iter_mut()
+        .iter_mut()
         .for_each(|(_, particle_mgr)| {
             particle_mgr.update(&update_dt);
         });
@@ -517,7 +516,7 @@ where
         let shader_cache = &mut game_state.engine_state.shader_cache;
         let enable_shaders = game_state.cvars.enable_shaders.read(cfg);
         let enable_shadows = game_state.cvars.enable_shadows.read(cfg);
-        let particle_mgrs = &game_state.engine_state.systems.particle_mgrs;
+        let particle_mgrs = &mut game_state.engine_state.systems.particle_mgrs;
 
         game_state
             .gameplay_system
@@ -537,7 +536,7 @@ where
                     frame_alloc,
                 );
 
-                particle_mgrs[&level.id].render(window, &gres, shader_cache, &level.get_camera().transform);
+                particle_mgrs.get_mut(&level.id).unwrap().render(window, &gres, shader_cache, &level.get_camera().transform, frame_alloc);
             });
         batcher::draw_batches(
             window,

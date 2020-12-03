@@ -1,5 +1,4 @@
-use crate::material::Material;
-use crate::render::Vertex_Buffer_Quads;
+use crate::render::{Vertex_Buffer, Primitive_Type};
 use crate::render::{self, Vertex};
 use inle_common::colors;
 
@@ -9,18 +8,19 @@ fn null_vertex() -> Vertex {
 }
 
 pub struct Vertex_Buffer_Holder {
-    pub vbuf: Vertex_Buffer_Quads,
+    pub vbuf: Vertex_Buffer,
     #[cfg(debug_assertions)]
-    id: Material,
+    id: String,
 }
 
 impl Vertex_Buffer_Holder {
     pub fn with_initial_vertex_count(
         initial_cap: u32,
-        #[cfg(debug_assertions)] id: Material,
+        primitive: Primitive_Type,
+        #[cfg(debug_assertions)] id: String,
     ) -> Self {
         Self {
-            vbuf: render::start_draw_quads(initial_cap / 4),
+            vbuf: render::new_vbuf(primitive, initial_cap),
             #[cfg(debug_assertions)]
             id,
         }
@@ -54,17 +54,17 @@ impl Vertex_Buffer_Holder {
     pub fn grow(&mut self, vertices_to_hold_at_least: u32) {
         let new_cap = vertices_to_hold_at_least.next_power_of_two();
         ldebug!(
-            "Growing Vertex_Buffer_Holder {:?} to hold {} vertices ({} requested).",
+            "Growing Vertex_Buffer_Holder {} to hold {} vertices ({} requested).",
             self.id,
             new_cap,
             vertices_to_hold_at_least
         );
 
-        let mut new_vbuf = render::start_draw_quads(new_cap / 4);
+        let mut new_vbuf = render::new_vbuf(render::vbuf_primitive_type(&self.vbuf), new_cap);
         let _res = render::swap_vbuf(&mut new_vbuf, &mut self.vbuf);
         #[cfg(debug_assertions)]
         {
-            debug_assert!(_res, "Vertex Buffer copying failed ({:?})!", self.id);
+            debug_assert!(_res, "Vertex Buffer copying failed ({})!", self.id);
         }
     }
 }
