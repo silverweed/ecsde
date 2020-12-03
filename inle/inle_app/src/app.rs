@@ -304,7 +304,7 @@ pub fn init_engine_debug(
         graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
 
         // Prev frame time before display
-        graph_config.show_avg = true;
+        graph_config.show_average = true;
         graph_config.grid_ystep = Some(graph::Grid_Step::Fixed_Subdivs(4));
         graph_config.fixed_y_range = None;
         graph_config.title = Some(String::from("PrevFrameTime"));
