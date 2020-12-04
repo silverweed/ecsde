@@ -734,6 +734,7 @@ fn update_debug(
     let debug_ui = &mut debug_systems.debug_ui;
     let target_win_size = engine_state.app_config.target_win_size;
 
+    let is_paused = engine_state.time.paused && !engine_state.time.is_stepping();
     let cvars = &game_state.debug_cvars;
     let draw_entities = cvars.draw_entities.read(&engine_state.config);
     let draw_component_lists = cvars.draw_component_lists.read(&engine_state.config);
@@ -779,7 +780,7 @@ fn update_debug(
 
             if draw_entity_prev_frame_ghost {
                 let batches = lv_batches.get_mut(&level.id).unwrap();
-                debug_draw_entities_prev_frame_ghost(batches, &mut level.world);
+                debug_draw_entities_prev_frame_ghost(batches, &mut level.world, is_paused);
             }
 
             if draw_component_lists {
@@ -1270,6 +1271,7 @@ fn debug_draw_lights(
 fn debug_draw_entities_prev_frame_ghost(
     batches: &mut inle_gfx::render::batcher::Batches,
     ecs_world: &mut Ecs_World,
+    is_paused: bool,
 ) {
     use crate::debug::entity_debug::C_Debug_Data;
     use crate::systems::pixel_collision_system::C_Texture_Collider;
@@ -1279,21 +1281,25 @@ fn debug_draw_entities_prev_frame_ghost(
     foreach_entity!(ecs_world, +C_Spatial2D, +C_Renderable, +C_Debug_Data, ~C_Texture_Collider, |entity| {
         let frame_starting_pos = ecs_world.get_component::<C_Spatial2D>(entity).unwrap().frame_starting_pos;
         let C_Renderable {
-            material,
+            mut material,
             rect,
             modulate,
             z_index,
         } = *ecs_world.get_component::<C_Renderable>(entity).unwrap();
 
+        material.cast_shadows = false;
+
         let debug_data = ecs_world.get_component_mut::<C_Debug_Data>(entity).unwrap();
-        if (debug_data.n_prev_positions_filled as usize) < debug_data.prev_positions.len() {
-            debug_data.prev_positions[debug_data.n_prev_positions_filled as usize] = frame_starting_pos;
-            debug_data.n_prev_positions_filled += 1;
-        } else {
-            for i in 0..debug_data.prev_positions.len() - 1 {
-                debug_data.prev_positions[i] = debug_data.prev_positions[i + 1];
+        if !is_paused {
+            if (debug_data.n_prev_positions_filled as usize) < debug_data.prev_positions.len() {
+                debug_data.prev_positions[debug_data.n_prev_positions_filled as usize] = frame_starting_pos;
+                debug_data.n_prev_positions_filled += 1;
+            } else {
+                for i in 0..debug_data.prev_positions.len() - 1 {
+                    debug_data.prev_positions[i] = debug_data.prev_positions[i + 1];
+                }
+                debug_data.prev_positions[debug_data.prev_positions.len() - 1] = frame_starting_pos;
             }
-            debug_data.prev_positions[debug_data.prev_positions.len() - 1] = frame_starting_pos;
         }
 
         for i in 0..debug_data.n_prev_positions_filled {

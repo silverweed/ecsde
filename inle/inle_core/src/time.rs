@@ -28,6 +28,8 @@ pub struct Time {
 
     /// Holds the previous value of `paused`
     was_paused: bool,
+
+    stepping: bool,
 }
 
 impl Default for Time {
@@ -43,6 +45,7 @@ impl Default for Time {
             time_scale: 1.,
             paused: false,
             was_paused: false,
+            stepping: false,
         }
     }
 }
@@ -57,6 +60,8 @@ impl Time {
     }
 
     pub fn update(&mut self) {
+        self.stepping = false;
+
         // Update real time
         let prev_real_time = self.real_time;
         self.real_time = self.start_time.elapsed();
@@ -75,6 +80,11 @@ impl Time {
     pub fn step(&mut self, dt: &Duration) {
         self.prev_game_time = self.game_time;
         self.game_time += *dt;
+        self.stepping = true;
+    }
+
+    pub fn is_stepping(&self) -> bool {
+        self.stepping
     }
 
     pub fn dt(&self) -> Duration {
