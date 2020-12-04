@@ -14,7 +14,7 @@ pub struct Moved_Collider {
     pub extent: Vec2f,
 }
 
-const MIN_SPEED: f32 = 0.001;
+const MIN_SPEED: f32 = 0.01;
 
 pub fn update(
     dt: &Duration,
@@ -26,7 +26,7 @@ pub fn update(
 
     foreach_entity!(ecs_world, +C_Spatial2D, |entity| {
         let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
-        if spatial.velocity.magnitude() < MIN_SPEED {
+        if spatial.velocity.magnitude2() < MIN_SPEED * MIN_SPEED {
             spatial.velocity = v2!(0., 0.);
         }
         let translation = spatial.velocity * dt_secs;

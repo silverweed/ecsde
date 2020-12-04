@@ -3,10 +3,11 @@
 use super::levels::{Level, Levels};
 use super::systems::controllable_system::{self, C_Controllable};
 use super::systems::dumb_movement_system;
-use super::systems::gravity_system;
 use super::systems::entity_preview_system::{self, C_Entity_Preview};
+use super::systems::gravity_system;
 use super::systems::ground_collision_calculation_system::Ground_Collision_Calculation_System;
 use super::systems::pixel_collision_system::Pixel_Collision_System;
+use super::systems::camera_system;
 use crate::gfx;
 use crate::input_utils::{get_movement_from_input, Input_Config};
 use crate::load::load_system;
@@ -57,6 +58,9 @@ pub struct Gameplay_System {
 
     #[cfg(debug_assertions)]
     debug_data: Debug_Data,
+
+    // @Cleanup: this is pretty ugly here
+    camera_on_player: Cfg_Var<bool>,
 }
 
 #[cfg(debug_assertions)]
@@ -77,6 +81,7 @@ impl Gameplay_System {
             cursor_entity: None,
             #[cfg(debug_assertions)]
             debug_data: Debug_Data::default(),
+            camera_on_player: Cfg_Var::default(),
         }
     }
 
@@ -89,6 +94,7 @@ impl Gameplay_System {
         self.input_cfg = read_input_cfg(&engine_state.config);
         self.cfg = gs_cfg;
         self.ground_collision_calc_system.init(engine_state);
+        self.camera_on_player = Cfg_Var::new("game/camera/on_player", &engine_state.config);
 
         Ok(())
     }
@@ -282,16 +288,34 @@ impl Gameplay_System {
     pub fn realtime_update(
         &mut self,
         real_dt: &Duration,
-        input_state: &Input_State,
-        cfg: &inle_cfg::Config,
+        engine_state: &Engine_State,
+        window: &Render_Window_Handle,
     ) {
         trace!("gameplay_system::realtime_update");
-        self.update_camera(real_dt, input_state, cfg);
+
+        if self.camera_on_player.read(&engine_state.config) {
+            self.update_camera(real_dt, engine_state, window);
+        } else {
+            self.update_free_camera(real_dt, &engine_state.input_state, &engine_state.config);
+        }
     }
 
     fn update_camera(
         &mut self,
-        real_dt: &Duration,
+        dt: &Duration,
+        engine_state: &Engine_State,
+        window: &Render_Window_Handle,
+    ) {
+        self.levels.foreach_active_level(|level| {
+            let world = &mut level.world;
+
+            camera_system::update(dt, world, window, &engine_state.config);
+        });
+    }
+
+    fn update_free_camera(
+        &mut self,
+        dt: &Duration,
         input_state: &Input_State,
         cfg: &inle_cfg::Config,
     ) {
@@ -306,11 +330,11 @@ impl Gameplay_System {
                     return;
                 }
 
-                let real_dt_secs = real_dt.as_secs_f32();
+                let dt_secs = dt.as_secs_f32();
                 let mut camera_ctrl = camera_ctrl.unwrap();
                 let speed = camera_ctrl.speed.read(cfg);
                 let velocity = movement * speed;
-                let v = velocity * real_dt_secs;
+                let v = velocity * dt_secs;
                 camera_ctrl.translation_this_frame = v;
                 v
             };
@@ -344,38 +368,13 @@ impl Gameplay_System {
                 camera.transform.add_scale_v(add_scale);
 
                 // Keep viewport centered
-                let win_w = Cfg_Var::<i32>::new("engine/window/width", &cfg).read(&cfg);
-                let win_h = Cfg_Var::<i32>::new("engine/window/height", &cfg).read(&cfg);
+                let win_w = Cfg_Var::<i32>::new("engine/window/width", cfg).read(cfg);
+                let win_h = Cfg_Var::<i32>::new("engine/window/height", cfg).read(cfg);
                 v -= add_scale * 0.5 * v2!(win_w as f32, win_h as f32);
             }
 
             //return;
             camera.transform.translate_v(v);
-
-            // DEBUG: center camera on player
-            let camera_on_player =
-                Cfg_Var::<bool>::new("engine/debug/gameplay/camera_on_player", &cfg).read(&cfg);
-            if !camera_on_player {
-                return;
-            }
-
-            foreach_entity!(&level.world, +C_Controllable, ~C_Camera2D, |moved| {
-                let pos = level
-                    .world
-                    .get_component::<C_Spatial2D>(moved)
-                    .unwrap()
-                    .transform
-                    .position();
-
-                let camera = level
-                    .world
-                    .get_component_mut::<C_Camera2D>(level.cameras[level.active_camera])
-                    .unwrap();
-
-                camera
-                    .transform
-                    .set_position_v(pos + Vec2f::new(-320., -175.));
-            });
         });
     }
 

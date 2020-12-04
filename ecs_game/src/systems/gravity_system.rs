@@ -1,6 +1,6 @@
-use inle_ecs::ecs_world::Ecs_World;
+use inle_cfg::{var::Cfg_Var, Config};
 use inle_ecs::components::base::C_Spatial2D;
-use inle_cfg::{Config, var::Cfg_Var};
+use inle_ecs::ecs_world::Ecs_World;
 use std::time::Duration;
 
 #[derive(Copy, Clone, Debug)]

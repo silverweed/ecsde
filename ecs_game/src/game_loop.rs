@@ -292,8 +292,8 @@ where
 
             game_state.gameplay_system.realtime_update(
                 &real_dt,
-                &game_state.engine_state.input_state,
-                &game_state.engine_state.config,
+                &game_state.engine_state,
+                &game_state.window,
             );
 
             // @Cleanup: where do we put this? Do we want this inside gameplay_system?

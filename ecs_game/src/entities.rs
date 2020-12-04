@@ -1,9 +1,8 @@
 use crate::collisions::Game_Collision_Layer;
 use crate::gfx::multi_sprite_animation_system::{Animation_Track, C_Multi_Renderable_Animation};
-use crate::systems::gravity_system::C_Gravity;
 use crate::gfx::shaders::*;
 use crate::systems::controllable_system::C_Controllable;
-use inle_math::angle::{deg, rad};
+use crate::systems::gravity_system::C_Gravity;
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use inle_cfg::{Cfg_Var, Config};
 use inle_core::env::Env_Info;
@@ -12,12 +11,13 @@ use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_gfx::components::{C_Animated_Sprite, C_Multi_Renderable, C_Renderable};
 use inle_gfx::material::Material;
 use inle_gfx::render;
+use inle_math::angle::{deg, rad};
 use inle_math::rect::Rect;
 use inle_math::transform::Transform2D;
+use inle_math::vector::Vec2f;
 use inle_physics::collider::{C_Collider, Collider, Collision_Shape};
 use inle_physics::phys_world::{Phys_Data, Physics_World};
 use inle_resources::gfx::{shader_path, tex_path, Gfx_Resources, Shader_Cache};
-use inle_math::vector::Vec2f;
 
 #[cfg(debug_assertions)]
 use {crate::debug::entity_debug::C_Debug_Data, std::collections::HashMap, std::sync::Mutex};
@@ -93,7 +93,7 @@ pub fn create_jelly(
         entity,
         C_Gravity {
             acceleration: Cfg_Var::new("game/gameplay/player/gravity", cfg),
-        }
+        },
     );
 
     let (sw, sh) = render::get_texture_size(gres.get_texture(renderable.material.texture));
@@ -389,10 +389,46 @@ pub fn create_room(
     env: &Env_Info,
     cfg: &Config,
 ) {
-    create_wall(world, phys_world, gres, shader_cache, env, &Transform2D::from_pos(v2!(0.0, 100.)), v2!(400., 20.), cfg);
-    create_wall(world, phys_world, gres, shader_cache, env, &Transform2D::from_pos(v2!(0.0, -100.)), v2!(400., 20.), cfg);
-    create_wall(world, phys_world, gres, shader_cache, env, &Transform2D::from_pos(v2!(-200.0, 0.0)), v2!(20., 200.), cfg);
-    create_wall(world, phys_world, gres, shader_cache, env, &Transform2D::from_pos(v2!(200.0, 0.0)), v2!(20., 200.), cfg);
+    create_wall(
+        world,
+        phys_world,
+        gres,
+        shader_cache,
+        env,
+        &Transform2D::from_pos(v2!(0.0, 100.)),
+        v2!(400., 20.),
+        cfg,
+    );
+    create_wall(
+        world,
+        phys_world,
+        gres,
+        shader_cache,
+        env,
+        &Transform2D::from_pos(v2!(0.0, -100.)),
+        v2!(400., 20.),
+        cfg,
+    );
+    create_wall(
+        world,
+        phys_world,
+        gres,
+        shader_cache,
+        env,
+        &Transform2D::from_pos(v2!(-200.0, 0.0)),
+        v2!(20., 200.),
+        cfg,
+    );
+    create_wall(
+        world,
+        phys_world,
+        gres,
+        shader_cache,
+        env,
+        &Transform2D::from_pos(v2!(200.0, 0.0)),
+        v2!(20., 200.),
+        cfg,
+    );
 }
 
 pub fn create_wall(
@@ -404,8 +440,7 @@ pub fn create_wall(
     transform: &Transform2D,
     wall_size: Vec2f,
     _cfg: &Config,
-)
-{
+) {
     let wall = world.new_entity();
 
     let renderable = world.add_component(

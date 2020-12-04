@@ -4,10 +4,11 @@ use crate::gfx::multi_sprite_animation_system::C_Multi_Renderable_Animation;
 use crate::gfx::shaders::*;
 use crate::levels::Level;
 use crate::spatial::World_Chunks;
-use crate::systems::gravity_system::C_Gravity;
+use crate::systems::camera_system::{C_Camera_Follow, Camera_Follow_Target};
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::dumb_movement_system::C_Dumb_Movement;
 use crate::systems::entity_preview_system::C_Entity_Preview;
+use crate::systems::gravity_system::C_Gravity;
 use crate::systems::ground_collision_calculation_system::C_Ground;
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use crate::Game_Resources;
@@ -85,6 +86,7 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Multi_Renderable_Animation>();
     world.register_component::<C_Entity_Preview>(); // @Cleanup
     world.register_component::<C_Gravity>();
+    world.register_component::<C_Camera_Follow>();
 
     #[cfg(debug_assertions)]
     {
@@ -163,7 +165,7 @@ fn init_demo_entities(
     let camera = level.world.new_entity();
     {
         let cam = level.world.add_component(camera, C_Camera2D::default());
-        cam.transform.set_scale(0.2, 0.2);
+        cam.transform.set_scale(0.4, 0.4);
         cam.transform.set_position(-120., -75.);
     }
     level.cameras.push(camera);
@@ -172,7 +174,7 @@ fn init_demo_entities(
         let mut ctrl = level.world.add_component(
             camera,
             C_Controllable {
-                speed: Cfg_Var::new("game/gameplay/camera_speed", cfg),
+                speed: Cfg_Var::new("game/camera/speed", cfg),
                 ..Default::default()
             },
         );
@@ -181,7 +183,14 @@ fn init_demo_entities(
     entities::create_background(&mut level.world, gres, shader_cache, env, cfg);
 
     //entities::create_terrain(&mut level.world, gres, shader_cache, env, cfg);
-    entities::create_room(&mut level.world, &mut level.phys_world, gres, shader_cache, env, cfg);
+    entities::create_room(
+        &mut level.world,
+        &mut level.phys_world,
+        gres,
+        shader_cache,
+        env,
+        cfg,
+    );
 
     //entities::create_sky(
     //    &mut level.world,
@@ -201,7 +210,7 @@ fn init_demo_entities(
             v2!(20., 20.)
         };
 
-        entities::create_jelly(
+        let player = entities::create_jelly(
             &mut level.world,
             &mut level.phys_world,
             gres,
@@ -210,6 +219,14 @@ fn init_demo_entities(
             cfg,
             &Transform2D::from_pos(pos),
             i == 0,
+        );
+
+        level.world.add_component(
+            camera,
+            C_Camera_Follow {
+                target: Camera_Follow_Target::Entity(player),
+                lerp_factor: Cfg_Var::new("game/camera/lerp_factor", cfg),
+            },
         );
     }
 

@@ -1,6 +1,6 @@
 use crate::states::state::{Game_State_Args, Persistent_Game_State};
 use crate::systems::pixel_collision_system::C_Texture_Collider;
-use inle_cfg::{self, Cfg_Var};
+use inle_cfg::{self, Cfg_Var, Cfg_Value};
 use inle_common::colors;
 use inle_common::stringid::String_Id;
 use inle_ecs::components::base::C_Spatial2D;
@@ -13,16 +13,9 @@ use inle_math::rect::Rect;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window;
 use std::time::Duration;
+use std::convert::TryFrom;
 
 pub struct Debug_Base_State {
-    sid_game_speed_up: String_Id,
-    sid_game_speed_down: String_Id,
-    sid_pause_toggle: String_Id,
-    sid_step_sim: String_Id,
-    sid_print_em_debug_info: String_Id,
-    sid_toggle_trace_overlay: String_Id,
-    sid_move_camera_to_origin: String_Id,
-    sid_debug_dig: String_Id,
     // @Cleanup: this cfg_var is already in Game_State!
     // Should we perhaps move it into Engine_State and read it from handle_actions?
     gameplay_update_tick_ms: Cfg_Var<f32>,
@@ -34,14 +27,6 @@ const CHANGE_SPEED_DELTA: f32 = 0.1;
 impl Debug_Base_State {
     pub fn new(cfg: &inle_cfg::Config) -> Debug_Base_State {
         Debug_Base_State {
-            sid_game_speed_up: sid!("game_speed_up"),
-            sid_game_speed_down: sid!("game_speed_down"),
-            sid_pause_toggle: sid!("pause_toggle"),
-            sid_step_sim: sid!("step_sim"),
-            sid_print_em_debug_info: sid!("print_em_debug_info"),
-            sid_toggle_trace_overlay: sid!("toggle_trace_overlay"),
-            sid_move_camera_to_origin: sid!("move_camera_to_origin"),
-            sid_debug_dig: sid!("debug_dig"),
             gameplay_update_tick_ms: Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg),
             digging: false,
         }
@@ -72,10 +57,10 @@ impl Persistent_Game_State for Debug_Base_State {
         for action in actions {
             match action {
                 (name, Action_Kind::Pressed)
-                    if *name == self.sid_game_speed_up || *name == self.sid_game_speed_down =>
+                    if *name == sid!("game_speed_up") || *name == sid!("game_speed_down") =>
                 {
                     let mut ts = engine_state.time.time_scale;
-                    if action.0 == self.sid_game_speed_up {
+                    if action.0 == sid!("game_speed_up") {
                         ts *= 2.0;
                     } else {
                         ts *= 0.5;
@@ -89,7 +74,7 @@ impl Persistent_Game_State for Debug_Base_State {
                         &format!("Time scale: {:.3}", engine_state.time.time_scale)
                     );
                 }
-                (name, Action_Kind::Pressed) if *name == self.sid_pause_toggle => {
+                (name, Action_Kind::Pressed) if *name == sid!("pause_toggle") => {
                     engine_state.time.pause_toggle();
                     window::set_key_repeat_enabled(window, engine_state.time.paused);
                     add_msg!(
@@ -101,7 +86,7 @@ impl Persistent_Game_State for Debug_Base_State {
                         }
                     );
                 }
-                (name, Action_Kind::Pressed) if *name == self.sid_step_sim => {
+                (name, Action_Kind::Pressed) if *name == sid!("step_sim") => {
                     let step_delta = std::time::Duration::from_millis(
                         self.gameplay_update_tick_ms.read(&engine_state.config) as u64,
                     );
@@ -143,10 +128,10 @@ impl Persistent_Game_State for Debug_Base_State {
                         }
                     });
                 }
-                (name, Action_Kind::Pressed) if *name == self.sid_print_em_debug_info => {
+                (name, Action_Kind::Pressed) if *name == sid!("print_em_debug_info") => {
                     //gs.print_debug_info();
                 }
-                (name, Action_Kind::Pressed) if *name == self.sid_toggle_trace_overlay => {
+                (name, Action_Kind::Pressed) if *name == sid!("toggle_trace_overlay") => {
                     let show_trace = &mut engine_state.debug_systems.show_trace_overlay;
                     *show_trace = !*show_trace;
                     engine_state
@@ -154,16 +139,26 @@ impl Persistent_Game_State for Debug_Base_State {
                         .debug_ui
                         .set_overlay_enabled(sid!("trace"), *show_trace);
                 }
-                (name, Action_Kind::Pressed) if *name == self.sid_move_camera_to_origin => {
+                (name, Action_Kind::Pressed) if *name == sid!("move_camera_to_origin") => {
                     gs.levels
                         .foreach_active_level(|level| level.move_camera_to(Vec2f::new(0., 0.)));
                     add_msg!(engine_state, "Moved camera to origin");
                 }
-                (name, Action_Kind::Pressed) if *name == self.sid_debug_dig => {
+                (name, Action_Kind::Pressed) if *name == sid!("debug_dig") => {
                     self.digging = true;
                 }
-                (name, Action_Kind::Released) if *name == self.sid_debug_dig => {
+                (name, Action_Kind::Released) if *name == sid!("debug_dig") => {
                     self.digging = false;
+                }
+                (name, Action_Kind::Released) if *name == sid!("toggle_camera_on_player") => {
+                    let cur: bool = bool::try_from(engine_state
+                        .config
+                        .read_cfg(sid!("game/camera/on_player"))
+                        .unwrap().clone())
+                        .unwrap();
+                    engine_state
+                        .config
+                        .write_cfg(sid!("game/camera/on_player"), Cfg_Value::from(!cur));
                 }
                 _ => {}
             }

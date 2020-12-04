@@ -59,9 +59,9 @@ pub enum Joystick_Button {
     Dpad_Right,
     Dpad_Bottom,
     Dpad_Left,
-    // L2
+    /// L2
     Trigger_Left,
-    // R2
+    /// R2
     Trigger_Right,
     _Count,
 }
@@ -93,23 +93,23 @@ impl TryFrom<u8> for Joystick_Axis {
 
 pub fn string_to_joy_btn(s: &str) -> Option<Joystick_Button> {
     match s {
-        "Face_Top" => Some(Joystick_Button::Face_Top),
-        "Face_Right" => Some(Joystick_Button::Face_Right),
-        "Face_Bottom" => Some(Joystick_Button::Face_Bottom),
-        "Face_Left" => Some(Joystick_Button::Face_Left),
-        "Special_Left" => Some(Joystick_Button::Special_Left),
-        "Special_Right" => Some(Joystick_Button::Special_Right),
+        "Face_Top" | "Triangle" | "XBox_Y" => Some(Joystick_Button::Face_Top),
+        "Face_Right" | "Circle" | "XBox_B" => Some(Joystick_Button::Face_Right),
+        "Face_Bottom" | "Cross" | "XBox_A" => Some(Joystick_Button::Face_Bottom),
+        "Face_Left" | "Square" | "XBox_X" => Some(Joystick_Button::Face_Left),
+        "Special_Left" | "Select" => Some(Joystick_Button::Special_Left),
+        "Special_Right" | "Start" => Some(Joystick_Button::Special_Right),
         "Special_Middle" => Some(Joystick_Button::Special_Middle),
-        "Stick_Left" => Some(Joystick_Button::Stick_Left),
-        "Stick_Right" => Some(Joystick_Button::Stick_Right),
-        "Shoulder_Left" => Some(Joystick_Button::Shoulder_Left),
-        "Shoulder_Right" => Some(Joystick_Button::Shoulder_Right),
+        "Stick_Left" | "L3" => Some(Joystick_Button::Stick_Left),
+        "Stick_Right" | "R3" => Some(Joystick_Button::Stick_Right),
+        "Shoulder_Left" | "L1" | "LB" => Some(Joystick_Button::Shoulder_Left),
+        "Shoulder_Right" | "R1" | "RB" => Some(Joystick_Button::Shoulder_Right),
         "Dpad_Top" => Some(Joystick_Button::Dpad_Top),
         "Dpad_Right" => Some(Joystick_Button::Dpad_Right),
         "Dpad_Bottom" => Some(Joystick_Button::Dpad_Bottom),
         "Dpad_Left" => Some(Joystick_Button::Dpad_Left),
-        "Trigger_Left" => Some(Joystick_Button::Trigger_Left),
-        "Trigger_Right" => Some(Joystick_Button::Trigger_Right),
+        "Trigger_Left" | "L2" | "LT" => Some(Joystick_Button::Trigger_Left),
+        "Trigger_Right" | "R2" | "RT" => Some(Joystick_Button::Trigger_Right),
         _ => None,
     }
 }
@@ -120,8 +120,8 @@ pub fn string_to_joy_axis(s: &str) -> Option<Joystick_Axis> {
         "Stick_Left_V" => Some(Joystick_Axis::Stick_Left_V),
         "Stick_Right_H" => Some(Joystick_Axis::Stick_Right_H),
         "Stick_Right_V" => Some(Joystick_Axis::Stick_Right_V),
-        "Trigger_Left" => Some(Joystick_Axis::Trigger_Left),
-        "Trigger_Right" => Some(Joystick_Axis::Trigger_Right),
+        "Trigger_Left" | "L2" | "LT" => Some(Joystick_Axis::Trigger_Left),
+        "Trigger_Right" | "R2" | "RT" => Some(Joystick_Axis::Trigger_Right),
         "Dpad_H" => Some(Joystick_Axis::Dpad_H),
         "Dpad_V" => Some(Joystick_Axis::Dpad_V),
         _ => None,

@@ -3,7 +3,7 @@ use inle_cfg::{self, Cfg_Var};
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::Ecs_World;
 use inle_input::axes::Virtual_Axes;
-use inle_input::input_state::{Game_Action, Action_Kind};
+use inle_input::input_state::{Action_Kind, Game_Action};
 use inle_math::vector::Vec2f;
 use std::time::Duration;
 
@@ -25,7 +25,7 @@ pub fn update(
     input_cfg: Input_Config,
     cfg: &inle_cfg::Config,
 ) {
-    let movement = get_movement_from_input(axes, input_cfg, cfg);
+    let movement = get_movement_from_input(axes, input_cfg, cfg).x;
     let dt_secs = dt.as_secs_f32();
 
     foreach_entity!(ecs_world, +C_Controllable, +C_Spatial2D, |entity| {
@@ -40,7 +40,7 @@ pub fn update(
         let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
         let velocity = &mut spatial.velocity;
 
-        *velocity += movement * acceleration * dt_secs;
+        velocity.x += movement * acceleration * dt_secs;
         if actions.contains(&(sid!("jump"), Action_Kind::Pressed)) {
             velocity.y -= jump_force * dt_secs;
         }

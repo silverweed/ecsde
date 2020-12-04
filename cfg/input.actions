@@ -22,7 +22,8 @@ move_camera_to_origin: O
 toggle_console: Tilde
 calipers: Mouse_Middle
 debug_dig: LControl
+toggle_camera_on_player: Home
 
 # Game
 place_entity: Mouse_Left
-jump: LShift, Space
+jump: LShift, Space, Joy_Cross
