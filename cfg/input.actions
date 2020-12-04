@@ -25,3 +25,4 @@ debug_dig: LControl
 
 # Game
 place_entity: Mouse_Left
+jump: LShift, Space

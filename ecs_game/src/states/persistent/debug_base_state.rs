@@ -200,8 +200,11 @@ impl Persistent_Game_State for Debug_Base_State {
                 .require::<C_Texture_Collider>()
                 .require::<C_Spatial2D>()
                 .build();
-            // assume we have a texture collider (and it's the one we're interested in)
-            let tex_cld_entity = entity_stream.next(world).unwrap();
+            let tex_cld_entity = entity_stream.next(world);
+            if tex_cld_entity.is_none() {
+                return;
+            }
+            let tex_cld_entity = tex_cld_entity.unwrap();
             let texture = world
                 .get_component::<C_Texture_Collider>(tex_cld_entity)
                 .unwrap()

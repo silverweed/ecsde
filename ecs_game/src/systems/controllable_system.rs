@@ -3,28 +3,23 @@ use inle_cfg::{self, Cfg_Var};
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::Ecs_World;
 use inle_input::axes::Virtual_Axes;
-use inle_input::input_state::Game_Action;
+use inle_input::input_state::{Game_Action, Action_Kind};
 use inle_math::vector::Vec2f;
 use std::time::Duration;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct C_Controllable {
-    pub speed: Cfg_Var<f32>,
     pub translation_this_frame: Vec2f,
-}
-
-impl Default for C_Controllable {
-    fn default() -> C_Controllable {
-        C_Controllable {
-            speed: Cfg_Var::default(),
-            translation_this_frame: Vec2f::new(0.0, 0.0),
-        }
-    }
+    pub speed: Cfg_Var<f32>, // @Cleanup: this is currently used by the camera!
+    pub acceleration: Cfg_Var<f32>,
+    pub jump_force: Cfg_Var<f32>,
+    pub dampening: Cfg_Var<f32>,
+    pub horiz_max_speed: Cfg_Var<f32>,
 }
 
 pub fn update(
     dt: &Duration,
-    _actions: &[Game_Action],
+    actions: &[Game_Action],
     axes: &Virtual_Axes,
     ecs_world: &mut Ecs_World,
     input_cfg: Input_Config,
@@ -35,14 +30,29 @@ pub fn update(
 
     foreach_entity!(ecs_world, +C_Controllable, +C_Spatial2D, |entity| {
         let ctrl = ecs_world
-            .get_component_mut::<C_Controllable>(entity)
+            .get_component::<C_Controllable>(entity)
             .unwrap();
-        let speed = ctrl.speed.read(cfg);
-        let velocity = movement * speed;
-        let v = velocity * dt_secs;
-        ctrl.translation_this_frame = v;
+        let acceleration = ctrl.acceleration.read(cfg);
+        let jump_force = ctrl.jump_force.read(cfg);
+        let dampening = ctrl.dampening.read(cfg);
+        let horiz_max_speed = ctrl.horiz_max_speed.read(cfg);
 
         let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
-        spatial.velocity = velocity;
+        let velocity = &mut spatial.velocity;
+
+        *velocity += movement * acceleration * dt_secs;
+        if actions.contains(&(sid!("jump"), Action_Kind::Pressed)) {
+            velocity.y -= jump_force * dt_secs;
+        }
+        let velocity_norm = velocity.normalized_or_zero();
+        let speed = velocity.magnitude();
+        *velocity -=  velocity_norm * dampening * speed * dt_secs;
+        velocity.x = velocity.x.min(horiz_max_speed);
+
+        let v = *velocity * dt_secs;
+        let ctrl = ecs_world
+            .get_component_mut::<C_Controllable>(entity)
+            .unwrap();
+        ctrl.translation_this_frame = v;
     });
 }

@@ -72,7 +72,10 @@ pub fn create_jelly(
         world.add_component(
             entity,
             C_Controllable {
-                speed: Cfg_Var::new("game/gameplay/player_speed", cfg),
+                acceleration: Cfg_Var::new("game/gameplay/player/acceleration", cfg),
+                jump_force: Cfg_Var::new("game/gameplay/player/jump_force", cfg),
+                dampening: Cfg_Var::new("game/gameplay/player/dampening", cfg),
+                horiz_max_speed: Cfg_Var::new("game/gameplay/player/horiz_max_speed", cfg),
                 ..Default::default()
             },
         );
@@ -89,7 +92,7 @@ pub fn create_jelly(
     world.add_component(
         entity,
         C_Gravity {
-            acceleration: 9800.0,
+            acceleration: Cfg_Var::new("game/gameplay/player/gravity", cfg),
         }
     );
 

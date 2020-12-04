@@ -248,7 +248,7 @@ impl Gameplay_System {
 
             ground_collision_calc_system.update(world, &mut level.phys_world, &mut level.chunks);
 
-            gravity_system::update(&dt, world);
+            gravity_system::update(&dt, world, cfg);
             //movement_system::update(&dt, world);
             dumb_movement_system::update(&dt, world, &mut level.phys_world, rng);
 
