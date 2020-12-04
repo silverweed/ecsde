@@ -117,10 +117,14 @@ impl Gameplay_System {
             .push(self.levels.loaded_levels.len() - 1);
 
         level_batches.insert(level_id, Batches::default());
-        engine_state
-            .systems
-            .particle_mgrs
-            .insert(level_id, Particle_Manager::new(&mut engine_state.shader_cache, &engine_state.env, &engine_state.config));
+        engine_state.systems.particle_mgrs.insert(
+            level_id,
+            Particle_Manager::new(
+                &mut engine_state.shader_cache,
+                &engine_state.env,
+                &engine_state.config,
+            ),
+        );
 
         #[cfg(debug_assertions)]
         {

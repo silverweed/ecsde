@@ -25,5 +25,16 @@ pub struct Render_Extra_Params<'t, 's> {
     pub shader: Option<&'s Shader<'s>>,
 }
 
-pub use backend::shaders_are_available;
+#[derive(Copy, Clone, Debug)]
+pub enum Primitive_Type {
+    Points,
+    Lines,
+    Line_Strip,
+    Triangles,
+    Triangle_Strip,
+    Triangle_Fan,
+    Quads,
+}
+
 pub use backend::geom_shaders_are_available;
+pub use backend::shaders_are_available;

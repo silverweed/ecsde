@@ -1,10 +1,8 @@
 use inle_audio::audio_system;
 use inle_events::evt_register;
-use inle_gfx;
 
 #[cfg(debug_assertions)]
 use {
-    inle_cfg,
     inle_common::stringid::String_Id,
     inle_core::env::Env_Info,
     inle_core::rand::Default_Rng_Seed,

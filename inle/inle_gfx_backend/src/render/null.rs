@@ -1,17 +1,19 @@
-use super::Render_Extra_Params;
-use crate::common::colors::{self, Color};
-use crate::common::rect::Rect;
-use crate::common::shapes;
-use crate::common::transform::Transform2D;
-use crate::common::vector::Vec2f;
-use crate::gfx::paint_props::Paint_Properties;
-use crate::gfx::render_window::Render_Window_Handle;
+use super::{Primitive_Type, Render_Extra_Params};
+use crate::render_window::Render_Window_Handle;
+use inle_common::colors::{self, Color};
+use inle_common::paint_props::Paint_Properties;
+use inle_math::rect::Rect;
+use inle_math::shapes;
+use inle_math::transform::Transform2D;
+use inle_math::vector::Vec2f;
 use std::marker::PhantomData;
 
 pub struct Vertex_Buffer {
     cur_vertices: u32,
     max_vertices: u32,
+    primitive_type: Primitive_Type,
 }
+
 #[derive(Copy, Clone)]
 pub struct Vertex {
     pub position: Vec2f,
@@ -120,10 +122,23 @@ pub fn get_text_size(_text: &Text) -> Vec2f {
     Vec2f::default()
 }
 
+pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
+    vbuf.primitive_type
+}
+
+pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
+    Vertex_Buffer {
+        cur_vertices: 0,
+        max_vertices: n_vertices,
+        primitive_type: primitive,
+    }
+}
+
 pub fn start_draw_quads(n_quads: u32) -> Vertex_Buffer {
     Vertex_Buffer {
         cur_vertices: 0,
         max_vertices: n_quads * 4,
+        primitive_type: Primitive_Type::Quads,
     }
 }
 
@@ -131,6 +146,7 @@ pub fn start_draw_triangles(n_tris: u32) -> Vertex_Buffer {
     Vertex_Buffer {
         cur_vertices: 0,
         max_vertices: n_tris * 3,
+        primitive_type: Primitive_Type::Triangles,
     }
 }
 
@@ -138,6 +154,7 @@ pub fn start_draw_lines(n_lines: u32) -> Vertex_Buffer {
     Vertex_Buffer {
         cur_vertices: 0,
         max_vertices: n_lines * 2,
+        primitive_type: Primitive_Type::Lines,
     }
 }
 
@@ -145,6 +162,15 @@ pub fn start_draw_linestrip(n_vertices: u32) -> Vertex_Buffer {
     Vertex_Buffer {
         cur_vertices: 0,
         max_vertices: n_vertices,
+        primitive_type: Primitive_Type::Line_Strip,
+    }
+}
+
+pub fn start_draw_points(n_vertices: u32) -> Vertex_Buffer {
+    Vertex_Buffer {
+        cur_vertices: 0,
+        max_vertices: n_vertices,
+        primitive_type: Primitive_Type::Points,
     }
 }
 
@@ -247,6 +273,10 @@ pub fn swap_vbuf(_a: &mut Vertex_Buffer, _b: &mut Vertex_Buffer) -> bool {
 pub fn update_texture_pixels(_texture: &mut Texture, _rect: &Rect<u32>, _pixels: &[Color]) {}
 
 pub fn shaders_are_available() -> bool {
+    false
+}
+
+pub fn geom_shaders_are_available() -> bool {
     false
 }
 

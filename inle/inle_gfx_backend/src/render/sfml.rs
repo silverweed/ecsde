@@ -1,4 +1,4 @@
-use super::Render_Extra_Params;
+use super::{Primitive_Type, Render_Extra_Params};
 use crate::render_window::Render_Window_Handle;
 use inle_common::colors::Color;
 use inle_common::paint_props::Paint_Properties;
@@ -26,7 +26,6 @@ impl std::fmt::Debug for Vertex_Buffer {
 pub type Vertex = sfml::graphics::Vertex;
 pub type Image = sfml::graphics::Image;
 pub type Shader<'texture> = sfml::graphics::Shader<'texture>;
-pub type Primitive_Type = PrimitiveType;
 
 sf_wrap!(Texture, sfml::graphics::Texture);
 sf_wrap!(Font, sfml::graphics::Font);
@@ -201,16 +200,20 @@ pub fn get_text_size(text: &sfml::graphics::Text<'_>) -> Vec2f {
 }
 
 #[inline(always)]
-pub fn new_vbuf(primitive: PrimitiveType, n_vertices: u32) -> Vertex_Buffer {
+pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
     Vertex_Buffer {
-        buf: VertexBuffer::new(primitive, n_vertices, VertexBufferUsage::Stream),
+        buf: VertexBuffer::new(
+            to_framework_primitive(primitive),
+            n_vertices,
+            VertexBufferUsage::Stream,
+        ),
         cur_vertices: 0,
     }
 }
 
 #[inline(always)]
 pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
-    vbuf.buf.primitive_type()
+    from_framework_primitive(vbuf.buf.primitive_type())
 }
 
 #[inline(always)]
@@ -256,11 +259,7 @@ pub fn start_draw_linestrip(n_vertices: u32) -> Vertex_Buffer {
 #[inline(always)]
 pub fn start_draw_points(n_vertices: u32) -> Vertex_Buffer {
     Vertex_Buffer {
-        buf: VertexBuffer::new(
-            PrimitiveType::Points,
-            n_vertices,
-            VertexBufferUsage::Stream,
-        ),
+        buf: VertexBuffer::new(PrimitiveType::Points, n_vertices, VertexBufferUsage::Stream),
         cur_vertices: 0,
     }
 }
@@ -494,4 +493,28 @@ fn col2v3(color: Color) -> glsl::Vec3 {
 #[inline(always)]
 pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
     texture.set_repeated(repeated);
+}
+
+const fn to_framework_primitive(prim: Primitive_Type) -> PrimitiveType {
+    match prim {
+        Primitive_Type::Points => PrimitiveType::Points,
+        Primitive_Type::Lines => PrimitiveType::Lines,
+        Primitive_Type::Line_Strip => PrimitiveType::LineStrip,
+        Primitive_Type::Triangles => PrimitiveType::Triangles,
+        Primitive_Type::Triangle_Strip => PrimitiveType::TriangleStrip,
+        Primitive_Type::Triangle_Fan => PrimitiveType::TriangleFan,
+        Primitive_Type::Quads => PrimitiveType::Quads,
+    }
+}
+
+const fn from_framework_primitive(prim: PrimitiveType) -> Primitive_Type {
+    match prim {
+        PrimitiveType::Points => Primitive_Type::Points,
+        PrimitiveType::Lines => Primitive_Type::Lines,
+        PrimitiveType::LineStrip => Primitive_Type::Line_Strip,
+        PrimitiveType::Triangles => Primitive_Type::Triangles,
+        PrimitiveType::TriangleStrip => Primitive_Type::Triangle_Strip,
+        PrimitiveType::TriangleFan => Primitive_Type::Triangle_Fan,
+        PrimitiveType::Quads => Primitive_Type::Quads,
+    }
 }

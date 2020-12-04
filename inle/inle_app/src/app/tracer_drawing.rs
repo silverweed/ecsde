@@ -168,7 +168,7 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
 }
 
 pub fn update_graph_traced_fn(
-    traces: impl Iterator<Item=Tracer_Node_Final>, // NOTE: these must be flattened!
+    traces: impl Iterator<Item = Tracer_Node_Final>, // NOTE: these must be flattened!
     graph: &mut graph::Debug_Graph_View,
     time: Duration,
     traced_fn: &str,

@@ -307,7 +307,9 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
 
 // Given some Tracer_Node_Final, merges all the ones with the same tag into a single one,
 // accumulating duration and n_calls. All parent information is lost.
-pub fn flatten_traces(traces: &[Tracer_Node_Final]) -> impl Iterator<Item=Tracer_Node_Final> + '_ {
+pub fn flatten_traces(
+    traces: &[Tracer_Node_Final],
+) -> impl Iterator<Item = Tracer_Node_Final> + '_ {
     let mut flat_traces = HashMap::new();
     for trace in traces {
         let accum = flat_traces

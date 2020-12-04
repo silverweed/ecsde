@@ -1,16 +1,18 @@
+use crate::render::Shader;
 use crate::render::{self, Primitive_Type};
 use crate::render_window::Render_Window_Handle;
 use crate::vbuf_holder::Vertex_Buffer_Holder;
 use inle_alloc::temp;
-use inle_core::rand::{Default_Rng, Precomputed_Rand_Pool};
-use inle_core::env::Env_Info;
+use inle_cfg::{self, Cfg_Var};
 use inle_common::colors;
-use inle_cfg::{Cfg_Var, self};
+use inle_core::env::Env_Info;
+use inle_core::rand::{Default_Rng, Precomputed_Rand_Pool};
 use inle_math::angle::{self, Angle};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use inle_resources::gfx::{shader_path, Gfx_Resources, Texture_Handle, Shader_Handle, Shader_Cache};
-use crate::render::Shader;
+use inle_resources::gfx::{
+    shader_path, Gfx_Resources, Shader_Cache, Shader_Handle, Texture_Handle,
+};
 use rayon::prelude::*;
 use std::ops::Range;
 use std::time::Duration;
@@ -198,7 +200,11 @@ pub fn render_particles(
     let mut vertices = temp::excl_temp_array(frame_alloc);
     for &transf in &particles.transforms {
         // @Incomplete or @Redundant: passing the vertex color is useless right now
-        vertices.push(render::new_vertex(transf.position(), particles.props.color, Vec2f::default()));
+        vertices.push(render::new_vertex(
+            transf.position(),
+            particles.props.color,
+            Vec2f::default(),
+        ));
     }
 
     vbuf.update(&mut vertices, particles.transforms.len() as u32);
@@ -217,9 +223,9 @@ pub fn render_particles(
 }
 
 fn random_pos_in(shape: &Emission_Shape, rng: &Precomputed_Rand_Pool) -> Vec2f {
-    match shape {
-        &Emission_Shape::Point => Vec2f::default(),
-        &Emission_Shape::Circle { radius } => {
+    match *shape {
+        Emission_Shape::Point => Vec2f::default(),
+        Emission_Shape::Circle { radius } => {
             let r = rng.rand_range(0.0, radius);
             let a = rng.rand_range(0.0, angle::TAU);
             Vec2f::from_polar(r, a)
@@ -264,14 +270,17 @@ impl Particle_Manager {
     ) -> Particles_Handle {
         debug_assert!(props.n_particles < std::u32::MAX as usize);
         self.active_particles.push(create_particles(props, rng));
-        self.active_particles_vbufs.push(
-            Vertex_Buffer_Holder::with_initial_vertex_count(
+        self.active_particles_vbufs
+            .push(Vertex_Buffer_Holder::with_initial_vertex_count(
                 props.n_particles as u32,
                 Primitive_Type::Points,
                 #[cfg(debug_assertions)]
-                format!("{:?}", props)
-        ));
-        debug_assert_eq!(self.active_particles.len(), self.active_particles_vbufs.len());
+                format!("{:?}", props),
+            ));
+        debug_assert_eq!(
+            self.active_particles.len(),
+            self.active_particles_vbufs.len()
+        );
 
         debug_assert!(self.active_particles.len() < std::isize::MAX as usize);
         Particles_Handle(self.active_particles.len() as isize - 1)
@@ -285,11 +294,13 @@ impl Particle_Manager {
     pub fn update(&mut self, dt: &Duration, cfg: &inle_cfg::Config) {
         let coarse_chunk_size = self.coarse_chunk_size.read(cfg) as usize;
         let narrow_chunk_size = self.narrow_chunk_size.read(cfg) as usize;
-        self.active_particles.par_chunks_mut(coarse_chunk_size).for_each(|chunk| {
-            for particles in chunk {
-                update_particles(particles, dt, narrow_chunk_size);
-            }
-        });
+        self.active_particles
+            .par_chunks_mut(coarse_chunk_size)
+            .for_each(|chunk| {
+                for particles in chunk {
+                    update_particles(particles, dt, narrow_chunk_size);
+                }
+            });
     }
 
     pub fn render(
@@ -300,15 +311,31 @@ impl Particle_Manager {
         camera: &Transform2D,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
+        if !render::shaders_are_available() {
+            return;
+        }
+
         let shader = shader_cache.get_shader_mut(self.particle_shader);
         let (ww, wh) = inle_win::window::get_window_real_size(window);
         render::set_uniform_float(shader, "camera_scale", 1.0 / camera.scale().x);
 
-        for (particles, vbuf) in self.active_particles.iter().zip(self.active_particles_vbufs.iter_mut()) {
+        for (particles, vbuf) in self
+            .active_particles
+            .iter()
+            .zip(self.active_particles_vbufs.iter_mut())
+        {
             // @Incomplete: we must handle the case where the texture is unset.
-            if let Some(tex) = particles.props.texture.map(|tex| gres.get_texture(Some(tex))) {
+            if let Some(tex) = particles
+                .props
+                .texture
+                .map(|tex| gres.get_texture(Some(tex)))
+            {
                 let (tw, th) = render::get_texture_size(tex);
-                render::set_uniform_vec2(shader, "tex_size_normalized", v2!(tw as f32 / ww as f32, th as f32 / wh as f32));
+                render::set_uniform_vec2(
+                    shader,
+                    "tex_size_normalized",
+                    v2!(tw as f32 / ww as f32, th as f32 / wh as f32),
+                );
             }
 
             // @Speed: we *may* want to run this in parallel and see if it gives benefits.

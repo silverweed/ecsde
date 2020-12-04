@@ -541,7 +541,13 @@ where
                 );
 
                 if enable_particles {
-                    particle_mgrs.get_mut(&level.id).unwrap().render(window, &gres, shader_cache, &level.get_camera().transform, frame_alloc);
+                    particle_mgrs.get_mut(&level.id).unwrap().render(
+                        window,
+                        &gres,
+                        shader_cache,
+                        &level.get_camera().transform,
+                        frame_alloc,
+                    );
                 }
             });
 

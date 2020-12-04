@@ -73,7 +73,11 @@ impl<'l> Shader_Cache<'l> {
             Entry::Vacant(v) => {
                 let vs_name = format!("{}.vert", shader_name);
                 let fs_name = format!("{}.frag", shader_name);
-                let gs_name = if with_geom { Some(format!("{}.geom", shader_name)) } else { None };
+                let gs_name = if with_geom {
+                    Some(format!("{}.geom", shader_name))
+                } else {
+                    None
+                };
                 match self.loader.load(&(vs_name, fs_name, gs_name)) {
                     Ok(res) => {
                         v.insert(res);

@@ -17,19 +17,19 @@ void main() {
 	float hh = 0.5 * tex_size_normalized.y * camera_scale;
 	
 	gl_Position = position + vec4(-hw, -hh, 0.0, 0.0);
-	tex_coords = vec2(0.0, 0.0);
-	EmitVertex();
-
-	gl_Position = position + vec4(hw, -hh, 0.0, 0.0);
-	tex_coords = vec2(1.0, 0.0);
-	EmitVertex();
-
-	gl_Position = position + vec4(-hw, hh, 0.0, 0.0);
 	tex_coords = vec2(0.0, 1.0);
 	EmitVertex();
 
-	gl_Position = position + vec4(hw, hh, 0.0, 0.0);
+	gl_Position = position + vec4(hw, -hh, 0.0, 0.0);
 	tex_coords = vec2(1.0, 1.0);
+	EmitVertex();
+
+	gl_Position = position + vec4(-hw, hh, 0.0, 0.0);
+	tex_coords = vec2(0.0, 0.0);
+	EmitVertex();
+
+	gl_Position = position + vec4(hw, hh, 0.0, 0.0);
+	tex_coords = vec2(1.0, 0.0);
 	EmitVertex();
 
 	EndPrimitive();

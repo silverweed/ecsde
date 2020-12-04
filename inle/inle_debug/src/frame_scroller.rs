@@ -379,7 +379,7 @@ impl Debug_Frame_Scroller {
                     })
             })
             .flatten()
-            .unwrap_or(colors::rgb(100, 100, 100))
+            .unwrap_or_else(|| colors::rgb(100, 100, 100))
     }
 
     fn map_frame_index_to_real_frame(&self, idx: u16) -> u64 {

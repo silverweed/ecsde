@@ -1,5 +1,5 @@
-use crate::render::{Vertex_Buffer, Primitive_Type};
 use crate::render::{self, Vertex};
+use crate::render::{Primitive_Type, Vertex_Buffer};
 use inle_common::colors;
 
 // @Cutnpaste from batcher.rs

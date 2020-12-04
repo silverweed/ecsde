@@ -1,8 +1,8 @@
-use crate::common::colors::Color;
-use crate::common::rect::Rectf;
-use crate::common::transform::Transform2D;
-use crate::common::vector::{Vec2f, Vec2i};
-use crate::gfx::window::Window_Handle;
+use inle_common::colors::Color;
+use inle_math::rect::Rectf;
+use inle_math::transform::Transform2D;
+use inle_math::vector::{Vec2f, Vec2i};
+use inle_win::window::Window_Handle;
 
 pub struct Render_Window_Handle {
     window: Window_Handle,

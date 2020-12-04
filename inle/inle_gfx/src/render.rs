@@ -8,7 +8,7 @@ use inle_math::shapes::Circle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
 
-pub use inle_gfx_backend::render::Render_Extra_Params;
+pub use inle_gfx_backend::render::{Primitive_Type, Render_Extra_Params};
 
 pub mod batcher;
 
@@ -20,7 +20,6 @@ pub type Text<'a> = backend::Text<'a>;
 pub type Texture<'a> = backend::Texture<'a>;
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
-pub type Primitive_Type = backend::Primitive_Type;
 
 //////////////////////////// DRAWING //////////////////////////////////
 
