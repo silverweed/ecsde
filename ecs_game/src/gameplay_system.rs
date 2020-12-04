@@ -3,6 +3,7 @@
 use super::levels::{Level, Levels};
 use super::systems::controllable_system::{self, C_Controllable};
 use super::systems::dumb_movement_system;
+use super::systems::gravity_system;
 use super::systems::entity_preview_system::{self, C_Entity_Preview};
 use super::systems::ground_collision_calculation_system::Ground_Collision_Calculation_System;
 use super::systems::pixel_collision_system::Pixel_Collision_System;
@@ -136,6 +137,7 @@ impl Gameplay_System {
         }
 
         // @Temporary
+        /*
         {
             use inle_gfx::particles;
             use inle_math::angle;
@@ -171,7 +173,7 @@ impl Gameplay_System {
                     .transform
                     .set_rotation(inle_math::angle::rad(i as f32 * 0.2));
             }
-        }
+        }*/
     }
 
     // @Temporary
@@ -246,6 +248,7 @@ impl Gameplay_System {
 
             ground_collision_calc_system.update(world, &mut level.phys_world, &mut level.chunks);
 
+            gravity_system::update(&dt, world);
             //movement_system::update(&dt, world);
             dumb_movement_system::update(&dt, world, &mut level.phys_world, rng);
 
@@ -371,7 +374,7 @@ impl Gameplay_System {
 
                 camera
                     .transform
-                    .set_position_v(pos + Vec2f::new(-120., -75.));
+                    .set_position_v(pos + Vec2f::new(-320., -175.));
             });
         });
     }

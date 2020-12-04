@@ -4,6 +4,7 @@ use crate::gfx::multi_sprite_animation_system::C_Multi_Renderable_Animation;
 use crate::gfx::shaders::*;
 use crate::levels::Level;
 use crate::spatial::World_Chunks;
+use crate::systems::gravity_system::C_Gravity;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::dumb_movement_system::C_Dumb_Movement;
 use crate::systems::entity_preview_system::C_Entity_Preview;
@@ -76,13 +77,14 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Renderable>();
     world.register_component::<C_Animated_Sprite>();
     world.register_component::<C_Controllable>();
-    world.register_component::<C_Dumb_Movement>();
+    world.register_component::<C_Dumb_Movement>(); // @Cleanup
     world.register_component::<C_Collider>();
     world.register_component::<C_Ground>();
-    world.register_component::<C_Texture_Collider>();
+    world.register_component::<C_Texture_Collider>(); // @Cleanup
     world.register_component::<C_Multi_Renderable>();
     world.register_component::<C_Multi_Renderable_Animation>();
-    world.register_component::<C_Entity_Preview>();
+    world.register_component::<C_Entity_Preview>(); // @Cleanup
+    world.register_component::<C_Gravity>();
 
     #[cfg(debug_assertions)]
     {
@@ -95,14 +97,14 @@ fn init_demo_lights(lights: &mut Lights) {
     lights.ambient_light.color = colors::rgb(200, 140, 180);
     lights.ambient_light.intensity = 0.2;
 
-    let light = Rect_Light {
-        rect: Rect::new(-37., -140., 90., 30.),
-        radius: 300.,
-        attenuation: 2.5,
-        color: colors::WHITE,
-        intensity: 2.5,
-    };
-    lights.add_rect_light(light);
+    //let light = Rect_Light {
+    //    rect: Rect::new(-37., -140., 90., 30.),
+    //    radius: 300.,
+    //    attenuation: 2.5,
+    //    color: colors::WHITE,
+    //    intensity: 2.5,
+    //};
+    //lights.add_rect_light(light);
 
     lights.add_point_light(Point_Light {
         position: v2!(0., 60.),
@@ -178,16 +180,17 @@ fn init_demo_entities(
 
     entities::create_background(&mut level.world, gres, shader_cache, env, cfg);
 
-    entities::create_terrain(&mut level.world, gres, shader_cache, env, cfg);
+    //entities::create_terrain(&mut level.world, gres, shader_cache, env, cfg);
+    entities::create_room(&mut level.world, &mut level.phys_world, gres, shader_cache, env, cfg);
 
-    entities::create_sky(
-        &mut level.world,
-        &mut level.phys_world,
-        gres,
-        shader_cache,
-        env,
-        cfg,
-    );
+    //entities::create_sky(
+    //    &mut level.world,
+    //    &mut level.phys_world,
+    //    gres,
+    //    shader_cache,
+    //    env,
+    //    cfg,
+    //);
 
     for i in 0..gs_cfg.n_entities_to_spawn {
         let x = rand::rand_01(rng);
@@ -210,15 +213,15 @@ fn init_demo_entities(
         );
     }
 
-    entities::create_drill(
-        &mut level.world,
-        &mut level.phys_world,
-        gres,
-        shader_cache,
-        env,
-        cfg,
-        &Transform2D::from_pos_rot_scale(v2!(10., 10.), rad(0.), v2!(0.2, 0.2)),
-    );
+    //entities::create_drill(
+    //    &mut level.world,
+    //    &mut level.phys_world,
+    //    gres,
+    //    shader_cache,
+    //    env,
+    //    cfg,
+    //    &Transform2D::from_pos_rot_scale(v2!(10., 10.), rad(0.), v2!(0.2, 0.2)),
+    //);
 }
 
 fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World, phys_world: &Physics_World) {

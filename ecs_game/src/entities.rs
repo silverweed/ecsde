@@ -1,7 +1,9 @@
 use crate::collisions::Game_Collision_Layer;
 use crate::gfx::multi_sprite_animation_system::{Animation_Track, C_Multi_Renderable_Animation};
+use crate::systems::gravity_system::C_Gravity;
 use crate::gfx::shaders::*;
 use crate::systems::controllable_system::C_Controllable;
+use inle_math::angle::{deg, rad};
 use crate::systems::pixel_collision_system::C_Texture_Collider;
 use inle_cfg::{Cfg_Var, Config};
 use inle_core::env::Env_Info;
@@ -15,6 +17,7 @@ use inle_math::transform::Transform2D;
 use inle_physics::collider::{C_Collider, Collider, Collision_Shape};
 use inle_physics::phys_world::{Phys_Data, Physics_World};
 use inle_resources::gfx::{shader_path, tex_path, Gfx_Resources, Shader_Cache};
+use inle_math::vector::Vec2f;
 
 #[cfg(debug_assertions)]
 use {crate::debug::entity_debug::C_Debug_Data, std::collections::HashMap, std::sync::Mutex};
@@ -81,6 +84,13 @@ pub fn create_jelly(
             transform: *transform,
             ..Default::default()
         },
+    );
+
+    world.add_component(
+        entity,
+        C_Gravity {
+            acceleration: 9800.0,
+        }
     );
 
     let (sw, sh) = render::get_texture_size(gres.get_texture(renderable.material.texture));
@@ -365,5 +375,80 @@ pub fn create_background(
     #[cfg(debug_assertions)]
     {
         add_debug_data(world, ground, "Background");
+    }
+}
+
+pub fn create_room(
+    world: &mut Ecs_World,
+    phys_world: &mut Physics_World,
+    gres: &mut Gfx_Resources,
+    shader_cache: &mut Shader_Cache,
+    env: &Env_Info,
+    cfg: &Config,
+) {
+    create_wall(world, phys_world, gres, shader_cache, env, &Transform2D::from_pos(v2!(0.0, 100.)), v2!(400., 20.), cfg);
+    create_wall(world, phys_world, gres, shader_cache, env, &Transform2D::from_pos(v2!(0.0, -100.)), v2!(400., 20.), cfg);
+    create_wall(world, phys_world, gres, shader_cache, env, &Transform2D::from_pos(v2!(-200.0, 0.0)), v2!(20., 200.), cfg);
+    create_wall(world, phys_world, gres, shader_cache, env, &Transform2D::from_pos(v2!(200.0, 0.0)), v2!(20., 200.), cfg);
+}
+
+pub fn create_wall(
+    world: &mut Ecs_World,
+    phys_world: &mut Physics_World,
+    gres: &mut Gfx_Resources,
+    shader_cache: &mut Shader_Cache,
+    env: &Env_Info,
+    transform: &Transform2D,
+    wall_size: Vec2f,
+    _cfg: &Config,
+)
+{
+    let wall = world.new_entity();
+
+    let renderable = world.add_component(
+        wall,
+        C_Renderable::new_with_diffuse(gres, env, "rock.png").with_shader(
+            shader_cache,
+            env,
+            SHD_SPRITE_FLAT,
+        ),
+    );
+    renderable.rect.width = wall_size.x as i32;
+    renderable.rect.height = wall_size.y as i32;
+
+    let tex = gres.get_texture_mut(renderable.material.texture);
+    render::set_texture_repeated(tex, true);
+
+    let cld = Collider {
+        shape: Collision_Shape::Rect {
+            width: transform.scale().x * wall_size.x,
+            height: transform.scale().y * wall_size.y,
+        },
+        layer: Game_Collision_Layer::Ground as _,
+        entity: wall,
+        ..Default::default()
+    };
+
+    world.add_component(
+        wall,
+        C_Collider {
+            handle: phys_world.new_physics_body_with_rigidbody(
+                cld,
+                Phys_Data {
+                    inv_mass: 0.,
+                    ..Default::default()
+                },
+            ),
+        },
+    );
+
+    #[cfg(debug_assertions)]
+    {
+        add_debug_data(world, wall, "Wall");
+    }
+
+    {
+        let spatial = world.add_component(wall, C_Spatial2D::default());
+        spatial.transform = *transform;
     }
 }
