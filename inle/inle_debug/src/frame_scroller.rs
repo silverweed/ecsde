@@ -131,8 +131,6 @@ impl Debug_Frame_Scroller {
                                 self.n_filled_frames = calc_filled_frames(self);
                             }
                         }
-                    } else {
-                        self.manually_selected = true;
                     }
                 }
                 // @Incomplete: make this button configurable
@@ -145,8 +143,6 @@ impl Debug_Frame_Scroller {
                             self.cur_frame = self.n_filled_frames - 1;
                             self.cur_second -= 1;
                         }
-                    } else {
-                        self.manually_selected = true;
                     }
                 }
                 _ => {}
