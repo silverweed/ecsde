@@ -128,7 +128,7 @@ fn parse_action(mods_and_key: &str) -> SmallVec<[Input_Action; 2]> {
                 for (i, &curs) in cursors.iter().enumerate() {
                     modif |= modifiers[i][curs];
                 }
-                merged_modifiers.push(dbg!(modif));
+                merged_modifiers.push(modif);
                 let mut curs_idx = 0;
                 let mut all_maxed = true;
                 while curs_idx < cursors.len() {
@@ -377,7 +377,7 @@ mod tests {
         .iter()
         .map(|&s| String::from(s))
         .collect();
-        let parsed = dbg!(parse_action_bindings_lines(lines.into_iter()));
+        let parsed = parse_action_bindings_lines(lines.into_iter());
 
         assert_eq!(parsed.len(), 23);
         assert_eq!(

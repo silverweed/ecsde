@@ -108,28 +108,81 @@ fn init_demo_lights(lights: &mut Lights) {
     //};
     //lights.add_rect_light(light);
 
+    // -------------------------------------------
+    // Corner lights
+    // -------------------------------------------
     lights.add_point_light(Point_Light {
-        position: v2!(0., 60.),
-        radius: 150.,
-        attenuation: 0.0,
-        color: colors::BLUE,
-        intensity: 1.0,
-    });
-
-    lights.add_point_light(Point_Light {
-        position: v2!(-100., 0.),
-        radius: 150.,
-        attenuation: 0.0,
+        position: v2!(-280., -180.),
+        radius: 250.,
+        attenuation: 1.0,
         color: colors::YELLOW,
         intensity: 1.0,
     });
 
     lights.add_point_light(Point_Light {
-        position: v2!(100., 100.),
-        radius: 150.,
-        attenuation: 0.0,
-        color: colors::RED,
+        position: v2!(280., -180.),
+        radius: 250.,
+        attenuation: 1.0,
+        color: colors::YELLOW,
         intensity: 1.0,
+    });
+
+    lights.add_point_light(Point_Light {
+        position: v2!(-280., 180.),
+        radius: 250.,
+        attenuation: 1.0,
+        color: colors::YELLOW,
+        intensity: 1.0,
+    });
+
+    lights.add_point_light(Point_Light {
+        position: v2!(280., 180.),
+        radius: 250.,
+        attenuation: 1.0,
+        color: colors::YELLOW,
+        intensity: 1.0,
+    });
+
+    // -------------------------------------------
+
+    lights.add_point_light(Point_Light {
+        position: v2!(0., 0.),
+        radius: 350.,
+        attenuation: 0.5,
+        color: colors::DARK_ORANGE,
+        intensity: 0.5,
+    });
+
+    lights.add_rect_light(Rect_Light {
+        rect: Rect::new(-300., -190., 600., 10.),
+        radius: 50.,
+        attenuation: 1.0,
+        color: colors::DARK_ORANGE,
+        intensity: 0.5,
+    });
+
+    lights.add_rect_light(Rect_Light {
+        rect: Rect::new(-300., 190., 600., 10.),
+        radius: 50.,
+        attenuation: 1.0,
+        color: colors::DARK_ORANGE,
+        intensity: 0.5,
+    });
+
+    lights.add_rect_light(Rect_Light {
+        rect: Rect::new(-290., -200., 10., 400.),
+        radius: 50.,
+        attenuation: 1.0,
+        color: colors::DARK_ORANGE,
+        intensity: 0.5,
+    });
+
+    lights.add_rect_light(Rect_Light {
+        rect: Rect::new(290., -200., 10., 400.),
+        radius: 50.,
+        attenuation: 1.0,
+        color: colors::DARK_ORANGE,
+        intensity: 0.5,
     });
 
     //let light = Point_Light {

@@ -4,6 +4,8 @@ mod sfml;
 use inle_math::angle::{rad, Angle};
 use std::f32::consts::{FRAC_PI_3, PI};
 
+include!("colors_def.rs");
+
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Color {
     pub r: u8,
@@ -19,39 +21,36 @@ pub struct Color_Hsv {
     pub v: f32,
 }
 
-pub const TRANSPARENT: Color = rgba(0, 0, 0, 0);
-pub const RED: Color = rgb(255, 0, 0);
-pub const GREEN: Color = rgb(0, 255, 0);
-pub const BLUE: Color = rgb(0, 0, 255);
-pub const YELLOW: Color = rgb(255, 255, 0);
-pub const FUCHSIA: Color = rgb(255, 0, 255);
-pub const AQUA: Color = rgb(0, 255, 255);
-pub const WHITE: Color = rgb(255, 255, 255);
-pub const BLACK: Color = rgb(0, 0, 0);
-
-pub fn color_to_hex(c: Color) -> u32 {
+pub const fn color_to_hex(c: Color) -> u32 {
     let mut h = 0u32;
-    h |= u32::from(c.a);
-    h |= u32::from(c.b) << 8;
-    h |= u32::from(c.g) << 16;
-    h |= u32::from(c.r) << 24;
+    h |= c.a as u32;
+    h |= (c.b as u32) << 8;
+    h |= (c.g as u32) << 16;
+    h |= (c.r as u32) << 24;
     h
 }
 
-pub fn color_to_hex_no_alpha(c: Color) -> u32 {
+pub const fn color_to_hex_no_alpha(c: Color) -> u32 {
     let mut h = 0u32;
-    h |= u32::from(c.b);
-    h |= u32::from(c.g) << 8;
-    h |= u32::from(c.r) << 16;
+    h |= c.b as u32;
+    h |= (c.g as u32) << 8;
+    h |= (c.r as u32) << 16;
     h
 }
 
-pub fn color_from_hex(hex: u32) -> Color {
+pub const fn color_from_hex(hex: u32) -> Color {
     let a = (hex & 0x00_00_00_FF) as u8;
     let b = ((hex & 0x00_00_FF_00) >> 8) as u8;
     let g = ((hex & 0x00_FF_00_00) >> 16) as u8;
     let r = ((hex & 0xFF_00_00_00) >> 24) as u8;
     rgba(r, g, b, a)
+}
+
+pub const fn color_from_hex_no_alpha(hex: u32) -> Color {
+    let b = (hex & 0x00_00_FF) as u8;
+    let g = ((hex & 0x00_FF_00) >> 8) as u8;
+    let r = ((hex & 0xFF_00_00) >> 16) as u8;
+    rgba(r, g, b, 255)
 }
 
 pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
@@ -72,7 +71,7 @@ pub fn lerp_col(a: Color, b: Color, t: f32) -> Color {
     )
 }
 
-pub fn hsv(h: Angle, s: f32, v: f32) -> Color_Hsv {
+pub const fn hsv(h: Angle, s: f32, v: f32) -> Color_Hsv {
     Color_Hsv { h, s, v }
 }
 

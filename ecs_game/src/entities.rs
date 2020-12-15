@@ -395,8 +395,8 @@ pub fn create_room(
         gres,
         shader_cache,
         env,
-        &Transform2D::from_pos(v2!(0.0, 100.)),
-        v2!(400., 20.),
+        &Transform2D::from_pos(v2!(0.0, 300.)),
+        v2!(1000., 200.),
         cfg,
     );
     create_wall(
@@ -405,8 +405,8 @@ pub fn create_room(
         gres,
         shader_cache,
         env,
-        &Transform2D::from_pos(v2!(0.0, -100.)),
-        v2!(400., 20.),
+        &Transform2D::from_pos(v2!(0.0, -300.)),
+        v2!(1000., 200.),
         cfg,
     );
     create_wall(
@@ -415,8 +415,8 @@ pub fn create_room(
         gres,
         shader_cache,
         env,
-        &Transform2D::from_pos(v2!(-200.0, 0.0)),
-        v2!(20., 200.),
+        &Transform2D::from_pos(v2!(-400.0, 0.0)),
+        v2!(200., 400.),
         cfg,
     );
     create_wall(
@@ -425,8 +425,8 @@ pub fn create_room(
         gres,
         shader_cache,
         env,
-        &Transform2D::from_pos(v2!(200.0, 0.0)),
-        v2!(20., 200.),
+        &Transform2D::from_pos(v2!(400.0, 0.0)),
+        v2!(200., 400.),
         cfg,
     );
 }
@@ -445,17 +445,25 @@ pub fn create_wall(
 
     let renderable = world.add_component(
         wall,
-        C_Renderable::new_with_diffuse(gres, env, "rock.png").with_shader(
-            shader_cache,
-            env,
-            SHD_SPRITE_FLAT,
-        ),
+        C_Renderable::new_with_diffuse(gres, env, "wall.png")
+            .with_normals(gres, env, "wall_n.png")
+            .with_shader(
+                shader_cache,
+                env,
+                SHD_SPRITE_WITH_NORMALS,
+            ),
     );
     renderable.rect.width = wall_size.x as i32;
     renderable.rect.height = wall_size.y as i32;
 
-    let tex = gres.get_texture_mut(renderable.material.texture);
-    render::set_texture_repeated(tex, true);
+    {
+        let tex = gres.get_texture_mut(renderable.material.texture);
+        render::set_texture_repeated(tex, true);
+    }
+    {
+        let tex = gres.get_texture_mut(renderable.material.normals);
+        render::set_texture_repeated(tex, true);
+    }
 
     let cld = Collider {
         shape: Collision_Shape::Rect {

@@ -54,7 +54,7 @@ void main() {
         vec3 diffuse = light.intensity * light.color;
 
         float dist = length(frag_to_light);
-        float atten = max(0.0, mix(1.0, 0.0, dist / light.radius));
+        float atten = pow(max(0.0, mix(1.0, 0.0, dist / light.radius)), 1.0 + light.attenuation);
 
         color += vec3(diffuse) * atten;
     }
@@ -67,7 +67,7 @@ void main() {
         vec3 diffuse = light.intensity * light.color;
 
         float dist = length(frag_to_light);
-        float atten = max(0.0, mix(1.0, 0.0, dist / light.radius));
+        float atten = pow(max(0.0, mix(1.0, 0.0, dist / light.radius)), 1.0 + light.attenuation);
 
         color += vec3(diffuse) * atten;
     }

@@ -96,7 +96,7 @@ void main() {
         vec3 result = light.intensity * (diffuse + specular);
 
         float dist = length(frag_to_light);
-        float atten = max(0.0, mix(1.0, 0.0, dist / light.radius));
+        float atten = pow(max(0.0, mix(1.0, 0.0, dist / light.radius)), 1.0 + light.attenuation);
 
         color += result * atten;
     }
@@ -118,7 +118,7 @@ void main() {
 
         vec3 result = light.intensity * (diffuse + specular);
 
-        float atten = max(0.0, mix(1.0, 0.0, dist / light.radius));
+        float atten = pow(max(0.0, mix(1.0, 0.0, dist / light.radius)), 1.0 + light.attenuation);
 
         color += result * atten;
     }
