@@ -1331,6 +1331,10 @@ fn debug_draw_grid(
     } = camera_transform.scale();
     let n_horiz = (screen_width as f32 * cam_sx / square_size).floor() as usize + 2;
     let n_vert = (screen_height as f32 * cam_sy / square_size).floor() as usize + 2;
+    if n_vert * n_horiz > 14_000 {
+        return; // let's not kill the machine if we can help
+    }
+
     let col_gray = colors::rgba(200, 200, 200, grid_opacity);
     let col_white = colors::rgba(255, 255, 255, grid_opacity);
     let sq_coord = Vec2f::new(
@@ -1338,6 +1342,7 @@ fn debug_draw_grid(
         (cy / square_size).floor() * square_size,
     );
 
+    let draw_text = n_vert * n_horiz < 1000;
     for j in 0..n_vert {
         for i in 0..n_horiz {
             let transf = Transform2D::from_pos(
@@ -1354,12 +1359,14 @@ fn debug_draw_grid(
             };
             let pos = transf.position();
             debug_painter.add_rect(Vec2f::new(square_size, square_size), &transf, color);
-            debug_painter.add_text(
-                &format!("{},{}", pos.x, pos.y),
-                pos + Vec2f::new(5., 5.),
-                (square_size as i32 / 6).max(8) as u16,
-                color,
-            );
+            if draw_text {
+                debug_painter.add_text(
+                    &format!("{},{}", pos.x, pos.y),
+                    pos + Vec2f::new(5., 5.),
+                    (square_size as i32 / 6).max(8) as u16,
+                    color,
+                );
+            }
         }
     }
 }
