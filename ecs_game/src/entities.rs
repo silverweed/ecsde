@@ -395,8 +395,8 @@ pub fn create_room(
         gres,
         shader_cache,
         env,
-        &Transform2D::from_pos(v2!(0.0, 300.)),
-        v2!(1000., 200.),
+        &Transform2D::from_pos(v2!(0.0, 400.)),
+        v2!(1600., 400.),
         cfg,
     );
     create_wall(
@@ -405,8 +405,8 @@ pub fn create_room(
         gres,
         shader_cache,
         env,
-        &Transform2D::from_pos(v2!(0.0, -300.)),
-        v2!(1000., 200.),
+        &Transform2D::from_pos(v2!(0.0, -400.)),
+        v2!(1600., 400.),
         cfg,
     );
     create_wall(
@@ -415,8 +415,8 @@ pub fn create_room(
         gres,
         shader_cache,
         env,
-        &Transform2D::from_pos(v2!(-400.0, 0.0)),
-        v2!(200., 400.),
+        &Transform2D::from_pos(v2!(-550.0, 0.0)),
+        v2!(500., 400.),
         cfg,
     );
     create_wall(
@@ -425,8 +425,8 @@ pub fn create_room(
         gres,
         shader_cache,
         env,
-        &Transform2D::from_pos(v2!(400.0, 0.0)),
-        v2!(200., 400.),
+        &Transform2D::from_pos(v2!(550.0, 0.0)),
+        v2!(500., 400.),
         cfg,
     );
 }

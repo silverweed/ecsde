@@ -154,7 +154,7 @@ fn init_demo_lights(lights: &mut Lights) {
     });
 
     lights.add_rect_light(Rect_Light {
-        rect: Rect::new(-300., -190., 600., 10.),
+        rect: Rect::new(-300., -199., 600., 1.),
         radius: 50.,
         attenuation: 1.0,
         color: colors::DARK_ORANGE,
@@ -162,7 +162,7 @@ fn init_demo_lights(lights: &mut Lights) {
     });
 
     lights.add_rect_light(Rect_Light {
-        rect: Rect::new(-300., 190., 600., 10.),
+        rect: Rect::new(-300., 199., 600., 1.),
         radius: 50.,
         attenuation: 1.0,
         color: colors::DARK_ORANGE,
@@ -170,7 +170,7 @@ fn init_demo_lights(lights: &mut Lights) {
     });
 
     lights.add_rect_light(Rect_Light {
-        rect: Rect::new(-290., -200., 10., 400.),
+        rect: Rect::new(-299., -200., 1., 400.),
         radius: 50.,
         attenuation: 1.0,
         color: colors::DARK_ORANGE,
@@ -178,7 +178,7 @@ fn init_demo_lights(lights: &mut Lights) {
     });
 
     lights.add_rect_light(Rect_Light {
-        rect: Rect::new(290., -200., 10., 400.),
+        rect: Rect::new(299., -200., 1., 400.),
         radius: 50.,
         attenuation: 1.0,
         color: colors::DARK_ORANGE,
