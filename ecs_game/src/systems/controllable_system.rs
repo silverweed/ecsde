@@ -12,7 +12,7 @@ pub struct C_Controllable {
     pub translation_this_frame: Vec2f,
     pub speed: Cfg_Var<f32>, // @Cleanup: this is currently used by the camera!
     pub acceleration: Cfg_Var<f32>,
-    pub jump_force: Cfg_Var<f32>,
+    pub jump_impulse: Cfg_Var<f32>,
     pub dampening: Cfg_Var<f32>,
     pub horiz_max_speed: Cfg_Var<f32>,
 }
@@ -33,7 +33,7 @@ pub fn update(
             .get_component::<C_Controllable>(entity)
             .unwrap();
         let acceleration = ctrl.acceleration.read(cfg);
-        let jump_force = ctrl.jump_force.read(cfg);
+        let jump_impulse = ctrl.jump_impulse.read(cfg);
         let dampening = ctrl.dampening.read(cfg);
         let horiz_max_speed = ctrl.horiz_max_speed.read(cfg);
 
@@ -42,7 +42,7 @@ pub fn update(
 
         velocity.x += movement * acceleration * dt_secs;
         if actions.contains(&(sid!("jump"), Action_Kind::Pressed)) {
-            velocity.y -= jump_force * dt_secs;
+            velocity.y -= jump_impulse;
         }
         let velocity_norm = velocity.normalized_or_zero();
         let speed = velocity.magnitude();

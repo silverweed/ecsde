@@ -73,7 +73,7 @@ pub fn create_jelly(
             entity,
             C_Controllable {
                 acceleration: Cfg_Var::new("game/gameplay/player/acceleration", cfg),
-                jump_force: Cfg_Var::new("game/gameplay/player/jump_force", cfg),
+                jump_impulse: Cfg_Var::new("game/gameplay/player/jump_impulse", cfg),
                 dampening: Cfg_Var::new("game/gameplay/player/dampening", cfg),
                 horiz_max_speed: Cfg_Var::new("game/gameplay/player/horiz_max_speed", cfg),
                 ..Default::default()
