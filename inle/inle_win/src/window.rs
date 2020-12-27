@@ -18,6 +18,9 @@ use self::glfw as backend;
 #[cfg(feature = "win-winit")]
 use self::winit as backend;
 
+#[cfg(all(feature = "win-glfw", feature = "gfx-gl"))]
+pub use backend::get_gl_handle;
+
 pub type Window_Handle = backend::Window_Handle;
 pub type Create_Window_Args = backend::Create_Window_Args;
 pub type Event = backend::Event;

@@ -4,11 +4,17 @@ pub mod sfml;
 #[cfg(feature = "gfx-null")]
 pub mod null;
 
+#[cfg(feature = "gfx-gl")]
+pub mod gl;
+
 #[cfg(feature = "gfx-sfml")]
 pub use self::sfml as backend;
 
 #[cfg(feature = "gfx-null")]
 pub use self::null as backend;
+
+#[cfg(feature = "gfx-gl")]
+pub use self::gl as backend;
 
 pub type Text<'a> = backend::Text<'a>;
 pub type Font<'a> = backend::Font<'a>;
@@ -37,8 +43,8 @@ pub enum Primitive_Type {
 }
 
 pub use backend::geom_shaders_are_available;
-pub use backend::shaders_are_available;
-pub use backend::set_image_pixel;
 pub use backend::new_image;
 pub use backend::new_texture_from_image;
+pub use backend::set_image_pixel;
 pub use backend::set_texture_repeated;
+pub use backend::shaders_are_available;

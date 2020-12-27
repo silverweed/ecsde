@@ -23,13 +23,24 @@ pub struct Window_Handle {
     pub event_receiver: std::sync::mpsc::Receiver<(f64, Event)>,
 }
 
+#[cfg(feature = "gfx-gl")]
+pub fn get_gl_handle(window: &mut Window_Handle, s: &'static str) -> *const std::ffi::c_void {
+    window.handle.get_proc_address(s)
+}
+
 #[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn create_window(
     args: &Create_Window_Args,
     target_size: (u32, u32),
     title: &str,
 ) -> Window_Handle {
-    let glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+    let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+    glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
+    glfw.window_hint(glfw::WindowHint::OpenGlProfile(
+        glfw::OpenGlProfileHint::Core,
+    ));
+    glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(true));
+
     // @Incomplete: allow setting mode?
     let (mut window, events) = glfw
         .create_window(
@@ -42,6 +53,7 @@ pub fn create_window(
 
     window.make_current();
     window.set_key_polling(true);
+    window.set_framebuffer_size_polling(true);
     // @Incomplete: vsync, etc
 
     Window_Handle {

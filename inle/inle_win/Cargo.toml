@@ -11,8 +11,9 @@ win-glfw = ["glfw"]
 win-sfml = ["sfml/window"]
 win-winit = ["winit"]
 gfx-sfml = ["sfml/graphics"]
+gfx-gl = []
 #default = ["win-sfml", "gfx-sfml"]
-default= ["win-glfw"]
+default= ["win-glfw", "gfx-gl"]
 
 [dependencies]
 inle_math = { path = "../inle_math" }
