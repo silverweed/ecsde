@@ -7,8 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = ["gfx-sfml"]
-gfx-sfml = ["sfml/graphics"]
+common-sfml = []
+gfx-sfml = ["sfml"]
+default = ["common-sfml", "gfx-sfml"]
 
 [dependencies]
 inle_diagnostics = { path = "../inle_diagnostics" }
