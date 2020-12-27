@@ -74,6 +74,7 @@ impl<'l> Shader_Cache<'l> {
 		let mut shader_cache = cache::Shader_Cache::new();
 
 		shader_cache.cache.insert(ERROR_SHADER_KEY, load_error_shader());
+		#[cfg(debug_assertions)]
 		shader_cache.cache.insert(BASIC_SHADER_KEY, load_basic_shader());
 
         Self(shader_cache)

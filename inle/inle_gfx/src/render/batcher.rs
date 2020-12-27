@@ -511,6 +511,8 @@ pub fn draw_batches(
             }
 
             if cast_shadows {
+				trace!("batcher::cast_shadows");
+
                 let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
                 shadow_vbuffer.update(shadow_vertices, n_shadow_vertices);
 

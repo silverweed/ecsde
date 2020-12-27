@@ -480,6 +480,7 @@ where
         inle_gfx::render_window::clear(window);
     }
 
+	#[cfg(debug_assertions)]
 	fn get_render_system_debug_visualization(debug_cvars: &super::game_state::Debug_CVars, cfg: &inle_cfg::Config) -> render_system::Debug_Visualization {
 		match debug_cvars.render_debug_visualization.read(cfg).as_str() {
 			"1" | "b" | "bounds" => render_system::Debug_Visualization::Sprites_Boundaries,

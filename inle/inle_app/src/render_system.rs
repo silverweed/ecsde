@@ -51,9 +51,7 @@ pub fn update(args: Render_System_Update_Args) {
         cfg,
         window,
         camera,
-		#[cfg(debug_assertions)]
 		gres,
-		#[cfg(debug_assertions)]
 		shader_cache,
     } = args;
 
