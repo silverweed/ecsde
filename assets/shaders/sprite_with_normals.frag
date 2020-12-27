@@ -22,8 +22,8 @@ struct Rect_Light {
     float intensity;
 };
 
-#define MAX_POINT_LIGHTS 64
-#define MAX_RECT_LIGHTS 64
+#define MAX_POINT_LIGHTS 8
+#define MAX_RECT_LIGHTS 8
 #define DIFFUSE_BIAS 0.2
 #define MAX_ENCODED_ANGLE 65535
 #define PI 3.14159265359

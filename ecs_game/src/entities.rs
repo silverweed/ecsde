@@ -56,14 +56,14 @@ pub fn create_jelly(
     transform: &Transform2D,
     make_controllable: bool,
 ) -> Entity {
-    const N_ANIM_FRAMES: i32 = 3;
+    const N_ANIM_FRAMES: i32 = 7;
 
     let entity = world.new_entity();
-    let renderable = C_Renderable::new_with_diffuse(gres, env, "jelly.png")
-        .with_normals(gres, env, "jelly_n.png")
+    let renderable = C_Renderable::new_with_diffuse(gres, env, "patricia_wagon_idle.png")
+        //.with_normals(gres, env, "jelly_n.png")
         .with_cast_shadows(true)
         .with_shininess(10.0)
-        .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS)
+        .with_shader(shader_cache, env, SHD_SPRITE_FLAT)
         .with_n_frames(N_ANIM_FRAMES);
     world.add_component(entity, renderable);
 
@@ -99,8 +99,8 @@ pub fn create_jelly(
     let (sw, sh) = render::get_texture_size(gres.get_texture(renderable.material.texture));
     let cld = Collider {
         shape: {
-            let width = (sw / N_ANIM_FRAMES as u32) as f32;
-            let height = sh as f32;
+            let width = transform.scale().x * (sw / N_ANIM_FRAMES as u32) as f32;
+            let height = transform.scale().y * sh as f32;
             Collision_Shape::Rect { width, height }
         },
         layer: Game_Collision_Layer::Entities as _,

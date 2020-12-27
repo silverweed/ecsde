@@ -20,8 +20,8 @@ struct Rect_Light {
     float intensity;
 };
 
-#define MAX_POINT_LIGHTS 64
-#define MAX_RECT_LIGHTS 64
+#define MAX_POINT_LIGHTS 8
+#define MAX_RECT_LIGHTS 8
 
 uniform sampler2D texture;
 uniform Ambient_Light ambient_light;

@@ -3,7 +3,9 @@ mod cache;
 use super::asset_path;
 use super::loaders;
 use inle_core::env::Env_Info;
-use inle_gfx_backend::render::{self, Font, Shader, Texture};
+use inle_gfx_backend::render::{self, Font, Shader, Texture, Image};
+use inle_common::colors;
+use inle_common::stringid::{const_sid_from_str, String_Id};
 
 pub type Texture_Handle = loaders::Res_Handle;
 pub type Font_Handle = loaders::Res_Handle;
@@ -14,6 +16,28 @@ pub struct Gfx_Resources<'l> {
     fonts: cache::Font_Cache<'l>,
 }
 
+const WHITE_TEXTURE_KEY: String_Id = const_sid_from_str("__white__");
+
+/// This must be created with create_white_image()
+static mut WHITE_IMAGE: Option<Image> = None;
+
+/// # Safety
+/// Must not be called from multiple threads
+unsafe fn create_white_image() {
+	let mut img = render::new_image(1, 1);
+	render::set_image_pixel(&mut img, 0, 0, colors::WHITE);
+	WHITE_IMAGE.replace(img);
+}
+
+/// # Safety
+/// Must not be called from multiple threads
+unsafe fn create_white_texture(tex_cache: &mut cache::Texture_Cache) {
+	let img = WHITE_IMAGE.as_ref().expect("white image was not created yet!");
+	let mut tex = render::new_texture_from_image(&img, None).unwrap();
+	render::set_texture_repeated(&mut tex, true);
+	tex_cache.cache.insert(WHITE_TEXTURE_KEY, tex);
+}
+
 impl<'l> Gfx_Resources<'l> {
     pub fn new() -> Self {
         if !render::shaders_are_available() {
@@ -22,8 +46,16 @@ impl<'l> Gfx_Resources<'l> {
             lwarn!("This platform does not support geometry shaders.");
         }
 
+		let mut tex_cache = cache::Texture_Cache::new();
+
+		// This occurs once here.
+		unsafe { 
+			create_white_image(); 
+			create_white_texture(&mut tex_cache); 
+		}
+
         Gfx_Resources {
-            textures: cache::Texture_Cache::new(),
+            textures: tex_cache,
             fonts: cache::Font_Cache::new(),
         }
     }
@@ -42,6 +74,14 @@ impl<'l> Gfx_Resources<'l> {
     {
         self.textures.must_get_mut(handle)
     }
+
+	pub fn get_white_texture(&self) -> &Texture {
+		self.textures.must_get(Some(WHITE_TEXTURE_KEY))
+	}
+	
+	pub fn get_white_texture_handle(&self) -> Texture_Handle {
+		Some(WHITE_TEXTURE_KEY)
+	}
 
     pub fn load_font(&mut self, fname: &str) -> Font_Handle {
         self.fonts.load(fname)

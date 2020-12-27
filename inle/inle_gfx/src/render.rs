@@ -155,6 +155,10 @@ pub fn copy_texture_to_image(texture: &Texture) -> Image {
     backend::copy_texture_to_image(texture)
 }
 
+pub fn new_texture_from_image(image: &Image, rect: Option<Rect<i32>>) -> Option<Texture> {
+	backend::new_texture_from_image(image, rect)
+}
+
 pub fn get_image_pixel(image: &Image, x: u32, y: u32) -> Color {
     backend::get_image_pixel(image, x, y)
 }
@@ -219,6 +223,10 @@ simple_wrap!(Vertex_Buffer_Triangles, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Linestrip, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Lines, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Points, Vertex_Buffer);
+
+pub fn new_image(width: u32, height: u32) -> Image {
+	backend::new_image(width, height)
+}
 
 pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
     backend::new_vbuf(primitive, n_vertices)

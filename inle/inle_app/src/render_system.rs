@@ -7,14 +7,29 @@ use inle_gfx::components::{C_Multi_Renderable, C_Renderable};
 use inle_gfx::render;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::transform::Transform2D;
+use inle_resources::gfx::Gfx_Resources;
+
+#[cfg(debug_assertions)]
+use {
+	inle_common::colors
+};
 
 #[derive(Copy, Clone)]
 pub struct Render_System_Config {
     pub clear_color: Color,
-    #[cfg(debug_assertions)]
-    pub draw_sprites_bg: bool,
-    #[cfg(debug_assertions)]
-    pub draw_sprites_bg_color: Color,
+
+	#[cfg(debug_assertions)]
+	pub debug_visualization: Debug_Visualization,
+}
+
+#[cfg(debug_assertions)]
+#[derive(Copy, Clone)]
+#[non_exhaustive]
+pub enum Debug_Visualization {
+	None,
+	Sprites_Boundaries,
+	Normals,
+	Materials
 }
 
 pub struct Render_System_Update_Args<'a> {
@@ -24,6 +39,7 @@ pub struct Render_System_Update_Args<'a> {
     pub frame_alloc: &'a mut temp::Temp_Allocator,
     pub cfg: Render_System_Config,
     pub camera: &'a Transform2D,
+	pub gres: &'a Gfx_Resources<'a>,
 }
 
 pub fn update(args: Render_System_Update_Args) {
@@ -34,6 +50,8 @@ pub fn update(args: Render_System_Update_Args) {
         cfg,
         window,
         camera,
+		#[cfg(debug_assertions)]
+		gres
     } = args;
 
     trace!("render_system::update");
@@ -49,6 +67,9 @@ pub fn update(args: Render_System_Update_Args) {
             .build()
             .collect(ecs_world, &mut entities);
 
+		#[cfg(debug_assertions)]
+		let (min_z, max_z) = get_min_max_z(ecs_world, &entities);
+
         for &entity in entities.as_slice() {
             let rend = renderables.get_component(entity).unwrap();
             let spatial = spatials.get_component(entity).unwrap();
@@ -62,14 +83,16 @@ pub fn update(args: Render_System_Update_Args) {
 
             #[cfg(debug_assertions)]
             {
-                // @Fixme: not working
-                if cfg.draw_sprites_bg {
-                    render::render_rect_ws(
-                        window,
-                        *src_rect,
-                        cfg.draw_sprites_bg_color,
+				let mat = inle_gfx::material::Material::with_texture(gres.get_white_texture_handle());
+                if let Debug_Visualization::Sprites_Boundaries = cfg.debug_visualization {
+					let color = colors::lerp_col(colors::RED, colors::AQUA, (*z_index - min_z) as f32 / (max_z - min_z) as f32);
+                    render::render_texture_ws(
+						batches,
+						mat,
+                        src_rect,
+						color,
                         &spatial.transform,
-                        camera,
+						*z_index,
                     );
                 }
             }
@@ -132,4 +155,28 @@ pub fn update(args: Render_System_Update_Args) {
             );
         }
     }
+}
+
+#[cfg(debug_assertions)]
+fn get_min_max_z(ecs_world: &Ecs_World, entities: &[inle_ecs::ecs_world::Entity]) -> (render::Z_Index, render::Z_Index) {
+	let mut min_z = render::Z_Index::MAX;
+	let mut max_z = render::Z_Index::MIN;
+	for &entity in entities {
+		let C_Renderable {
+			z_index,
+			..
+		} = ecs_world.get_component::<C_Renderable>(entity).unwrap();
+		
+		let z_index = *z_index;
+
+		if z_index < min_z {
+			min_z = z_index;
+		}
+
+		if z_index > max_z {
+			max_z = z_index;
+		}
+	}
+
+	(min_z, max_z)
 }

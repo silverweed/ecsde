@@ -38,3 +38,7 @@ pub enum Primitive_Type {
 
 pub use backend::geom_shaders_are_available;
 pub use backend::shaders_are_available;
+pub use backend::set_image_pixel;
+pub use backend::new_image;
+pub use backend::new_texture_from_image;
+pub use backend::set_texture_repeated;

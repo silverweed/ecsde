@@ -10,6 +10,13 @@ macro_rules! sf_wrap {
         }
 
         impl $typename<'_> {
+            pub fn with_inner(inner: ::sfml::system::SfBox<$sftypename>) -> Self {
+                Self {
+                    wrapped: inner,
+                    _marker: &std::marker::PhantomData,
+                }
+            }
+
             pub fn from_file(fname: &str) -> Option<Self> {
                 Some(Self {
                     wrapped: <$sftypename>::from_file(fname)?,

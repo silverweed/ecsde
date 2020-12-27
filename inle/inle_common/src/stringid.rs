@@ -36,7 +36,7 @@ where
 
 #[cfg(debug_assertions)]
 pub fn sid_from_str(s: &str) -> String_Id {
-    let this = String_Id(fnv1a(s.as_bytes()));
+    let this = const_sid_from_str(s);
     {
         match STRING_ID_MAP
             .write()
@@ -61,6 +61,10 @@ pub fn sid_from_str(s: &str) -> String_Id {
 
 #[cfg(not(debug_assertions))]
 pub const fn sid_from_str(s: &str) -> String_Id {
+	const_sid_from_str(s)
+}
+
+pub const fn const_sid_from_str(s: &str) -> String_Id {
     String_Id(fnv1a(s.as_bytes()))
 }
 

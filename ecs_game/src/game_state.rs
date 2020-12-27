@@ -52,8 +52,7 @@ pub struct CVars {
 
 #[cfg(debug_assertions)]
 pub struct Debug_CVars {
-    pub draw_sprites_bg: Cfg_Var<bool>,      // @Cleanup: unused
-    pub draw_sprites_bg_color: Cfg_Var<u32>, // @Cleanup: unused
+	pub render_debug_visualization: Cfg_Var<String>,
     pub draw_lights: Cfg_Var<bool>,
 
     pub record_replay: Cfg_Var<bool>,
@@ -289,8 +288,7 @@ fn create_cvars(cfg: &inle_cfg::Config) -> CVars {
 
 #[cfg(debug_assertions)]
 fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
-    let draw_sprites_bg = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg", cfg);
-    let draw_sprites_bg_color = Cfg_Var::new("engine/debug/rendering/draw_sprites_bg_color", cfg);
+    let render_debug_visualization = Cfg_Var::new("engine/debug/rendering/debug_visualization", cfg);
     let draw_lights = Cfg_Var::new("engine/debug/rendering/draw_lights", cfg);
     let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
     let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
@@ -310,8 +308,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     let draw_world_chunks = Cfg_Var::new("engine/debug/world/draw_chunks", cfg);
 
     Debug_CVars {
-        draw_sprites_bg,
-        draw_sprites_bg_color,
+        render_debug_visualization,
         draw_lights,
         record_replay,
         trace_overlay_refresh_rate,

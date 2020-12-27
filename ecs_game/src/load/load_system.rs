@@ -270,7 +270,7 @@ fn init_demo_entities(
             shader_cache,
             env,
             cfg,
-            &Transform2D::from_pos(pos),
+            &Transform2D::from_pos_rot_scale(pos, rad(0.0), v2!(0.3, 0.3)),
             i == 0,
         );
 

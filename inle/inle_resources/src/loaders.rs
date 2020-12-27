@@ -13,7 +13,7 @@ where
     Loader: 'l + Resource_Loader<'l, Res, Args = str>,
 {
     loader: &'l Loader,
-    cache: HashMap<String_Id, Res>,
+    pub(super) cache: HashMap<String_Id, Res>,
 }
 
 pub(super) type Res_Handle = Option<String_Id>;

@@ -126,6 +126,10 @@ pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
     vbuf.primitive_type
 }
 
+pub fn new_image(_width: u32, _height: u32) -> Image {
+	()
+}
+
 pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
     Vertex_Buffer {
         cur_vertices: 0,
@@ -255,6 +259,10 @@ pub fn create_text<'a>(_string: &str, _font: &'a Font, _size: u16) -> Text<'a> {
 pub fn render_line(_window: &mut Render_Window_Handle, _start: &Vertex, _end: &Vertex) {}
 
 pub fn copy_texture_to_image(_texture: &Texture) -> Image {}
+
+pub fn new_texture_from_image(_image: &Image, _rect: Option<Rect>) -> Texture {
+	Texture {}
+}
 
 pub fn get_image_pixel(_image: &Image, _x: u32, _y: u32) -> Color {
     colors::TRANSPARENT

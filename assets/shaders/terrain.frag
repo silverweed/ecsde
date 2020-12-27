@@ -11,7 +11,7 @@ struct Point_Light {
     float intensity;
 };
 
-#define MAX_POINT_LIGHTS 64
+#define MAX_POINT_LIGHTS 8
 
 uniform sampler2D texture;
 uniform vec2 texture_size;
