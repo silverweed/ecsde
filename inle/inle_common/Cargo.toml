@@ -9,7 +9,7 @@ edition = "2018"
 [features]
 common-sfml = []
 gfx-sfml = ["sfml"]
-default = ["common-sfml", "gfx-sfml"]
+#default = ["common-sfml", "gfx-sfml"]
 
 [dependencies]
 inle_diagnostics = { path = "../inle_diagnostics" }

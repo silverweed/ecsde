@@ -9,8 +9,8 @@ edition = "2018"
 [features]
 audio-sfml = ["sfml/audio"]
 audio-null = []
-#default = ["audio-null"]
-default = ["audio-sfml"]
+default = ["audio-null"]
+#default = ["audio-sfml"]
 
 [dependencies]
 inle_common = { path = "../inle_common" }

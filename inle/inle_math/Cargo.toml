@@ -8,7 +8,7 @@ edition = "2018"
 
 [features]
 gfx-sfml = ["sfml/window"]
-default = ["gfx-sfml"]
+#default = ["gfx-sfml"]
 
 [dependencies]
 inle_diagnostics = { path = "../inle_diagnostics" }
