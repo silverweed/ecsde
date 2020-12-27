@@ -1,7 +1,7 @@
 use super::Shader_Handle;
 use crate::loaders;
 use crate::loaders::Resource_Loader;
-use inle_common::stringid::String_Id;
+use inle_common::stringid::{const_sid_from_str, String_Id};
 use inle_gfx_backend::render::{Font, Shader, Texture};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -33,25 +33,11 @@ impl<'l> loaders::Resource_Loader<'l, Shader<'l>> for Shader_Loader {
     }
 }
 
-const ERROR_SHADER_KEY: String_Id = String_Id::from_u32(0);
-const ERROR_SHADER_VERT: &str = "
-    void main() {
-        gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-    }
-";
-const ERROR_SHADER_FRAG: &str = "
-    void main() {
-        gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
-    }
-";
-
-fn load_error_shader<'a>() -> Shader<'a> {
-    Shader::from_memory(Some(ERROR_SHADER_VERT), None, Some(ERROR_SHADER_FRAG)).unwrap()
-}
+pub(super) const ERROR_SHADER_KEY: String_Id = const_sid_from_str("__error__");
 
 pub(super) struct Shader_Cache<'l> {
     loader: &'l Shader_Loader,
-    cache: HashMap<String_Id, Shader<'l>>,
+    pub(super) cache: HashMap<String_Id, Shader<'l>>,
 }
 
 impl<'l> Shader_Cache<'l> {
@@ -60,9 +46,10 @@ impl<'l> Shader_Cache<'l> {
     }
 
     pub(super) fn new_with_loader(loader: &'l Shader_Loader) -> Self {
-        let mut cache = HashMap::new();
-        cache.insert(ERROR_SHADER_KEY, load_error_shader());
-        Shader_Cache { cache, loader }
+        Shader_Cache { 
+			loader,
+			cache: HashMap::new(), 
+		}
     }
 
     /// shader_name: the name of the shader(s) without extension.

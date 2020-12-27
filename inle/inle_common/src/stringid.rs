@@ -36,7 +36,7 @@ where
 
 #[cfg(debug_assertions)]
 pub fn sid_from_str(s: &str) -> String_Id {
-    let this = const_sid_from_str(s);
+    let this = const_sid_from_str(s);	
     {
         match STRING_ID_MAP
             .write()

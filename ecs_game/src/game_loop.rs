@@ -500,6 +500,7 @@ where
         let gameplay_system = &mut game_state.gameplay_system;
         let batches = &mut game_state.level_batches;
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
+        let shader_cache = &game_state.engine_state.shader_cache;
         gameplay_system.levels.foreach_active_level(|level| {
             let render_args = render_system::Render_System_Update_Args {
                 batches: batches.get_mut(&level.id).unwrap(),
@@ -509,6 +510,7 @@ where
                 window,
                 camera: &level.get_camera().transform,
 				gres,
+				shader_cache,
             };
 
             render_system::update(render_args);

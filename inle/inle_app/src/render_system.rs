@@ -7,7 +7,7 @@ use inle_gfx::components::{C_Multi_Renderable, C_Renderable};
 use inle_gfx::render;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::transform::Transform2D;
-use inle_resources::gfx::Gfx_Resources;
+use inle_resources::gfx::{Shader_Cache, Gfx_Resources};
 
 #[cfg(debug_assertions)]
 use {
@@ -40,6 +40,7 @@ pub struct Render_System_Update_Args<'a> {
     pub cfg: Render_System_Config,
     pub camera: &'a Transform2D,
 	pub gres: &'a Gfx_Resources<'a>,
+	pub shader_cache: &'a Shader_Cache<'a>,
 }
 
 pub fn update(args: Render_System_Update_Args) {
@@ -51,7 +52,9 @@ pub fn update(args: Render_System_Update_Args) {
         window,
         camera,
 		#[cfg(debug_assertions)]
-		gres
+		gres,
+		#[cfg(debug_assertions)]
+		shader_cache,
     } = args;
 
     trace!("render_system::update");
@@ -81,25 +84,38 @@ pub fn update(args: Render_System_Update_Args) {
                 z_index,
             } = rend;
 
+			let mut_in_debug!(material) = *material;
+
             #[cfg(debug_assertions)]
             {
-				let mat = inle_gfx::material::Material::with_texture(gres.get_white_texture_handle());
-                if let Debug_Visualization::Sprites_Boundaries = cfg.debug_visualization {
-					let color = colors::lerp_col(colors::RED, colors::AQUA, (*z_index - min_z) as f32 / (max_z - min_z) as f32);
-                    render::render_texture_ws(
-						batches,
-						mat,
-                        src_rect,
-						color,
-                        &spatial.transform,
-						*z_index,
-                    );
+				use inle_gfx::material::Material;
+
+                match cfg.debug_visualization {
+					Debug_Visualization::Sprites_Boundaries => {
+						let mat = Material::with_texture(gres.get_white_texture_handle());
+						let color = colors::lerp_col(colors::RED, colors::AQUA, (*z_index - min_z) as f32 / (max_z - min_z) as f32);
+						render::render_texture_ws(
+							batches,
+							mat,
+							src_rect,
+							color,
+							&spatial.transform,
+							*z_index,
+						);
+					}
+					Debug_Visualization::Normals => {
+						let mut mat = Material::with_texture(if material.normals.is_some() { material.normals } else { gres.get_white_texture_handle() });
+						mat.shader = shader_cache.get_basic_shader_handle();
+						mat.cast_shadows = false;
+						material = mat;
+					}
+					_ => {}
                 }
             }
 
             render::render_texture_ws(
                 batches,
-                *material,
+                material,
                 src_rect,
                 *modulate,
                 &spatial.transform,
@@ -117,6 +133,9 @@ pub fn update(args: Render_System_Update_Args) {
 
     let multi_renderables = ecs_world.get_component_storage::<C_Multi_Renderable>();
 
+	#[cfg(debug_assertions)]
+	let (min_z, max_z) = get_min_max_z_multi(ecs_world, &entities);
+
     for &entity in entities.as_slice() {
         let rend = multi_renderables.get_component(entity).unwrap();
         let spatial = spatials.get_component(entity).unwrap();
@@ -126,19 +145,6 @@ pub fn update(args: Render_System_Update_Args) {
             rend_transforms,
             n_renderables,
         } = rend;
-
-        //#[cfg(debug_assertions)]
-        //{
-        //if cfg.draw_sprites_bg {
-        //render::render_rect_ws(
-        //window,
-        //*src_rect,
-        //cfg.draw_sprites_bg_color,
-        //&spatial.transform,
-        //camera,
-        //);
-        //}
-        //}
 
         for i in 0..*n_renderables {
             let C_Renderable {
@@ -150,8 +156,38 @@ pub fn update(args: Render_System_Update_Args) {
             let rend_transform = &rend_transforms[i as usize];
 
             let transform = spatial.transform.combine(rend_transform);
+
+			let mut_in_debug!(material) = *material;
+
+            #[cfg(debug_assertions)]
+            {
+				use inle_gfx::material::Material;
+
+                match cfg.debug_visualization {
+					Debug_Visualization::Sprites_Boundaries => {
+						let mat = Material::with_texture(gres.get_white_texture_handle());
+						let color = colors::lerp_col(colors::RED, colors::AQUA, (*z_index - min_z) as f32 / (max_z - min_z) as f32);
+						render::render_texture_ws(
+							batches,
+							mat,
+							src_rect,
+							color,
+							&spatial.transform,
+							*z_index,
+						);
+					}
+					Debug_Visualization::Normals => {
+						let mut mat = Material::with_texture(if material.normals.is_some() { material.normals } else { gres.get_white_texture_handle() });
+						mat.shader = shader_cache.get_basic_shader_handle();
+						mat.cast_shadows = false;
+						material = mat;
+					}
+					_ => {}
+                }
+            }
+
             render::render_texture_ws(
-                batches, *material, src_rect, *modulate, &transform, *z_index,
+                batches, material, src_rect, *modulate, &transform, *z_index,
             );
         }
     }
@@ -180,3 +216,30 @@ fn get_min_max_z(ecs_world: &Ecs_World, entities: &[inle_ecs::ecs_world::Entity]
 
 	(min_z, max_z)
 }
+
+#[cfg(debug_assertions)]
+fn get_min_max_z_multi(ecs_world: &Ecs_World, entities: &[inle_ecs::ecs_world::Entity]) -> (render::Z_Index, render::Z_Index) {
+	let mut min_z = render::Z_Index::MAX;
+	let mut max_z = render::Z_Index::MIN;
+	for &entity in entities {
+		let C_Multi_Renderable {
+			renderables,
+			..
+		} = ecs_world.get_component::<C_Multi_Renderable>(entity).unwrap();
+
+		for rend in renderables {
+			let z_index = rend.z_index;
+
+			if z_index < min_z {
+				min_z = z_index;
+			}
+
+			if z_index > max_z {
+				max_z = z_index;
+			}
+		}
+	}
+
+	(min_z, max_z)
+}
+

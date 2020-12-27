@@ -56,14 +56,14 @@ pub fn create_jelly(
     transform: &Transform2D,
     make_controllable: bool,
 ) -> Entity {
-    const N_ANIM_FRAMES: i32 = 7;
+    const N_ANIM_FRAMES: i32 = 3;
 
     let entity = world.new_entity();
-    let renderable = C_Renderable::new_with_diffuse(gres, env, "patricia_wagon_idle.png")
-        //.with_normals(gres, env, "jelly_n.png")
+    let renderable = C_Renderable::new_with_diffuse(gres, env, "jelly.png")
+        .with_normals(gres, env, "jelly_n.png")
         .with_cast_shadows(true)
         .with_shininess(10.0)
-        .with_shader(shader_cache, env, SHD_SPRITE_FLAT)
+        .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS)
         .with_n_frames(N_ANIM_FRAMES);
     world.add_component(entity, renderable);
 
