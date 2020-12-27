@@ -127,7 +127,7 @@ pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
 }
 
 pub fn new_image(_width: u32, _height: u32) -> Image {
-	()
+    ()
 }
 
 pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
@@ -260,8 +260,8 @@ pub fn render_line(_window: &mut Render_Window_Handle, _start: &Vertex, _end: &V
 
 pub fn copy_texture_to_image(_texture: &Texture) -> Image {}
 
-pub fn new_texture_from_image(_image: &Image, _rect: Option<Rect>) -> Texture {
-	Texture {}
+pub fn new_texture_from_image(_image: &Image, _rect: Option<Rect<i32>>) -> Option<Texture> {
+    Some(Texture { _pd: PhantomData })
 }
 
 pub fn get_image_pixel(_image: &Image, _x: u32, _y: u32) -> Color {
