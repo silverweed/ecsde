@@ -1,6 +1,6 @@
 use super::Mouse_Button;
-use crate::gfx::window::Event;
 use glfw::Action;
+use inle_win::window::Event;
 
 pub type Button = glfw::MouseButton;
 

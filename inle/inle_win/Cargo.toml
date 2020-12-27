@@ -9,8 +9,10 @@ edition = "2018"
 [features]
 win-glfw = ["glfw"]
 win-sfml = ["sfml/window"]
+win-winit = ["winit"]
 gfx-sfml = ["sfml/graphics"]
-default = ["win-sfml", "gfx-sfml"]
+#default = ["win-sfml", "gfx-sfml"]
+default= ["win-glfw"]
 
 [dependencies]
 inle_math = { path = "../inle_math" }
@@ -28,3 +30,9 @@ version = "0.39"
 optional = true
 default-features = false
 #features = ["glfw-sys"]
+
+[dependencies.winit]
+version = "0.24"
+optional = true
+default-features = false
+features = ["x11"]

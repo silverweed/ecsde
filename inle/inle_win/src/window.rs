@@ -6,11 +6,17 @@ mod sfml;
 #[cfg(feature = "win-glfw")]
 mod glfw;
 
+#[cfg(feature = "win-winit")]
+mod winit;
+
 #[cfg(feature = "win-sfml")]
 use self::sfml as backend;
 
 #[cfg(feature = "win-glfw")]
 use self::glfw as backend;
+
+#[cfg(feature = "win-winit")]
+use self::winit as backend;
 
 pub type Window_Handle = backend::Window_Handle;
 pub type Create_Window_Args = backend::Create_Window_Args;

@@ -7,4 +7,7 @@
 #[macro_use]
 extern crate inle_diagnostics;
 
+#[macro_use]
+extern crate inle_math;
+
 pub mod window;

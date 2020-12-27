@@ -9,7 +9,7 @@ edition = "2018"
 [features]
 win-sfml = ["sfml/window"]
 win-glfw = ["glfw"]
-default = ["win-sfml"]
+default = ["win-glfw"]
 
 [dependencies]
 inle_common = { path = "../inle_common" }

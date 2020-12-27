@@ -1,6 +1,5 @@
-use crate::common::vector::Vec2i;
-use glfw;
 use glfw::Context;
+use inle_math::vector::Vec2i;
 
 pub type Event = glfw::WindowEvent;
 

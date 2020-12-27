@@ -9,7 +9,7 @@ edition = "2018"
 [features]
 gfx-null = []
 gfx-sfml = ["sfml/graphics"]
-default = ["gfx-sfml"]
+default = ["gfx-null"]
 
 [dependencies]
 inle_common = { path = "../inle_common" }
