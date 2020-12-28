@@ -88,6 +88,8 @@ pub fn set_key_repeat_enabled(window: &mut Window_Handle, enabled: bool) {
     window.handle.set_key_repeat_enabled(enabled);
 }
 
+pub fn prepare_poll_events(_window: &mut Window_Handle) {}
+
 pub fn poll_event(window: &mut Window_Handle) -> Option<Event> {
     window.handle.poll_event()
 }

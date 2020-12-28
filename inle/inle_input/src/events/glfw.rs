@@ -7,9 +7,9 @@ use inle_win::window::Event as Win_Event;
 pub(super) fn framework_to_engine_event(event: Win_Event) -> Option<Input_Raw_Event> {
     use glfw::Action;
 
-    match event {
+    match dbg!(event) {
         Win_Event::Close => Some(Input_Raw_Event::Quit),
-        Win_Event::Size(width, height) => Some(Input_Raw_Event::Resized(
+        Win_Event::FramebufferSize(width, height) => Some(Input_Raw_Event::Resized(
             width.max(1) as u32,
             height.max(1) as u32,
         )),

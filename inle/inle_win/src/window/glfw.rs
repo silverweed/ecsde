@@ -1,5 +1,6 @@
 use glfw::Context;
 use inle_math::vector::Vec2i;
+use std::collections::VecDeque;
 
 pub type Event = glfw::WindowEvent;
 
@@ -21,6 +22,7 @@ pub struct Window_Handle {
     vsync: bool,
     pub glfw: glfw::Glfw,
     pub event_receiver: std::sync::mpsc::Receiver<(f64, Event)>,
+    events_buffer: VecDeque<Event>,
 }
 
 #[cfg(feature = "gfx-gl")]
@@ -53,6 +55,7 @@ pub fn create_window(
 
     window.make_current();
     window.set_key_polling(true);
+    // @Cleanup: needed?
     window.set_framebuffer_size_polling(true);
     // @Incomplete: vsync, etc
 
@@ -62,15 +65,15 @@ pub fn create_window(
         vsync: args.vsync,
         glfw,
         event_receiver: events,
+        events_buffer: VecDeque::with_capacity(8),
     }
 }
 
-pub fn has_vsync<W: AsRef<Window_Handle>>(window: &W) -> bool {
-    window.as_ref().vsync
+pub fn has_vsync(window: &Window_Handle) -> bool {
+    window.vsync
 }
 
-pub fn set_vsync<W: AsMut<Window_Handle>>(window: &mut W, vsync: bool) {
-    let window = window.as_mut();
+pub fn set_vsync(window: &mut Window_Handle, vsync: bool) {
     window.vsync = vsync;
     window.glfw.set_swap_interval(if vsync {
         glfw::SwapInterval::Sync(1)
@@ -79,38 +82,39 @@ pub fn set_vsync<W: AsMut<Window_Handle>>(window: &mut W, vsync: bool) {
     });
 }
 
-pub fn display<W: AsMut<Window_Handle>>(window: &mut W) {
-    window.as_mut().handle.swap_buffers();
+pub fn display(window: &mut Window_Handle) {
+    window.handle.swap_buffers();
 }
 
-pub fn get_window_target_size<W: AsRef<Window_Handle>>(window: &W) -> (u32, u32) {
-    window.as_ref().target_size
+pub fn get_window_target_size(window: &Window_Handle) -> (u32, u32) {
+    window.target_size
 }
 
-pub fn get_window_real_size<W: AsRef<Window_Handle>>(window: &W) -> (u32, u32) {
-    let (x, y) = window.as_ref().handle.get_size();
+pub fn get_window_real_size(window: &Window_Handle) -> (u32, u32) {
+    let (x, y) = window.handle.get_size();
     (x as _, y as _)
 }
 
-pub fn poll_event<W: AsMut<Window_Handle>>(window: &mut W) -> Option<Event> {
-    // @Incomplete
-    //window.glfw.poll_events_unbuffered(|_, evt| Some(evt));
-    //for (_, evt) in glfw::flush_messages(&window.event_receiver) {
-    let window = window.as_mut();
+pub fn prepare_poll_events(window: &mut Window_Handle) {
     window.glfw.poll_events();
-    glfw::flush_messages(&window.event_receiver)
-        .next()
-        .map(|(_, evt)| evt)
+    window.events_buffer.clear();
+    for (_, evt) in glfw::flush_messages(&window.event_receiver) {
+        window.events_buffer.push_back(evt);
+    }
 }
 
-pub fn raw_mouse_pos_in_window<W: AsRef<Window_Handle>>(window: &W) -> Vec2i {
-    let (x, y) = window.as_ref().handle.get_cursor_pos();
+pub fn poll_event(window: &mut Window_Handle) -> Option<Event> {
+    window.events_buffer.pop_front()
+}
+
+pub fn raw_mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
+    let (x, y) = window.handle.get_cursor_pos();
     debug_assert!(x < std::i32::MAX as f64);
     debug_assert!(y < std::i32::MAX as f64);
     v2!(x as i32, y as i32)
 }
 
-pub fn set_key_repeat_enabled<W: AsMut<Window_Handle>>(window: &mut W, enabled: bool) {
+pub fn set_key_repeat_enabled(window: &mut Window_Handle, enabled: bool) {
     // @Incomplete
-    window.as_mut().handle.set_key_polling(!enabled);
+    window.handle.set_key_polling(!enabled);
 }

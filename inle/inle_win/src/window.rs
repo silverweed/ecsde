@@ -74,6 +74,11 @@ pub fn get_window_real_size<W: AsRef<Window_Handle>>(window: &W) -> (u32, u32) {
 }
 
 #[inline(always)]
+pub fn prepare_poll_events<W: AsMut<Window_Handle>>(window: &mut W) {
+    backend::prepare_poll_events(window.as_mut())
+}
+
+#[inline(always)]
 pub fn poll_event<W: AsMut<Window_Handle>>(window: &mut W) -> Option<Event> {
     backend::poll_event(window.as_mut())
 }

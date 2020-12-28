@@ -1,6 +1,6 @@
 use gl::types::*;
 use inle_common::colors::Color;
-use inle_math::rect::Rectf;
+use inle_math::rect::{Rect, Rectf};
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::Window_Handle;
@@ -10,6 +10,7 @@ use std::{mem, ptr, str};
 pub struct Render_Window_Handle {
     window: Window_Handle,
     pub gl: Gl,
+    view: View,
 }
 
 impl AsRef<Window_Handle> for Render_Window_Handle {
@@ -215,6 +216,7 @@ pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
     Render_Window_Handle {
         window,
         gl: init_gl(),
+        view: View::default(),
     }
 }
 
@@ -239,7 +241,48 @@ pub fn clear(_window: &mut Render_Window_Handle) {
     }
 }
 
-pub fn set_viewport(_window: &mut Render_Window_Handle, _viewport: &Rectf, _view_rect: &Rectf) {}
+#[derive(Default)]
+struct View {
+    center: Vec2f,
+    size: Vec2f,
+    // The normalized viewport rect (coords are 0 to 1)
+    viewport: Rectf,
+}
+
+impl View {
+    fn from_rect(view_rect: &Rectf) -> Self {
+        let mut v = View::default();
+        v.center.x = view_rect.x + view_rect.width * 0.5;
+        v.center.y = view_rect.y + view_rect.height * 0.5;
+        v.size.x = view_rect.width;
+        v.size.y = view_rect.height;
+        v.viewport = Rect::new(0.0, 0.0, 1.0, 1.0);
+        v
+    }
+}
+
+pub fn set_viewport(window: &mut Render_Window_Handle, viewport: &Rectf, view_rect: &Rectf) {
+    let view = View::from_rect(view_rect);
+    window.view = view;
+
+    let win_size = inle_win::window::get_window_real_size(window);
+    let width = win_size.0 as f32;
+    let height = win_size.1 as f32;
+
+    // de-normalize the viewport
+    let viewport = Rect::new(
+        (0.5 + width * viewport.x) as i32,
+        (0.5 + height * viewport.y) as i32,
+        (0.5 + width * viewport.width) as i32,
+        (0.5 + height * viewport.height) as i32,
+    );
+
+    dbg!(viewport);
+
+    unsafe {
+        gl::Viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+    }
+}
 
 pub fn raw_unproject_screen_pos(
     _screen_pos: Vec2i,

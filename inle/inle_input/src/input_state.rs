@@ -78,11 +78,14 @@ pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut
     raw_state.core_events.clear();
     raw_state.events.clear();
 
+    window::prepare_poll_events(window);
     while let Some(evt) = window::poll_event(window) {
         if let Some(evt) = events::framework_to_engine_event(evt) {
             if is_core_event(&evt) {
+                ldebug!("core evt {:?}", evt);
                 raw_state.core_events.push(evt);
             }
+            ldebug!("evt {:?}", evt);
             raw_state.events.push(evt);
         }
     }
@@ -120,7 +123,7 @@ fn read_events_to_actions(
     processed.core_actions.clear();
     processed.game_actions.clear();
 
-    let process_event_func = if process_game_actions {
+    let process_event_func = if dbg!(process_game_actions) {
         process_event_core_and_game_actions
     } else {
         process_event_core_actions

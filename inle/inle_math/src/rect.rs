@@ -44,6 +44,17 @@ impl<T: PartialEq> PartialEq for Rect<T> {
 }
 impl<T: Eq> Eq for Rect<T> {}
 
+impl<T: Default> Default for Rect<T> {
+    fn default() -> Self {
+        Self {
+            x: T::default(),
+            y: T::default(),
+            width: T::default(),
+            height: T::default(),
+        }
+    }
+}
+
 pub type Rectf = Rect<f32>;
 pub type Recti = Rect<i32>;
 pub type Rectu = Rect<u32>;
