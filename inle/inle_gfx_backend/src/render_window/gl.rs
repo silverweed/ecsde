@@ -218,6 +218,10 @@ pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
     }
 }
 
+pub fn recreate_render_window(window: &mut Render_Window_Handle) {
+    gl::load_with(|symbol| inle_win::window::get_gl_handle(&mut window.window, symbol));
+}
+
 pub fn set_clear_color(_window: &mut Render_Window_Handle, color: Color) {
     unsafe {
         gl::ClearColor(

@@ -11,6 +11,10 @@ pub fn create_render_window(window: Window_Handle) -> Render_Window_Handle {
     backend::create_render_window(window)
 }
 
+pub fn recreate_render_window(window: &mut Render_Window_Handle) {
+    backend::recreate_render_window(window);
+}
+
 pub fn clear(window: &mut Render_Window_Handle) {
     backend::clear(window);
 }
