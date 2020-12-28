@@ -13,18 +13,21 @@ use std::mem;
 use std::ptr;
 use std::str;
 
+mod shape;
+
 pub struct Vertex_Buffer {
     cur_vertices: u32,
     max_vertices: u32,
     primitive_type: Primitive_Type,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 pub struct Vertex {
     pub position: Vec2f,
     pub color: Color,
     pub tex_coords: Vec2f,
 }
+
 pub type Image = ();
 pub struct Shader<'texture> {
     _pd: PhantomData<&'texture ()>,
@@ -72,8 +75,29 @@ pub fn fill_color_rect<R>(
 {
     let rect = rect.into();
 
+    // @Speed: may we do this more efficiently? Maybe a single draw call?
+    if paint_props.border_thick > 0. {
+        let outline_rect = Rect::new(
+            rect.x - paint_props.border_thick,
+            rect.y - paint_props.border_thick,
+            rect.width + 2. * paint_props.border_thick,
+            rect.height + 2. * paint_props.border_thick,
+        );
+        use_rect_shader(window, paint_props.border_color, &outline_rect);
+        unsafe {
+            gl::BindVertexArray(window.gl.rect_vao);
+            gl::DrawElements(
+                gl::TRIANGLES,
+                window.gl.n_rect_indices(),
+                window.gl.rect_indices_type(),
+                ptr::null(),
+            );
+        }
+    }
+
+    use_rect_shader(window, paint_props.color, &rect);
+
     unsafe {
-        use_rect_shader(window, paint_props, &rect);
         gl::BindVertexArray(window.gl.rect_vao);
         gl::DrawElements(
             gl::TRIANGLES,
@@ -321,11 +345,7 @@ macro_rules! c_str {
     };
 }
 
-fn use_rect_shader(
-    window: &mut Render_Window_Handle,
-    paint_props: &Paint_Properties,
-    rect: &Rect<f32>,
-) {
+fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<f32>) {
     let (ww, wh) = inle_win::window::get_window_target_size(window);
     let ww = 0.5 * ww as f32;
     let wh = 0.5 * wh as f32;
@@ -352,10 +372,10 @@ fn use_rect_shader(
 
         gl::Uniform4f(
             get_uniform_loc(window.gl.rect_shader, c_str!("color")),
-            paint_props.color.r as f32 / 255.0,
-            paint_props.color.g as f32 / 255.0,
-            paint_props.color.b as f32 / 255.0,
-            paint_props.color.a as f32 / 255.0,
+            color.r as f32 / 255.0,
+            color.g as f32 / 255.0,
+            color.b as f32 / 255.0,
+            color.a as f32 / 255.0,
         );
         check_gl_err();
     }

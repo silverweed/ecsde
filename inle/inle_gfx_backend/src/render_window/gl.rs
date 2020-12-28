@@ -34,6 +34,7 @@ pub struct Gl {
     pub rect_vbo: GLuint,
     pub rect_ebo: GLuint,
     pub rect_shader: GLuint,
+    pub rect_ws_shader: GLuint,
 }
 
 impl Gl {
@@ -49,7 +50,8 @@ impl Gl {
 fn init_gl() -> Gl {
     let mut gl = Gl::default();
     fill_rect_vbo_and_vao(&mut gl);
-    init_rect_shaders(&mut gl);
+    init_rect_shader(&mut gl);
+    init_rect_ws_shader(&mut gl);
     gl
 }
 
@@ -105,39 +107,29 @@ fn fill_rect_vbo_and_vao(gl: &mut Gl) {
 const GL_TRUE: GLint = gl::TRUE as _;
 const GL_FALSE: GLint = gl::FALSE as _;
 
-fn init_rect_shaders(gl: &mut Gl) {
-    const VERT_SHADER_SRC: &str = "
-            #version 330 core
+macro_rules! create_shader_from {
+    ($name: expr) => {{
+        const VERT_SHADER_SRC: &str =
+            include_str!(concat!("./gl/builtin_shaders/", $name, ".vert"));
+        const FRAG_SHADER_SRC: &str =
+            include_str!(concat!("./gl/builtin_shaders/", $name, ".frag"));
 
-            layout (location = 0) in vec2 in_pos;
+        create_shader(VERT_SHADER_SRC, FRAG_SHADER_SRC, $name)
+    }};
+}
 
-            /* (left, top, width, height) */
-            uniform vec4 rect;
-            uniform vec2 win_half_size;
+fn init_rect_shader(gl: &mut Gl) {
+    gl.rect_shader = create_shader_from!("screen_rect");
+}
 
-            void main() {
-               vec2 fin_pos = in_pos * vec2(rect.z, rect.w) + vec2(rect.x + 0.5 * rect.z, rect.y + 0.5 * rect.w);
-               fin_pos.x = (fin_pos.x - win_half_size.x) / win_half_size.x;
-               fin_pos.y = -(fin_pos.y - win_half_size.y) / win_half_size.y;
-               gl_Position = vec4(fin_pos.x, fin_pos.y, 0.0, 1.0);
-            }
-    ";
+fn init_rect_ws_shader(gl: &mut Gl) {
+    gl.rect_ws_shader = create_shader_from!("ws_rect");
+}
 
-    const FRAG_SHADER_SRC: &str = "
-            #version 330 core
-
-            uniform vec4 color;
-
-            out vec4 frag_color;
-
-            void main() {
-               frag_color = color;
-            }
-    ";
-
+fn create_shader(vertex_src: &str, fragment_src: &str, shader_src: &str) -> GLuint {
     unsafe {
         let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
-        let c_str_vert = CString::new(VERT_SHADER_SRC.as_bytes()).unwrap();
+        let c_str_vert = CString::new(vertex_src.as_bytes()).unwrap();
 
         gl::ShaderSource(vertex_shader, 1, &c_str_vert.as_ptr(), ptr::null());
         gl::CompileShader(vertex_shader);
@@ -148,21 +140,23 @@ fn init_rect_shaders(gl: &mut Gl) {
 
         let mut success = GL_FALSE;
         gl::GetShaderiv(vertex_shader, gl::COMPILE_STATUS, &mut success);
+        let mut info_len = 0;
         if success != GL_TRUE {
             gl::GetShaderInfoLog(
                 vertex_shader,
                 INFO_LOG_CAP,
-                ptr::null_mut(),
+                &mut info_len,
                 info_log.as_mut_ptr() as *mut GLchar,
             );
             panic!(
-                "Rect vertex shader failed to compile:\n----------\n{}\n-----------",
-                str::from_utf8(&info_log).unwrap()
+                "Vertex shader `{}` failed to compile:\n----------\n{}\n-----------",
+                shader_src,
+                str::from_utf8(&info_log[..info_len as usize]).unwrap()
             );
         }
 
         let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
-        let c_str_frag = CString::new(FRAG_SHADER_SRC.as_bytes()).unwrap();
+        let c_str_frag = CString::new(fragment_src.as_bytes()).unwrap();
 
         gl::ShaderSource(fragment_shader, 1, &c_str_frag.as_ptr(), ptr::null());
         gl::CompileShader(fragment_shader);
@@ -172,12 +166,13 @@ fn init_rect_shaders(gl: &mut Gl) {
             gl::GetShaderInfoLog(
                 fragment_shader,
                 INFO_LOG_CAP,
-                ptr::null_mut(),
+                &mut info_len,
                 info_log.as_mut_ptr() as *mut GLchar,
             );
             panic!(
-                "Rect fragment shader failed to compile:\n----------\n{}\n-----------",
-                str::from_utf8(&info_log).unwrap()
+                "Fragment shader `{}` failed to compile:\n----------\n{}\n-----------",
+                shader_src,
+                str::from_utf8(&info_log[..info_len as usize]).unwrap()
             );
         }
 
@@ -191,12 +186,13 @@ fn init_rect_shaders(gl: &mut Gl) {
             gl::GetProgramInfoLog(
                 shader_program,
                 INFO_LOG_CAP,
-                ptr::null_mut(),
+                &mut info_len,
                 info_log.as_mut_ptr() as *mut GLchar,
             );
             panic!(
-                "Rect shader failed to link:\n----------\n{}\n-----------",
-                str::from_utf8(&info_log).unwrap()
+                "Shader `{}` failed to link:\n----------\n{}\n-----------",
+                shader_src,
+                str::from_utf8(&info_log[..info_len as usize]).unwrap()
             );
         }
         gl::DeleteShader(vertex_shader);
@@ -204,10 +200,12 @@ fn init_rect_shaders(gl: &mut Gl) {
 
         debug_assert!(shader_program != 0);
         ldebug!(
-            "Rect shader linked successfully as shader {}",
+            "Shader `{}` ({}) linked successfully.",
+            shader_src,
             shader_program
         );
-        gl.rect_shader = shader_program;
+
+        shader_program
     }
 }
 
