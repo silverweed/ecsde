@@ -129,7 +129,6 @@ impl Console {
     }
 
     pub fn update(&mut self, input_state: &Input_State) {
-        ldebug!("updating console. {}", input_state.raw.events.len());
         for event in &input_state.raw.events {
             self.process_event(*event, input_state.raw.kb_state.modifiers_pressed);
         }

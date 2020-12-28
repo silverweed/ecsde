@@ -3,6 +3,7 @@ use crate::render_window::Render_Window_Handle;
 use gl::types::*;
 use inle_common::colors::{self, Color};
 use inle_common::paint_props::Paint_Properties;
+use inle_math::matrix::Matrix3;
 use inle_math::rect::Rect;
 use inle_math::shapes;
 use inle_math::transform::Transform2D;
@@ -109,14 +110,53 @@ pub fn fill_color_rect<R>(
 }
 
 pub fn fill_color_rect_ws<T>(
-    _window: &mut Render_Window_Handle,
-    _paint_props: &Paint_Properties,
-    _rect: T,
-    _transform: &Transform2D,
-    _camera: &Transform2D,
+    window: &mut Render_Window_Handle,
+    paint_props: &Paint_Properties,
+    rect: T,
+    transform: &Transform2D,
+    camera: &Transform2D,
 ) where
     T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
+    let rect = rect.into();
+
+    // @Speed: may we do this more efficiently? Maybe a single draw call?
+    if paint_props.border_thick > 0. {
+        let outline_rect = Rect::new(
+            rect.x - paint_props.border_thick,
+            rect.y - paint_props.border_thick,
+            rect.width + 2. * paint_props.border_thick,
+            rect.height + 2. * paint_props.border_thick,
+        );
+        use_rect_ws_shader(
+            window,
+            paint_props.border_color,
+            &outline_rect,
+            transform,
+            camera,
+        );
+        unsafe {
+            gl::BindVertexArray(window.gl.rect_vao);
+            gl::DrawElements(
+                gl::TRIANGLES,
+                window.gl.n_rect_indices(),
+                window.gl.rect_indices_type(),
+                ptr::null(),
+            );
+        }
+    }
+
+    use_rect_ws_shader(window, paint_props.color, &rect, transform, camera);
+
+    unsafe {
+        gl::BindVertexArray(window.gl.rect_vao);
+        gl::DrawElements(
+            gl::TRIANGLES,
+            window.gl.n_rect_indices(),
+            window.gl.rect_indices_type(),
+            ptr::null(),
+        );
+    }
 }
 
 pub fn fill_color_circle(
@@ -381,6 +421,70 @@ fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<
     }
 }
 
+fn use_rect_ws_shader(
+    window: &mut Render_Window_Handle,
+    color: Color,
+    rect: &Rect<f32>,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) {
+    let (width, height) = inle_win::window::get_window_target_size(window);
+    let model = transform;
+    let view = camera.inverse();
+    let projection = Matrix3::new(
+        1. / width as f32,
+        0.,
+        0.,
+        0.,
+        -1. / height as f32,
+        0.,
+        0.,
+        0.,
+        1.,
+    );
+    let mvp = projection * view.get_matrix() * model.get_matrix();
+
+    // @Volatile: order must be consistent with render_window::backend::RECT_VERTICES
+    let rect_vertices = [
+        rect.x,
+        rect.y,
+        rect.x + rect.width,
+        rect.y,
+        rect.x + rect.width,
+        rect.y + rect.height,
+        rect.x,
+        rect.y + rect.height,
+    ];
+
+    unsafe {
+        gl::UseProgram(window.gl.rect_ws_shader);
+        check_gl_err();
+
+        gl::UniformMatrix3fv(
+            get_uniform_loc(window.gl.rect_ws_shader, c_str!("mvp")),
+            1,
+            gl::FALSE,
+            mvp.as_slice().as_ptr(),
+        );
+        check_gl_err();
+
+        gl::Uniform2fv(
+            get_uniform_loc(window.gl.rect_ws_shader, c_str!("rect")),
+            rect_vertices.len() as _,
+            rect_vertices.as_ptr(),
+        );
+
+        gl::Uniform4f(
+            get_uniform_loc(window.gl.rect_ws_shader, c_str!("color")),
+            color.r as f32 / 255.0,
+            color.g as f32 / 255.0,
+            color.b as f32 / 255.0,
+            color.a as f32 / 255.0,
+        );
+        check_gl_err();
+    }
+}
+
 #[inline]
 fn get_uniform_loc(shader: GLuint, name: &CStr) -> GLint {
     unsafe {
@@ -399,6 +503,7 @@ fn get_uniform_loc(shader: GLuint, name: &CStr) -> GLint {
 
 #[cfg(debug_assertions)]
 #[inline]
+#[track_caller]
 fn check_gl_err() {
     unsafe {
         let err = gl::GetError();

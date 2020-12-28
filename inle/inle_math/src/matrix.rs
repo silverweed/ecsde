@@ -10,7 +10,7 @@ pub struct Matrix3<T> {
 impl<T> Matrix3<T> {
     #[rustfmt::skip]
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub const fn new(
         r1c1: T, r1c2: T, r1c3: T,
         r2c1: T, r2c2: T, r2c3: T,
         r3c1: T, r3c2: T, r3c3: T,
@@ -21,6 +21,14 @@ impl<T> Matrix3<T> {
                 [r1c2, r2c2, r3c2],
                 [r1c3, r2c3, r3c3],
             ],
+        }
+    }
+
+    pub fn as_slice(&self) -> &[T] {
+        let c = self.columns.as_ptr();
+        unsafe {
+            let p = &(*c)[..];
+            std::slice::from_raw_parts(p.as_ptr(), 9)
         }
     }
 }
@@ -106,6 +114,10 @@ where
             ],
         }
     }
+}
+
+pub const fn identity_matrix() -> Matrix3<f32> {
+    Matrix3::new(1., 0., 0., 0., 1., 0., 0., 0., 1.)
 }
 
 impl<T> Debug for Matrix3<T>
@@ -469,5 +481,11 @@ mod tests {
         );
 
         assert_approx_eq!(a.determinant(), 131.004);
+    }
+
+    #[test]
+    fn mat_as_slice() {
+        let a = Matrix3::new(1, 2, 3, 4, 5, 6, 7, 8, 9);
+        assert_eq!(a.as_slice(), &[1, 4, 7, 2, 5, 8, 3, 6, 9]);
     }
 }

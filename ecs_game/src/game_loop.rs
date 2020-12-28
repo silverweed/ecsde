@@ -286,6 +286,31 @@ where
             );
         }
 
+        // @Temporary DEBUG
+        game_state
+            .engine_state
+            .debug_systems
+            .painters
+            .get_mut(&sid!("test"))
+            .unwrap()
+            .add_rect(
+                v2!(200., 100.),
+                &Transform2D::from_pos_rot_scale(
+                    v2!(
+                        200. * game_state.engine_state.time.game_time().as_secs_f32().sin(),
+                        0.
+                    ),
+                    inle_math::angle::deg(game_state.engine_state.time.game_time().as_secs_f32()),
+                    v2!(1., 1.),
+                ),
+                Paint_Properties {
+                    color: colors::RED,
+                    border_thick: 2.,
+                    border_color: colors::GREEN,
+                    ..Default::default()
+                },
+            );
+
         // Update game systems
         {
             trace!("game_update");
