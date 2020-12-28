@@ -34,7 +34,8 @@ impl Bit_Set {
             let bits_len = self.slow_bits.len();
             if element_idx > bits_len {
                 let size_diff = ((element_idx - 1) - self.slow_bits.len()).max(0);
-                self.slow_bits.resize(self.slow_bits.len() + size_diff, 0);
+                self.slow_bits
+                    .resize(self.slow_bits.len() + size_diff + 1, 0);
             }
 
             let element_idx = element_idx - 1;
