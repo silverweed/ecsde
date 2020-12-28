@@ -31,6 +31,6 @@ pub fn sound_playing(_sound: &Sound) -> bool {
     false
 }
 
-pub fn create_sound_with_buffer<'a>(buf: &'a Sound_Buffer) -> Sound<'a> {
+pub fn create_sound_with_buffer<'a>(_buf: &'a Sound_Buffer) -> Sound<'a> {
     Sound(PhantomData)
 }

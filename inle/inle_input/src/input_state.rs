@@ -63,14 +63,13 @@ pub fn create_input_state(env: &Env_Info) -> Input_State {
 }
 
 fn is_core_event(evt: &Input_Raw_Event) -> bool {
-    match evt {
+    matches!(evt,
         Input_Raw_Event::Resized(..)
         | Input_Raw_Event::Quit
         | Input_Raw_Event::Joy_Connected { .. }
-        | Input_Raw_Event::Joy_Disconnected { .. } => true,
-        _ => false,
-    }
+        | Input_Raw_Event::Joy_Disconnected { .. })
 }
+
 pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut Input_Raw_State) {
     let window = window.as_mut();
 

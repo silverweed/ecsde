@@ -119,17 +119,16 @@ impl Debug_Frame_Scroller {
                 }
                 // @Incomplete: make this button configurable
                 Input_Raw_Event::Key_Pressed { code: Key::Period } => {
-                    if self.manually_selected {
-                        if self.cur_second as u32 * self.n_frames as u32 + (self.cur_frame as u32)
+                    if self.manually_selected
+                        && self.cur_second as u32 * self.n_frames as u32 + (self.cur_frame as u32)
                             < self.tot_scroller_filled_frames
-                        {
-                            if self.cur_frame < self.n_filled_frames - 1 {
-                                self.cur_frame += 1;
-                            } else if self.cur_second < self.n_filled_seconds - 1 {
-                                self.cur_frame = 0;
-                                self.cur_second += 1;
-                                self.n_filled_frames = calc_filled_frames(self);
-                            }
+                    {
+                        if self.cur_frame < self.n_filled_frames - 1 {
+                            self.cur_frame += 1;
+                        } else if self.cur_second < self.n_filled_seconds - 1 {
+                            self.cur_frame = 0;
+                            self.cur_second += 1;
+                            self.n_filled_frames = calc_filled_frames(self);
                         }
                     }
                 }

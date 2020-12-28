@@ -70,7 +70,7 @@ pub fn fill_color_rect<R>(
 ) where
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
-    let mut rect = rect.into();
+    let rect = rect.into();
 
     unsafe {
         use_rect_shader(window, paint_props, &rect);
@@ -143,9 +143,7 @@ pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
     vbuf.primitive_type
 }
 
-pub fn new_image(_width: u32, _height: u32) -> Image {
-    ()
-}
+pub fn new_image(_width: u32, _height: u32) -> Image {}
 
 pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
     Vertex_Buffer {
@@ -328,29 +326,9 @@ fn use_rect_shader(
     paint_props: &Paint_Properties,
     rect: &Rect<f32>,
 ) {
-    //let mut rect = *rect;
     let (ww, wh) = inle_win::window::get_window_target_size(window);
     let ww = 0.5 * ww as f32;
     let wh = 0.5 * wh as f32;
-    //rect.x = (rect.x - ww) / ww;
-    //rect.y = -(rect.y - wh) / wh;
-    //rect.width /= ww;
-    //rect.height /= -wh;
-
-    //let in_pos = v2!(-0.5, -0.5);
-    //let mut fin_pos = in_pos * v2!(rect.width, rect.height)
-    //+ v2!(rect.x + 0.5 * rect.width, rect.y + 0.5 * rect.height);
-    //fin_pos.x -= ww;
-    //fin_pos.x /= ww;
-    //fin_pos.y -= wh;
-    //fin_pos.y /= wh;
-    //fin_pos.y = -fin_pos.y;
-    //dbg!(rect);
-    //dbg!(fin_pos);
-    //let in_pos = v2!(0.5, 0.5);
-    //let fin_pos = in_pos * v2!(rect.width, rect.height)
-    //+ v2!(rect.x + 0.5 * rect.width, rect.y + 0.5 * rect.height);
-    //dbg!(fin_pos);
 
     unsafe {
         gl::UseProgram(window.gl.rect_shader);
@@ -387,6 +365,7 @@ fn use_rect_shader(
 fn get_uniform_loc(shader: GLuint, name: &CStr) -> GLint {
     unsafe {
         let loc = gl::GetUniformLocation(shader, name.as_ptr());
+        #[cfg(debug_assertions)]
         if loc == -1 {
             lerr!(
                 "Failed to get location of uniform `{:?}` in shader {}",
@@ -405,9 +384,9 @@ fn check_gl_err() {
         let err = gl::GetError();
         match err {
             gl::NO_ERROR => {}
-            gl::INVALID_ENUM => panic!("GL_INVALID_ENUM!"),
-            gl::INVALID_OPERATION => panic!("GL_INVALID_OPERATION!"),
-            gl::INVALID_VALUE => panic!("GL_INVALID_VALUE!"),
+            gl::INVALID_ENUM => panic!("GL_INVALID_ENUM"),
+            gl::INVALID_OPERATION => panic!("GL_INVALID_OPERATION"),
+            gl::INVALID_VALUE => panic!("GL_INVALID_VALUE"),
             _ => panic!("Other GL error: {}", err),
         }
     }

@@ -405,20 +405,16 @@ pub fn draw_batches(
                                     const SHADOW_MAX_VALUE: f32 = 50.0;
 
                                     for v_idx in 0..4 {
-                                        v[v_idx].position -= (lerp_clamped(
-                                            0.0,
-                                            1.0,
-                                            dist2[v_idx] / min_d_sqr - 1.0,
-                                        ) * diff[v_idx])
-                                            .into();
+                                        v[v_idx].position -=
+                                            lerp_clamped(0.0, 1.0, dist2[v_idx] / min_d_sqr - 1.0)
+                                                * diff[v_idx];
                                         let t = (1.0 - dist2[v_idx] * recp_radius2).max(0.0);
                                         v[v_idx].color = colors::rgba(
                                             0,
                                             0,
                                             0,
                                             lerp(0.0, SHADOW_MAX_VALUE, t * t) as u8,
-                                        )
-                                        .into();
+                                        );
 
                                         shadow_chunk
                                             [4 * (SHADOWS_PER_ENTITY * i + light_idx) + v_idx] =
@@ -511,7 +507,7 @@ pub fn draw_batches(
             }
 
             if cast_shadows {
-				trace!("batcher::cast_shadows");
+                trace!("batcher::cast_shadows");
 
                 let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
                 shadow_vbuffer.update(shadow_vertices, n_shadow_vertices);
