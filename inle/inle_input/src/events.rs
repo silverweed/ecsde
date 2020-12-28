@@ -31,6 +31,9 @@ pub enum Input_Raw_Event {
     Key_Released {
         code: Key,
     },
+    Key_Repeated {
+        code: Key,
+    },
     Mouse_Wheel_Scrolled {
         delta: f32,
     },

@@ -7,7 +7,7 @@ use inle_win::window::Event as Win_Event;
 pub(super) fn framework_to_engine_event(event: Win_Event) -> Option<Input_Raw_Event> {
     use glfw::Action;
 
-    match dbg!(event) {
+    match event {
         Win_Event::Close => Some(Input_Raw_Event::Quit),
         Win_Event::FramebufferSize(width, height) => Some(Input_Raw_Event::Resized(
             width.max(1) as u32,
@@ -43,6 +43,14 @@ pub(super) fn framework_to_engine_event(event: Win_Event) -> Option<Input_Raw_Ev
         Win_Event::Key(key, _, Action::Release, _) => {
             if let Some(key) = keyboard::framework_to_engine_key(key) {
                 Some(Input_Raw_Event::Key_Released { code: key })
+            } else {
+                ldebug!("Ignored unknown key {:?}", key);
+                None
+            }
+        }
+        Win_Event::Key(key, _, Action::Repeat, _) => {
+            if let Some(key) = keyboard::framework_to_engine_key(key) {
+                Some(Input_Raw_Event::Key_Repeated { code: key })
             } else {
                 ldebug!("Ignored unknown key {:?}", key);
                 None

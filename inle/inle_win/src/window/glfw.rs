@@ -114,7 +114,4 @@ pub fn raw_mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
     v2!(x as i32, y as i32)
 }
 
-pub fn set_key_repeat_enabled(window: &mut Window_Handle, enabled: bool) {
-    // @Incomplete
-    window.handle.set_key_polling(!enabled);
-}
+pub fn set_key_repeat_enabled(_window: &mut Window_Handle, _enabled: bool) {}

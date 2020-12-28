@@ -480,15 +480,18 @@ where
         inle_gfx::render_window::clear(window);
     }
 
-	#[cfg(debug_assertions)]
-	fn get_render_system_debug_visualization(debug_cvars: &super::game_state::Debug_CVars, cfg: &inle_cfg::Config) -> render_system::Debug_Visualization {
-		match debug_cvars.render_debug_visualization.read(cfg).as_str() {
-			"1" | "b" | "bounds" => render_system::Debug_Visualization::Sprites_Boundaries,
-			"2" | "n" | "normals" => render_system::Debug_Visualization::Normals,
-			"3" | "m" | "materials" => render_system::Debug_Visualization::Materials,
-			_ => render_system::Debug_Visualization::None,
-		}
-	}
+    #[cfg(debug_assertions)]
+    fn get_render_system_debug_visualization(
+        debug_cvars: &super::game_state::Debug_CVars,
+        cfg: &inle_cfg::Config,
+    ) -> render_system::Debug_Visualization {
+        match debug_cvars.render_debug_visualization.read(cfg).as_str() {
+            "1" | "b" | "bounds" => render_system::Debug_Visualization::Sprites_Boundaries,
+            "2" | "n" | "normals" => render_system::Debug_Visualization::Normals,
+            "3" | "m" | "materials" => render_system::Debug_Visualization::Materials,
+            _ => render_system::Debug_Visualization::None,
+        }
+    }
 
     let cfg = &game_state.engine_state.config;
     let render_cfg = render_system::Render_System_Config {
@@ -510,8 +513,8 @@ where
                 cfg: render_cfg,
                 window,
                 camera: &level.get_camera().transform,
-				gres,
-				shader_cache,
+                gres,
+                shader_cache,
             };
 
             render_system::update(render_args);

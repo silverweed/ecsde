@@ -129,6 +129,7 @@ impl Console {
     }
 
     pub fn update(&mut self, input_state: &Input_State) {
+        ldebug!("updating console. {}", input_state.raw.events.len());
         for event in &input_state.raw.events {
             self.process_event(*event, input_state.raw.kb_state.modifiers_pressed);
         }
@@ -153,129 +154,164 @@ impl Console {
     }
 
     fn process_event(&mut self, event: Input_Raw_Event, modifiers: Input_Action_Modifiers) {
+        debug_assert!(self.cur_pos <= self.cur_line.len());
+
+        let line_changed = match event {
+            Input_Raw_Event::Key_Pressed { code } => self.process_key(code, modifiers),
+            Input_Raw_Event::Key_Repeated { code } => self.process_key(code, modifiers),
+            _ => false,
+        };
+
+        if line_changed {
+            self.update_hints();
+        }
+    }
+
+    // Returns whether the line was changed or not.
+    fn process_key(&mut self, code: keyboard::Key, modifiers: Input_Action_Modifiers) -> bool {
         use inle_input::bindings::modifiers::*;
         use keyboard::Key;
 
-        debug_assert!(self.cur_pos <= self.cur_line.len());
-
-        let mut line_changed = false;
-
         let ctrl = (modifiers & MOD_CTRL) != 0;
         let shift = (modifiers & MOD_SHIFT) != 0;
-        if let Input_Raw_Event::Key_Pressed { code } = event {
-            match code {
-                _ if self.toggle_console_keys.contains(&code) => {
-                    self.status = Console_Status::Closed;
-                }
-                Key::BackSpace => {
-                    if ctrl {
-                        self.del_prev_word();
-                    } else {
-                        self.del_prev_char();
-                    }
-                    line_changed = true;
-                }
-                Key::Up => {
-                    if self.hints_displayed.is_empty() {
-                        if let Some(line) = self.history.move_and_read(Direction::To_Older) {
-                            self.cur_line = line.to_string();
-                            self.cur_pos = self.cur_line.len();
-                        }
-                    } else if self.selected_hint == self.hints_displayed.len() - 1 {
-                        self.selected_hint = 0;
-                    } else {
-                        self.selected_hint += 1;
-                    }
-                }
-                Key::Down => {
-                    if self.hints_displayed.is_empty() {
-                        if !self.history.is_cursor_past_end() {
-                            self.cur_line = self
-                                .history
-                                .move_and_read(Direction::To_Newer)
-                                .map_or_else(|| String::from(""), |s| s.to_string());
-                            self.cur_pos = self.cur_line.len();
-                        }
-                    } else if self.selected_hint == 0 {
-                        self.selected_hint = self.hints_displayed.len() - 1;
-                    } else {
-                        self.selected_hint -= 1;
-                    }
-                }
-                Key::Left => {
-                    if ctrl {
-                        self.move_one_word(-1);
-                    } else {
-                        self.move_one_char(-1);
-                    }
-                }
-                Key::Right => {
-                    if ctrl {
-                        self.move_one_word(1);
-                    } else {
-                        self.move_one_char(1);
-                    }
-                }
-                Key::A if ctrl => {
-                    self.cur_pos = 0;
-                }
-                Key::Home => {
-                    self.cur_pos = 0;
-                }
-                Key::E if ctrl => {
-                    self.cur_pos = self.cur_line.len();
-                }
-                Key::End => {
-                    self.cur_pos = self.cur_line.len();
-                }
-                Key::W if ctrl => {
+        match code {
+            _ if self.toggle_console_keys.contains(&code) => {
+                self.status = Console_Status::Closed;
+                false
+            }
+
+            Key::BackSpace => {
+                if ctrl {
                     self.del_prev_word();
-                    line_changed = true;
+                } else {
+                    self.del_prev_char();
                 }
-                Key::Delete => {
-                    if ctrl {
-                        self.del_next_word();
-                    } else {
-                        self.del_next_char();
-                    }
-                    line_changed = true;
-                }
-                Key::K if ctrl => {
-                    self.cur_line.truncate(self.cur_pos);
-                    line_changed = true;
-                }
-                Key::D if ctrl => {
-                    self.cur_line.clear();
-                    self.cur_pos = 0;
-                    line_changed = true;
-                }
-                Key::Return => {
-                    self.commit_line();
-                    line_changed = true;
-                }
-                Key::Tab => {
-                    if !self.hints_displayed.is_empty() {
-                        // @Improve: this is a pretty rudimentary behaviour: consider improving.
-                        let (cmd, _) = self.get_hint_key_and_rest().unwrap();
-                        self.cur_line = cmd.to_string()
-                            + if cmd.is_empty() { "" } else { " " }
-                            + &self.hints[cmd][self.hints_displayed[self.selected_hint]]
-                            + " ";
+
+                true
+            }
+
+            Key::Up => {
+                if self.hints_displayed.is_empty() {
+                    if let Some(line) = self.history.move_and_read(Direction::To_Older) {
+                        self.cur_line = line.to_string();
                         self.cur_pos = self.cur_line.len();
                     }
-                    line_changed = true;
+                } else if self.selected_hint == self.hints_displayed.len() - 1 {
+                    self.selected_hint = 0;
+                } else {
+                    self.selected_hint += 1;
                 }
-                _ => {
-                    if let Some(c) = keyboard::key_to_char(code, shift) {
-                        self.cur_line.insert(self.cur_pos, c);
-                        self.cur_pos += 1;
-                    }
-                    line_changed = true;
-                }
+
+                false
             }
-        }
-        if line_changed {
-            self.update_hints();
+
+            Key::Down => {
+                if self.hints_displayed.is_empty() {
+                    if !self.history.is_cursor_past_end() {
+                        self.cur_line = self
+                            .history
+                            .move_and_read(Direction::To_Newer)
+                            .map_or_else(|| String::from(""), |s| s.to_string());
+                        self.cur_pos = self.cur_line.len();
+                    }
+                } else if self.selected_hint == 0 {
+                    self.selected_hint = self.hints_displayed.len() - 1;
+                } else {
+                    self.selected_hint -= 1;
+                }
+
+                false
+            }
+
+            Key::Left => {
+                if ctrl {
+                    self.move_one_word(-1);
+                } else {
+                    self.move_one_char(-1);
+                }
+
+                false
+            }
+
+            Key::Right => {
+                if ctrl {
+                    self.move_one_word(1);
+                } else {
+                    self.move_one_char(1);
+                }
+                false
+            }
+
+            Key::A if ctrl => {
+                self.cur_pos = 0;
+                false
+            }
+
+            Key::Home => {
+                self.cur_pos = 0;
+                false
+            }
+
+            Key::E if ctrl => {
+                self.cur_pos = self.cur_line.len();
+                false
+            }
+
+            Key::End => {
+                self.cur_pos = self.cur_line.len();
+                false
+            }
+
+            Key::W if ctrl => {
+                self.del_prev_word();
+                true
+            }
+
+            Key::Delete => {
+                if ctrl {
+                    self.del_next_word();
+                } else {
+                    self.del_next_char();
+                }
+                true
+            }
+
+            Key::K if ctrl => {
+                self.cur_line.truncate(self.cur_pos);
+                true
+            }
+
+            Key::D if ctrl => {
+                self.cur_line.clear();
+                self.cur_pos = 0;
+                true
+            }
+
+            Key::Return => {
+                self.commit_line();
+                true
+            }
+
+            Key::Tab => {
+                if !self.hints_displayed.is_empty() {
+                    // @Improve: this is a pretty rudimentary behaviour: consider improving.
+                    let (cmd, _) = self.get_hint_key_and_rest().unwrap();
+                    self.cur_line = cmd.to_string()
+                        + if cmd.is_empty() { "" } else { " " }
+                        + &self.hints[cmd][self.hints_displayed[self.selected_hint]]
+                        + " ";
+                    self.cur_pos = self.cur_line.len();
+                }
+                true
+            }
+
+            _ => {
+                if let Some(c) = keyboard::key_to_char(code, shift) {
+                    self.cur_line.insert(self.cur_pos, c);
+                    self.cur_pos += 1;
+                }
+                true
+            }
         }
     }
 
