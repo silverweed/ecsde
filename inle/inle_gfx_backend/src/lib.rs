@@ -5,10 +5,13 @@
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
 #[macro_use]
-extern crate inle_math;
+extern crate inle_common;
 
 #[macro_use]
-extern crate inle_common;
+extern crate inle_diagnostics;
+
+#[macro_use]
+extern crate inle_math;
 
 pub mod render;
 pub mod render_window;

@@ -7,7 +7,7 @@ use inle_math::rect::Rect;
 use inle_math::shapes;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use std::ffi::{c_void, CString};
+use std::ffi::{c_void, CStr, CString};
 use std::marker::PhantomData;
 use std::mem;
 use std::ptr;
@@ -70,165 +70,17 @@ pub fn fill_color_rect<R>(
 ) where
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
-    // @Temporary crap code just to see if we can get something on screen.
-    // Apparently we can!
-
     let mut rect = rect.into();
-    let (ww, wh) = inle_win::window::get_window_target_size(window);
-    let ww = 0.5 * ww as f32;
-    let wh = 0.5 * wh as f32;
-    rect.x = (rect.x - ww) / ww;
-    rect.y = -(rect.y - wh) / wh;
-    rect.width /= ww;
-    rect.height /= -wh;
-
-    let vertexShaderSource = "
-            #version 330 core
-            layout (location = 0) in vec2 aPos;
-            void main() {
-               gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);
-            }
-    ";
-    let fragmentShaderSource = "
-            #version 330 core
-            uniform vec3 color;
-            out vec4 FragColor;
-            void main() {
-               FragColor = vec4(color, 1.0);
-            }
-    ";
 
     unsafe {
-        let vertexShader = gl::CreateShader(gl::VERTEX_SHADER);
-        let c_str_vert = CString::new(vertexShaderSource.as_bytes()).unwrap();
-        gl::ShaderSource(vertexShader, 1, &c_str_vert.as_ptr(), ptr::null());
-        gl::CompileShader(vertexShader);
-
-        let mut success = gl::FALSE as GLint;
-        let mut infoLog = Vec::with_capacity(512);
-        infoLog.set_len(512 - 1); // subtract 1 to skip the trailing null character
-        gl::GetShaderiv(vertexShader, gl::COMPILE_STATUS, &mut success);
-        if success != gl::TRUE as GLint {
-            gl::GetShaderInfoLog(
-                vertexShader,
-                512,
-                ptr::null_mut(),
-                infoLog.as_mut_ptr() as *mut GLchar,
-            );
-            println!(
-                "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n{}",
-                str::from_utf8(&infoLog).unwrap()
-            );
-        }
-
-        // fragment shader
-        let fragmentShader = gl::CreateShader(gl::FRAGMENT_SHADER);
-        let c_str_frag = CString::new(fragmentShaderSource.as_bytes()).unwrap();
-        gl::ShaderSource(fragmentShader, 1, &c_str_frag.as_ptr(), ptr::null());
-        gl::CompileShader(fragmentShader);
-        // check for shader compile errors
-        gl::GetShaderiv(fragmentShader, gl::COMPILE_STATUS, &mut success);
-        if success != gl::TRUE as GLint {
-            gl::GetShaderInfoLog(
-                fragmentShader,
-                512,
-                ptr::null_mut(),
-                infoLog.as_mut_ptr() as *mut GLchar,
-            );
-            println!(
-                "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n{}",
-                str::from_utf8(&infoLog).unwrap()
-            );
-        }
-
-        // link shaders
-        let shaderProgram = gl::CreateProgram();
-        gl::AttachShader(shaderProgram, vertexShader);
-        gl::AttachShader(shaderProgram, fragmentShader);
-        gl::LinkProgram(shaderProgram);
-        // check for linking errors
-        gl::GetProgramiv(shaderProgram, gl::LINK_STATUS, &mut success);
-        if success != gl::TRUE as GLint {
-            gl::GetProgramInfoLog(
-                shaderProgram,
-                512,
-                ptr::null_mut(),
-                infoLog.as_mut_ptr() as *mut GLchar,
-            );
-            println!(
-                "ERROR::SHADER::PROGRAM::COMPILATION_FAILED\n{}",
-                str::from_utf8(&infoLog).unwrap()
-            );
-        }
-        gl::DeleteShader(vertexShader);
-        gl::DeleteShader(fragmentShader);
-
-        //let vertices: [f32; 9] = [
-        //-0.5, -0.5, 0.0, // left
-        //0.5, -0.5, 0.0, // right
-        //0.0, 0.5, 0.0, // top
-        //];
-        let vertices = [
-            rect.x,
-            rect.y,
-            rect.x + rect.width,
-            rect.y,
-            rect.x + rect.width,
-            rect.y + rect.height,
-            rect.x + rect.width,
-            rect.y + rect.height,
-            rect.x,
-            rect.y + rect.height,
-            rect.x,
-            rect.y,
-        ];
-        let (mut VBO, mut VAO) = (0, 0);
-        gl::GenVertexArrays(1, &mut VAO);
-        gl::GenBuffers(1, &mut VBO);
-        // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-        gl::BindVertexArray(VAO);
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
-        gl::BufferData(
-            gl::ARRAY_BUFFER,
-            (vertices.len() * mem::size_of::<GLfloat>()) as GLsizeiptr,
-            &vertices[0] as *const f32 as *const c_void,
-            gl::STATIC_DRAW,
-        );
-
-        gl::VertexAttribPointer(
-            0,
-            2,
-            gl::FLOAT,
-            gl::FALSE,
-            2 * mem::size_of::<GLfloat>() as GLsizei,
+        use_rect_shader(window, paint_props, &rect);
+        gl::BindVertexArray(window.gl.rect_vao);
+        gl::DrawElements(
+            gl::TRIANGLES,
+            window.gl.n_rect_indices(),
+            window.gl.rect_indices_type(),
             ptr::null(),
         );
-        gl::EnableVertexAttribArray(0);
-
-        // note that this is allowed, the call to gl::VertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-
-        // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-        // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-        gl::BindVertexArray(0);
-
-        //gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-        //gl::Clear(gl::COLOR_BUFFER_BIT);
-
-        // draw our first triangle
-        gl::UseProgram(shaderProgram);
-
-        gl::Uniform3f(
-            gl::GetUniformLocation(shaderProgram, "color".as_ptr() as _),
-            paint_props.color.r as f32 / 255.0,
-            paint_props.color.g as f32 / 255.0,
-            paint_props.color.b as f32 / 255.0,
-        );
-
-        gl::BindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-        gl::DrawArrays(gl::TRIANGLES, 0, vertices.len() as i32 / 2);
-        gl::BindVertexArray(0); // no need to unbind it every time
     }
 }
 
@@ -462,3 +314,104 @@ pub fn set_uniform_color(_shader: &mut Shader, _name: &str, _val: Color) {}
 pub fn set_uniform_texture(_shader: &mut Shader, _name: &str, _val: &Texture) {}
 
 pub fn set_texture_repeated(_texture: &mut Texture, _repeated: bool) {}
+
+// -----------------------------------------------------------------------
+
+macro_rules! c_str {
+    ($literal:expr) => {
+        CStr::from_bytes_with_nul_unchecked(concat!($literal, "\0").as_bytes())
+    };
+}
+
+fn use_rect_shader(
+    window: &mut Render_Window_Handle,
+    paint_props: &Paint_Properties,
+    rect: &Rect<f32>,
+) {
+    //let mut rect = *rect;
+    let (ww, wh) = inle_win::window::get_window_target_size(window);
+    let ww = 0.5 * ww as f32;
+    let wh = 0.5 * wh as f32;
+    //rect.x = (rect.x - ww) / ww;
+    //rect.y = -(rect.y - wh) / wh;
+    //rect.width /= ww;
+    //rect.height /= -wh;
+
+    //let in_pos = v2!(-0.5, -0.5);
+    //let mut fin_pos = in_pos * v2!(rect.width, rect.height)
+    //+ v2!(rect.x + 0.5 * rect.width, rect.y + 0.5 * rect.height);
+    //fin_pos.x -= ww;
+    //fin_pos.x /= ww;
+    //fin_pos.y -= wh;
+    //fin_pos.y /= wh;
+    //fin_pos.y = -fin_pos.y;
+    //dbg!(rect);
+    //dbg!(fin_pos);
+    //let in_pos = v2!(0.5, 0.5);
+    //let fin_pos = in_pos * v2!(rect.width, rect.height)
+    //+ v2!(rect.x + 0.5 * rect.width, rect.y + 0.5 * rect.height);
+    //dbg!(fin_pos);
+
+    unsafe {
+        gl::UseProgram(window.gl.rect_shader);
+        check_gl_err();
+
+        gl::Uniform4f(
+            get_uniform_loc(window.gl.rect_shader, c_str!("rect")),
+            rect.x,
+            rect.y,
+            rect.width,
+            rect.height,
+        );
+        check_gl_err();
+
+        gl::Uniform2f(
+            get_uniform_loc(window.gl.rect_shader, c_str!("win_half_size")),
+            ww,
+            wh,
+        );
+        check_gl_err();
+
+        gl::Uniform4f(
+            get_uniform_loc(window.gl.rect_shader, c_str!("color")),
+            paint_props.color.r as f32 / 255.0,
+            paint_props.color.g as f32 / 255.0,
+            paint_props.color.b as f32 / 255.0,
+            paint_props.color.a as f32 / 255.0,
+        );
+        check_gl_err();
+    }
+}
+
+#[inline]
+fn get_uniform_loc(shader: GLuint, name: &CStr) -> GLint {
+    unsafe {
+        let loc = gl::GetUniformLocation(shader, name.as_ptr());
+        if loc == -1 {
+            lerr!(
+                "Failed to get location of uniform `{:?}` in shader {}",
+                name,
+                shader
+            );
+        }
+        loc
+    }
+}
+
+#[cfg(debug_assertions)]
+#[inline]
+fn check_gl_err() {
+    unsafe {
+        let err = gl::GetError();
+        match err {
+            gl::NO_ERROR => {}
+            gl::INVALID_ENUM => panic!("GL_INVALID_ENUM!"),
+            gl::INVALID_OPERATION => panic!("GL_INVALID_OPERATION!"),
+            gl::INVALID_VALUE => panic!("GL_INVALID_VALUE!"),
+            _ => panic!("Other GL error: {}", err),
+        }
+    }
+}
+
+#[cfg(not(debug_assertions))]
+fn check_gl_err() {}

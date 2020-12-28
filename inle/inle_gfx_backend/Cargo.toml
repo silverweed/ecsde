@@ -15,6 +15,7 @@ default = ["gfx-gl"]
 
 [dependencies]
 inle_common = { path = "../inle_common" }
+inle_diagnostics = { path = "../inle_diagnostics" }
 inle_math = { path = "../inle_math" }
 inle_win = { path = "../inle_win" }
 

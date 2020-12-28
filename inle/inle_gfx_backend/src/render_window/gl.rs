@@ -1,11 +1,15 @@
+use gl::types::*;
 use inle_common::colors::Color;
 use inle_math::rect::Rectf;
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::Window_Handle;
+use std::ffi::CString;
+use std::{mem, ptr, str};
 
 pub struct Render_Window_Handle {
     window: Window_Handle,
+    pub gl: Gl,
 }
 
 impl AsRef<Window_Handle> for Render_Window_Handle {
@@ -20,9 +24,198 @@ impl AsMut<Window_Handle> for Render_Window_Handle {
     }
 }
 
+const RECT_VERTICES: [GLfloat; 8] = [-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5];
+const RECT_INDICES: [GLuint; 6] = [0, 1, 2, 2, 3, 0];
+
+#[derive(Default)]
+pub struct Gl {
+    pub rect_vao: GLuint,
+    pub rect_vbo: GLuint,
+    pub rect_ebo: GLuint,
+    pub rect_shader: GLuint,
+}
+
+impl Gl {
+    pub const fn n_rect_indices(&self) -> GLsizei {
+        RECT_INDICES.len() as _
+    }
+
+    pub const fn rect_indices_type(&self) -> GLenum {
+        gl::UNSIGNED_INT
+    }
+}
+
+fn init_gl() -> Gl {
+    let mut gl = Gl::default();
+    fill_rect_vbo_and_vao(&mut gl);
+    init_rect_shaders(&mut gl);
+    gl
+}
+
+const LOC_IN_VERTEX: GLuint = 0;
+
+fn fill_rect_vbo_and_vao(gl: &mut Gl) {
+    let (mut vbo, mut vao, mut ebo) = (0, 0, 0);
+    unsafe {
+        gl::GenVertexArrays(1, &mut vao);
+        gl::GenBuffers(1, &mut vbo);
+        gl::GenBuffers(1, &mut ebo);
+
+        debug_assert!(vao != 0);
+        debug_assert!(vbo != 0);
+        debug_assert!(ebo != 0);
+
+        gl::BindVertexArray(vao);
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            (RECT_VERTICES.len() * mem::size_of::<GLfloat>()) as _,
+            RECT_VERTICES.as_ptr() as *const _,
+            gl::STATIC_DRAW,
+        );
+
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
+        gl::BufferData(
+            gl::ELEMENT_ARRAY_BUFFER,
+            (RECT_INDICES.len() * mem::size_of::<GLuint>()) as _,
+            RECT_INDICES.as_ptr() as *const _,
+            gl::STATIC_DRAW,
+        );
+
+        gl::VertexAttribPointer(
+            LOC_IN_VERTEX,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            2 * mem::size_of::<GLfloat>() as GLsizei,
+            ptr::null(),
+        );
+        gl::EnableVertexAttribArray(LOC_IN_VERTEX);
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+    }
+
+    gl.rect_vao = vao;
+    gl.rect_vbo = vbo;
+    gl.rect_ebo = ebo;
+}
+
+const GL_TRUE: GLint = gl::TRUE as _;
+const GL_FALSE: GLint = gl::FALSE as _;
+
+fn init_rect_shaders(gl: &mut Gl) {
+    const VERT_SHADER_SRC: &str = "
+            #version 330 core
+
+            layout (location = 0) in vec2 in_pos;
+
+            /* (left, top, width, height) */
+            uniform vec4 rect;
+            uniform vec2 win_half_size;
+
+            void main() {
+               vec2 fin_pos = in_pos * vec2(rect.z, rect.w) + vec2(rect.x + 0.5 * rect.z, rect.y + 0.5 * rect.w);
+               fin_pos.x = (fin_pos.x - win_half_size.x) / win_half_size.x;
+               fin_pos.y = -(fin_pos.y - win_half_size.y) / win_half_size.y;
+               gl_Position = vec4(fin_pos.x, fin_pos.y, 0.0, 1.0);
+            }
+    ";
+
+    const FRAG_SHADER_SRC: &str = "
+            #version 330 core
+
+            uniform vec4 color;
+
+            out vec4 frag_color;
+
+            void main() {
+               frag_color = color;
+            }
+    ";
+
+    unsafe {
+        let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
+        let c_str_vert = CString::new(VERT_SHADER_SRC.as_bytes()).unwrap();
+
+        gl::ShaderSource(vertex_shader, 1, &c_str_vert.as_ptr(), ptr::null());
+        gl::CompileShader(vertex_shader);
+
+        const INFO_LOG_CAP: GLint = 512;
+        let mut info_log = Vec::with_capacity(INFO_LOG_CAP as usize);
+        info_log.set_len(INFO_LOG_CAP as usize - 1); // subtract 1 to skip the trailing null character
+
+        let mut success = GL_FALSE;
+        gl::GetShaderiv(vertex_shader, gl::COMPILE_STATUS, &mut success);
+        if success != GL_TRUE {
+            gl::GetShaderInfoLog(
+                vertex_shader,
+                INFO_LOG_CAP,
+                ptr::null_mut(),
+                info_log.as_mut_ptr() as *mut GLchar,
+            );
+            panic!(
+                "Rect vertex shader failed to compile:\n----------\n{}\n-----------",
+                str::from_utf8(&info_log).unwrap()
+            );
+        }
+
+        let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
+        let c_str_frag = CString::new(FRAG_SHADER_SRC.as_bytes()).unwrap();
+
+        gl::ShaderSource(fragment_shader, 1, &c_str_frag.as_ptr(), ptr::null());
+        gl::CompileShader(fragment_shader);
+
+        gl::GetShaderiv(fragment_shader, gl::COMPILE_STATUS, &mut success);
+        if success != GL_TRUE {
+            gl::GetShaderInfoLog(
+                fragment_shader,
+                INFO_LOG_CAP,
+                ptr::null_mut(),
+                info_log.as_mut_ptr() as *mut GLchar,
+            );
+            panic!(
+                "Rect fragment shader failed to compile:\n----------\n{}\n-----------",
+                str::from_utf8(&info_log).unwrap()
+            );
+        }
+
+        let shader_program = gl::CreateProgram();
+        gl::AttachShader(shader_program, vertex_shader);
+        gl::AttachShader(shader_program, fragment_shader);
+        gl::LinkProgram(shader_program);
+
+        gl::GetProgramiv(shader_program, gl::LINK_STATUS, &mut success);
+        if success != GL_TRUE {
+            gl::GetProgramInfoLog(
+                shader_program,
+                INFO_LOG_CAP,
+                ptr::null_mut(),
+                info_log.as_mut_ptr() as *mut GLchar,
+            );
+            panic!(
+                "Rect shader failed to link:\n----------\n{}\n-----------",
+                str::from_utf8(&info_log).unwrap()
+            );
+        }
+        gl::DeleteShader(vertex_shader);
+        gl::DeleteShader(fragment_shader);
+
+        debug_assert!(shader_program != 0);
+        ldebug!(
+            "Rect shader linked successfully as shader {}",
+            shader_program
+        );
+        gl.rect_shader = shader_program;
+    }
+}
+
 pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
     gl::load_with(|symbol| inle_win::window::get_gl_handle(&mut window, symbol));
-    Render_Window_Handle { window }
+    Render_Window_Handle {
+        window,
+        gl: init_gl(),
+    }
 }
 
 pub fn set_clear_color(_window: &mut Render_Window_Handle, color: Color) {

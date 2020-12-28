@@ -4,6 +4,8 @@ all: build
 c:
 	cargo check
 
+r: run
+
 run: build
 	cargo run
 
