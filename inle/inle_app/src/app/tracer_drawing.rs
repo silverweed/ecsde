@@ -38,6 +38,7 @@ fn add_tracer_node_line(
         duration_ms / n_calls as f32,
         width = width,
     ));
+
     let bg_col = colors::Color { a: 50, ..color };
     overlay
         .add_line(&line)
@@ -110,6 +111,10 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
         .with_color(colors::rgba(60, 60, 60, 180));
     for tree in &trace_trees {
         add_tree_lines(tree, &total_traced_time, 0, overlay, &prune_duration);
+    }
+
+    for line in &overlay.lines {
+        println!("{}", line.text);
     }
 }
 

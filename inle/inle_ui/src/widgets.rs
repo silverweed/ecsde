@@ -3,11 +3,10 @@ use super::ui_context::*;
 use inle_common::colors::{self, Color};
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input::input_state::Input_State;
-use inle_input::mouse::{mouse_went_down, mouse_went_up, Mouse_Button};
+use inle_input::mouse::{mouse_pos_in_window, mouse_went_down, mouse_went_up, Mouse_Button};
 use inle_math::rect::Rectf;
 use inle_math::vector::Vec2f;
 use inle_resources::gfx::{Font_Handle, Gfx_Resources};
-use inle_win::window::mouse_pos_in_window;
 
 pub struct By_Activeness<T> {
     pub normal: T,
@@ -101,7 +100,7 @@ pub fn button(
             set_active(ui, id);
         }
 
-        let mpos = mouse_pos_in_window(window);
+        let mpos = mouse_pos_in_window(window, &input_state.raw.mouse_state);
         if rect.contains(Vec2f::from(mpos)) {
             set_hot(ui, id);
         } else {

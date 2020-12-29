@@ -41,6 +41,8 @@ pub fn create_render_window(window: Window_Handle) -> Render_Window_Handle {
     }
 }
 
+pub fn recreate_render_window(_window: &mut Render_Window_Handle) {}
+
 pub fn set_clear_color(window: &mut Render_Window_Handle, color: Color) {
     window.clear_color = color;
 }

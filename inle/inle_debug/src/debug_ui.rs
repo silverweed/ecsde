@@ -212,20 +212,20 @@ impl Debug_Ui_System {
 
         for elem in &mut self.graphs.actives {
             elem.update(dt, window, input_state);
-            elem.draw(window, gres, frame_alloc);
+            elem.draw(window, gres, input_state, frame_alloc);
         }
 
         for elem in &mut self.overlays.actives {
             elem.update(dt, window, input_state);
-            elem.draw(window, gres, frame_alloc);
+            elem.draw(window, gres, input_state, frame_alloc);
         }
 
         for elem in &mut self.fadeout_overlays.actives {
             elem.update(dt, window, input_state);
-            elem.draw(window, gres, frame_alloc);
+            elem.draw(window, gres, input_state, frame_alloc);
         }
 
-        self.frame_scroller.update(window, log);
+        self.frame_scroller.update(window, log, input_state);
         self.frame_scroller.draw(window, gres, log);
     }
 }

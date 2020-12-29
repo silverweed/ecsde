@@ -43,6 +43,10 @@ pub enum Input_Raw_Event {
     Mouse_Button_Released {
         button: Mouse_Button,
     },
+    Mouse_Moved {
+        x: f64,
+        y: f64,
+    },
     Joy_Button_Pressed {
         joystick_id: Joystick_Id,
         button: Joystick_Button_Id,

@@ -99,6 +99,7 @@ impl Debug_Element for Debug_Overlay {
         &self,
         window: &mut Render_Window_Handle,
         gres: &mut Gfx_Resources,
+        _input_state: &Input_State,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
         trace!("debug::overlay::draw");
@@ -209,7 +210,10 @@ impl Debug_Element for Debug_Overlay {
                 row_width * 0.5,
                 (row_height + self.config.row_spacing) * (self.lines.len() as f32) * 0.5
             );
-        let mpos = Vec2f::from(window::mouse_pos_in_window(window));
+        let mpos = Vec2f::from(mouse::mouse_pos_in_window(
+            window,
+            &input_state.raw.mouse_state,
+        ));
 
         if mouse::is_mouse_btn_pressed(&input_state.raw.mouse_state, mouse::Mouse_Button::Left) {
             self.hover_data.selected_line = self.hover_data.hovered_line;

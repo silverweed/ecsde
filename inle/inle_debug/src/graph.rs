@@ -78,7 +78,10 @@ impl Debug_Element for Debug_Graph_View {
             return;
         }
 
-        let mpos = Vec2f::from(window::mouse_pos_in_window(window));
+        let mpos = Vec2f::from(mouse::mouse_pos_in_window(
+            window,
+            &input_state.raw.mouse_state,
+        ));
         let rect = Rect::new(self.pos.x, self.pos.y, self.size.x, self.size.y);
         self.hovered_point = None;
         if rect.contains(mpos) {
@@ -109,6 +112,7 @@ impl Debug_Element for Debug_Graph_View {
         &self,
         window: &mut Render_Window_Handle,
         gres: &mut Gfx_Resources,
+        input_state: &Input_State,
         _frame_alloc: &mut temp::Temp_Allocator,
     ) {
         trace!("debug::graph::draw");
@@ -238,7 +242,10 @@ impl Debug_Element for Debug_Graph_View {
             if let Some(x) = self.hovered_point {
                 if i == x {
                     let color = colors::WHITE;
-                    let mpos = Vec2f::from(window::mouse_pos_in_window(window));
+                    let mpos = Vec2f::from(mouse::mouse_pos_in_window(
+                        window,
+                        &input_state.raw.mouse_state,
+                    ));
                     let v1 = render::new_vertex(pos + v2!(mpos.x, 0.0), color, Vec2f::default());
                     let v2 = render::new_vertex(
                         pos + v2!(mpos.x, self.size.y as f32),

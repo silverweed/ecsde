@@ -4,8 +4,9 @@ use inle_common::paint_props::Paint_Properties;
 use inle_gfx::render;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input::events::Input_Raw_Event;
+use inle_input::input_state::Input_State;
 use inle_input::keyboard::Key;
-use inle_input::mouse::Mouse_Button;
+use inle_input::mouse::{self, Mouse_Button};
 use inle_math::rect;
 use inle_math::vector::{Vec2f, Vec2i, Vec2u};
 use inle_resources::gfx::{Font_Handle, Gfx_Resources};
@@ -63,14 +64,19 @@ struct Row_Props {
 const DRAW_COLOR_HIGH_THRESHOLD_MS: u64 = 70;
 
 impl Debug_Frame_Scroller {
-    pub fn update(&mut self, window: &Render_Window_Handle, log: &Debug_Log) {
+    pub fn update(
+        &mut self,
+        window: &Render_Window_Handle,
+        log: &Debug_Log,
+        input_state: &Input_State,
+    ) {
         trace!("frame_scroller::update");
 
         if !self.manually_selected {
             self.update_frame(log);
         }
 
-        let mpos = window::mouse_pos_in_window(window);
+        let mpos = mouse::mouse_pos_in_window(window, &input_state.raw.mouse_state);
         self.hovered = None;
         self.check_hovered_row(Row::Seconds, mpos);
         if self.hovered.is_none() {
@@ -222,7 +228,6 @@ impl Debug_Frame_Scroller {
             filled,
             show_labels,
         } = self.get_row_props(row);
-        let mpos = window::mouse_pos_in_window(window);
         let cur = if row == Row::Frames {
             self.cur_frame
         } else {
@@ -230,7 +235,7 @@ impl Debug_Frame_Scroller {
         };
 
         let row_r = rect::Rectf::new(self.pos.x as _, y, self.size.x as _, height);
-        let row_hovered = row_r.contains(mpos);
+        let row_hovered = matches!(self.hovered, Some((row, _)));
         {
             // Draw outline
             let paint_props = Paint_Properties {

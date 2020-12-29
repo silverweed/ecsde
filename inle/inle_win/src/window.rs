@@ -83,11 +83,10 @@ pub fn poll_event<W: AsMut<Window_Handle>>(window: &mut W) -> Option<Event> {
     backend::poll_event(window.as_mut())
 }
 
-pub fn mouse_pos_in_window<W: AsRef<Window_Handle>>(window: &W) -> Vec2i {
-    trace!("mouse_pos_in_window");
-
-    let window = window.as_ref();
-    let v = Vec2f::from(backend::raw_mouse_pos_in_window(window));
+/// Converts a raw pos (one in pixels) to a scaled pos (one in screen coordinates)
+/// Should be passed the position taken from `mouse::raw_mouse_pos`.
+pub fn correct_mouse_pos_in_window<W: AsRef<Window_Handle>>(window: &W, raw_pos: Vec2f) -> Vec2i {
+    trace!("correct_mouse_pos_in_window");
 
     let ts: Vec2u = get_window_target_size(window).into();
     let target_ratio = ts.y as f32 / ts.x as f32;
@@ -104,25 +103,15 @@ pub fn mouse_pos_in_window<W: AsRef<Window_Handle>>(window: &W) -> Vec2i {
     let y;
     if real_ratio <= target_ratio {
         let delta = (rs.x as f32 - rs.y as f32 / target_ratio) * 0.5;
-        y = v.y / ratio.y;
-        x = (v.x - delta) / ratio.y;
+        y = raw_pos.y / ratio.y;
+        x = (raw_pos.x - delta) / ratio.y;
     } else {
         let delta = (rs.y as f32 - rs.x as f32 * target_ratio) * 0.5;
-        x = v.x / ratio.x;
-        y = (v.y - delta) / ratio.x;
+        x = raw_pos.x / ratio.x;
+        y = (raw_pos.y - delta) / ratio.x;
     }
 
     Vec2i::new(x as _, y as _)
-}
-
-// Returns the mouse position relative to the actual window,
-// without taking the target size into account (so if the window aspect ratio
-// does not match with the target ratio, the result does not take "black bands" into account).
-// Use this when you want to unproject mouse coordinates!
-#[inline(always)]
-pub fn raw_mouse_pos_in_window<W: AsRef<Window_Handle>>(window: &W) -> Vec2i {
-    trace!("raw_mouse_pos_in_window");
-    backend::raw_mouse_pos_in_window(window.as_ref())
 }
 
 #[inline(always)]

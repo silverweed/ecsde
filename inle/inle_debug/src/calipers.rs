@@ -1,9 +1,11 @@
 use crate::painter::Debug_Painter;
 use inle_common::colors;
 use inle_gfx::render_window::{self, Render_Window_Handle};
+use inle_input::input_state::Input_State;
+use inle_input::mouse;
 use inle_math::shapes::Arrow;
 use inle_math::transform::Transform2D;
-use inle_math::vector::Vec2f;
+use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window;
 
 // Measures distances
@@ -14,9 +16,13 @@ pub struct Debug_Calipers {
 }
 
 impl Debug_Calipers {
-    pub fn start_measuring_dist(&mut self, window: &Render_Window_Handle, camera: &Transform2D) {
-        let pos = window::raw_mouse_pos_in_window(window);
-        let pos = render_window::unproject_screen_pos(pos, window, camera);
+    pub fn start_measuring_dist(
+        &mut self,
+        window: &Render_Window_Handle,
+        camera: &Transform2D,
+        input_state: &Input_State,
+    ) {
+        let pos = render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, camera);
         self.start_world_pos = pos;
         self.dragging = true;
     }
@@ -30,12 +36,15 @@ impl Debug_Calipers {
         window: &Render_Window_Handle,
         painter: &mut Debug_Painter,
         camera: &Transform2D,
+        input_state: &Input_State,
     ) {
         if !self.dragging {
             return;
         }
 
-        let end_screen_pos = window::raw_mouse_pos_in_window(window);
+        let end_screen_pos = Vec2i::from(Vec2f::from(mouse::raw_mouse_pos(
+            &input_state.raw.mouse_state,
+        )));
         let end_world_pos = render_window::unproject_screen_pos(end_screen_pos, window, camera);
         let delta = end_world_pos - self.start_world_pos;
         let scale = camera.scale().x;

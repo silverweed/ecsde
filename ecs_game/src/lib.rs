@@ -129,6 +129,8 @@ where
 
         let log = &mut game_state.engine_state.debug_systems.log;
 
+        inle_gfx::render_window::start_new_frame(&mut game_state.window);
+
         if !game_state.engine_state.time.paused {
             if game_state.engine_state.time.was_paused() {
                 // Just resumed
@@ -180,6 +182,14 @@ where
             &mut game_state.engine_state,
             game_state.debug_cvars.trace_overlay_refresh_rate,
         );
+
+        if game_state.engine_state.cur_frame % 100 == 0 {
+            ldebug!(
+                "Draw calls this frame: {}. Time taken: {:?}",
+                game_state.window.gl.n_draw_calls_this_frame,
+                t_before_work.elapsed()
+            );
+        }
     }
 
     game_state.engine_state.frame_alloc.dealloc_all();

@@ -67,7 +67,8 @@ fn is_core_event(evt: &Input_Raw_Event) -> bool {
         Input_Raw_Event::Resized(..)
         | Input_Raw_Event::Quit
         | Input_Raw_Event::Joy_Connected { .. }
-        | Input_Raw_Event::Joy_Disconnected { .. })
+        | Input_Raw_Event::Joy_Disconnected { .. }
+        | Input_Raw_Event::Mouse_Moved { .. })
 }
 
 pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut Input_Raw_State) {

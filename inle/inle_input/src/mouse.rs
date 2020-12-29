@@ -1,4 +1,6 @@
 use crate::events::Input_Raw_Event;
+use inle_math::vector::{Vec2f, Vec2i};
+use inle_win::window::Window_Handle;
 use std::convert::TryFrom;
 
 #[cfg(feature = "win-sfml")]
@@ -42,6 +44,7 @@ pub struct Mouse_State {
     // indexed by Mouse_Button
     was_pressed_latest_frame: [bool; 3],
     is_pressed: [bool; 3],
+    cursor: (f64, f64),
 }
 
 pub fn reset_mouse_state(state: &mut Mouse_State) {
@@ -66,6 +69,9 @@ pub fn update_mouse_state(state: &mut Mouse_State, events: &[Input_Raw_Event]) {
             Input_Raw_Event::Mouse_Button_Released { button } => {
                 state.is_pressed[button as usize] = false;
             }
+            Input_Raw_Event::Mouse_Moved { x, y } => {
+                state.cursor = (x, y);
+            }
             _ => (),
         }
     }
@@ -79,6 +85,21 @@ pub fn mouse_went_up(state: &Mouse_State, button: Mouse_Button) -> bool {
 #[inline]
 pub fn mouse_went_down(state: &Mouse_State, button: Mouse_Button) -> bool {
     !state.was_pressed_latest_frame[button as usize] && is_mouse_btn_pressed(state, button)
+}
+
+/// Returns the mouse position relative to the window,
+/// without taking the target size into account (so if the window aspect ratio
+/// does not match with the target ratio, the result does not take "black bands" into account).
+/// Use this when you want to unproject mouse coordinates!
+#[inline(always)]
+pub fn raw_mouse_pos(state: &Mouse_State) -> (f32, f32) {
+    (state.cursor.0 as f32, state.cursor.1 as f32)
+}
+
+#[inline]
+pub fn mouse_pos_in_window<W: AsRef<Window_Handle>>(window: &W, state: &Mouse_State) -> Vec2i {
+    let raw = Vec2f::new(state.cursor.0 as f32, state.cursor.1 as f32);
+    inle_win::window::correct_mouse_pos_in_window(window, raw)
 }
 
 pub fn string_to_mouse_btn(s: &str) -> Option<Mouse_Button> {

@@ -67,6 +67,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         &self,
         window: &mut Render_Window_Handle,
         gres: &mut Gfx_Resources,
+        _input_state: &Input_State,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
         trace!("debug::fadeout_overlay::draw");

@@ -5,6 +5,8 @@ use inle_app::{app, render_system};
 use inle_common::colors;
 use inle_core::time;
 use inle_gfx::render_window::Render_Window_Handle;
+use inle_input::input_state::Input_State;
+use inle_input::mouse;
 use inle_math::transform::Transform2D;
 use inle_physics::physics;
 use inle_resources::gfx::Gfx_Resources;
@@ -270,7 +272,11 @@ where
                         .engine_state
                         .debug_systems
                         .calipers
-                        .start_measuring_dist(&game_state.window, &level.get_camera().transform);
+                        .start_measuring_dist(
+                            &game_state.window,
+                            &level.get_camera().transform,
+                            &game_state.engine_state.input_state,
+                        );
                 }
             } else if actions.contains(&(sid!("calipers"), Action_Kind::Released)) {
                 game_state
@@ -620,6 +626,7 @@ fn update_debug_graphics<'a, 's, 'r>(
                 &game_state.window,
                 painters.get_mut(&level.id).unwrap(),
                 &level.get_camera().transform,
+                &game_state.engine_state.input_state,
             );
         }
     }
@@ -711,6 +718,7 @@ fn update_debug(
         game_state.cvars.vsync.read(&engine_state.config),
     );
 
+    let input_state = &engine_state.input_state;
     let draw_mouse_rulers = game_state
         .debug_cvars
         .draw_mouse_rulers
@@ -728,6 +736,7 @@ fn update_debug(
                 .levels
                 .first_active_level()
                 .map(|level| level.get_camera().transform),
+            input_state,
         );
     }
 
@@ -933,16 +942,17 @@ fn update_mouse_debug_overlay(
     painter: &mut Debug_Painter,
     window: &Render_Window_Handle,
     camera: Option<Transform2D>,
+    input_state: &Input_State,
 ) {
     use inle_math::shapes::Line;
 
-    let pos = window::mouse_pos_in_window(window);
+    let pos = mouse::mouse_pos_in_window(window, &input_state.raw.mouse_state);
     debug_overlay.position = Vec2f::from(pos) + v2!(0., -15.);
     debug_overlay
         .add_line(&format!("s {},{}", pos.x, pos.y))
         .with_color(colors::rgba(220, 220, 220, 220));
     if let Some(camera) = camera {
-        let wpos = render_window::mouse_pos_in_world(window, &camera);
+        let wpos = render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, &camera);
         debug_overlay
             .add_line(&format!("w {:.2},{:.2}", wpos.x, wpos.y))
             .with_color(colors::rgba(200, 200, 200, 220));

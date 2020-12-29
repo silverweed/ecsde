@@ -1,5 +1,5 @@
 use glfw::Context;
-use inle_math::vector::Vec2i;
+use inle_math::vector::{Vec2f, Vec2i};
 use std::collections::VecDeque;
 
 pub type Event = glfw::WindowEvent;
@@ -23,6 +23,12 @@ pub struct Window_Handle {
     pub glfw: glfw::Glfw,
     pub event_receiver: std::sync::mpsc::Receiver<(f64, Event)>,
     events_buffer: VecDeque<Event>,
+
+    /// We keep track of these ourselves because going through GLFW queries may be costly
+    // Cursor pos in pixels (relative to the window)
+    cursor_pos: (f64, f64),
+    // Size of the framebuffer
+    real_size: (u32, u32),
 }
 
 #[cfg(feature = "gfx-gl")]
@@ -57,6 +63,10 @@ pub fn create_window(
     window.set_key_polling(true);
     // @Cleanup: needed?
     window.set_framebuffer_size_polling(true);
+    window.set_cursor_pos_polling(true);
+    window.set_size_limits(Some(1), Some(1), None, None);
+    // We handle aspect ratio ourselves
+    window.set_aspect_ratio(glfw::ffi::DONT_CARE as u32, glfw::ffi::DONT_CARE as u32);
     // @Incomplete: vsync, etc
 
     Window_Handle {
@@ -66,6 +76,8 @@ pub fn create_window(
         glfw,
         event_receiver: events,
         events_buffer: VecDeque::with_capacity(8),
+        cursor_pos: (0., 0.),
+        real_size: (0, 0),
     }
 }
 
@@ -91,8 +103,7 @@ pub fn get_window_target_size(window: &Window_Handle) -> (u32, u32) {
 }
 
 pub fn get_window_real_size(window: &Window_Handle) -> (u32, u32) {
-    let (x, y) = window.handle.get_size();
-    (x as _, y as _)
+    window.real_size
 }
 
 pub fn prepare_poll_events(window: &mut Window_Handle) {
@@ -104,14 +115,11 @@ pub fn prepare_poll_events(window: &mut Window_Handle) {
 }
 
 pub fn poll_event(window: &mut Window_Handle) -> Option<Event> {
-    window.events_buffer.pop_front()
-}
-
-pub fn raw_mouse_pos_in_window(window: &Window_Handle) -> Vec2i {
-    let (x, y) = window.handle.get_cursor_pos();
-    debug_assert!(x < std::i32::MAX as f64);
-    debug_assert!(y < std::i32::MAX as f64);
-    v2!(x as i32, y as i32)
+    let evt = window.events_buffer.pop_front();
+    if let Some(Event::FramebufferSize(x, y)) = evt {
+        window.real_size = (x as u32, y as u32);
+    }
+    evt
 }
 
 pub fn set_key_repeat_enabled(_window: &mut Window_Handle, _enabled: bool) {}

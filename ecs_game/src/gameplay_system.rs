@@ -240,6 +240,7 @@ impl Gameplay_System {
         let gres = &mut rsrc.gfx;
         let env = &engine_state.env;
         let shader_cache = &mut engine_state.shader_cache;
+        let input_state = &engine_state.input_state;
 
         levels.foreach_active_level(|level| {
             let world = &mut level.world;
@@ -264,6 +265,7 @@ impl Gameplay_System {
                 &mut level.world,
                 &mut level.phys_world,
                 window,
+                input_state,
                 gres,
                 shader_cache,
                 env,

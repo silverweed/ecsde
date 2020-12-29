@@ -218,7 +218,8 @@ fn init_demo_entities(
     let camera = level.world.new_entity();
     {
         let cam = level.world.add_component(camera, C_Camera2D::default());
-        cam.transform.set_scale(0.4, 0.4);
+        let scale = Cfg_Var::<f32>::new("game/camera/initial_scale", cfg).read(cfg);
+        cam.transform.set_scale(scale, scale);
         cam.transform.set_position(-120., -75.);
     }
     level.cameras.push(camera);

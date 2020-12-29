@@ -29,6 +29,7 @@ pub(super) fn framework_to_engine_event(event: Win_Event) -> Option<Input_Raw_Ev
                 None
             }
         }
+        Win_Event::CursorPos(x, y) => Some(Input_Raw_Event::Mouse_Moved { x, y }),
         Win_Event::Scroll(_x, y) => Some(Input_Raw_Event::Mouse_Wheel_Scrolled {
             delta: y as f32, // @Robustness: truncating! Also, do we want to support horizontal scrolling?
         }),

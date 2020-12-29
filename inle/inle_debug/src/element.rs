@@ -16,6 +16,7 @@ pub trait Debug_Element {
         &self,
         window: &mut Render_Window_Handle,
         gres: &mut Gfx_Resources,
+        input_state: &Input_State,
         frame_alloc: &mut temp::Temp_Allocator,
     );
 }

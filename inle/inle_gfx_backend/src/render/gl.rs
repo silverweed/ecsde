@@ -87,12 +87,9 @@ pub fn fill_color_rect<R>(
         use_rect_shader(window, paint_props.border_color, &outline_rect);
         unsafe {
             gl::BindVertexArray(window.gl.rect_vao);
-            gl::DrawElements(
-                gl::TRIANGLES,
-                window.gl.n_rect_indices(),
-                window.gl.rect_indices_type(),
-                ptr::null(),
-            );
+            window
+                .gl
+                .draw_indexed(window.gl.n_rect_indices(), window.gl.rect_indices_type());
         }
     }
 
@@ -100,12 +97,9 @@ pub fn fill_color_rect<R>(
 
     unsafe {
         gl::BindVertexArray(window.gl.rect_vao);
-        gl::DrawElements(
-            gl::TRIANGLES,
-            window.gl.n_rect_indices(),
-            window.gl.rect_indices_type(),
-            ptr::null(),
-        );
+        window
+            .gl
+            .draw_indexed(window.gl.n_rect_indices(), window.gl.rect_indices_type());
     }
 }
 
@@ -137,12 +131,9 @@ pub fn fill_color_rect_ws<T>(
         );
         unsafe {
             gl::BindVertexArray(window.gl.rect_vao);
-            gl::DrawElements(
-                gl::TRIANGLES,
-                window.gl.n_rect_indices(),
-                window.gl.rect_indices_type(),
-                ptr::null(),
-            );
+            window
+                .gl
+                .draw_indexed(window.gl.n_rect_indices(), window.gl.rect_indices_type());
         }
     }
 
@@ -150,12 +141,9 @@ pub fn fill_color_rect_ws<T>(
 
     unsafe {
         gl::BindVertexArray(window.gl.rect_vao);
-        gl::DrawElements(
-            gl::TRIANGLES,
-            window.gl.n_rect_indices(),
-            window.gl.rect_indices_type(),
-            ptr::null(),
-        );
+        window
+            .gl
+            .draw_indexed(window.gl.n_rect_indices(), window.gl.rect_indices_type());
     }
 }
 
@@ -390,25 +378,36 @@ fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<
     let ww = 0.5 * ww as f32;
     let wh = 0.5 * wh as f32;
 
+    let vertices = {
+        let mut rect = *rect;
+        rect.x = (rect.x - ww) / ww;
+        rect.y = (wh - rect.y) / wh;
+        rect.width /= ww;
+        rect.height /= -wh;
+
+        // @Volatile: order must be consistent with render_window::backend::RECT_INDICES
+        [
+            rect.x,
+            rect.y,
+            rect.x + rect.width,
+            rect.y,
+            rect.x + rect.width,
+            rect.y + rect.height,
+            rect.x,
+            rect.y + rect.height,
+        ]
+    };
+
+    // @TODO: consider using UBOs
     unsafe {
         gl::UseProgram(window.gl.rect_shader);
         check_gl_err();
 
-        gl::Uniform4f(
-            get_uniform_loc(window.gl.rect_shader, c_str!("rect")),
-            rect.x,
-            rect.y,
-            rect.width,
-            rect.height,
+        gl::Uniform2fv(
+            get_uniform_loc(window.gl.rect_shader, c_str!("vertices")),
+            4,
+            vertices.as_ptr(),
         );
-        check_gl_err();
-
-        gl::Uniform2f(
-            get_uniform_loc(window.gl.rect_shader, c_str!("win_half_size")),
-            ww,
-            wh,
-        );
-        check_gl_err();
 
         gl::Uniform4f(
             get_uniform_loc(window.gl.rect_shader, c_str!("color")),
@@ -432,11 +431,11 @@ fn use_rect_ws_shader(
     let model = transform;
     let view = camera.inverse();
     let projection = Matrix3::new(
-        1. / width as f32,
+        2. / width as f32,
         0.,
         0.,
         0.,
-        -1. / height as f32,
+        -2. / height as f32,
         0.,
         0.,
         0.,
@@ -444,7 +443,7 @@ fn use_rect_ws_shader(
     );
     let mvp = projection * view.get_matrix() * model.get_matrix();
 
-    // @Volatile: order must be consistent with render_window::backend::RECT_VERTICES
+    // @Volatile: order must be consistent with render_window::backend::RECT_INDICES
     let rect_vertices = [
         rect.x,
         rect.y,
@@ -456,6 +455,7 @@ fn use_rect_ws_shader(
         rect.y + rect.height,
     ];
 
+    // @TODO: consider using UBOs
     unsafe {
         gl::UseProgram(window.gl.rect_ws_shader);
         check_gl_err();
@@ -470,7 +470,7 @@ fn use_rect_ws_shader(
 
         gl::Uniform2fv(
             get_uniform_loc(window.gl.rect_ws_shader, c_str!("rect")),
-            rect_vertices.len() as _,
+            (rect_vertices.len() / 2) as _,
             rect_vertices.as_ptr(),
         );
 

@@ -10,7 +10,6 @@ use std::{mem, ptr, str};
 pub struct Render_Window_Handle {
     window: Window_Handle,
     pub gl: Gl,
-    view: View,
 }
 
 impl AsRef<Window_Handle> for Render_Window_Handle {
@@ -35,6 +34,9 @@ pub struct Gl {
     pub rect_ebo: GLuint,
     pub rect_shader: GLuint,
     pub rect_ws_shader: GLuint,
+
+    #[cfg(debug_assertions)]
+    pub n_draw_calls_this_frame: u32,
 }
 
 impl Gl {
@@ -45,13 +47,31 @@ impl Gl {
     pub const fn rect_indices_type(&self) -> GLenum {
         gl::UNSIGNED_INT
     }
+
+    pub fn draw_indexed(&mut self, indices: GLsizei, indices_type: GLenum) {
+        unsafe {
+            gl::DrawElements(gl::TRIANGLES, indices, indices_type, ptr::null());
+        }
+
+        #[cfg(debug_assertions)]
+        {
+            self.n_draw_calls_this_frame += 1;
+        }
+    }
 }
 
 fn init_gl() -> Gl {
     let mut gl = Gl::default();
+
     fill_rect_vbo_and_vao(&mut gl);
     init_rect_shader(&mut gl);
     init_rect_ws_shader(&mut gl);
+
+    unsafe {
+        gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+        gl::Enable(gl::BLEND);
+    }
+
     gl
 }
 
@@ -70,13 +90,13 @@ fn fill_rect_vbo_and_vao(gl: &mut Gl) {
 
         gl::BindVertexArray(vao);
 
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::BufferData(
-            gl::ARRAY_BUFFER,
-            (RECT_VERTICES.len() * mem::size_of::<GLfloat>()) as _,
-            RECT_VERTICES.as_ptr() as *const _,
-            gl::STATIC_DRAW,
-        );
+        //gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        //gl::BufferData(
+        //gl::ARRAY_BUFFER,
+        //(RECT_VERTICES.len() * mem::size_of::<GLfloat>()) as _,
+        //RECT_VERTICES.as_ptr() as *const _,
+        //gl::STATIC_DRAW,
+        //);
 
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
         gl::BufferData(
@@ -214,7 +234,6 @@ pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
     Render_Window_Handle {
         window,
         gl: init_gl(),
-        view: View::default(),
     }
 }
 
@@ -239,30 +258,7 @@ pub fn clear(_window: &mut Render_Window_Handle) {
     }
 }
 
-#[derive(Default)]
-struct View {
-    center: Vec2f,
-    size: Vec2f,
-    // The normalized viewport rect (coords are 0 to 1)
-    viewport: Rectf,
-}
-
-impl View {
-    fn from_rect(view_rect: &Rectf) -> Self {
-        let mut v = View::default();
-        v.center.x = view_rect.x + view_rect.width * 0.5;
-        v.center.y = view_rect.y + view_rect.height * 0.5;
-        v.size.x = view_rect.width;
-        v.size.y = view_rect.height;
-        v.viewport = Rect::new(0.0, 0.0, 1.0, 1.0);
-        v
-    }
-}
-
-pub fn set_viewport(window: &mut Render_Window_Handle, viewport: &Rectf, view_rect: &Rectf) {
-    let view = View::from_rect(view_rect);
-    window.view = view;
-
+pub fn set_viewport(window: &mut Render_Window_Handle, viewport: &Rectf, _view_rect: &Rectf) {
     let win_size = inle_win::window::get_window_real_size(window);
     let width = win_size.0 as f32;
     let height = win_size.1 as f32;
@@ -274,8 +270,6 @@ pub fn set_viewport(window: &mut Render_Window_Handle, viewport: &Rectf, view_re
         (0.5 + width * viewport.width) as i32,
         (0.5 + height * viewport.height) as i32,
     );
-
-    dbg!(viewport);
 
     unsafe {
         gl::Viewport(viewport.x, viewport.y, viewport.width, viewport.height);
@@ -296,4 +290,12 @@ pub fn raw_project_world_pos(
     _camera: &Transform2D,
 ) -> Vec2i {
     Vec2i::default()
+}
+
+#[inline(always)]
+pub fn start_new_frame(_window: &mut Render_Window_Handle) {
+    #[cfg(debug_assertions)]
+    {
+        _window.gl.n_draw_calls_this_frame = 0;
+    }
 }

@@ -16,6 +16,7 @@ default = ["win-glfw"]
 inle_common = { path = "../inle_common" }
 inle_core = { path = "../inle_core" }
 inle_diagnostics = { path = "../inle_diagnostics" }
+inle_math = { path = "../inle_math" }
 inle_serialize = { path = "../inle_serialize" }
 inle_win = { path = "../inle_win" }
 

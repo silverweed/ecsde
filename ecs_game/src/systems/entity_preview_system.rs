@@ -4,7 +4,7 @@ use inle_core::env::Env_Info;
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::Ecs_World;
 use inle_gfx::render_window::{mouse_pos_in_world, Render_Window_Handle};
-use inle_input::input_state::{Action_Kind, Game_Action};
+use inle_input::input_state::{Action_Kind, Game_Action, Input_State};
 use inle_math::transform::Transform2D;
 use inle_physics::phys_world::Physics_World;
 use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
@@ -16,6 +16,7 @@ pub fn update(
     world: &mut Ecs_World,
     phys_world: &mut Physics_World,
     window: &Render_Window_Handle,
+    input_state: &Input_State,
     gres: &mut Gfx_Resources,
     shader_cache: &mut Shader_Cache,
     env: &Env_Info,
@@ -25,7 +26,7 @@ pub fn update(
 ) {
     foreach_entity!(world, +C_Spatial2D, +C_Entity_Preview, |entity| {
         let spatial = world.get_component_mut::<C_Spatial2D>(entity).unwrap();
-        let mpos = mouse_pos_in_world(window, camera);
+        let mpos = mouse_pos_in_world(window, &input_state.raw.mouse_state, camera);
         spatial.transform.set_position_v(mpos);
 
         //if actions.contains(&(sid!("place_entity"), Action_Kind::Pressed)) {
