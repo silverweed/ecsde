@@ -77,7 +77,7 @@ pub fn create_window(
         event_receiver: events,
         events_buffer: VecDeque::with_capacity(8),
         cursor_pos: (0., 0.),
-        real_size: (0, 0),
+        real_size: (1, 1),
     }
 }
 
