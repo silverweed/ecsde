@@ -323,7 +323,10 @@ pub fn create_text<'a>(_string: &str, _font: &'a Font, _size: u16) -> Text<'a> {
     Text { _pd: PhantomData }
 }
 
-pub fn render_line(_window: &mut Render_Window_Handle, _start: &Vertex, _end: &Vertex) {}
+pub fn render_line(window: &mut Render_Window_Handle, start: &Vertex, end: &Vertex) {
+    // TODO
+    //use_line_shader();
+}
 
 pub fn copy_texture_to_image(_texture: &Texture) -> Image {}
 

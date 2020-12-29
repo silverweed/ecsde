@@ -24,16 +24,15 @@ impl AsMut<Window_Handle> for Render_Window_Handle {
     }
 }
 
-const RECT_VERTICES: [GLfloat; 8] = [-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5];
 const RECT_INDICES: [GLuint; 6] = [0, 1, 2, 2, 3, 0];
 
 #[derive(Default)]
 pub struct Gl {
     pub rect_vao: GLuint,
-    pub rect_vbo: GLuint,
     pub rect_ebo: GLuint,
     pub rect_shader: GLuint,
     pub rect_ws_shader: GLuint,
+    pub line_shader: GLuint,
 
     #[cfg(debug_assertions)]
     pub n_draw_calls_this_frame: u32,
@@ -63,9 +62,10 @@ impl Gl {
 fn init_gl() -> Gl {
     let mut gl = Gl::default();
 
-    fill_rect_vbo_and_vao(&mut gl);
+    fill_rect_buffers(&mut gl);
     init_rect_shader(&mut gl);
     init_rect_ws_shader(&mut gl);
+    init_line_shader(&mut gl);
 
     unsafe {
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
@@ -77,26 +77,16 @@ fn init_gl() -> Gl {
 
 const LOC_IN_VERTEX: GLuint = 0;
 
-fn fill_rect_vbo_and_vao(gl: &mut Gl) {
-    let (mut vbo, mut vao, mut ebo) = (0, 0, 0);
+fn fill_rect_buffers(gl: &mut Gl) {
+    let (mut vao, mut ebo) = (0, 0);
     unsafe {
         gl::GenVertexArrays(1, &mut vao);
-        gl::GenBuffers(1, &mut vbo);
         gl::GenBuffers(1, &mut ebo);
 
         debug_assert!(vao != 0);
-        debug_assert!(vbo != 0);
         debug_assert!(ebo != 0);
 
         gl::BindVertexArray(vao);
-
-        //gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        //gl::BufferData(
-        //gl::ARRAY_BUFFER,
-        //(RECT_VERTICES.len() * mem::size_of::<GLfloat>()) as _,
-        //RECT_VERTICES.as_ptr() as *const _,
-        //gl::STATIC_DRAW,
-        //);
 
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
         gl::BufferData(
@@ -120,7 +110,6 @@ fn fill_rect_vbo_and_vao(gl: &mut Gl) {
     }
 
     gl.rect_vao = vao;
-    gl.rect_vbo = vbo;
     gl.rect_ebo = ebo;
 }
 
@@ -128,22 +117,26 @@ const GL_TRUE: GLint = gl::TRUE as _;
 const GL_FALSE: GLint = gl::FALSE as _;
 
 macro_rules! create_shader_from {
-    ($name: expr) => {{
+    ($vert: expr, $frag: expr) => {{
         const VERT_SHADER_SRC: &str =
-            include_str!(concat!("./gl/builtin_shaders/", $name, ".vert"));
+            include_str!(concat!("./gl/builtin_shaders/", $vert, ".vert"));
         const FRAG_SHADER_SRC: &str =
-            include_str!(concat!("./gl/builtin_shaders/", $name, ".frag"));
+            include_str!(concat!("./gl/builtin_shaders/", $frag, ".frag"));
 
-        create_shader(VERT_SHADER_SRC, FRAG_SHADER_SRC, $name)
+        create_shader(VERT_SHADER_SRC, FRAG_SHADER_SRC, concat!($vert, "+", $frag))
     }};
 }
 
 fn init_rect_shader(gl: &mut Gl) {
-    gl.rect_shader = create_shader_from!("screen_rect");
+    gl.rect_shader = create_shader_from!("screen_rect", "basic_color");
 }
 
 fn init_rect_ws_shader(gl: &mut Gl) {
-    gl.rect_ws_shader = create_shader_from!("ws_rect");
+    gl.rect_ws_shader = create_shader_from!("ws_rect", "basic_color");
+}
+
+fn init_line_shader(gl: &mut Gl) {
+    gl.line_shader = create_shader_from!("line", "line");
 }
 
 fn create_shader(vertex_src: &str, fragment_src: &str, shader_src: &str) -> GLuint {
