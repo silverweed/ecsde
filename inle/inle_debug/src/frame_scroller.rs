@@ -235,7 +235,11 @@ impl Debug_Frame_Scroller {
         };
 
         let row_r = rect::Rectf::new(self.pos.x as _, y, self.size.x as _, height);
-        let row_hovered = matches!(self.hovered, Some((row, _)));
+        let row_hovered = if let Some((r, _)) = self.hovered {
+		r == row
+	} else {
+		false
+	};
         {
             // Draw outline
             let paint_props = Paint_Properties {
