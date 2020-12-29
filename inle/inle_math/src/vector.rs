@@ -7,6 +7,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 #[cfg(feature = "gfx-sfml")]
 mod sfml;
 
+#[repr(C)]
 pub struct Vector2<T> {
     pub x: T,
     pub y: T,

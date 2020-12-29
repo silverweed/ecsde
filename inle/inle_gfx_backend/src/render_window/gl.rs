@@ -4,7 +4,7 @@ use inle_math::rect::{Rect, Rectf};
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::Window_Handle;
-use std::ffi::CString;
+use std::ffi::{c_void, CString};
 use std::{mem, ptr, str};
 
 pub struct Render_Window_Handle {
@@ -33,6 +33,7 @@ pub struct Gl {
     pub rect_shader: GLuint,
     pub rect_ws_shader: GLuint,
     pub line_shader: GLuint,
+    pub vbuf_shader: GLuint,
 
     #[cfg(debug_assertions)]
     pub n_draw_calls_this_frame: u32,
@@ -66,18 +67,26 @@ fn init_gl() -> Gl {
     init_rect_shader(&mut gl);
     init_rect_ws_shader(&mut gl);
     init_line_shader(&mut gl);
+    init_vbuf_shader(&mut gl);
 
     unsafe {
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         gl::Enable(gl::BLEND);
     }
 
+    #[cfg(debug_assertions)]
+    unsafe {
+        gl::Enable(gl::DEBUG_OUTPUT);
+        check_gl_err();
+        gl::DebugMessageCallback(Some(gl_msg_callback), ptr::null());
+    }
+
     gl
 }
 
-const LOC_IN_VERTEX: GLuint = 0;
-
 fn fill_rect_buffers(gl: &mut Gl) {
+    const LOC_IN_POS: GLuint = 0;
+
     let (mut vao, mut ebo) = (0, 0);
     unsafe {
         gl::GenVertexArrays(1, &mut vao);
@@ -89,22 +98,22 @@ fn fill_rect_buffers(gl: &mut Gl) {
         gl::BindVertexArray(vao);
 
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
-        gl::BufferData(
+        gl::BufferStorage(
             gl::ELEMENT_ARRAY_BUFFER,
             (RECT_INDICES.len() * mem::size_of::<GLuint>()) as _,
             RECT_INDICES.as_ptr() as *const _,
-            gl::STATIC_DRAW,
+            0,
         );
 
         gl::VertexAttribPointer(
-            LOC_IN_VERTEX,
+            LOC_IN_POS,
             2,
             gl::FLOAT,
             gl::FALSE,
             2 * mem::size_of::<GLfloat>() as GLsizei,
             ptr::null(),
         );
-        gl::EnableVertexAttribArray(LOC_IN_VERTEX);
+        gl::EnableVertexAttribArray(LOC_IN_POS);
 
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
     }
@@ -137,6 +146,10 @@ fn init_rect_ws_shader(gl: &mut Gl) {
 
 fn init_line_shader(gl: &mut Gl) {
     gl.line_shader = create_shader_from!("line", "line");
+}
+
+fn init_vbuf_shader(gl: &mut Gl) {
+    gl.vbuf_shader = create_shader_from!("vbuf", "vbuf");
 }
 
 fn create_shader(vertex_src: &str, fragment_src: &str, shader_src: &str) -> GLuint {
@@ -292,3 +305,45 @@ pub fn start_new_frame(_window: &mut Render_Window_Handle) {
         _window.gl.n_draw_calls_this_frame = 0;
     }
 }
+
+extern "system" fn gl_msg_callback(
+    _source: GLenum,
+    typ: GLenum,
+    _id: GLuint,
+    _severity: GLenum,
+    length: GLsizei,
+    message: *const GLchar,
+    _user_param: *mut c_void,
+) {
+    let message: &[u8] =
+        unsafe { std::slice::from_raw_parts(message as *const u8, length as usize) };
+    lerr!(
+        "GL MSG: {} message = {}\n",
+        if typ == gl::DEBUG_TYPE_ERROR {
+            "** GL ERROR **"
+        } else {
+            ""
+        },
+        str::from_utf8(message).unwrap()
+    );
+}
+
+// @Cleanup: don't duplicate this code from render/gl.rs! Share it!
+#[cfg(debug_assertions)]
+#[inline]
+#[track_caller]
+fn check_gl_err() {
+    unsafe {
+        let err = gl::GetError();
+        match err {
+            gl::NO_ERROR => {}
+            gl::INVALID_ENUM => panic!("GL_INVALID_ENUM"),
+            gl::INVALID_OPERATION => panic!("GL_INVALID_OPERATION"),
+            gl::INVALID_VALUE => panic!("GL_INVALID_VALUE"),
+            _ => panic!("Other GL error: {}", err),
+        }
+    }
+}
+
+#[cfg(not(debug_assertions))]
+fn check_gl_err() {}

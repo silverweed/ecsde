@@ -10,18 +10,132 @@ use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
 use std::ffi::{c_void, CStr, CString};
 use std::marker::PhantomData;
-use std::mem;
-use std::ptr;
-use std::str;
+use std::{mem, ptr, str};
 
-mod shape;
+fn to_gl_primitive_type(prim: Primitive_Type) -> GLenum {
+    match prim {
+        Primitive_Type::Points => gl::POINTS,
+        Primitive_Type::Lines => gl::LINES,
+        Primitive_Type::Line_Strip => gl::LINE_STRIP,
+        Primitive_Type::Triangles => gl::TRIANGLES,
+        Primitive_Type::Triangle_Strip => gl::TRIANGLE_STRIP,
+        Primitive_Type::Triangle_Fan => gl::TRIANGLE_FAN,
+        Primitive_Type::Quads => gl::QUADS,
+    }
+}
 
 pub struct Vertex_Buffer {
     cur_vertices: u32,
     max_vertices: u32,
     primitive_type: Primitive_Type,
+    id: GLuint,
 }
 
+impl Vertex_Buffer {
+    const LOC_IN_POS: GLuint = 0;
+    const LOC_IN_COLOR: GLuint = 1;
+    const LOC_IN_TEXCOORD: GLuint = 2;
+
+    fn new(primitive_type: Primitive_Type, max_vertices: u32) -> Self {
+        let mut id = 0;
+        if max_vertices > 0 {
+            unsafe {
+                gl::GenBuffers(1, &mut id);
+
+                gl::BindBuffer(gl::ARRAY_BUFFER, id);
+                check_gl_err();
+
+                // NOTE: using a BufferStorage means that this buffer is unresizable.
+                gl::BufferStorage(
+                    gl::ARRAY_BUFFER,
+                    (max_vertices * mem::size_of::<Vertex>() as u32) as _,
+                    ptr::null(),
+                    gl::DYNAMIC_STORAGE_BIT,
+                );
+                check_gl_err();
+
+                gl::VertexAttribPointer(
+                    Self::LOC_IN_POS,
+                    2,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    2 * mem::size_of::<GLfloat>() as GLsizei,
+                    ptr::null(),
+                );
+                gl::EnableVertexAttribArray(Self::LOC_IN_POS);
+
+                gl::VertexAttribPointer(
+                    Self::LOC_IN_COLOR,
+                    4,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    4 * mem::size_of::<GLfloat>() as GLsizei,
+                    ptr::null(),
+                );
+                gl::EnableVertexAttribArray(Self::LOC_IN_COLOR);
+
+                gl::VertexAttribPointer(
+                    Self::LOC_IN_TEXCOORD,
+                    2,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    2 * mem::size_of::<GLfloat>() as GLsizei,
+                    ptr::null(),
+                );
+                gl::EnableVertexAttribArray(Self::LOC_IN_TEXCOORD);
+            }
+        } else {
+            lwarn!("Creating a Vertex_Buffer with max_vertices = 0");
+        }
+
+        Self {
+            id,
+            cur_vertices: 0,
+            max_vertices,
+            primitive_type,
+        }
+    }
+
+    fn add_vertices(&mut self, vertices: &[Vertex]) {
+        debug_assert!(self.cur_vertices as usize + vertices.len() <= self.max_vertices as usize);
+        unsafe {
+            gl::NamedBufferSubData(
+                self.id,
+                (self.cur_vertices * mem::size_of::<Vertex>() as u32) as _,
+                (vertices.len() * mem::size_of::<Vertex>()) as _,
+                vertices.as_ptr() as _,
+            );
+            check_gl_err();
+        }
+        debug_assert!(self.cur_vertices as usize + vertices.len() < std::u32::MAX as usize);
+        self.cur_vertices += vertices.len() as u32;
+    }
+
+    fn update_vertices(&mut self, vertices: &[Vertex], offset: u32) {
+        unsafe {
+            gl::NamedBufferSubData(
+                self.id,
+                (offset as usize * mem::size_of::<Vertex>()) as _,
+                (vertices.len() * mem::size_of::<Vertex>()) as _,
+                vertices.as_ptr() as _,
+            );
+            check_gl_err();
+        }
+    }
+}
+
+impl Drop for Vertex_Buffer {
+    fn drop(&mut self) {
+        // @FIXME: we are crashing here on shutdown because the window is destroyed before this happens!
+        // We should avoid RAII for these buffers, and instead use a sort of arena-allocator approach, which
+        // we can then free just before dropping the game state.
+        unsafe {
+            gl::DeleteBuffers(1, &mut self.id);
+        }
+    }
+}
+
+#[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct Vertex {
     pub position: Vec2f,
@@ -198,70 +312,48 @@ pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
 pub fn new_image(_width: u32, _height: u32) -> Image {}
 
 pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
-    Vertex_Buffer {
-        cur_vertices: 0,
-        max_vertices: n_vertices,
-        primitive_type: primitive,
-    }
+    Vertex_Buffer::new(primitive, n_vertices)
 }
 
 pub fn start_draw_quads(n_quads: u32) -> Vertex_Buffer {
-    Vertex_Buffer {
-        cur_vertices: 0,
-        max_vertices: n_quads * 4,
-        primitive_type: Primitive_Type::Quads,
-    }
+    Vertex_Buffer::new(Primitive_Type::Quads, n_quads * 4)
 }
 
 pub fn start_draw_triangles(n_tris: u32) -> Vertex_Buffer {
-    Vertex_Buffer {
-        cur_vertices: 0,
-        max_vertices: n_tris * 3,
-        primitive_type: Primitive_Type::Triangles,
-    }
+    Vertex_Buffer::new(Primitive_Type::Triangles, n_tris * 4)
 }
 
 pub fn start_draw_lines(n_lines: u32) -> Vertex_Buffer {
-    Vertex_Buffer {
-        cur_vertices: 0,
-        max_vertices: n_lines * 2,
-        primitive_type: Primitive_Type::Lines,
-    }
+    Vertex_Buffer::new(Primitive_Type::Lines, n_lines * 2)
 }
 
 pub fn start_draw_linestrip(n_vertices: u32) -> Vertex_Buffer {
-    Vertex_Buffer {
-        cur_vertices: 0,
-        max_vertices: n_vertices,
-        primitive_type: Primitive_Type::Line_Strip,
-    }
+    Vertex_Buffer::new(Primitive_Type::Line_Strip, n_vertices)
 }
 
 pub fn start_draw_points(n_vertices: u32) -> Vertex_Buffer {
-    Vertex_Buffer {
-        cur_vertices: 0,
-        max_vertices: n_vertices,
-        primitive_type: Primitive_Type::Points,
-    }
+    Vertex_Buffer::new(Primitive_Type::Points, n_vertices)
 }
 
-pub fn add_quad(vbuf: &mut Vertex_Buffer, _v1: &Vertex, _v2: &Vertex, _v3: &Vertex, _v4: &Vertex) {
-    vbuf.cur_vertices += 4;
+pub fn add_quad(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex, v4: &Vertex) {
+    vbuf.add_vertices(&[*v1, *v2, *v3, *v4]);
 }
 
-pub fn add_triangle(vbuf: &mut Vertex_Buffer, _v1: &Vertex, _v2: &Vertex, _v3: &Vertex) {
-    vbuf.cur_vertices += 3;
+pub fn add_triangle(vbuf: &mut Vertex_Buffer, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
+    vbuf.add_vertices(&[*v1, *v2, *v3]);
 }
 
-pub fn add_line(vbuf: &mut Vertex_Buffer, _from: &Vertex, _to: &Vertex) {
-    vbuf.cur_vertices += 2;
+pub fn add_line(vbuf: &mut Vertex_Buffer, from: &Vertex, to: &Vertex) {
+    vbuf.add_vertices(&[*from, *to]);
 }
 
-pub fn add_vertex(vbuf: &mut Vertex_Buffer, _v: &Vertex) {
-    vbuf.cur_vertices += 1;
+pub fn add_vertex(vbuf: &mut Vertex_Buffer, v: &Vertex) {
+    vbuf.add_vertices(&[*v]);
 }
 
-pub fn update_vbuf(_vbuf: &mut Vertex_Buffer, _vertices: &[Vertex], _offset: u32) {}
+pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
+    vbuf.update_vertices(vertices, offset);
+}
 
 pub fn vbuf_cur_vertices(vbuf: &Vertex_Buffer) -> u32 {
     vbuf.cur_vertices
@@ -272,12 +364,8 @@ pub fn vbuf_max_vertices(vbuf: &Vertex_Buffer) -> u32 {
 }
 
 pub fn set_vbuf_cur_vertices(vbuf: &mut Vertex_Buffer, cur_vertices: u32) {
+    // TODO
     vbuf.cur_vertices = cur_vertices;
-}
-
-pub fn copy_vbuf_to_vbuf(dest: &mut Vertex_Buffer, src: &Vertex_Buffer) -> bool {
-    dest.cur_vertices = src.cur_vertices;
-    true
 }
 
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
@@ -289,10 +377,21 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
 }
 
 pub fn render_vbuf(
-    _window: &mut Render_Window_Handle,
-    _vbuf: &Vertex_Buffer,
-    _transform: &Transform2D,
+    window: &mut Render_Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
 ) {
+    use_vbuf_shader(window, transform);
+
+    unsafe {
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbuf.id);
+        check_gl_err();
+        gl::DrawArrays(
+            to_gl_primitive_type(vbuf.primitive_type),
+            0,
+            vbuf.cur_vertices as _,
+        );
+    }
 }
 
 pub fn render_vbuf_ws(
@@ -485,6 +584,19 @@ fn use_rect_ws_shader(
             color.a as f32 / 255.0,
         );
         check_gl_err();
+    }
+}
+
+fn use_vbuf_shader(window: &mut Render_Window_Handle, transform: &Transform2D) {
+    unsafe {
+        gl::UseProgram(window.gl.vbuf_shader);
+
+        gl::UniformMatrix3fv(
+            get_uniform_loc(window.gl.vbuf_shader, c_str!("transform")),
+            1,
+            gl::FALSE,
+            transform.get_matrix().as_slice().as_ptr(),
+        );
     }
 }
 
