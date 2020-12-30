@@ -293,6 +293,7 @@ where
         }
 
         // @Temporary DEBUG
+        /*
         game_state
             .engine_state
             .debug_systems
@@ -316,6 +317,7 @@ where
                     ..Default::default()
                 },
             );
+            */
 
         // Update game systems
         {
@@ -510,6 +512,25 @@ where
         inle_gfx::render_window::set_clear_color(window, clear_color);
         inle_gfx::render_window::clear(window);
     }
+
+    // @Temporary
+    use inle_gfx::render;
+    let mut vbuf = render::start_draw_triangles(1);
+    render::add_triangle(
+        &mut vbuf,
+        &render::new_vertex(v2!(0., 0.), colors::RED, v2!(0., 0.)),
+        &render::new_vertex(v2!(400., 0.), colors::BLUE, v2!(0., 0.)),
+        &render::new_vertex(v2!(400., 200.), colors::GREEN, v2!(0., 0.)),
+        //&render::new_vertex(v2!(-0.400, 0.), colors::BLUE, v2!(0., 0.)),
+        //&render::new_vertex(v2!(0.200, 0.200), colors::GREEN, v2!(0., 0.)),
+        //&render::new_vertex(v2!(0., 200.), colors::YELLOW, v2!(0., 0.)),
+    );
+    render::render_vbuf(
+        window,
+        &vbuf,
+        &Transform2D::from_pos_rot_scale(v2!(300., 300.), inle_math::angle::deg(50.), v2!(1.0, 1.)),
+    );
+    // ------------------------------
 
     #[cfg(debug_assertions)]
     fn get_render_system_debug_visualization(

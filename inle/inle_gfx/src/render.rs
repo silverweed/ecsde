@@ -156,7 +156,7 @@ pub fn copy_texture_to_image(texture: &Texture) -> Image {
 }
 
 pub fn new_texture_from_image(image: &Image, rect: Option<Rect<i32>>) -> Option<Texture> {
-	backend::new_texture_from_image(image, rect)
+    backend::new_texture_from_image(image, rect)
 }
 
 pub fn get_image_pixel(image: &Image, x: u32, y: u32) -> Color {
@@ -225,10 +225,11 @@ simple_wrap!(Vertex_Buffer_Lines, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Points, Vertex_Buffer);
 
 pub fn new_image(width: u32, height: u32) -> Image {
-	backend::new_image(width, height)
+    backend::new_image(width, height)
 }
 
 pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
+    trace!("new_vbuf");
     backend::new_vbuf(primitive, n_vertices)
 }
 
@@ -236,28 +237,23 @@ pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
     backend::vbuf_primitive_type(vbuf)
 }
 pub fn start_draw_quads(n_quads: u32) -> Vertex_Buffer_Quads {
-    trace!("start_draw_quads");
-    Vertex_Buffer_Quads(backend::start_draw_quads(n_quads))
+    Vertex_Buffer_Quads(new_vbuf(Primitive_Type::Quads, n_quads * 4))
 }
 
 pub fn start_draw_triangles(n_triangles: u32) -> Vertex_Buffer_Triangles {
-    trace!("start_draw_triangles");
-    Vertex_Buffer_Triangles(backend::start_draw_triangles(n_triangles))
+    Vertex_Buffer_Triangles(new_vbuf(Primitive_Type::Triangles, n_triangles * 3))
 }
 
 pub fn start_draw_linestrip(n_vertices: u32) -> Vertex_Buffer_Linestrip {
-    trace!("start_draw_linestrip");
-    Vertex_Buffer_Linestrip(backend::start_draw_linestrip(n_vertices))
+    Vertex_Buffer_Linestrip(new_vbuf(Primitive_Type::Line_Strip, n_vertices))
 }
 
-pub fn start_draw_lines(n_vertices: u32) -> Vertex_Buffer_Lines {
-    trace!("start_draw_lines");
-    Vertex_Buffer_Lines(backend::start_draw_lines(n_vertices))
+pub fn start_draw_lines(n_lines: u32) -> Vertex_Buffer_Lines {
+    Vertex_Buffer_Lines(new_vbuf(Primitive_Type::Lines, n_lines * 2))
 }
 
 pub fn start_draw_points(n_vertices: u32) -> Vertex_Buffer_Points {
-    trace!("start_draw_points");
-    Vertex_Buffer_Points(backend::start_draw_points(n_vertices))
+    Vertex_Buffer_Points(new_vbuf(Primitive_Type::Points, n_vertices))
 }
 
 ///////////////////////////////// UPDATING ///////////////////////////////////
@@ -269,23 +265,23 @@ pub fn add_quad(
     v3: &Vertex,
     v4: &Vertex,
 ) {
-    backend::add_quad(vbuf, v1, v2, v3, v4);
+    backend::add_vertices(vbuf, &[*v1, *v2, *v3, *v4]);
 }
 
 pub fn add_triangle(vbuf: &mut Vertex_Buffer_Triangles, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
-    backend::add_triangle(vbuf, v1, v2, v3);
+    backend::add_vertices(vbuf, &[*v1, *v2, *v3]);
 }
 
 pub fn add_line(vbuf: &mut Vertex_Buffer_Lines, from: &Vertex, to: &Vertex) {
-    backend::add_line(vbuf, from, to);
+    backend::add_vertices(vbuf, &[*from, *to]);
 }
 
 pub fn add_vertex(vbuf: &mut Vertex_Buffer_Linestrip, v: &Vertex) {
-    backend::add_vertex(vbuf, v);
+    backend::add_vertices(vbuf, &[*v]);
 }
 
 pub fn add_point(vbuf: &mut Vertex_Buffer_Points, v: &Vertex) {
-    backend::add_vertex(vbuf, v);
+    backend::add_vertices(vbuf, &[*v]);
 }
 
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
