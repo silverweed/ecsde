@@ -235,7 +235,7 @@ pub fn fill_color_rect<R>(
 {
     let rect = rect.into();
 
-    // @Speed: may we do this more efficiently? Maybe a single draw call?
+    // @FIXME: this outline also fills the shape, and it shouldn't!
     if paint_props.border_thick > 0. {
         let outline_rect = Rect::new(
             rect.x - paint_props.border_thick,
@@ -273,7 +273,7 @@ pub fn fill_color_rect_ws<T>(
 {
     let rect = rect.into();
 
-    // @Speed: may we do this more efficiently? Maybe a single draw call?
+    // @FIXME: this outline also fills the shape, and it shouldn't!
     if paint_props.border_thick > 0. {
         let outline_rect = Rect::new(
             rect.x - paint_props.border_thick,
@@ -311,6 +311,7 @@ pub fn fill_color_circle(
     paint_props: &Paint_Properties,
     circle: shapes::Circle,
 ) {
+    // @FIXME: this outline also fills the shape, and it shouldn't!
     if paint_props.border_thick > 0. {
         let outline = shapes::Circle {
             center: circle.center,
@@ -343,6 +344,7 @@ pub fn fill_color_circle_ws(
     circle: shapes::Circle,
     camera: &Transform2D,
 ) {
+    // @FIXME: this outline also fills the shape, and it shouldn't!
     if paint_props.border_thick > 0. {
         let outline = shapes::Circle {
             center: circle.center,
