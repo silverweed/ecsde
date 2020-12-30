@@ -195,7 +195,6 @@ impl Debug_Element for Debug_Overlay {
         input_state: &Input_State,
     ) {
         use inle_input::mouse;
-        use inle_win::window;
 
         trace!("debug::overlay::update");
 

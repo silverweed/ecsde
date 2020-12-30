@@ -362,13 +362,10 @@ where
         trace!("physics::update");
 
         let gameplay_system = &mut game_state.gameplay_system;
-        let pixel_collision_system = &mut gameplay_system.pixel_collision_system;
         let levels = &gameplay_system.levels;
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
         let phys_settings = &game_state.engine_state.systems.physics_settings;
         let evt_register = &mut game_state.engine_state.systems.evt_register;
-        #[cfg(debug_assertions)]
-        let debug_systems = &mut game_state.engine_state.debug_systems;
 
         levels.foreach_active_level(|level| {
             #[cfg(debug_assertions)]
@@ -384,16 +381,6 @@ where
                 evt_register,
                 #[cfg(debug_assertions)]
                 coll_debug,
-            );
-
-            pixel_collision_system.update(
-                &mut level.world,
-                &mut level.phys_world,
-                &game_resources.gfx,
-                &phys_settings.collision_matrix,
-                frame_alloc,
-                #[cfg(debug_assertions)]
-                debug_systems.painters.get_mut(&level.id).unwrap(),
             );
 
             {

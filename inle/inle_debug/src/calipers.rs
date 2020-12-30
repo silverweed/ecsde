@@ -6,7 +6,6 @@ use inle_input::mouse;
 use inle_math::shapes::Arrow;
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
-use inle_win::window;
 
 // Measures distances
 #[derive(Default)]

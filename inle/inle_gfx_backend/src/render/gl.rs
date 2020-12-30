@@ -8,7 +8,7 @@ use inle_math::rect::Rect;
 use inle_math::shapes;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use std::ffi::{c_void, CStr, CString};
+use std::ffi::{c_void, CStr};
 use std::marker::PhantomData;
 use std::{mem, ptr, str};
 

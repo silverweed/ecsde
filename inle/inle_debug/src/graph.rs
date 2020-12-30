@@ -13,7 +13,6 @@ use inle_math::shapes::Circle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2u};
 use inle_resources::gfx::{Font_Handle, Gfx_Resources};
-use inle_win::window;
 use std::collections::{HashMap, VecDeque};
 use std::convert::TryFrom;
 use std::iter::FromIterator;

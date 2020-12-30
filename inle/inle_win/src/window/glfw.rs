@@ -1,5 +1,4 @@
 use glfw::Context;
-use inle_math::vector::{Vec2f, Vec2i};
 use std::collections::VecDeque;
 
 pub type Event = glfw::WindowEvent;

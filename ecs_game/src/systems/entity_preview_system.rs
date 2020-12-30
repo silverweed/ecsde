@@ -29,10 +29,10 @@ pub fn update(
         let mpos = mouse_pos_in_world(window, &input_state.raw.mouse_state, camera);
         spatial.transform.set_position_v(mpos);
 
-        //if actions.contains(&(sid!("place_entity"), Action_Kind::Pressed)) {
-            //let transform = spatial.transform;
-            //// @Temporary
-            //entities::create_drill(world, phys_world, gres, shader_cache, env, cfg, &transform);
-        //}
+        if actions.contains(&(sid!("place_entity"), Action_Kind::Pressed)) {
+            let transform = spatial.transform;
+            // @Temporary
+            entities::create_drill(world, phys_world, gres, shader_cache, env, cfg, &transform);
+        }
     });
 }

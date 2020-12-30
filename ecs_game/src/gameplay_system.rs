@@ -4,7 +4,6 @@ use super::levels::{Level, Levels};
 use super::systems::camera_system;
 use super::systems::controllable_system::{self, C_Controllable};
 use super::systems::dumb_movement_system;
-use super::systems::entity_preview_system::{self, C_Entity_Preview};
 use super::systems::gravity_system;
 use super::systems::ground_collision_calculation_system::Ground_Collision_Calculation_System;
 use super::systems::pixel_collision_system::Pixel_Collision_System;
@@ -110,13 +109,6 @@ impl Gameplay_System {
         let mut level = load_system::level_load_sync(level_id, engine_state, game_res, self.cfg);
 
         level.chunks.init(engine_state);
-
-        // @Temporary
-        //self.cursor_entity = Some(create_cursor_entity(
-        //    &mut game_res.gfx,
-        //    &mut engine_state.env,
-        //    &mut level.world,
-        //));
 
         self.levels.loaded_levels.push(Arc::new(Mutex::new(level)));
         self.levels
@@ -256,24 +248,8 @@ impl Gameplay_System {
             ground_collision_calc_system.update(world, &mut level.phys_world, &mut level.chunks);
 
             gravity_system::update(&dt, world, cfg);
-            //movement_system::update(&dt, world);
-            dumb_movement_system::update(&dt, world, &mut level.phys_world, rng);
 
             gfx::multi_sprite_animation_system::update(&dt, world, frame_alloc);
-            let camera = level.get_camera().transform;
-            entity_preview_system::update(
-                &mut level.world,
-                &mut level.phys_world,
-                window,
-                input_state,
-                gres,
-                shader_cache,
-                env,
-                &camera,
-                &actions,
-                cfg,
-            );
-
             level.chunks.update(&mut level.world, &level.phys_world);
         });
     }
@@ -550,19 +526,4 @@ fn read_input_cfg(cfg: &inle_cfg::Config) -> Input_Config {
     Input_Config {
         joy_deadzone: Cfg_Var::new("game/input/joystick/deadzone", cfg),
     }
-}
-
-fn create_cursor_entity(gres: &mut Gfx_Resources, env: &Env_Info, world: &mut Ecs_World) -> Entity {
-    let entity = world.new_entity();
-    world.add_component(
-        entity,
-        C_Renderable::new_with_diffuse(gres, env, "drill.png")
-            .with_normals(gres, env, "drill_n.png")
-            .with_z_index(10)
-            .with_color(colors::rgba(255, 255, 255, 150)),
-    );
-    let spat = world.add_component(entity, C_Spatial2D::default());
-    spat.transform.set_scale(0.2, 0.2); // @Cleanup
-    world.add_component(entity, C_Entity_Preview::default());
-    entity
 }

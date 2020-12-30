@@ -10,7 +10,6 @@ use inle_input::mouse::{self, Mouse_Button};
 use inle_math::rect;
 use inle_math::vector::{Vec2f, Vec2i, Vec2u};
 use inle_resources::gfx::{Font_Handle, Gfx_Resources};
-use inle_win::window;
 use std::time::Duration;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -236,10 +235,10 @@ impl Debug_Frame_Scroller {
 
         let row_r = rect::Rectf::new(self.pos.x as _, y, self.size.x as _, height);
         let row_hovered = if let Some((r, _)) = self.hovered {
-		r == row
-	} else {
-		false
-	};
+            r == row
+        } else {
+            false
+        };
         {
             // Draw outline
             let paint_props = Paint_Properties {

@@ -6,11 +6,8 @@ use crate::levels::Level;
 use crate::spatial::World_Chunks;
 use crate::systems::camera_system::{C_Camera_Follow, Camera_Follow_Target};
 use crate::systems::controllable_system::C_Controllable;
-use crate::systems::dumb_movement_system::C_Dumb_Movement;
-use crate::systems::entity_preview_system::C_Entity_Preview;
 use crate::systems::gravity_system::C_Gravity;
 use crate::systems::ground_collision_calculation_system::C_Ground;
-use crate::systems::pixel_collision_system::C_Texture_Collider;
 use crate::Game_Resources;
 use inle_app::app::Engine_State;
 use inle_cfg::{self, Cfg_Var};
@@ -22,7 +19,6 @@ use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::Ecs_World;
 use inle_gfx::components::{C_Animated_Sprite, C_Camera2D, C_Multi_Renderable, C_Renderable};
 use inle_gfx::light::{Lights, Point_Light, Rect_Light};
-use inle_math::angle::rad;
 use inle_math::rect::Rect;
 use inle_math::transform::Transform2D;
 use inle_physics::collider::C_Collider;
@@ -78,13 +74,10 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Renderable>();
     world.register_component::<C_Animated_Sprite>();
     world.register_component::<C_Controllable>();
-    world.register_component::<C_Dumb_Movement>(); // @Cleanup
     world.register_component::<C_Collider>();
     world.register_component::<C_Ground>();
-    world.register_component::<C_Texture_Collider>(); // @Cleanup
     world.register_component::<C_Multi_Renderable>();
     world.register_component::<C_Multi_Renderable_Animation>();
-    world.register_component::<C_Entity_Preview>(); // @Cleanup
     world.register_component::<C_Gravity>();
     world.register_component::<C_Camera_Follow>();
 

@@ -11,7 +11,6 @@ use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_gfx::components::{C_Animated_Sprite, C_Multi_Renderable, C_Renderable};
 use inle_gfx::material::Material;
 use inle_gfx::render;
-use inle_math::angle::{deg, rad};
 use inle_math::rect::Rect;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
@@ -447,11 +446,7 @@ pub fn create_wall(
         wall,
         C_Renderable::new_with_diffuse(gres, env, "wall.png")
             .with_normals(gres, env, "wall_n.png")
-            .with_shader(
-                shader_cache,
-                env,
-                SHD_SPRITE_WITH_NORMALS,
-            ),
+            .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS),
     );
     renderable.rect.width = wall_size.x as i32;
     renderable.rect.height = wall_size.y as i32;
