@@ -32,8 +32,16 @@ pub struct Gl {
     pub rect_ebo: GLuint,
     pub rect_shader: GLuint,
     pub rect_ws_shader: GLuint,
+
     pub line_shader: GLuint,
+
     pub vbuf_shader: GLuint,
+    pub vbuf_ws_shader: GLuint,
+
+    pub circle_vao: GLuint,
+    pub circle_vbo: GLuint,
+    pub circle_shader: GLuint,
+    pub circle_ws_shader: GLuint,
 
     #[cfg(debug_assertions)]
     pub n_draw_calls_this_frame: u32,
@@ -48,9 +56,26 @@ impl Gl {
         gl::UNSIGNED_INT
     }
 
+    pub const fn n_circle_vertices(&self) -> GLsizei {
+        CIRCLE_VERTICES.len() as _
+    }
+
+    pub fn draw_arrays(&mut self, primitive: GLenum, first: GLint, count: GLsizei) {
+        unsafe {
+            gl::DrawArrays(primitive, first, count);
+            check_gl_err();
+        }
+
+        #[cfg(debug_assertions)]
+        {
+            self.n_draw_calls_this_frame += 1;
+        }
+    }
+
     pub fn draw_indexed(&mut self, indices: GLsizei, indices_type: GLenum) {
         unsafe {
             gl::DrawElements(gl::TRIANGLES, indices, indices_type, ptr::null());
+            check_gl_err();
         }
 
         #[cfg(debug_assertions)]
@@ -68,6 +93,10 @@ fn init_gl() -> Gl {
     init_rect_ws_shader(&mut gl);
     init_line_shader(&mut gl);
     init_vbuf_shader(&mut gl);
+    init_vbuf_ws_shader(&mut gl);
+    fill_circle_buffers(&mut gl);
+    init_circle_shader(&mut gl);
+    init_circle_ws_shader(&mut gl);
 
     unsafe {
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
@@ -85,8 +114,6 @@ fn init_gl() -> Gl {
 }
 
 fn fill_rect_buffers(gl: &mut Gl) {
-    const LOC_IN_POS: GLuint = 0;
-
     let (mut vao, mut ebo) = (0, 0);
     unsafe {
         gl::GenVertexArrays(1, &mut vao);
@@ -104,6 +131,32 @@ fn fill_rect_buffers(gl: &mut Gl) {
             RECT_INDICES.as_ptr() as *const _,
             0,
         );
+    }
+
+    gl.rect_vao = vao;
+    gl.rect_ebo = ebo;
+}
+
+fn fill_circle_buffers(gl: &mut Gl) {
+    const LOC_IN_POS: GLuint = 0;
+
+    let (mut vao, mut vbo) = (0, 0);
+    unsafe {
+        gl::GenVertexArrays(1, &mut vao);
+        gl::GenBuffers(1, &mut vbo);
+
+        debug_assert!(vao != 0);
+        debug_assert!(vbo != 0);
+
+        gl::BindVertexArray(vao);
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BufferStorage(
+            gl::ARRAY_BUFFER,
+            (CIRCLE_VERTICES.len() * mem::size_of::<GLfloat>()) as _,
+            CIRCLE_VERTICES.as_ptr() as *const _,
+            0,
+        );
 
         gl::VertexAttribPointer(
             LOC_IN_POS,
@@ -114,12 +167,10 @@ fn fill_rect_buffers(gl: &mut Gl) {
             ptr::null(),
         );
         gl::EnableVertexAttribArray(LOC_IN_POS);
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
     }
 
-    gl.rect_vao = vao;
-    gl.rect_ebo = ebo;
+    gl.circle_vao = vao;
+    gl.circle_vbo = vbo;
 }
 
 const GL_TRUE: GLint = gl::TRUE as _;
@@ -145,11 +196,23 @@ fn init_rect_ws_shader(gl: &mut Gl) {
 }
 
 fn init_line_shader(gl: &mut Gl) {
-    gl.line_shader = create_shader_from!("line", "line");
+    gl.line_shader = create_shader_from!("line", "vbuf");
 }
 
 fn init_vbuf_shader(gl: &mut Gl) {
     gl.vbuf_shader = create_shader_from!("vbuf", "vbuf");
+}
+
+fn init_vbuf_ws_shader(gl: &mut Gl) {
+    gl.vbuf_ws_shader = create_shader_from!("vbuf_ws", "vbuf");
+}
+
+fn init_circle_shader(gl: &mut Gl) {
+    gl.circle_shader = create_shader_from!("circle", "basic_color");
+}
+
+fn init_circle_ws_shader(gl: &mut Gl) {
+    gl.circle_ws_shader = create_shader_from!("ws_circle", "basic_color");
 }
 
 fn create_shader(vertex_src: &str, fragment_src: &str, shader_src: &str) -> GLuint {
@@ -347,3 +410,75 @@ fn check_gl_err() {
 
 #[cfg(not(debug_assertions))]
 fn check_gl_err() {}
+
+const N_CIRCLE_POINTS: usize = 32;
+const CIRCLE_VERTICES: [GLfloat; 2 * (N_CIRCLE_POINTS + 2)] = [
+    0.,
+    0.,
+    0.5,
+    0.,
+    0.49039264020252843,
+    0.09754516100347305,
+    0.4619397662592261,
+    0.19134171617389545,
+    0.41573480615907454,
+    0.2777851164981247,
+    0.35355339060651375,
+    0.35355339058003377,
+    0.2777851165292618,
+    0.4157348061382694,
+    0.19134171620849316,
+    0.46193976624489524,
+    0.09754516104020178,
+    0.49039264019522266,
+    3.744829732598636e-11,
+    0.5,
+    -0.0975451609667443,
+    0.49039264020983425,
+    -0.19134171613929774,
+    0.46193976627355693,
+    -0.27778511646698756,
+    0.41573480617987973,
+    -0.35355339055355384,
+    0.3535533906329937,
+    -0.4157348061174642,
+    0.27778511656039895,
+    -0.46193976623056443,
+    0.19134171624309088,
+    -0.49039264018791684,
+    0.09754516107693052,
+    -0.5,
+    7.489659465197271e-11,
+    -0.4903926402171401,
+    -0.09754516093001557,
+    -0.4619397662878878,
+    -0.19134171610470002,
+    -0.41573480620068487,
+    -0.27778511643585047,
+    -0.3535533906594736,
+    -0.3535533905270739,
+    -0.27778511659153604,
+    -0.4157348060966591,
+    -0.1913417162776886,
+    -0.46193976621623356,
+    -0.09754516111365925,
+    -0.4903926401806111,
+    -1.1234489197795908e-10,
+    -0.5,
+    0.09754516089328683,
+    -0.49039264022444584,
+    0.1913417160701023,
+    -0.4619397663022186,
+    0.2777851164047133,
+    -0.41573480622149,
+    0.353553390500594,
+    -0.3535533906859536,
+    0.4157348060758539,
+    -0.2777851166226732,
+    0.4619397662019027,
+    -0.19134171631228633,
+    0.49039264017330525,
+    -0.097545161150388,
+    0.5,
+    0.,
+];

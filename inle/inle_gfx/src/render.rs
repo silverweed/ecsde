@@ -236,8 +236,9 @@ pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
 pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
     backend::vbuf_primitive_type(vbuf)
 }
+
 pub fn start_draw_quads(n_quads: u32) -> Vertex_Buffer_Quads {
-    Vertex_Buffer_Quads(new_vbuf(Primitive_Type::Quads, n_quads * 4))
+    Vertex_Buffer_Quads(new_vbuf(Primitive_Type::Triangle_Strip, n_quads * 4))
 }
 
 pub fn start_draw_triangles(n_triangles: u32) -> Vertex_Buffer_Triangles {

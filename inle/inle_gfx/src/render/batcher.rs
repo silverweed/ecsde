@@ -74,14 +74,14 @@ pub(super) fn add_texture_ws(
                 Sprite_Batch {
                     vbuffer: Vertex_Buffer_Holder::with_initial_vertex_count(
                         4 * 48,
-                        Primitive_Type::Quads,
+                        Primitive_Type::Triangle_Strip,
                         #[cfg(debug_assertions)]
                         format!("{:?}", material),
                     ),
                     shadow_vbuffer: if material.cast_shadows {
                         Some(Vertex_Buffer_Holder::with_initial_vertex_count(
                             4 * 4 * 48,
-                            Primitive_Type::Quads,
+                            Primitive_Type::Triangle_Strip,
                             #[cfg(debug_assertions)]
                             format!("{:?}", material),
                         ))

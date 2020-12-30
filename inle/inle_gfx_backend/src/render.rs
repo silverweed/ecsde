@@ -39,7 +39,6 @@ pub enum Primitive_Type {
     Triangles,
     Triangle_Strip,
     Triangle_Fan,
-    Quads,
 }
 
 pub use backend::geom_shaders_are_available;

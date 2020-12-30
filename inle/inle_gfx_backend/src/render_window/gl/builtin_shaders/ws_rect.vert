@@ -1,7 +1,5 @@
 #version 330 core
 
-//layout (location = 0) in vec2 in_pos;
-
 uniform mat3 mvp;
 uniform vec2 rect[4];
 

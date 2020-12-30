@@ -525,11 +525,6 @@ where
         //&render::new_vertex(v2!(0.200, 0.200), colors::GREEN, v2!(0., 0.)),
         //&render::new_vertex(v2!(0., 200.), colors::YELLOW, v2!(0., 0.)),
     );
-    render::render_vbuf(
-        window,
-        &vbuf,
-        &Transform2D::from_pos_rot_scale(v2!(300., 300.), inle_math::angle::deg(50.), v2!(1.0, 1.)),
-    );
     // ------------------------------
 
     #[cfg(debug_assertions)]
@@ -552,6 +547,22 @@ where
         debug_visualization: get_render_system_debug_visualization(&game_state.debug_cvars, cfg),
     };
 
+    // @Temporary
+    render::render_line(
+        window,
+        &render::new_vertex(v2!(0., 200.), colors::GREEN, v2!(0., 0.)),
+        &render::new_vertex(v2!(1400., 400.), colors::YELLOW, v2!(0., 0.)),
+    );
+    render::render_circle(
+        window,
+        inle_math::shapes::Circle {
+            center: v2!(400., 500.),
+            radius: 250.,
+        },
+        colors::BLUE,
+    );
+    // -----------------------
+
     {
         let gameplay_system = &mut game_state.gameplay_system;
         let batches = &mut game_state.level_batches;
@@ -568,6 +579,19 @@ where
                 gres,
                 shader_cache,
             };
+
+            // @Temporary
+            render::render_vbuf_ws(
+                render_args.window,
+                &vbuf,
+                &Transform2D::from_pos_rot_scale(
+                    v2!(0., 0.),
+                    inle_math::angle::deg(50.),
+                    v2!(1.0, 1.),
+                ),
+                &level.get_camera().transform,
+            );
+            // ---------------------------
 
             render_system::update(render_args);
         });

@@ -20,7 +20,6 @@ fn to_gl_primitive_type(prim: Primitive_Type) -> GLenum {
         Primitive_Type::Triangles => gl::TRIANGLES,
         Primitive_Type::Triangle_Strip => gl::TRIANGLE_STRIP,
         Primitive_Type::Triangle_Fan => gl::TRIANGLE_FAN,
-        Primitive_Type::Quads => gl::QUADS,
     }
 }
 
@@ -54,17 +53,11 @@ impl Vertex_Buffer {
                 check_gl_err();
 
                 // NOTE: using a BufferStorage means that this buffer is unresizable.
-                //gl::BufferStorage(
-                //gl::ARRAY_BUFFER,
-                //(max_vertices * mem::size_of::<Vertex>() as u32) as _,
-                //ptr::null(),
-                //gl::DYNAMIC_STORAGE_BIT,
-                //);
-                gl::BufferData(
+                gl::BufferStorage(
                     gl::ARRAY_BUFFER,
                     (max_vertices * mem::size_of::<Vertex>() as u32) as _,
                     ptr::null(),
-                    gl::DYNAMIC_DRAW,
+                    gl::DYNAMIC_STORAGE_BIT,
                 );
                 check_gl_err();
 
@@ -111,33 +104,6 @@ impl Vertex_Buffer {
             cur_vertices: 0,
             max_vertices,
             primitive_type,
-        }
-    }
-
-    fn add_vertices(&mut self, vertices: &[Vertex]) {
-        debug_assert!(self.cur_vertices as usize + vertices.len() <= self.max_vertices as usize);
-        unsafe {
-            gl::NamedBufferSubData(
-                self.vbo,
-                (self.cur_vertices * mem::size_of::<Vertex>() as u32) as _,
-                (vertices.len() * mem::size_of::<Vertex>()) as _,
-                vertices.as_ptr() as _,
-            );
-            check_gl_err();
-        }
-        debug_assert!(self.cur_vertices as usize + vertices.len() < std::u32::MAX as usize);
-        self.cur_vertices += vertices.len() as u32;
-    }
-
-    fn update_vertices(&mut self, vertices: &[Vertex], offset: u32) {
-        unsafe {
-            gl::NamedBufferSubData(
-                self.vbo,
-                (offset as usize * mem::size_of::<Vertex>()) as _,
-                (vertices.len() * mem::size_of::<Vertex>()) as _,
-                vertices.as_ptr() as _,
-            );
-            check_gl_err();
         }
     }
 }
@@ -341,18 +307,66 @@ pub fn fill_color_rect_ws<T>(
 }
 
 pub fn fill_color_circle(
-    _window: &mut Render_Window_Handle,
-    _paint_props: &Paint_Properties,
-    _circle: shapes::Circle,
+    window: &mut Render_Window_Handle,
+    paint_props: &Paint_Properties,
+    circle: shapes::Circle,
 ) {
+    if paint_props.border_thick > 0. {
+        let outline = shapes::Circle {
+            center: circle.center,
+            radius: circle.radius + 2. * paint_props.border_thick,
+        };
+
+        use_circle_shader(window, paint_props.border_color, outline);
+
+        unsafe {
+            gl::BindVertexArray(window.gl.circle_vao);
+            window
+                .gl
+                .draw_arrays(gl::TRIANGLE_FAN, 0, window.gl.n_circle_vertices());
+        }
+    }
+
+    use_circle_shader(window, paint_props.color, circle);
+
+    unsafe {
+        gl::BindVertexArray(window.gl.circle_vao);
+        window
+            .gl
+            .draw_arrays(gl::TRIANGLE_FAN, 0, window.gl.n_circle_vertices());
+    }
 }
 
 pub fn fill_color_circle_ws(
-    _window: &mut Render_Window_Handle,
-    _paint_props: &Paint_Properties,
-    _circle: shapes::Circle,
-    _camera: &Transform2D,
+    window: &mut Render_Window_Handle,
+    paint_props: &Paint_Properties,
+    circle: shapes::Circle,
+    camera: &Transform2D,
 ) {
+    if paint_props.border_thick > 0. {
+        let outline = shapes::Circle {
+            center: circle.center,
+            radius: circle.radius + 2. * paint_props.border_thick,
+        };
+
+        use_circle_ws_shader(window, paint_props.border_color, outline, camera);
+
+        unsafe {
+            gl::BindVertexArray(window.gl.circle_vao);
+            window
+                .gl
+                .draw_arrays(gl::TRIANGLE_FAN, 0, window.gl.n_circle_vertices());
+        }
+    }
+
+    use_circle_ws_shader(window, paint_props.color, circle, camera);
+
+    unsafe {
+        gl::BindVertexArray(window.gl.circle_vao);
+        window
+            .gl
+            .draw_arrays(gl::TRIANGLE_FAN, 0, window.gl.n_circle_vertices());
+    }
 }
 
 pub fn render_text(
@@ -398,12 +412,31 @@ pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
 
 #[inline(always)]
 pub fn add_vertices(vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
-    vbuf.add_vertices(vertices);
+    debug_assert!(vbuf.cur_vertices as usize + vertices.len() <= vbuf.max_vertices as usize);
+    unsafe {
+        gl::NamedBufferSubData(
+            vbuf.vbo,
+            (vbuf.cur_vertices * mem::size_of::<Vertex>() as u32) as _,
+            (vertices.len() * mem::size_of::<Vertex>()) as _,
+            vertices.as_ptr() as _,
+        );
+        check_gl_err();
+    }
+    debug_assert!(vbuf.cur_vertices as usize + vertices.len() < std::u32::MAX as usize);
+    vbuf.cur_vertices += vertices.len() as u32;
 }
 
 #[inline(always)]
 pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
-    vbuf.update_vertices(vertices, offset);
+    unsafe {
+        gl::NamedBufferSubData(
+            vbuf.vbo,
+            (offset as usize * mem::size_of::<Vertex>()) as _,
+            (vertices.len() * mem::size_of::<Vertex>()) as _,
+            vertices.as_ptr() as _,
+        );
+        check_gl_err();
+    }
 }
 
 #[inline(always)]
@@ -444,7 +477,7 @@ pub fn render_vbuf(
         gl::BindVertexArray(vbuf.vao);
         check_gl_err();
 
-        gl::DrawArrays(
+        window.gl.draw_arrays(
             to_gl_primitive_type(vbuf.primitive_type),
             0,
             vbuf.cur_vertices as _,
@@ -454,11 +487,28 @@ pub fn render_vbuf(
 }
 
 pub fn render_vbuf_ws(
-    _window: &mut Render_Window_Handle,
-    _vbuf: &Vertex_Buffer,
-    _transform: &Transform2D,
-    _camera: &Transform2D,
+    window: &mut Render_Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
+    camera: &Transform2D,
 ) {
+    if vbuf_cur_vertices(vbuf) == 0 {
+        return;
+    }
+
+    use_vbuf_ws_shader(window, transform, camera);
+
+    unsafe {
+        gl::BindVertexArray(vbuf.vao);
+        check_gl_err();
+
+        window.gl.draw_arrays(
+            to_gl_primitive_type(vbuf.primitive_type),
+            0,
+            vbuf.cur_vertices as _,
+        );
+        check_gl_err();
+    }
 }
 
 pub fn render_vbuf_ws_ex(
@@ -482,8 +532,14 @@ pub fn create_text<'a>(_string: &str, _font: &'a Font, _size: u16) -> Text<'a> {
 }
 
 pub fn render_line(window: &mut Render_Window_Handle, start: &Vertex, end: &Vertex) {
-    // TODO
-    //use_line_shader();
+    use_line_shader(window, start, end);
+
+    unsafe {
+        // We reuse the rect VAO since it has no vertices associated to it.
+        gl::BindVertexArray(window.gl.rect_vao);
+
+        window.gl.draw_arrays(gl::LINES, 0, 2);
+    }
 }
 
 pub fn copy_texture_to_image(_texture: &Texture) -> Image {}
@@ -502,7 +558,8 @@ pub fn get_image_pixels(_image: &Image) -> &[Color] {
     &[]
 }
 
-pub fn swap_vbuf(_a: &mut Vertex_Buffer, _b: &mut Vertex_Buffer) -> bool {
+pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
+    mem::swap(a, b);
     true
 }
 
@@ -581,13 +638,11 @@ fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<
     }
 }
 
-fn use_rect_ws_shader(
-    window: &mut Render_Window_Handle,
-    color: Color,
-    rect: &Rect<f32>,
+fn get_mvp_matrix(
+    window: &Render_Window_Handle,
     transform: &Transform2D,
     camera: &Transform2D,
-) {
+) -> Matrix3<f32> {
     let (width, height) = inle_win::window::get_window_target_size(window);
     let model = transform;
     let view = camera.inverse();
@@ -602,8 +657,16 @@ fn use_rect_ws_shader(
         0.,
         1.,
     );
-    let mvp = projection * view.get_matrix() * model.get_matrix();
+    projection * view.get_matrix() * model.get_matrix()
+}
 
+fn use_rect_ws_shader(
+    window: &mut Render_Window_Handle,
+    color: Color,
+    rect: &Rect<f32>,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) {
     // @Volatile: order must be consistent with render_window::backend::RECT_INDICES
     let rect_vertices = [
         rect.x,
@@ -615,6 +678,7 @@ fn use_rect_ws_shader(
         rect.x,
         rect.y + rect.height,
     ];
+    let mvp = get_mvp_matrix(window, transform, camera);
 
     // @TODO: consider using UBOs
     unsafe {
@@ -664,6 +728,137 @@ fn use_vbuf_shader(window: &mut Render_Window_Handle, transform: &Transform2D) {
             gl::FALSE,
             transform.get_matrix().as_slice().as_ptr(),
         );
+    }
+}
+
+fn use_vbuf_ws_shader(
+    window: &mut Render_Window_Handle,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) {
+    let mvp = get_mvp_matrix(window, transform, camera);
+    unsafe {
+        gl::UseProgram(window.gl.vbuf_ws_shader);
+
+        gl::UniformMatrix3fv(
+            get_uniform_loc(window.gl.vbuf_ws_shader, c_str!("mvp")),
+            1,
+            gl::FALSE,
+            mvp.as_slice().as_ptr(),
+        );
+        check_gl_err();
+    }
+}
+
+fn use_line_shader(window: &mut Render_Window_Handle, start: &Vertex, end: &Vertex) {
+    let (ww, wh) = inle_win::window::get_window_target_size(window);
+    let ww = ww as f32 * 0.5;
+    let wh = wh as f32 * 0.5;
+    unsafe {
+        gl::UseProgram(window.gl.line_shader);
+
+        gl::Uniform2fv(
+            get_uniform_loc(window.gl.line_shader, c_str!("pos")),
+            2,
+            [
+                (start.position.x - ww) / ww,
+                (wh - start.position.y) / wh,
+                (end.position.x - ww) / ww,
+                (wh - end.position.y) / wh,
+            ]
+            .as_ptr(),
+        );
+        check_gl_err();
+
+        gl::Uniform4fv(
+            get_uniform_loc(window.gl.line_shader, c_str!("color")),
+            2,
+            [
+                start.color.x,
+                start.color.y,
+                start.color.z,
+                start.color.w,
+                end.color.x,
+                end.color.y,
+                end.color.z,
+                end.color.w,
+            ]
+            .as_ptr(),
+        );
+        check_gl_err();
+    }
+}
+
+fn use_circle_shader(window: &mut Render_Window_Handle, color: Color, circle: shapes::Circle) {
+    let transform = Transform2D::from_pos_rot_scale(
+        circle.center,
+        inle_math::angle::Angle::default(),
+        v2!(circle.radius, circle.radius) * 2.0,
+    );
+
+    let (ww, wh) = inle_win::window::get_window_target_size(window);
+    let ww = ww as f32 * 0.5;
+    let wh = wh as f32 * 0.5;
+
+    unsafe {
+        gl::UseProgram(window.gl.circle_shader);
+
+        gl::UniformMatrix3fv(
+            get_uniform_loc(window.gl.circle_shader, c_str!("transform")),
+            1,
+            gl::FALSE,
+            transform.get_matrix().as_slice().as_ptr(),
+        );
+
+        gl::Uniform2f(
+            get_uniform_loc(window.gl.circle_shader, c_str!("win_half_size")),
+            ww,
+            wh,
+        );
+
+        gl::Uniform4f(
+            get_uniform_loc(window.gl.circle_shader, c_str!("color")),
+            color.r as f32 / 255.0,
+            color.g as f32 / 255.0,
+            color.b as f32 / 255.0,
+            color.a as f32 / 255.0,
+        );
+        check_gl_err();
+    }
+}
+
+fn use_circle_ws_shader(
+    window: &mut Render_Window_Handle,
+    color: Color,
+    circle: shapes::Circle,
+    camera: &Transform2D,
+) {
+    let transform = Transform2D::from_pos_rot_scale(
+        circle.center,
+        inle_math::angle::Angle::default(),
+        v2!(circle.radius, circle.radius) * 2.0,
+    );
+
+    let mvp = get_mvp_matrix(window, &transform, camera);
+
+    unsafe {
+        gl::UseProgram(window.gl.circle_ws_shader);
+
+        gl::UniformMatrix3fv(
+            get_uniform_loc(window.gl.circle_ws_shader, c_str!("mvp")),
+            1,
+            gl::FALSE,
+            mvp.as_slice().as_ptr(),
+        );
+
+        gl::Uniform4f(
+            get_uniform_loc(window.gl.circle_ws_shader, c_str!("color")),
+            color.r as f32 / 255.0,
+            color.g as f32 / 255.0,
+            color.b as f32 / 255.0,
+            color.a as f32 / 255.0,
+        );
+        check_gl_err();
     }
 }
 
