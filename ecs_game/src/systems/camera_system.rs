@@ -1,9 +1,9 @@
+use inle_cfg::{Cfg_Var, Config};
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_gfx::components::C_Camera2D;
-use inle_math::vector::Vec2f;
-use inle_cfg::{Config, Cfg_Var};
 use inle_gfx::render_window::Render_Window_Handle;
+use inle_math::vector::Vec2f;
 use std::time::Duration;
 
 #[derive(Copy, Clone, Debug)]
@@ -40,7 +40,7 @@ pub fn update(dt: &Duration, world: &mut Ecs_World, window: &Render_Window_Handl
             Camera_Follow_Target::Position(pos) => pos,
             Camera_Follow_Target::Entity(entity) => {
                 let spatial = world.get_component::<C_Spatial2D>(entity).expect("Followed entity has no C_Spatial2D!");
-                spatial.transform.position() - camera.transform.scale() * v2!(0.5 * win_w as f32, 0.5 * win_h as f32)
+                spatial.transform.position() / camera.transform.scale()
             },
         };
 

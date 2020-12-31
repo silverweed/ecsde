@@ -548,6 +548,19 @@ where
         },
         colors::BLUE,
     );
+    //let mut sbuf = render::start_draw_quads(1);
+    //render::add_quad(
+    //&mut sbuf,
+    //&render::new_vertex(v2!(-0.5, -0.5), colors::YELLOW, v2!(0., 1.)),
+    //&render::new_vertex(v2!(0.5, -0.5), colors::WHITE, v2!(1., 1.)),
+    //&render::new_vertex(v2!(0.5, 0.5), colors::GREEN, v2!(1., 0.)),
+    //&render::new_vertex(v2!(-0.5, 0.5), colors::BLUE, v2!(0., 0.)),
+    //);
+    //let tex = gres.load_texture(&inle_resources::gfx::tex_path(
+    //&game_state.engine_state.env,
+    //"jelly.png",
+    //));
+    //let tex = gres.get_texture(tex);
     // -----------------------
 
     {

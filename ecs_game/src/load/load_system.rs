@@ -227,7 +227,7 @@ fn init_demo_entities(
         );
     }
 
-    entities::create_background(&mut level.world, gres, shader_cache, env, cfg);
+    //entities::create_background(&mut level.world, gres, shader_cache, env, cfg);
 
     //entities::create_terrain(&mut level.world, gres, shader_cache, env, cfg);
     entities::create_room(

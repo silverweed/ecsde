@@ -1,11 +1,13 @@
 mod cache;
+mod font;
+mod image;
 
 use super::asset_path;
 use super::loaders;
-use inle_core::env::Env_Info;
-use inle_gfx_backend::render::{self, Font, Shader, Texture, Image};
 use inle_common::colors;
 use inle_common::stringid::{const_sid_from_str, String_Id};
+use inle_core::env::Env_Info;
+use inle_gfx_backend::render::{self, Font, Image, Shader, Texture};
 
 pub type Texture_Handle = loaders::Res_Handle;
 pub type Font_Handle = loaders::Res_Handle;
@@ -24,17 +26,19 @@ impl<'l> Gfx_Resources<'l> {
             lwarn!("This platform does not support geometry shaders.");
         }
 
-		let mut tex_cache = cache::Texture_Cache::new();
-
-		// This occurs once here.
-		unsafe { 
-			create_white_image(); 
-			create_white_texture(&mut tex_cache); 
-		}
+        let tex_cache = cache::Texture_Cache::new();
 
         Gfx_Resources {
             textures: tex_cache,
             fonts: cache::Font_Cache::new(),
+        }
+    }
+
+    pub fn init(&mut self) {
+        // This occurs once here. Cannot do this in new() because it must be done after the Render_Window is created.
+        unsafe {
+            create_white_image();
+            create_white_texture(&mut self.textures);
         }
     }
 
@@ -53,9 +57,9 @@ impl<'l> Gfx_Resources<'l> {
         self.textures.must_get_mut(handle)
     }
 
-	pub fn get_white_texture_handle(&self) -> Texture_Handle {
-		Some(WHITE_TEXTURE_KEY)
-	}
+    pub fn get_white_texture_handle(&self) -> Texture_Handle {
+        Some(WHITE_TEXTURE_KEY)
+    }
 
     pub fn load_font(&mut self, fname: &str) -> Font_Handle {
         self.fonts.load(fname)
@@ -71,11 +75,15 @@ pub struct Shader_Cache<'l>(cache::Shader_Cache<'l>);
 
 impl<'l> Shader_Cache<'l> {
     pub fn new() -> Self {
-		let mut shader_cache = cache::Shader_Cache::new();
+        let mut shader_cache = cache::Shader_Cache::new();
 
-		shader_cache.cache.insert(ERROR_SHADER_KEY, load_error_shader());
-		#[cfg(debug_assertions)]
-		shader_cache.cache.insert(BASIC_SHADER_KEY, load_basic_shader());
+        shader_cache
+            .cache
+            .insert(ERROR_SHADER_KEY, load_error_shader());
+        #[cfg(debug_assertions)]
+        shader_cache
+            .cache
+            .insert(BASIC_SHADER_KEY, load_basic_shader());
 
         Self(shader_cache)
     }
@@ -109,13 +117,13 @@ impl<'l> Shader_Cache<'l> {
         self.0.must_get_mut(handle)
     }
 
-	pub fn get_error_shader_handle(&self) -> Shader_Handle {
-		Some(ERROR_SHADER_KEY)
-	}
+    pub fn get_error_shader_handle(&self) -> Shader_Handle {
+        Some(ERROR_SHADER_KEY)
+    }
 
-	pub fn get_basic_shader_handle(&self) -> Shader_Handle {
-		Some(BASIC_SHADER_KEY)
-	}
+    pub fn get_basic_shader_handle(&self) -> Shader_Handle {
+        Some(BASIC_SHADER_KEY)
+    }
 }
 
 pub fn tex_path(env: &Env_Info, file: &str) -> String {
@@ -138,30 +146,32 @@ static mut WHITE_IMAGE: Option<Image> = None;
 /// # Safety
 /// Must not be called from multiple threads
 unsafe fn create_white_image() {
-	let mut img = render::new_image(1, 1);
-	render::set_image_pixel(&mut img, 0, 0, colors::WHITE);
-	WHITE_IMAGE.replace(img);
+    let mut img = render::new_image(1, 1, render::Color_Type::RGB);
+    render::set_image_pixel(&mut img, 0, 0, colors::WHITE);
+    WHITE_IMAGE.replace(img);
 }
 
 /// # Safety
 /// Must not be called from multiple threads
 unsafe fn create_white_texture(tex_cache: &mut cache::Texture_Cache) {
-	let img = WHITE_IMAGE.as_ref().expect("white image was not created yet!");
-	let mut tex = render::new_texture_from_image(&img, None).unwrap();
-	render::set_texture_repeated(&mut tex, true);
-	tex_cache.cache.insert(WHITE_TEXTURE_KEY, tex);
+    let img = WHITE_IMAGE
+        .as_ref()
+        .expect("white image was not created yet!");
+    let mut tex = render::new_texture_from_image(&img, None).unwrap();
+    render::set_texture_repeated(&mut tex, true);
+    tex_cache.cache.insert(WHITE_TEXTURE_KEY, tex);
 }
 
 const ERROR_SHADER_KEY: String_Id = cache::ERROR_SHADER_KEY;
 const BASIC_SHADER_KEY: String_Id = const_sid_from_str("__basic__");
 
 fn load_error_shader<'a>() -> Shader<'a> {
-	const ERROR_SHADER_VERT: &str = "
+    const ERROR_SHADER_VERT: &str = "
 		void main() {
 			gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
 		}
 	";
-	const ERROR_SHADER_FRAG: &str = "
+    const ERROR_SHADER_FRAG: &str = "
 		void main() {
 			gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
 		}
@@ -171,13 +181,13 @@ fn load_error_shader<'a>() -> Shader<'a> {
 
 #[cfg(debug_assertions)]
 fn load_basic_shader<'a>() -> Shader<'a> {
-	const BASIC_SHADER_VERT: &str = "
+    const BASIC_SHADER_VERT: &str = "
 		void main() {
 			gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;
 			gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
 		}
 	";
-	const BASIC_SHADER_FRAG: &str = "
+    const BASIC_SHADER_FRAG: &str = "
 		uniform sampler2D texture;
 		void main() {
 			gl_FragColor = texture2D(texture, gl_TexCoord[0].xy);

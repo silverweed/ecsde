@@ -20,6 +20,7 @@ pub type Text<'a> = backend::Text<'a>;
 pub type Texture<'a> = backend::Texture<'a>;
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
+pub type Color_Type = backend::Color_Type;
 
 //////////////////////////// DRAWING //////////////////////////////////
 
@@ -224,8 +225,8 @@ simple_wrap!(Vertex_Buffer_Linestrip, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Lines, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Points, Vertex_Buffer);
 
-pub fn new_image(width: u32, height: u32) -> Image {
-    backend::new_image(width, height)
+pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {
+    backend::new_image(width, height, color_type)
 }
 
 pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
@@ -238,7 +239,7 @@ pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
 }
 
 pub fn start_draw_quads(n_quads: u32) -> Vertex_Buffer_Quads {
-    Vertex_Buffer_Quads(new_vbuf(Primitive_Type::Triangle_Strip, n_quads * 4))
+    Vertex_Buffer_Quads(new_vbuf(Primitive_Type::Triangle_Fan, n_quads * 4))
 }
 
 pub fn start_draw_triangles(n_triangles: u32) -> Vertex_Buffer_Triangles {

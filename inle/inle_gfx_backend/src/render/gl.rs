@@ -12,15 +12,10 @@ use std::ffi::{c_void, CStr};
 use std::marker::PhantomData;
 use std::{mem, ptr, str};
 
-fn to_gl_primitive_type(prim: Primitive_Type) -> GLenum {
-    match prim {
-        Primitive_Type::Points => gl::POINTS,
-        Primitive_Type::Lines => gl::LINES,
-        Primitive_Type::Line_Strip => gl::LINE_STRIP,
-        Primitive_Type::Triangles => gl::TRIANGLES,
-        Primitive_Type::Triangle_Strip => gl::TRIANGLE_STRIP,
-        Primitive_Type::Triangle_Fan => gl::TRIANGLE_FAN,
-    }
+macro_rules! c_str {
+    ($literal:expr) => {
+        CStr::from_bytes_with_nul_unchecked(concat!($literal, "\0").as_bytes())
+    };
 }
 
 pub struct Vertex_Buffer {
@@ -188,13 +183,70 @@ impl Vertex {
     }
 }
 
-pub type Image = ();
+#[derive(Copy, Clone, Debug)]
+pub enum Color_Type {
+    Grayscale,
+    RGB,
+    Indexed,
+    Grayscale_Alpha,
+    RGBA,
+}
+
+pub struct Image {
+    bytes: Vec<u8>,
+
+    width: u32,
+    height: u32,
+    color_type: Color_Type,
+
+    // NOTE: this is currently always expected to be 8 for all manipulation purposes.
+    // It can only be != 8 while loading a texture from an image, since in that case it needs
+    // not be manipulated by our API calls.
+    bit_depth: u8,
+}
+
+impl Image {
+    fn bit_depth_as_gl_type(&self) -> GLenum {
+        match self.bit_depth {
+            8 => gl::UNSIGNED_BYTE,
+            16 => gl::UNSIGNED_SHORT,
+            32 => gl::UNSIGNED_INT,
+            _ => panic!("Unsupported bit depth {}", self.bit_depth),
+        }
+    }
+
+    fn color_type_as_gl_type(&self) -> GLenum {
+        match (self.color_type, self.bit_depth) {
+            (Color_Type::Grayscale, 8) => gl::R8,
+            (Color_Type::Grayscale_Alpha, 8) => gl::RG8,
+            (Color_Type::RGB, 8) => gl::RGB8,
+            (Color_Type::RGB, 16) => gl::RGB16,
+            (Color_Type::RGBA, 8) => gl::RGBA8,
+            (Color_Type::RGBA, 16) => gl::RGBA16,
+            _ => panic!(
+                "combination {:?} / {}bits is not implemented",
+                self.color_type, self.bit_depth
+            ),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Texture<'a> {
+    id: GLuint,
+
+    width: u32,
+    height: u32,
+
+    pixel_type: GLenum,
+
+    _pd: PhantomData<&'a ()>,
+}
+
 pub struct Shader<'texture> {
     _pd: PhantomData<&'texture ()>,
 }
-pub struct Texture<'a> {
-    _pd: PhantomData<&'a ()>,
-}
+
 pub struct Font<'a> {
     _pd: PhantomData<&'a ()>,
 }
@@ -204,12 +256,6 @@ pub struct Text<'font> {
 
 // @Cleanup
 // we should actually have API functions for these, not methods...
-impl Texture<'_> {
-    pub fn from_file(_: &str) -> Option<Self> {
-        Some(Self { _pd: PhantomData })
-    }
-}
-
 impl Font<'_> {
     pub fn from_file(_: &str) -> Option<Self> {
         Some(Self { _pd: PhantomData })
@@ -388,19 +434,43 @@ pub fn render_text_ws(
 ) {
 }
 
-pub fn get_texture_size(_texture: &Texture) -> (u32, u32) {
-    (1, 1)
+pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
+    (texture.width, texture.height)
 }
 
-pub fn get_image_size(_image: &Image) -> (u32, u32) {
-    (1, 1)
+pub fn get_image_size(image: &Image) -> (u32, u32) {
+    (image.width, image.height)
 }
 
 pub fn get_text_size(_text: &Text) -> Vec2f {
     Vec2f::default()
 }
 
-pub fn new_image(_width: u32, _height: u32) -> Image {}
+pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {
+    Image {
+        width,
+        height,
+        bytes: vec![0; 8 * (width * height) as usize],
+        color_type,
+        bit_depth: 8,
+    }
+}
+
+pub fn new_image_with_data(
+    width: u32,
+    height: u32,
+    color_type: Color_Type,
+    bit_depth: u8,
+    bytes: Vec<u8>,
+) -> Image {
+    Image {
+        width,
+        height,
+        color_type,
+        bit_depth,
+        bytes,
+    }
+}
 
 #[inline(always)]
 pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
@@ -494,6 +564,22 @@ pub fn render_vbuf_ws(
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
+    render_vbuf_ws_ex(
+        window,
+        vbuf,
+        transform,
+        camera,
+        Render_Extra_Params::default(),
+    );
+}
+
+pub fn render_vbuf_ws_ex(
+    window: &mut Render_Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
+    camera: &Transform2D,
+    extra_params: Render_Extra_Params,
+) {
     if vbuf_cur_vertices(vbuf) == 0 {
         return;
     }
@@ -501,6 +587,13 @@ pub fn render_vbuf_ws(
     use_vbuf_ws_shader(window, transform, camera);
 
     unsafe {
+        if let Some(tex) = extra_params.texture {
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::BindTexture(gl::TEXTURE_2D, tex.id);
+        }
+
+        // @Incomplete: shader
+
         gl::BindVertexArray(vbuf.vao);
         check_gl_err();
 
@@ -511,22 +604,6 @@ pub fn render_vbuf_ws(
         );
         check_gl_err();
     }
-}
-
-pub fn render_vbuf_ws_ex(
-    _window: &mut Render_Window_Handle,
-    _vbuf: &Vertex_Buffer,
-    _transform: &Transform2D,
-    _camera: &Transform2D,
-    _extra_params: Render_Extra_Params,
-) {
-}
-
-pub fn render_vbuf_texture(
-    _window: &mut Render_Window_Handle,
-    _vbuf: &Vertex_Buffer,
-    _texture: &Texture,
-) {
 }
 
 pub fn create_text<'a>(_string: &str, _font: &'a Font, _size: u16) -> Text<'a> {
@@ -544,20 +621,124 @@ pub fn render_line(window: &mut Render_Window_Handle, start: &Vertex, end: &Vert
     }
 }
 
-pub fn copy_texture_to_image(_texture: &Texture) -> Image {}
+pub fn copy_texture_to_image(texture: &Texture) -> Image {
+    // NOTE: currently we always get pixels as unsigned bytes.
+    let bit_depth = 1u8;
+    let mut pixels = vec![0; (texture.width * texture.height * bit_depth as u32) as usize];
+    unsafe {
+        gl::BindTexture(gl::TEXTURE_2D, texture.id);
+        gl::GetTexImage(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGBA,
+            gl::UNSIGNED_BYTE,
+            pixels.as_mut_ptr() as _,
+        );
+    }
 
-pub fn new_texture_from_image(_image: &Image, _rect: Option<Rect<i32>>) -> Option<Texture> {
-    Some(Texture { _pd: PhantomData })
+    Image {
+        width: texture.width,
+        height: texture.height,
+        bytes: pixels,
+        color_type: Color_Type::RGBA,
+        bit_depth,
+    }
 }
 
-pub fn get_image_pixel(_image: &Image, _x: u32, _y: u32) -> Color {
-    colors::TRANSPARENT
+pub fn new_texture_from_image<'img, 'tex>(
+    image: &'img Image,
+    _rect: Option<Rect<i32>>,
+) -> Option<Texture<'tex>> {
+    assert!(image.width < gl::MAX_TEXTURE_SIZE);
+    assert!(image.height < gl::MAX_TEXTURE_SIZE);
+
+    let mut id = 0;
+    let pixel_type = image.bit_depth_as_gl_type();
+    unsafe {
+        gl::GenTextures(1, &mut id);
+        check_gl_err();
+
+        debug_assert!(id != 0);
+
+        gl::BindTexture(gl::TEXTURE_2D, id);
+
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as _);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as _);
+
+        // @Audit: not 100% sure that the internal format and pixel format/type conversions are correct..
+        gl::TexStorage2D(
+            gl::TEXTURE_2D,
+            1,
+            image.color_type_as_gl_type(),
+            image.width as _,
+            image.height as _,
+        );
+        gl::TexSubImage2D(
+            gl::TEXTURE_2D,
+            0,
+            0,
+            0,
+            image.width as _,
+            image.height as _,
+            gl::RGBA,
+            pixel_type,
+            image.bytes.as_ptr() as _,
+        );
+        check_gl_err();
+    }
+
+    Some(dbg!(Texture {
+        id,
+        width: image.width,
+        height: image.height,
+        pixel_type,
+        _pd: PhantomData,
+    }))
 }
 
-pub fn set_image_pixel(_image: &mut Image, _x: u32, _y: u32, _val: Color) {}
+pub fn get_image_pixel(image: &Image, x: u32, y: u32) -> Color {
+    debug_assert_eq!(image.bit_depth, 8);
 
-pub fn get_image_pixels(_image: &Image) -> &[Color] {
-    &[]
+    let b = &image.bytes[..];
+    let i = (image.width * y + x) as usize;
+    Color {
+        r: b[i],
+        g: b[i + 1],
+        b: b[i + 2],
+        a: b[i + 3],
+    }
+}
+
+pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {
+    debug_assert_eq!(image.bit_depth, 8);
+
+    let i = (y * image.width + x) as usize;
+    image.bytes[i] = val.r;
+    match image.color_type {
+        Color_Type::Grayscale => {}
+        Color_Type::Grayscale_Alpha => {
+            image.bytes[i + 1] = val.g;
+        }
+        Color_Type::RGB => {
+            image.bytes[i + 1] = val.g;
+            image.bytes[i + 2] = val.b;
+        }
+        Color_Type::RGBA => {
+            image.bytes[i + 1] = val.g;
+            image.bytes[i + 2] = val.b;
+            image.bytes[i + 3] = val.a;
+        }
+        _ => unimplemented!(),
+    }
+}
+
+pub fn get_image_pixels(image: &Image) -> &[Color] {
+    const_assert!(mem::size_of::<Color>() == 4);
+    debug_assert_eq!(image.bytes.len() % 4, 0);
+    debug_assert_eq!(image.bit_depth, 8);
+    unsafe { std::slice::from_raw_parts(image.bytes.as_ptr() as *const _, image.bytes.len() / 4) }
 }
 
 pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
@@ -565,7 +746,23 @@ pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
     true
 }
 
-pub fn update_texture_pixels(_texture: &mut Texture, _rect: &Rect<u32>, _pixels: &[Color]) {}
+pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[Color]) {
+    unsafe {
+        gl::BindTexture(gl::TEXTURE_2D, texture.id);
+        gl::TexSubImage2D(
+            gl::TEXTURE_2D,
+            0,
+            rect.x as _,
+            rect.y as _,
+            rect.width as _,
+            rect.height as _,
+            gl::RGBA,
+            texture.pixel_type,
+            pixels.as_ptr() as _,
+        );
+        check_gl_err();
+    }
+}
 
 pub fn shaders_are_available() -> bool {
     false
@@ -583,15 +780,31 @@ pub fn set_uniform_color(_shader: &mut Shader, _name: &str, _val: Color) {}
 
 pub fn set_uniform_texture(_shader: &mut Shader, _name: &str, _val: &Texture) {}
 
-pub fn set_texture_repeated(_texture: &mut Texture, _repeated: bool) {}
+pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
+    unsafe {
+        gl::BindTexture(gl::TEXTURE_2D, texture.id);
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_WRAP_S,
+            if repeated {
+                gl::REPEAT
+            } else {
+                gl::CLAMP_TO_EDGE
+            } as _,
+        );
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_WRAP_T,
+            if repeated {
+                gl::REPEAT
+            } else {
+                gl::CLAMP_TO_EDGE
+            } as _,
+        );
+    }
+}
 
 // -----------------------------------------------------------------------
-
-macro_rules! c_str {
-    ($literal:expr) => {
-        CStr::from_bytes_with_nul_unchecked(concat!($literal, "\0").as_bytes())
-    };
-}
 
 fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<f32>) {
     // @Volatile: order must be consistent with render_window::backend::RECT_INDICES
@@ -897,4 +1110,15 @@ fn get_mvp_screen_matrix(window: &Render_Window_Handle, transform: &Transform2D)
         1.,
     );
     view_projection * model.get_matrix()
+}
+
+fn to_gl_primitive_type(prim: Primitive_Type) -> GLenum {
+    match prim {
+        Primitive_Type::Points => gl::POINTS,
+        Primitive_Type::Lines => gl::LINES,
+        Primitive_Type::Line_Strip => gl::LINE_STRIP,
+        Primitive_Type::Triangles => gl::TRIANGLES,
+        Primitive_Type::Triangle_Strip => gl::TRIANGLE_STRIP,
+        Primitive_Type::Triangle_Fan => gl::TRIANGLE_FAN,
+    }
 }

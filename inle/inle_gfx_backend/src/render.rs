@@ -24,6 +24,7 @@ pub type Image = backend::Image;
 
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
+pub type Color_Type = backend::Color_Type;
 
 #[derive(Default)]
 pub struct Render_Extra_Params<'t, 's> {
@@ -43,6 +44,7 @@ pub enum Primitive_Type {
 
 pub use backend::geom_shaders_are_available;
 pub use backend::new_image;
+pub use backend::new_image_with_data;
 pub use backend::new_texture_from_image;
 pub use backend::set_image_pixel;
 pub use backend::set_texture_repeated;

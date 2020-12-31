@@ -127,6 +127,7 @@ pub fn init_engine_systems(
     engine_state: &mut Engine_State,
     gres: &mut Gfx_Resources,
 ) -> Maybe_Error {
+    gres.init();
     inle_input::joystick_state::init_joysticks(&mut engine_state.input_state.raw.joy_state);
     inle_ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
 

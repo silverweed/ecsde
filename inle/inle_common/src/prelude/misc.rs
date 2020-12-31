@@ -25,3 +25,29 @@ macro_rules! const_assert {
         } as usize] = [];
     };
 }
+
+#[derive(Debug)]
+struct Generic_Error {
+    msg: String,
+}
+
+impl std::error::Error for Generic_Error {}
+impl std::fmt::Display for Generic_Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.msg)
+    }
+}
+
+pub fn generic_error<T: Into<String>>(t: T) -> Box<dyn std::error::Error> {
+    Box::new(Generic_Error { msg: t.into() })
+}
+
+#[macro_export]
+macro_rules! error {
+    ($x: expr) => {
+        $crate::generic_error($x)
+    };
+    () => {
+        $crate::generic_error("")
+    };
+}

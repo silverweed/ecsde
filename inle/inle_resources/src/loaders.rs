@@ -60,21 +60,22 @@ where
 
 #[macro_export]
 macro_rules! define_file_loader {
-    ($loaded_res: ident, $loader_name: ident, $cache_name: ident) => {
+    ($loaded_res: ident, $loader_name: ident, $cache_name: ident, $load_fn: path) => {
         pub(super) struct $loader_name;
 
         impl<'l> loaders::Resource_Loader<'l, $loaded_res<'l>> for $loader_name {
             type Args = str;
 
             fn load(&'l self, fname: &str) -> Result<$loaded_res<'l>, String> {
-                $loaded_res::from_file(fname).ok_or_else(|| {
+                $load_fn(fname).map_err(|err| {
                     format!(
                         concat!(
                             "[ WARNING ] Failed to load ",
                             stringify!($loaded_res),
-                            " from {}"
+                            " from {}: {}"
                         ),
-                        fname
+                        fname,
+                        err.to_string()
                     )
                 })
             }

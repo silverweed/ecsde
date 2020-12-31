@@ -6,8 +6,18 @@ use inle_gfx_backend::render::{Font, Shader, Texture};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
-define_file_loader!(Texture, Texture_Loader, Texture_Cache);
-define_file_loader!(Font, Font_Loader, Font_Cache);
+define_file_loader!(
+    Texture,
+    Texture_Loader,
+    Texture_Cache,
+    super::image::load_texture_from_file
+);
+define_file_loader!(
+    Font,
+    Font_Loader,
+    Font_Cache,
+    super::font::load_font_from_file
+);
 
 // @Cleanup @WaitForStable: this code is mostly @Cutnpaste from loaders.rs, since
 // the arguments to the Loader are different.
@@ -46,10 +56,10 @@ impl<'l> Shader_Cache<'l> {
     }
 
     pub(super) fn new_with_loader(loader: &'l Shader_Loader) -> Self {
-        Shader_Cache { 
-			loader,
-			cache: HashMap::new(), 
-		}
+        Shader_Cache {
+            loader,
+            cache: HashMap::new(),
+        }
     }
 
     /// shader_name: the name of the shader(s) without extension.
