@@ -594,39 +594,36 @@ macro_rules! c_str {
 }
 
 fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<f32>) {
-    let (ww, wh) = inle_win::window::get_window_target_size(window);
-    let ww = 0.5 * ww as f32;
-    let wh = 0.5 * wh as f32;
-
-    let vertices = {
-        let mut rect = *rect;
-        rect.x = (rect.x - ww) / ww;
-        rect.y = (wh - rect.y) / wh;
-        rect.width /= ww;
-        rect.height /= -wh;
-
-        // @Volatile: order must be consistent with render_window::backend::RECT_INDICES
-        [
-            rect.x,
-            rect.y,
-            rect.x + rect.width,
-            rect.y,
-            rect.x + rect.width,
-            rect.y + rect.height,
-            rect.x,
-            rect.y + rect.height,
-        ]
-    };
+    // @Volatile: order must be consistent with render_window::backend::RECT_INDICES
+    let rect_vertices = [
+        rect.x,
+        rect.y,
+        rect.x + rect.width,
+        rect.y,
+        rect.x + rect.width,
+        rect.y + rect.height,
+        rect.x,
+        rect.y + rect.height,
+    ];
+    let mvp = get_mvp_screen_matrix(window, &Transform2D::default());
 
     // @TODO: consider using UBOs
     unsafe {
         gl::UseProgram(window.gl.rect_shader);
         check_gl_err();
 
+        gl::UniformMatrix3fv(
+            get_uniform_loc(window.gl.rect_shader, c_str!("mvp")),
+            1,
+            gl::FALSE,
+            mvp.as_slice().as_ptr(),
+        );
+        check_gl_err();
+
         gl::Uniform2fv(
-            get_uniform_loc(window.gl.rect_shader, c_str!("vertices")),
-            4,
-            vertices.as_ptr(),
+            get_uniform_loc(window.gl.rect_shader, c_str!("rect")),
+            (rect_vertices.len() / 2) as _,
+            rect_vertices.as_ptr(),
         );
 
         gl::Uniform4f(
@@ -638,28 +635,6 @@ fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<
         );
         check_gl_err();
     }
-}
-
-fn get_mvp_matrix(
-    window: &Render_Window_Handle,
-    transform: &Transform2D,
-    camera: &Transform2D,
-) -> Matrix3<f32> {
-    let (width, height) = inle_win::window::get_window_target_size(window);
-    let model = transform;
-    let view = camera.inverse();
-    let projection = Matrix3::new(
-        2. / width as f32,
-        0.,
-        0.,
-        0.,
-        -2. / height as f32,
-        0.,
-        0.,
-        0.,
-        1.,
-    );
-    projection * view.get_matrix() * model.get_matrix()
 }
 
 fn use_rect_ws_shader(
@@ -684,11 +659,11 @@ fn use_rect_ws_shader(
 
     // @TODO: consider using UBOs
     unsafe {
-        gl::UseProgram(window.gl.rect_ws_shader);
+        gl::UseProgram(window.gl.rect_shader);
         check_gl_err();
 
         gl::UniformMatrix3fv(
-            get_uniform_loc(window.gl.rect_ws_shader, c_str!("mvp")),
+            get_uniform_loc(window.gl.rect_shader, c_str!("mvp")),
             1,
             gl::FALSE,
             mvp.as_slice().as_ptr(),
@@ -696,13 +671,13 @@ fn use_rect_ws_shader(
         check_gl_err();
 
         gl::Uniform2fv(
-            get_uniform_loc(window.gl.rect_ws_shader, c_str!("rect")),
+            get_uniform_loc(window.gl.rect_shader, c_str!("rect")),
             (rect_vertices.len() / 2) as _,
             rect_vertices.as_ptr(),
         );
 
         gl::Uniform4f(
-            get_uniform_loc(window.gl.rect_ws_shader, c_str!("color")),
+            get_uniform_loc(window.gl.rect_shader, c_str!("color")),
             color.r as f32 / 255.0,
             color.g as f32 / 255.0,
             color.b as f32 / 255.0,
@@ -713,22 +688,15 @@ fn use_rect_ws_shader(
 }
 
 fn use_vbuf_shader(window: &mut Render_Window_Handle, transform: &Transform2D) {
+    let mvp = get_mvp_screen_matrix(window, transform);
     unsafe {
         gl::UseProgram(window.gl.vbuf_shader);
 
-        let (ww, wh) = inle_win::window::get_window_target_size(window);
-
-        gl::Uniform2f(
-            get_uniform_loc(window.gl.vbuf_shader, c_str!("win_half_size")),
-            ww as f32 * 0.5,
-            wh as f32 * 0.5,
-        );
-
         gl::UniformMatrix3fv(
-            get_uniform_loc(window.gl.vbuf_shader, c_str!("transform")),
+            get_uniform_loc(window.gl.vbuf_shader, c_str!("mvp")),
             1,
             gl::FALSE,
-            transform.get_matrix().as_slice().as_ptr(),
+            mvp.as_slice().as_ptr(),
         );
     }
 }
@@ -740,10 +708,10 @@ fn use_vbuf_ws_shader(
 ) {
     let mvp = get_mvp_matrix(window, transform, camera);
     unsafe {
-        gl::UseProgram(window.gl.vbuf_ws_shader);
+        gl::UseProgram(window.gl.vbuf_shader);
 
         gl::UniformMatrix3fv(
-            get_uniform_loc(window.gl.vbuf_ws_shader, c_str!("mvp")),
+            get_uniform_loc(window.gl.vbuf_shader, c_str!("mvp")),
             1,
             gl::FALSE,
             mvp.as_slice().as_ptr(),
@@ -798,28 +766,21 @@ fn use_circle_shader(window: &mut Render_Window_Handle, color: Color, circle: sh
         v2!(circle.radius, circle.radius) * 2.0,
     );
 
-    let (ww, wh) = inle_win::window::get_window_target_size(window);
-    let ww = ww as f32 * 0.5;
-    let wh = wh as f32 * 0.5;
+    let mvp = get_mvp_screen_matrix(window, &transform);
+    let shader = window.gl.circle_shader;
 
     unsafe {
-        gl::UseProgram(window.gl.circle_shader);
+        gl::UseProgram(shader);
 
         gl::UniformMatrix3fv(
-            get_uniform_loc(window.gl.circle_shader, c_str!("transform")),
+            get_uniform_loc(shader, c_str!("mvp")),
             1,
             gl::FALSE,
-            transform.get_matrix().as_slice().as_ptr(),
-        );
-
-        gl::Uniform2f(
-            get_uniform_loc(window.gl.circle_shader, c_str!("win_half_size")),
-            ww,
-            wh,
+            mvp.as_slice().as_ptr(),
         );
 
         gl::Uniform4f(
-            get_uniform_loc(window.gl.circle_shader, c_str!("color")),
+            get_uniform_loc(shader, c_str!("color")),
             color.r as f32 / 255.0,
             color.g as f32 / 255.0,
             color.b as f32 / 255.0,
@@ -844,17 +805,17 @@ fn use_circle_ws_shader(
     let mvp = get_mvp_matrix(window, &transform, camera);
 
     unsafe {
-        gl::UseProgram(window.gl.circle_ws_shader);
+        gl::UseProgram(window.gl.circle_shader);
 
         gl::UniformMatrix3fv(
-            get_uniform_loc(window.gl.circle_ws_shader, c_str!("mvp")),
+            get_uniform_loc(window.gl.circle_shader, c_str!("mvp")),
             1,
             gl::FALSE,
             mvp.as_slice().as_ptr(),
         );
 
         gl::Uniform4f(
-            get_uniform_loc(window.gl.circle_ws_shader, c_str!("color")),
+            get_uniform_loc(window.gl.circle_shader, c_str!("color")),
             color.r as f32 / 255.0,
             color.g as f32 / 255.0,
             color.b as f32 / 255.0,
@@ -898,3 +859,42 @@ fn check_gl_err() {
 
 #[cfg(not(debug_assertions))]
 fn check_gl_err() {}
+
+fn get_mvp_matrix(
+    window: &Render_Window_Handle,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) -> Matrix3<f32> {
+    let (width, height) = inle_win::window::get_window_target_size(window);
+    let model = transform;
+    let view = camera.inverse();
+    let projection = Matrix3::new(
+        2. / width as f32,
+        0.,
+        0.,
+        0.,
+        -2. / height as f32,
+        0.,
+        0.,
+        0.,
+        1.,
+    );
+    projection * view.get_matrix() * model.get_matrix()
+}
+
+fn get_mvp_screen_matrix(window: &Render_Window_Handle, transform: &Transform2D) -> Matrix3<f32> {
+    let (width, height) = inle_win::window::get_window_target_size(window);
+    let model = transform;
+    let view_projection = Matrix3::new(
+        2. / width as f32,
+        0.,
+        -1.,
+        0.,
+        -2. / height as f32,
+        1.,
+        0.,
+        0.,
+        1.,
+    );
+    view_projection * model.get_matrix()
+}

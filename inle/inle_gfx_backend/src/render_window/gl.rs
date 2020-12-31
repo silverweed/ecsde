@@ -31,17 +31,14 @@ pub struct Gl {
     pub rect_vao: GLuint,
     pub rect_ebo: GLuint,
     pub rect_shader: GLuint,
-    pub rect_ws_shader: GLuint,
 
     pub line_shader: GLuint,
 
     pub vbuf_shader: GLuint,
-    pub vbuf_ws_shader: GLuint,
 
     pub circle_vao: GLuint,
     pub circle_vbo: GLuint,
     pub circle_shader: GLuint,
-    pub circle_ws_shader: GLuint,
 
     #[cfg(debug_assertions)]
     pub n_draw_calls_this_frame: u32,
@@ -90,13 +87,10 @@ fn init_gl() -> Gl {
 
     fill_rect_buffers(&mut gl);
     init_rect_shader(&mut gl);
-    init_rect_ws_shader(&mut gl);
     init_line_shader(&mut gl);
     init_vbuf_shader(&mut gl);
-    init_vbuf_ws_shader(&mut gl);
     fill_circle_buffers(&mut gl);
     init_circle_shader(&mut gl);
-    init_circle_ws_shader(&mut gl);
 
     unsafe {
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
@@ -188,11 +182,7 @@ macro_rules! create_shader_from {
 }
 
 fn init_rect_shader(gl: &mut Gl) {
-    gl.rect_shader = create_shader_from!("screen_rect", "basic_color");
-}
-
-fn init_rect_ws_shader(gl: &mut Gl) {
-    gl.rect_ws_shader = create_shader_from!("ws_rect", "basic_color");
+    gl.rect_shader = create_shader_from!("rect", "basic_color");
 }
 
 fn init_line_shader(gl: &mut Gl) {
@@ -203,16 +193,8 @@ fn init_vbuf_shader(gl: &mut Gl) {
     gl.vbuf_shader = create_shader_from!("vbuf", "vbuf");
 }
 
-fn init_vbuf_ws_shader(gl: &mut Gl) {
-    gl.vbuf_ws_shader = create_shader_from!("vbuf_ws", "vbuf");
-}
-
 fn init_circle_shader(gl: &mut Gl) {
     gl.circle_shader = create_shader_from!("circle", "basic_color");
-}
-
-fn init_circle_ws_shader(gl: &mut Gl) {
-    gl.circle_ws_shader = create_shader_from!("ws_circle", "basic_color");
 }
 
 fn create_shader(vertex_src: &str, fragment_src: &str, shader_src: &str) -> GLuint {
