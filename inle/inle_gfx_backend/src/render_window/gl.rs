@@ -35,6 +35,7 @@ pub struct Gl {
     pub line_shader: GLuint,
 
     pub vbuf_shader: GLuint,
+    pub vbuf_texture_shader: GLuint,
 
     pub circle_vao: GLuint,
     pub circle_vbo: GLuint,
@@ -89,6 +90,7 @@ fn init_gl() -> Gl {
     init_rect_shader(&mut gl);
     init_line_shader(&mut gl);
     init_vbuf_shader(&mut gl);
+    init_vbuf_texture_shader(&mut gl);
     fill_circle_buffers(&mut gl);
     init_circle_shader(&mut gl);
 
@@ -191,6 +193,10 @@ fn init_line_shader(gl: &mut Gl) {
 
 fn init_vbuf_shader(gl: &mut Gl) {
     gl.vbuf_shader = create_shader_from!("vbuf", "vbuf");
+}
+
+fn init_vbuf_texture_shader(gl: &mut Gl) {
+    gl.vbuf_texture_shader = create_shader_from!("vbuf", "vbuf_texture");
 }
 
 fn init_circle_shader(gl: &mut Gl) {

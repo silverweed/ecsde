@@ -506,8 +506,8 @@ where
     render::add_triangle(
         &mut vbuf,
         &render::new_vertex(v2!(0., 0.), colors::RED, v2!(0., 0.)),
-        &render::new_vertex(v2!(400., 0.), colors::BLUE, v2!(0., 0.)),
-        &render::new_vertex(v2!(400., 200.), colors::GREEN, v2!(0., 0.)),
+        &render::new_vertex(v2!(400., 0.), colors::BLUE, v2!(1., 0.)),
+        &render::new_vertex(v2!(400., 200.), colors::GREEN, v2!(1., 1.)),
         //&render::new_vertex(v2!(-0.400, 0.), colors::BLUE, v2!(0., 0.)),
         //&render::new_vertex(v2!(0.200, 0.200), colors::GREEN, v2!(0., 0.)),
         //&render::new_vertex(v2!(0., 200.), colors::YELLOW, v2!(0., 0.)),
@@ -535,19 +535,6 @@ where
     };
 
     // @Temporary
-    render::render_line(
-        window,
-        &render::new_vertex(v2!(0., 200.), colors::GREEN, v2!(0., 0.)),
-        &render::new_vertex(v2!(1400., 400.), colors::YELLOW, v2!(0., 0.)),
-    );
-    render::render_circle(
-        window,
-        inle_math::shapes::Circle {
-            center: v2!(400., 500.),
-            radius: 250.,
-        },
-        colors::BLUE,
-    );
     //let mut sbuf = render::start_draw_quads(1);
     //render::add_quad(
     //&mut sbuf,
@@ -556,11 +543,11 @@ where
     //&render::new_vertex(v2!(0.5, 0.5), colors::GREEN, v2!(1., 0.)),
     //&render::new_vertex(v2!(-0.5, 0.5), colors::BLUE, v2!(0., 0.)),
     //);
-    //let tex = gres.load_texture(&inle_resources::gfx::tex_path(
-    //&game_state.engine_state.env,
-    //"jelly.png",
-    //));
-    //let tex = gres.get_texture(tex);
+    let tex = gres.load_texture(&inle_resources::gfx::tex_path(
+        &game_state.engine_state.env,
+        "jelly.png",
+    ));
+    let tex = gres.get_texture(tex);
     // -----------------------
 
     {
@@ -581,7 +568,7 @@ where
             };
 
             // @Temporary
-            render::render_vbuf_ws(
+            render::render_vbuf_ws_ex(
                 render_args.window,
                 &vbuf,
                 &Transform2D::from_pos_rot_scale(
@@ -590,6 +577,10 @@ where
                     v2!(1.0, 1.),
                 ),
                 &level.get_camera().transform,
+                render::Render_Extra_Params {
+                    texture: Some(tex),
+                    ..Default::default()
+                },
             );
             // ---------------------------
 

@@ -18,6 +18,7 @@ use std::cmp;
 use std::collections::{BTreeMap, HashMap};
 
 const SHADOWS_PER_ENTITY: usize = 4;
+const VERTICES_PER_SPRITE: usize = 6;
 
 struct Sprite_Batch {
     pub vbuffer: Vertex_Buffer_Holder,
@@ -73,15 +74,15 @@ pub(super) fn add_texture_ws(
                 ldebug!("creating buffer for material {:?}", material);
                 Sprite_Batch {
                     vbuffer: Vertex_Buffer_Holder::with_initial_vertex_count(
-                        4 * 48,
-                        Primitive_Type::Triangle_Strip,
+                        6 * 48,
+                        Primitive_Type::Triangles,
                         #[cfg(debug_assertions)]
                         format!("{:?}", material),
                     ),
                     shadow_vbuffer: if material.cast_shadows {
                         Some(Vertex_Buffer_Holder::with_initial_vertex_count(
-                            4 * 4 * 48,
-                            Primitive_Type::Triangle_Strip,
+                            6 * 4 * 48,
+                            Primitive_Type::Triangles,
                             #[cfg(debug_assertions)]
                             format!("{:?}", material),
                         ))
@@ -270,12 +271,14 @@ pub fn draw_batches(
 
             let n_sprites_per_chunk = cmp::min(n_sprites, n_sprites / n_threads + 1);
 
-            let n_vertices_without_shadows = (n_sprites * 4) as u32;
+            let n_vertices_without_shadows = (n_sprites * VERTICES_PER_SPRITE) as u32;
             debug_assert!(
-                n_vertices_without_shadows as usize + (shadow_data.len() * 4 * SHADOWS_PER_ENTITY)
+                n_vertices_without_shadows as usize
+                    + (shadow_data.len() * VERTICES_PER_SPRITE * SHADOWS_PER_ENTITY)
                     <= std::u32::MAX as usize
             );
-            let n_shadow_vertices = (shadow_data.len() * 4 * SHADOWS_PER_ENTITY) as u32;
+            let n_shadow_vertices =
+                (shadow_data.len() * VERTICES_PER_SPRITE * SHADOWS_PER_ENTITY) as u32;
             let n_vertices = n_vertices_without_shadows + n_shadow_vertices;
 
             // This buffer holds both regular vertices and shadow vertices
@@ -293,7 +296,7 @@ pub fn draw_batches(
                 }
             }
 
-            let n_vert_per_chunk = n_sprites_per_chunk * 4;
+            let n_vert_per_chunk = n_sprites_per_chunk * VERTICES_PER_SPRITE;
             let vert_chunks = vertices.par_chunks_mut(n_vert_per_chunk);
 
             // Ensure the vbuffer has enough room to write in
@@ -306,187 +309,25 @@ pub fn draw_batches(
                 trace!("sprite_batch_ws");
 
                 if cast_shadows {
-                    let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
-                    if n_shadow_vertices > super::vbuf_max_vertices(&shadow_vbuffer.vbuf) {
-                        shadow_vbuffer.grow(n_shadow_vertices);
-                    }
-                    debug_assert!(
-                        n_shadow_vertices <= super::vbuf_max_vertices(&shadow_vbuffer.vbuf)
-                    );
-
-                    #[cfg(debug_assertions)]
-                    {
-                        for vert in shadow_vertices.iter_mut() {
-                            *vert = invalid_vertex();
-                        }
-                    }
-                    #[cfg(not(debug_assertions))]
-                    {
-                        for vert in shadow_vertices.iter_mut() {
-                            *vert = null_vertex();
-                        }
-                    }
-
-                    debug_assert_eq!(shadow_vertices.len(), n_shadow_vertices as usize);
-                    let shadows_per_chunk = n_vert_per_chunk * SHADOWS_PER_ENTITY;
-                    let shadow_chunks = shadow_vertices.par_chunks_mut(shadows_per_chunk);
-
-                    let sprite_chunks = sprites.par_chunks(n_sprites_per_chunk);
-                    debug_assert_eq!(sprite_chunks.len(), vert_chunks.len());
-                    debug_assert_eq!(sprite_chunks.len(), shadow_chunks.len());
-
-                    sprite_chunks.zip(vert_chunks).zip(shadow_chunks).for_each(
-                        |((sprite_chunk, vert_chunk), shadow_chunk)| {
-                            for (i, sprite) in sprite_chunk.iter().enumerate() {
-                                let Sprite {
-                                    tex_rect,
-                                    transform,
-                                    color,
-                                } = sprite;
-
-                                let uv: Rect<f32> = (*tex_rect).into();
-                                let sprite_size =
-                                    Vec2f::new(tex_rect.width as _, tex_rect.height as _);
-                                let render_transform = *transform;
-
-                                let color = if has_shader {
-                                    encode_rot_and_alpha_as_color(transform.rotation(), color.a)
-                                } else {
-                                    *color
-                                };
-
-                                // Note: beware of the order of multiplications!
-                                // Scaling the local positions must be done BEFORE multiplying the matrix!
-                                let p1 = render_transform * (sprite_size * v2!(-0.5, -0.5));
-                                let p2 = render_transform * (sprite_size * v2!(0.5, -0.5));
-                                let p3 = render_transform * (sprite_size * v2!(0.5, 0.5));
-                                let p4 = render_transform * (sprite_size * v2!(-0.5, 0.5));
-
-                                let v1 = super::new_vertex(p1, color, v2!(uv.x, uv.y));
-                                let v2 = super::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
-                                let v3 = super::new_vertex(
-                                    p3,
-                                    color,
-                                    v2!(uv.x + uv.width, uv.y + uv.height),
-                                );
-                                let v4 = super::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
-
-                                vert_chunk[i * 4] = v1;
-                                vert_chunk[i * 4 + 1] = v2;
-                                vert_chunk[i * 4 + 2] = v3;
-                                vert_chunk[i * 4 + 3] = v4;
-
-                                // @Incomplete: the shadow looks weird: it should be flipped in certain situations
-                                // and probably have some bias to not make the entity look like "floating"
-                                for (light_idx, light) in
-                                    shadow_data[i].nearby_point_lights.iter().enumerate()
-                                {
-                                    debug_assert!(light_idx < 4);
-                                    let light_pos = light.position;
-                                    let recp_radius2 = 1.0 / (light.radius * light.radius);
-                                    let mut v = [v1, v2, v3, v4];
-                                    let diff = [
-                                        light_pos - p1,
-                                        light_pos - p2,
-                                        light_pos - p3,
-                                        light_pos - p4,
-                                    ];
-                                    let dist2 = [
-                                        diff[0].magnitude2(),
-                                        diff[1].magnitude2(),
-                                        diff[2].magnitude2(),
-                                        diff[3].magnitude2(),
-                                    ];
-                                    let min_d_sqr = dist2
-                                        .iter()
-                                        .min_by(|a, b| a.partial_cmp(b).unwrap())
-                                        .unwrap();
-
-                                    const SHADOW_MAX_VALUE: f32 = 50.0;
-
-                                    for v_idx in 0..4 {
-                                        v[v_idx].set_position(
-                                            v[v_idx].position()
-                                                - lerp_clamped(
-                                                    0.0,
-                                                    1.0,
-                                                    dist2[v_idx] / min_d_sqr - 1.0,
-                                                ) * diff[v_idx],
-                                        );
-
-                                        let t = (1.0 - dist2[v_idx] * recp_radius2).max(0.0);
-                                        v[v_idx].set_color(colors::rgba(
-                                            0,
-                                            0,
-                                            0,
-                                            lerp(0.0, SHADOW_MAX_VALUE, t * t) as u8,
-                                        ));
-
-                                        shadow_chunk
-                                            [4 * (SHADOWS_PER_ENTITY * i + light_idx) + v_idx] =
-                                            v[v_idx];
-                                    }
-                                }
-
-                                #[cfg(debug_assertions)]
-                                {
-                                    for light_idx in shadow_data[i].nearby_point_lights.len()..4 {
-                                        for v_idx in 0..4 {
-                                            shadow_chunk[4
-                                                * (SHADOWS_PER_ENTITY * v_idx + light_idx)
-                                                + v_idx] = null_vertex();
-                                        }
-                                    }
-                                }
-                            }
-                        },
+                    fill_vertices_with_shadows(
+                        texture,
+                        sprites,
+                        vert_chunks,
+                        n_sprites_per_chunk,
+                        has_shader,
+                        shadow_vbuffer.as_mut().unwrap(),
+                        shadow_vertices,
+                        n_shadow_vertices,
+                        &shadow_data,
                     );
                 } else {
-                    sprites
-                        .par_chunks(n_sprites_per_chunk)
-                        .zip(vert_chunks)
-                        .for_each(|(sprite_chunk, vert_chunk)| {
-                            for (i, sprite) in sprite_chunk.iter().enumerate() {
-                                let Sprite {
-                                    tex_rect,
-                                    transform,
-                                    color,
-                                } = sprite;
-
-                                let uv: Rect<f32> = (*tex_rect).into();
-                                let sprite_size =
-                                    Vec2f::new(tex_rect.width as _, tex_rect.height as _);
-                                let render_transform = *transform;
-
-                                // Encode rotation in color
-                                let color = if has_shader {
-                                    encode_rot_and_alpha_as_color(transform.rotation(), color.a)
-                                } else {
-                                    *color
-                                };
-
-                                // Note: beware of the order of multiplications!
-                                // Scaling the local positions must be done BEFORE multiplying the matrix!
-                                let p1 = render_transform * (sprite_size * v2!(-0.5, -0.5));
-                                let p2 = render_transform * (sprite_size * v2!(0.5, -0.5));
-                                let p3 = render_transform * (sprite_size * v2!(0.5, 0.5));
-                                let p4 = render_transform * (sprite_size * v2!(-0.5, 0.5));
-
-                                let v1 = super::new_vertex(p1, color, v2!(uv.x, uv.y));
-                                let v2 = super::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
-                                let v3 = super::new_vertex(
-                                    p3,
-                                    color,
-                                    v2!(uv.x + uv.width, uv.y + uv.height),
-                                );
-                                let v4 = super::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
-
-                                vert_chunk[i * 4] = v1;
-                                vert_chunk[i * 4 + 1] = v2;
-                                vert_chunk[i * 4 + 2] = v3;
-                                vert_chunk[i * 4 + 3] = v4;
-                            }
-                        });
+                    fill_vertices(
+                        texture,
+                        sprites,
+                        vert_chunks,
+                        n_sprites_per_chunk,
+                        has_shader,
+                    );
                 }
             }
 
@@ -578,4 +419,210 @@ fn collect_entity_shadow_data<'a>(
     }
 
     unsafe { shadow_data.into_read_only() }
+}
+
+fn fill_vertices_with_shadows(
+    texture: &Texture,
+    sprites: &[Sprite],
+    vert_chunks: rayon::slice::ChunksMut<'_, Vertex>,
+    n_sprites_per_chunk: usize,
+    has_shader: bool,
+    shadow_vbuffer: &mut Vertex_Buffer_Holder,
+    shadow_vertices: &mut [Vertex],
+    n_shadow_vertices: u32,
+    shadow_data: &temp::Read_Only_Temp_Array<Entity_Shadow_Data>,
+) {
+    let n_vert_per_chunk = n_sprites_per_chunk * VERTICES_PER_SPRITE;
+
+    if n_shadow_vertices > super::vbuf_max_vertices(&shadow_vbuffer.vbuf) {
+        shadow_vbuffer.grow(n_shadow_vertices);
+    }
+    debug_assert!(n_shadow_vertices <= super::vbuf_max_vertices(&shadow_vbuffer.vbuf));
+
+    #[cfg(debug_assertions)]
+    {
+        for vert in shadow_vertices.iter_mut() {
+            *vert = invalid_vertex();
+        }
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        for vert in shadow_vertices.iter_mut() {
+            *vert = null_vertex();
+        }
+    }
+
+    debug_assert_eq!(shadow_vertices.len(), n_shadow_vertices as usize);
+    let shadows_per_chunk = n_vert_per_chunk * SHADOWS_PER_ENTITY;
+    let shadow_chunks = shadow_vertices.par_chunks_mut(shadows_per_chunk);
+
+    let sprite_chunks = sprites.par_chunks(n_sprites_per_chunk);
+    debug_assert_eq!(sprite_chunks.len(), vert_chunks.len());
+    debug_assert_eq!(sprite_chunks.len(), shadow_chunks.len());
+
+    sprite_chunks.zip(vert_chunks).zip(shadow_chunks).for_each(
+        |((sprite_chunk, vert_chunk), shadow_chunk)| {
+            for (i, sprite) in sprite_chunk.iter().enumerate() {
+                let Sprite {
+                    tex_rect,
+                    transform,
+                    color,
+                } = sprite;
+
+                let tex_size = render::get_texture_size(texture);
+                let (tw, th) = (tex_size.0 as f32, tex_size.1 as f32);
+                let uv: Rect<f32> = Rect::new(
+                    tex_rect.x as f32 / tw,
+                    tex_rect.y as f32 / th,
+                    tex_rect.width as f32 / tw,
+                    tex_rect.height as f32 / th,
+                );
+                let sprite_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
+                let render_transform = *transform;
+
+                let color = if has_shader {
+                    encode_rot_and_alpha_as_color(transform.rotation(), color.a)
+                } else {
+                    *color
+                };
+
+                // Note: beware of the order of multiplications!
+                // Scaling the local positions must be done BEFORE multiplying the matrix!
+                let p1 = render_transform * (sprite_size * v2!(-0.5, -0.5));
+                let p2 = render_transform * (sprite_size * v2!(0.5, -0.5));
+                let p3 = render_transform * (sprite_size * v2!(0.5, 0.5));
+                let p4 = render_transform * (sprite_size * v2!(-0.5, 0.5));
+
+                let v1 = super::new_vertex(p1, color, v2!(uv.x, uv.y));
+                let v2 = super::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
+                let v3 = super::new_vertex(p3, color, v2!(uv.x + uv.width, uv.y + uv.height));
+                let v4 = super::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
+
+                vert_chunk[i * 6] = v1;
+                vert_chunk[i * 6 + 1] = v2;
+                vert_chunk[i * 6 + 2] = v3;
+                vert_chunk[i * 6 + 3] = v3;
+                vert_chunk[i * 6 + 4] = v4;
+                vert_chunk[i * 6 + 5] = v1;
+
+                // @Incomplete: the shadow looks weird: it should be flipped in certain situations
+                // and probably have some bias to not make the entity look like "floating"
+                for (light_idx, light) in shadow_data[i].nearby_point_lights.iter().enumerate() {
+                    debug_assert!(light_idx < 4);
+                    let light_pos = light.position;
+                    let recp_radius2 = 1.0 / (light.radius * light.radius);
+                    let mut v = [v1, v2, v3, v4];
+                    let diff = [
+                        light_pos - p1,
+                        light_pos - p2,
+                        light_pos - p3,
+                        light_pos - p4,
+                    ];
+                    let dist2 = [
+                        diff[0].magnitude2(),
+                        diff[1].magnitude2(),
+                        diff[2].magnitude2(),
+                        diff[3].magnitude2(),
+                    ];
+                    let min_d_sqr = dist2
+                        .iter()
+                        .min_by(|a, b| a.partial_cmp(b).unwrap())
+                        .unwrap();
+
+                    const SHADOW_MAX_VALUE: f32 = 50.0;
+
+                    for v_idx in 0..4 {
+                        v[v_idx].set_position(
+                            v[v_idx].position()
+                                - lerp_clamped(0.0, 1.0, dist2[v_idx] / min_d_sqr - 1.0)
+                                    * diff[v_idx],
+                        );
+
+                        let t = (1.0 - dist2[v_idx] * recp_radius2).max(0.0);
+                        v[v_idx].set_color(colors::rgba(
+                            0,
+                            0,
+                            0,
+                            lerp(0.0, SHADOW_MAX_VALUE, t * t) as u8,
+                        ));
+                    }
+
+                    shadow_chunk[6 * (SHADOWS_PER_ENTITY * i + light_idx) + 0] = v[0];
+                    shadow_chunk[6 * (SHADOWS_PER_ENTITY * i + light_idx) + 1] = v[1];
+                    shadow_chunk[6 * (SHADOWS_PER_ENTITY * i + light_idx) + 2] = v[2];
+                    shadow_chunk[6 * (SHADOWS_PER_ENTITY * i + light_idx) + 3] = v[2];
+                    shadow_chunk[6 * (SHADOWS_PER_ENTITY * i + light_idx) + 4] = v[3];
+                    shadow_chunk[6 * (SHADOWS_PER_ENTITY * i + light_idx) + 5] = v[0];
+                }
+
+                #[cfg(debug_assertions)]
+                {
+                    for light_idx in shadow_data[i].nearby_point_lights.len()..4 {
+                        for v_idx in 0..4 {
+                            shadow_chunk[4 * (SHADOWS_PER_ENTITY * v_idx + light_idx) + v_idx] =
+                                null_vertex();
+                        }
+                    }
+                }
+            }
+        },
+    );
+}
+
+fn fill_vertices(
+    texture: &Texture,
+    sprites: &[Sprite],
+    vert_chunks: rayon::slice::ChunksMut<'_, Vertex>,
+    n_sprites_per_chunk: usize,
+    has_shader: bool,
+) {
+    sprites
+        .par_chunks(n_sprites_per_chunk)
+        .zip(vert_chunks)
+        .for_each(|(sprite_chunk, vert_chunk)| {
+            for (i, sprite) in sprite_chunk.iter().enumerate() {
+                let Sprite {
+                    tex_rect,
+                    transform,
+                    color,
+                } = sprite;
+
+                let tex_size = render::get_texture_size(texture);
+                let (tw, th) = (tex_size.0 as f32, tex_size.1 as f32);
+                let uv: Rect<f32> = Rect::new(
+                    tex_rect.x as f32 / tw,
+                    tex_rect.y as f32 / th,
+                    tex_rect.width as f32 / tw,
+                    tex_rect.height as f32 / th,
+                );
+                let sprite_size = Vec2f::new(tex_rect.width as _, tex_rect.height as _);
+                let render_transform = *transform;
+
+                // Encode rotation in color
+                let color = if has_shader {
+                    encode_rot_and_alpha_as_color(transform.rotation(), color.a)
+                } else {
+                    *color
+                };
+
+                // Note: beware of the order of multiplications!
+                // Scaling the local positions must be done BEFORE multiplying the matrix!
+                let p1 = render_transform * (sprite_size * v2!(-0.5, -0.5));
+                let p2 = render_transform * (sprite_size * v2!(0.5, -0.5));
+                let p3 = render_transform * (sprite_size * v2!(0.5, 0.5));
+                let p4 = render_transform * (sprite_size * v2!(-0.5, 0.5));
+
+                let v1 = super::new_vertex(p1, color, v2!(uv.x, uv.y));
+                let v2 = super::new_vertex(p2, color, v2!(uv.x + uv.width, uv.y));
+                let v3 = super::new_vertex(p3, color, v2!(uv.x + uv.width, uv.y + uv.height));
+                let v4 = super::new_vertex(p4, color, v2!(uv.x, uv.y + uv.height));
+
+                vert_chunk[i * 6] = v1;
+                vert_chunk[i * 6 + 1] = v2;
+                vert_chunk[i * 6 + 2] = v3;
+                vert_chunk[i * 6 + 3] = v3;
+                vert_chunk[i * 6 + 4] = v4;
+                vert_chunk[i * 6 + 5] = v1;
+            }
+        });
 }

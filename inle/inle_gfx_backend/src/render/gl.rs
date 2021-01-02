@@ -229,6 +229,16 @@ impl Image {
             ),
         }
     }
+
+    fn pixel_format_as_gl_type(&self) -> GLenum {
+        match self.color_type_as_gl_type() {
+            gl::RGB8 | gl::RGB16 => gl::RGB,
+            gl::RGBA8 | gl::RGBA16 => gl::RGBA,
+            gl::R8 => gl::RED,
+            gl::RG8 => gl::RG,
+            x => panic!("color type {} is unsupported", x),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -584,7 +594,16 @@ pub fn render_vbuf_ws_ex(
         return;
     }
 
-    use_vbuf_ws_shader(window, transform, camera);
+    use_vbuf_ws_shader(
+        window,
+        transform,
+        camera,
+        if extra_params.texture.is_some() {
+            window.gl.vbuf_texture_shader
+        } else {
+            window.gl.vbuf_shader
+        },
+    );
 
     unsafe {
         if let Some(tex) = extra_params.texture {
@@ -682,20 +701,28 @@ pub fn new_texture_from_image<'img, 'tex>(
             0,
             image.width as _,
             image.height as _,
-            gl::RGBA,
+            image.pixel_format_as_gl_type(),
             pixel_type,
             image.bytes.as_ptr() as _,
         );
         check_gl_err();
     }
 
-    Some(dbg!(Texture {
+    ldebug!(
+        "Loaded texture with size {}x{}, color type {:?} and pixel type {}",
+        image.width,
+        image.height,
+        image.color_type,
+        pixel_type
+    );
+
+    Some(Texture {
         id,
         width: image.width,
         height: image.height,
         pixel_type,
         _pd: PhantomData,
-    }))
+    })
 }
 
 pub fn get_image_pixel(image: &Image, x: u32, y: u32) -> Color {
@@ -918,13 +945,14 @@ fn use_vbuf_ws_shader(
     window: &mut Render_Window_Handle,
     transform: &Transform2D,
     camera: &Transform2D,
+    shader: GLuint,
 ) {
     let mvp = get_mvp_matrix(window, transform, camera);
     unsafe {
-        gl::UseProgram(window.gl.vbuf_shader);
+        gl::UseProgram(shader);
 
         gl::UniformMatrix3fv(
-            get_uniform_loc(window.gl.vbuf_shader, c_str!("mvp")),
+            get_uniform_loc(shader, c_str!("mvp")),
             1,
             gl::FALSE,
             mvp.as_slice().as_ptr(),
