@@ -165,15 +165,27 @@ const BASIC_SHADER_KEY: String_Id = const_sid_from_str("__basic__");
 
 fn load_error_shader<'a>() -> Shader<'a> {
     const ERROR_SHADER_VERT: &str = "
+		#version 330 core
+
+		layout (location = 1) in vec2 in_pos;
+
+		uniform mat3 mvp;
+
 		void main() {
-			gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+			vec3 pos = mvp * vec3(in_pos, 1.0);
+			gl_Position = vec4(pos.xy, 0.0, 1.0);
 		}
 	";
     const ERROR_SHADER_FRAG: &str = "
+		#version 330 core
+
+		out vec4 frag_color;
+
 		void main() {
-			gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+			frag_color = vec4(1.0, 0.0, 1.0, 1.0);
 		}
 	";
+
     render::new_shader(
         ERROR_SHADER_VERT.as_bytes(),
         ERROR_SHADER_FRAG.as_bytes(),
@@ -184,17 +196,35 @@ fn load_error_shader<'a>() -> Shader<'a> {
 #[cfg(debug_assertions)]
 fn load_basic_shader<'a>() -> Shader<'a> {
     const BASIC_SHADER_VERT: &str = "
+		#version 330 core
+
+		layout (location = 1) in vec2 in_pos;
+		layout (location = 2) in vec2 in_tex_coord;
+
+		uniform mat3 mvp;
+
+		out vec2 tex_coord;
+
 		void main() {
-			gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;
-			gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+			vec3 pos = mvp * vec3(in_pos, 1.0);
+			gl_Position = vec4(pos.xy, 0.0, 1.0);
+			tex_coord = in_tex_coord;
 		}
 	";
     const BASIC_SHADER_FRAG: &str = "
-		uniform sampler2D texture;
+		#version 330 core
+
+		in vec2 tex_coord;
+
+		out vec4 frag_color;
+
+		uniform sampler2D tex;
+
 		void main() {
-			gl_FragColor = texture2D(texture, gl_TexCoord[0].xy);
+			vec4 pixel = texture(tex, tex_coord);
+			frag_color = pixel;
 		}
-	";
+   	";
     render::new_shader(
         BASIC_SHADER_VERT.as_bytes(),
         BASIC_SHADER_FRAG.as_bytes(),
