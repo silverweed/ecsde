@@ -5,12 +5,9 @@ use inle_app::{app, render_system};
 use inle_common::colors;
 use inle_core::time;
 use inle_gfx::render_window::Render_Window_Handle;
-use inle_input::input_state::Input_State;
-use inle_input::mouse;
 use inle_math::transform::Transform2D;
 use inle_physics::physics;
 use inle_resources::gfx::Gfx_Resources;
-use std::convert::TryInto;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
@@ -22,12 +19,15 @@ use {
     inle_ecs::components::base::C_Spatial2D,
     inle_ecs::ecs_world::{self, Ecs_World},
     inle_gfx::render_window,
+    inle_input::input_state::Input_State,
+    inle_input::mouse,
     inle_math::angle::rad,
     inle_math::shapes::{Arrow, Circle},
     inle_math::vector::Vec2f,
     inle_physics::phys_world::Physics_World,
     inle_win::window,
     std::collections::HashMap,
+    std::convert::TryInto,
 };
 
 pub fn tick_game<'a, 's, 'r>(
@@ -292,42 +292,13 @@ where
             );
         }
 
-        // @Temporary DEBUG
-        /*
-        game_state
-            .engine_state
-            .debug_systems
-            .painters
-            .get_mut(&sid!("test"))
-            .unwrap()
-            .add_rect(
-                v2!(200., 100.),
-                &Transform2D::from_pos_rot_scale(
-                    v2!(
-                        200. * game_state.engine_state.time.game_time().as_secs_f32().sin(),
-                        0.
-                    ),
-                    inle_math::angle::deg(game_state.engine_state.time.game_time().as_secs_f32()),
-                    v2!(1., 1.),
-                ),
-                Paint_Properties {
-                    color: colors::RED,
-                    border_thick: 2.,
-                    border_color: colors::GREEN,
-                    ..Default::default()
-                },
-            );
-            */
-
         // Update game systems
         {
             trace!("game_update");
 
-            game_state.gameplay_system.realtime_update(
-                &real_dt,
-                &game_state.engine_state,
-                &game_state.window,
-            );
+            game_state
+                .gameplay_system
+                .realtime_update(&real_dt, &game_state.engine_state);
 
             // @Cleanup: where do we put this? Do we want this inside gameplay_system?
             {
@@ -504,55 +475,12 @@ fn update_graphics<'a, 's, 'r>(
         inle_gfx::render_window::clear(window);
     }
 
-    // @Temporary
-    use inle_gfx::render;
-    let mut vbuf = render::start_draw_triangles(1);
-    render::add_triangle(
-        &mut vbuf,
-        &render::new_vertex(v2!(0., 0.), colors::RED, v2!(0., 0.)),
-        &render::new_vertex(v2!(400., 0.), colors::BLUE, v2!(1., 0.)),
-        &render::new_vertex(v2!(400., 200.), colors::GREEN, v2!(1., 1.)),
-        //&render::new_vertex(v2!(-0.400, 0.), colors::BLUE, v2!(0., 0.)),
-        //&render::new_vertex(v2!(0.200, 0.200), colors::GREEN, v2!(0., 0.)),
-        //&render::new_vertex(v2!(0., 200.), colors::YELLOW, v2!(0., 0.)),
-    );
-    // ------------------------------
-
-    #[cfg(debug_assertions)]
-    fn get_render_system_debug_visualization(
-        debug_cvars: &super::game_state::Debug_CVars,
-        cfg: &inle_cfg::Config,
-    ) -> render_system::Debug_Visualization {
-        match debug_cvars.render_debug_visualization.read(cfg).as_str() {
-            "1" | "b" | "bounds" => render_system::Debug_Visualization::Sprites_Boundaries,
-            "2" | "n" | "normals" => render_system::Debug_Visualization::Normals,
-            "3" | "m" | "materials" => render_system::Debug_Visualization::Materials,
-            _ => render_system::Debug_Visualization::None,
-        }
-    }
-
     let cfg = &game_state.engine_state.config;
     let render_cfg = render_system::Render_System_Config {
         clear_color: colors::color_from_hex(game_state.cvars.clear_color.read(cfg) as u32),
         #[cfg(debug_assertions)]
         debug_visualization: get_render_system_debug_visualization(&game_state.debug_cvars, cfg),
     };
-
-    // @Temporary
-    //let mut sbuf = render::start_draw_quads(1);
-    //render::add_quad(
-    //&mut sbuf,
-    //&render::new_vertex(v2!(-0.5, -0.5), colors::YELLOW, v2!(0., 1.)),
-    //&render::new_vertex(v2!(0.5, -0.5), colors::WHITE, v2!(1., 1.)),
-    //&render::new_vertex(v2!(0.5, 0.5), colors::GREEN, v2!(1., 0.)),
-    //&render::new_vertex(v2!(-0.5, 0.5), colors::BLUE, v2!(0., 0.)),
-    //);
-    let tex = gres.load_texture(&inle_resources::gfx::tex_path(
-        &game_state.engine_state.env,
-        "jelly.png",
-    ));
-    let tex = gres.get_texture(tex);
-    // -----------------------
 
     {
         let gameplay_system = &mut game_state.gameplay_system;
@@ -1465,4 +1393,17 @@ fn update_graph_prev_frame_t(
         TIME_LIMIT,
         prev_frame_t.as_secs_f32() * 1000.,
     );
+}
+
+#[cfg(debug_assertions)]
+fn get_render_system_debug_visualization(
+    debug_cvars: &super::game_state::Debug_CVars,
+    cfg: &inle_cfg::Config,
+) -> render_system::Debug_Visualization {
+    match debug_cvars.render_debug_visualization.read(cfg).as_str() {
+        "1" | "b" | "bounds" => render_system::Debug_Visualization::Sprites_Boundaries,
+        "2" | "n" | "normals" => render_system::Debug_Visualization::Normals,
+        "3" | "m" | "materials" => render_system::Debug_Visualization::Materials,
+        _ => render_system::Debug_Visualization::None,
+    }
 }

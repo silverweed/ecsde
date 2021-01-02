@@ -2,7 +2,6 @@ use inle_cfg::{Cfg_Var, Config};
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_gfx::components::C_Camera2D;
-use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::vector::Vec2f;
 use std::time::Duration;
 
@@ -25,9 +24,7 @@ pub struct C_Camera_Follow {
     pub lerp_factor: Cfg_Var<f32>,
 }
 
-pub fn update(dt: &Duration, world: &mut Ecs_World, window: &Render_Window_Handle, cfg: &Config) {
-    let (win_w, win_h) = inle_win::window::get_window_target_size(window);
-
+pub fn update(dt: &Duration, world: &mut Ecs_World, cfg: &Config) {
     foreach_entity!(world, +C_Camera_Follow, +C_Camera2D, |entity| {
         let cam_follow = world.get_component::<C_Camera_Follow>(entity).unwrap();
         let target = cam_follow.target;

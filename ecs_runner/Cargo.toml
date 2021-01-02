@@ -6,7 +6,7 @@ authors = ["silverweed <silverweed1991@gmail.com>"]
 
 [features]
 hotload = []
-default = ["hotload"]
+#default = ["hotload"]
 
 [dependencies]
 libloading = "0.5"

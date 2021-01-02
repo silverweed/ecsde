@@ -430,13 +430,7 @@ pub fn draw_batches(
             vbuffer.update(vertices, n_vertices_without_shadows);
 
             if let Some(shader) = shader.map(|s| s as &_) {
-                render::render_vbuf_ws_with_shader(
-                    window,
-                    &vbuffer.vbuf,
-                    &Transform2D::default(),
-                    camera,
-                    shader,
-                );
+                render::render_vbuf_with_shader(window, &vbuffer.vbuf, shader);
             } else {
                 render::render_vbuf_ws(window, &vbuffer.vbuf, &Transform2D::default(), camera);
             }

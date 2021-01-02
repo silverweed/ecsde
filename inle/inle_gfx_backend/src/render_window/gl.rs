@@ -5,7 +5,6 @@ use inle_math::rect::{Rect, Rectf};
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::Window_Handle;
-use std::ffi::{c_void, CString};
 use std::{mem, ptr, str};
 
 pub struct Render_Window_Handle {
@@ -257,6 +256,7 @@ pub fn start_new_frame(_window: &mut Render_Window_Handle) {
     }
 }
 
+#[cfg(debug_assertions)]
 extern "system" fn gl_msg_callback(
     _source: GLenum,
     typ: GLenum,
@@ -264,7 +264,7 @@ extern "system" fn gl_msg_callback(
     _severity: GLenum,
     length: GLsizei,
     message: *const GLchar,
-    _user_param: *mut c_void,
+    _user_param: *mut std::ffi::c_void,
 ) {
     let message: &[u8] =
         unsafe { std::slice::from_raw_parts(message as *const u8, length as usize) };

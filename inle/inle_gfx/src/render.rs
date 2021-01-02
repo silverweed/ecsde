@@ -141,15 +141,13 @@ pub fn render_vbuf_ws_with_texture(
     backend::render_vbuf_ws_with_texture(window, vbuf, transform, camera, texture);
 }
 
-pub fn render_vbuf_ws_with_shader(
+pub fn render_vbuf_with_shader(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
-    transform: &Transform2D,
-    camera: &Transform2D,
     shader: &Shader,
 ) {
-    trace!("render_vbuf_ws_with_shader");
-    backend::render_vbuf_ws_with_shader(window, vbuf, transform, camera, shader);
+    trace!("render_vbuf_with_shader");
+    backend::render_vbuf_with_shader(window, vbuf, shader);
 }
 
 // Note: this always renders a line with thickness = 1px

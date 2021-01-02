@@ -2,7 +2,7 @@ use super::{Primitive_Type, Uniform_Value};
 use crate::backend_common::misc::check_gl_err;
 use crate::render_window::Render_Window_Handle;
 use gl::types::*;
-use inle_common::colors::{self, Color, Color3};
+use inle_common::colors::{Color, Color3};
 use inle_common::paint_props::Paint_Properties;
 use inle_math::matrix::Matrix3;
 use inle_math::rect::Rect;
@@ -827,11 +827,9 @@ pub fn render_vbuf_ws_with_texture(
     }
 }
 
-pub fn render_vbuf_ws_with_shader(
+pub fn render_vbuf_with_shader(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
-    transform: &Transform2D,
-    camera: &Transform2D,
     shader: &Shader,
 ) {
     if vbuf_cur_vertices(vbuf) == 0 {

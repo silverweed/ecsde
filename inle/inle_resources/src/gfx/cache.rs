@@ -92,8 +92,4 @@ impl<'l> Shader_Cache<'l> {
     pub fn must_get_mut<'a>(&'a mut self, handle: Shader_Handle) -> &'a mut Shader<'l> {
         self.cache.get_mut(&handle.unwrap()).unwrap()
     }
-
-    pub fn n_loaded(&self) -> usize {
-        self.cache.len()
-    }
 }

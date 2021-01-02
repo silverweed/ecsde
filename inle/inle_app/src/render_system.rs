@@ -50,7 +50,7 @@ pub fn update(args: Render_System_Update_Args) {
         window: _,
         camera: _,
         gres,
-        shader_cache,
+        ..
     } = args;
 
     trace!("render_system::update");
@@ -109,7 +109,7 @@ pub fn update(args: Render_System_Update_Args) {
                         } else {
                             gres.get_white_texture_handle()
                         });
-                        mat.shader = shader_cache.get_basic_shader_handle();
+                        mat.shader = args.shader_cache.get_basic_shader_handle();
                         mat.cast_shadows = false;
                         material = mat;
                     }
@@ -190,7 +190,7 @@ pub fn update(args: Render_System_Update_Args) {
                         } else {
                             gres.get_white_texture_handle()
                         });
-                        mat.shader = shader_cache.get_basic_shader_handle();
+                        mat.shader = args.shader_cache.get_basic_shader_handle();
                         mat.cast_shadows = false;
                         material = mat;
                     }

@@ -39,13 +39,14 @@ mod systems;
 mod debug;
 
 use game_state::*;
-use inle_app::app;
-use inle_common::colors;
 use inle_core::{sleep, time};
 use std::convert::TryInto;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::time::{Duration, Instant};
+
+#[cfg(debug_assertions)]
+use {inle_app::app, inle_common::colors};
 
 /// Given a c_char pointer, returns a String allocated from the raw string it points to,
 /// or an empty string if the conversion fails.

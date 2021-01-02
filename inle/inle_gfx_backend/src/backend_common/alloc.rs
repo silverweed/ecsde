@@ -158,7 +158,6 @@ fn bucket_has_contiguous_capacity(bucket: &Buffer_Allocator_Bucket, cap: usize) 
     bucket.free_list.iter().position(|slot| slot.len >= cap)
 }
 
-#[cfg(debug_assertions)]
 fn is_bucket_slot_free(bucket: &Buffer_Allocator_Bucket, slot: &Bucket_Slot) -> bool {
     bucket.free_list.iter().any(|s| s.contains(slot))
 }

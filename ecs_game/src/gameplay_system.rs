@@ -263,31 +263,21 @@ impl Gameplay_System {
         });
     }
 
-    pub fn realtime_update(
-        &mut self,
-        real_dt: &Duration,
-        engine_state: &Engine_State,
-        window: &Render_Window_Handle,
-    ) {
+    pub fn realtime_update(&mut self, real_dt: &Duration, engine_state: &Engine_State) {
         trace!("gameplay_system::realtime_update");
 
         if self.camera_on_player.read(&engine_state.config) {
-            self.update_camera(real_dt, engine_state, window);
+            self.update_camera(real_dt, engine_state);
         } else {
             self.update_free_camera(real_dt, &engine_state.input_state, &engine_state.config);
         }
     }
 
-    fn update_camera(
-        &mut self,
-        dt: &Duration,
-        engine_state: &Engine_State,
-        window: &Render_Window_Handle,
-    ) {
+    fn update_camera(&mut self, dt: &Duration, engine_state: &Engine_State) {
         self.levels.foreach_active_level(|level| {
             let world = &mut level.world;
 
-            camera_system::update(dt, world, window, &engine_state.config);
+            camera_system::update(dt, world, &engine_state.config);
         });
     }
 
