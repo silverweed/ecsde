@@ -209,13 +209,18 @@ impl Debug_Frame_Scroller {
     ) {
         trace!("frame_scroller::draw");
 
-        self.draw_row(window, gres, Row::Seconds, debug_log);
-        self.draw_row(window, gres, Row::Frames, debug_log);
+        let mut vbuf = render::start_draw_quads((self.n_frames + self.n_seconds) as _);
+
+        self.draw_row(window, &mut vbuf, gres, Row::Seconds, debug_log);
+        self.draw_row(window, &mut vbuf, gres, Row::Frames, debug_log);
+
+        render::render_vbuf(window, &vbuf, &inle_math::transform::Transform2D::default());
     }
 
     fn draw_row(
         &self,
         window: &mut Render_Window_Handle,
+        vbuf: &mut render::Vertex_Buffer_Quads,
         gres: &Gfx_Resources,
         row: Row,
         debug_log: &Debug_Log,
@@ -299,7 +304,21 @@ impl Debug_Frame_Scroller {
                 border_color: colors::rgba(outline_col, outline_col, outline_col, color.a),
                 ..Default::default()
             };
-            render::render_rect(window, subdiv_rect, paint_props);
+            render::add_quad(
+                vbuf,
+                &render::new_vertex(subdiv_rect.pos_min(), paint_props.color, v2!(0., 0.)),
+                &render::new_vertex(
+                    subdiv_rect.pos_min() + v2!(subdiv_rect.width, 0.),
+                    paint_props.color,
+                    v2!(0., 0.),
+                ),
+                &render::new_vertex(subdiv_rect.pos_max(), paint_props.color, v2!(0., 0.)),
+                &render::new_vertex(
+                    subdiv_rect.pos_min() + v2!(0., subdiv_rect.height),
+                    paint_props.color,
+                    v2!(0., 0.),
+                ),
+            );
         }
 
         if show_labels {
