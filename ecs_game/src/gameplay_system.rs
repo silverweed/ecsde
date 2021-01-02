@@ -119,7 +119,7 @@ impl Gameplay_System {
         engine_state.systems.particle_mgrs.insert(
             level_id,
             Particle_Manager::new(
-                &mut engine_state.shader_cache,
+                &mut game_res.shader_cache,
                 &engine_state.env,
                 &engine_state.config,
             ),
@@ -231,7 +231,7 @@ impl Gameplay_System {
         let frame_alloc = &mut engine_state.frame_alloc;
         let gres = &mut rsrc.gfx;
         let env = &engine_state.env;
-        let shader_cache = &mut engine_state.shader_cache;
+        let shader_cache = &mut rsrc.shader_cache;
         let input_state = &engine_state.input_state;
 
         levels.foreach_active_level(|level| {

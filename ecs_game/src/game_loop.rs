@@ -440,7 +440,7 @@ where
     #[cfg(debug_assertions)]
     update_debug(game_state, collision_debug_data);
 
-    update_graphics(game_state, &mut game_resources.gfx);
+    update_graphics(game_state, game_resources);
     update_ui(game_state, &game_resources.gfx);
 
     #[cfg(debug_assertions)]
@@ -469,14 +469,18 @@ fn update_ui(game_state: &mut Game_State, gres: &Gfx_Resources) {
     inle_ui::draw_all_ui(window, gres, ui_ctx);
 }
 
-fn update_graphics<'a, 's, 'r>(game_state: &'a mut Game_State<'s>, gres: &'a mut Gfx_Resources<'r>)
-where
+fn update_graphics<'a, 's, 'r>(
+    game_state: &'a mut Game_State<'s>,
+    game_resources: &mut Game_Resources<'r>,
+) where
     'r: 's,
     's: 'a,
 {
     trace!("update_graphics");
 
     let window = &mut game_state.window;
+    let gres = &mut game_resources.gfx;
+    let shader_cache = &mut game_resources.shader_cache;
 
     #[cfg(debug_assertions)]
     {
@@ -554,7 +558,6 @@ where
         let gameplay_system = &mut game_state.gameplay_system;
         let batches = &mut game_state.level_batches;
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
-        let shader_cache = &game_state.engine_state.shader_cache;
         gameplay_system.levels.foreach_active_level(|level| {
             let render_args = render_system::Render_System_Update_Args {
                 batches: batches.get_mut(&level.id).unwrap(),
@@ -578,7 +581,6 @@ where
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
         let lv_batches = &mut game_state.level_batches;
         let window = &mut game_state.window;
-        let shader_cache = &mut game_state.engine_state.shader_cache;
         let enable_shaders = game_state.cvars.enable_shaders.read(cfg);
         let enable_shadows = game_state.cvars.enable_shadows.read(cfg);
         let enable_particles = game_state.cvars.enable_particles.read(cfg);

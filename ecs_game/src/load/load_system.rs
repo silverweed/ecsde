@@ -48,7 +48,7 @@ pub fn level_load_sync(
     register_all_components(&mut level.world);
     init_demo_entities(
         &mut game_resources.gfx,
-        &mut engine_state.shader_cache,
+        &mut game_resources.shader_cache,
         &engine_state.env,
         &mut engine_state.rng,
         &engine_state.config,

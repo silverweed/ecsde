@@ -47,8 +47,6 @@ pub struct Engine_State<'r> {
 
     pub global_batches: inle_gfx::render::batcher::Batches,
 
-    pub shader_cache: Shader_Cache<'r>,
-
     #[cfg(debug_assertions)]
     pub debug_systems: Debug_Systems,
 
@@ -95,7 +93,6 @@ pub fn create_engine_state<'r>(
         input_state,
         systems,
         global_batches: inle_gfx::render::batcher::Batches::default(),
-        shader_cache: Shader_Cache::new(),
         frame_alloc: Temp_Allocator::with_capacity(megabytes(10)),
         #[cfg(debug_assertions)]
         debug_systems,
@@ -126,9 +123,10 @@ pub fn start_config_watch(env: &Env_Info, config: &mut inle_cfg::Config) -> Mayb
 pub fn init_engine_systems(
     engine_state: &mut Engine_State,
     gres: &mut Gfx_Resources,
+    shader_cache: &mut Shader_Cache,
 ) -> Maybe_Error {
     gres.init();
-    engine_state.shader_cache.init();
+    shader_cache.init();
 
     inle_input::joystick_state::init_joysticks(&mut engine_state.input_state.raw.joy_state);
     inle_ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);

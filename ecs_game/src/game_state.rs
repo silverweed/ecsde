@@ -84,6 +84,8 @@ pub struct Debug_CVars {
 pub struct Game_Resources<'a> {
     pub gfx: inle_resources::gfx::Gfx_Resources<'a>,
     pub audio: inle_resources::audio::Audio_Resources<'a>,
+    // Note: this is not inside gfx because we need to borrow from both at the same time
+    pub shader_cache: inle_resources::gfx::Shader_Cache<'a>,
 }
 
 #[repr(C)]
@@ -205,7 +207,11 @@ fn create_game_state<'a>(
     linfo!("Working dir = {:?}", engine_state.env.working_dir);
     linfo!("Exe = {:?}", engine_state.env.full_exe_path);
 
-    app::init_engine_systems(&mut engine_state, &mut game_resources.gfx)?;
+    app::init_engine_systems(
+        &mut engine_state,
+        &mut game_resources.gfx,
+        &mut game_resources.shader_cache,
+    )?;
 
     #[cfg(debug_assertions)]
     {
@@ -330,11 +336,13 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
 }
 
 fn create_game_resources<'a>() -> Result<Box<Game_Resources<'a>>, Box<dyn std::error::Error>> {
-    let gfx_resources = inle_resources::gfx::Gfx_Resources::new();
-    let audio_resources = inle_resources::audio::Audio_Resources::new();
+    let gfx = inle_resources::gfx::Gfx_Resources::new();
+    let audio = inle_resources::audio::Audio_Resources::new();
+    let shader_cache = inle_resources::gfx::Shader_Cache::new();
     Ok(Box::new(Game_Resources {
-        gfx: gfx_resources,
-        audio: audio_resources,
+        gfx,
+        audio,
+        shader_cache,
     }))
 }
 
