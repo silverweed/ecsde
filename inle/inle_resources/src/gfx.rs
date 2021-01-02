@@ -76,17 +76,14 @@ pub struct Shader_Cache<'l>(cache::Shader_Cache<'l>);
 
 impl<'l> Shader_Cache<'l> {
     pub fn new() -> Self {
-        let mut shader_cache = cache::Shader_Cache::new();
+        Self(cache::Shader_Cache::new())
+    }
 
-        shader_cache
-            .cache
-            .insert(ERROR_SHADER_KEY, load_error_shader());
+    pub fn init(&mut self) {
+        self.0.cache.insert(ERROR_SHADER_KEY, load_error_shader());
+
         #[cfg(debug_assertions)]
-        shader_cache
-            .cache
-            .insert(BASIC_SHADER_KEY, load_basic_shader());
-
-        Self(shader_cache)
+        self.0.cache.insert(BASIC_SHADER_KEY, load_basic_shader());
     }
 
     pub fn load_shader(&mut self, fname: &str) -> Shader_Handle {
@@ -177,7 +174,11 @@ fn load_error_shader<'a>() -> Shader<'a> {
 			gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
 		}
 	";
-    Shader::from_memory(Some(ERROR_SHADER_VERT), None, Some(ERROR_SHADER_FRAG)).unwrap()
+    render::new_shader(
+        ERROR_SHADER_VERT.as_bytes(),
+        ERROR_SHADER_FRAG.as_bytes(),
+        Some("builtin_error_shader"),
+    )
 }
 
 #[cfg(debug_assertions)]
@@ -194,5 +195,9 @@ fn load_basic_shader<'a>() -> Shader<'a> {
 			gl_FragColor = texture2D(texture, gl_TexCoord[0].xy);
 		}
 	";
-    Shader::from_memory(Some(BASIC_SHADER_VERT), None, Some(BASIC_SHADER_FRAG)).unwrap()
+    render::new_shader(
+        BASIC_SHADER_VERT.as_bytes(),
+        BASIC_SHADER_FRAG.as_bytes(),
+        Some("builtin_basic_shader"),
+    )
 }

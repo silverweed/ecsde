@@ -567,23 +567,6 @@ where
                 shader_cache,
             };
 
-            // @Temporary
-            render::render_vbuf_ws_ex(
-                render_args.window,
-                &vbuf,
-                &Transform2D::from_pos_rot_scale(
-                    v2!(0., 0.),
-                    inle_math::angle::deg(50.),
-                    v2!(1.0, 1.),
-                ),
-                &level.get_camera().transform,
-                render::Render_Extra_Params {
-                    texture: Some(tex),
-                    ..Default::default()
-                },
-            );
-            // ---------------------------
-
             render_system::update(render_args);
         });
     }

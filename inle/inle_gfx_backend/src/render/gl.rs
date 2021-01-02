@@ -11,12 +11,24 @@ use inle_math::vector::Vec2f;
 use std::collections::HashMap;
 use std::ffi::{c_void, CStr, CString};
 use std::marker::PhantomData;
+use std::sync::Once;
 use std::{mem, ptr, str};
 
-macro_rules! c_str {
-    ($literal:expr) => {
-        CStr::from_bytes_with_nul_unchecked(concat!($literal, "\0").as_bytes())
-    };
+fn max_texture_units() -> usize {
+    static mut MAX_TEXTURE_UNITS: usize = 0;
+    static INIT: Once = Once::new();
+
+    unsafe {
+        INIT.call_once(|| {
+            gl::GetIntegerv(
+                gl::MAX_TEXTURE_IMAGE_UNITS,
+                &mut MAX_TEXTURE_UNITS as *mut usize as *mut i32,
+            );
+            check_gl_err();
+        });
+
+        MAX_TEXTURE_UNITS
+    }
 }
 
 pub struct Vertex_Buffer {
@@ -264,50 +276,70 @@ pub struct Shader<'texture> {
     _pd: PhantomData<&'texture ()>,
 }
 
-#[inline(always)]
-fn str_to_cstring(s: &str) -> CString {
-    CString::new(s).unwrap()
-}
-
 impl Uniform_Value for f32 {
-    fn apply_to(self, shader: &mut Shader, name: &str) {
+    fn apply_to(self, shader: &mut Shader, name: &CStr) {
         unsafe {
-            gl::Uniform1f(get_uniform_loc(shader.id, &str_to_cstring(name)), self);
+            gl::UseProgram(shader.id); // @Speed: don't do this every time!
+            gl::Uniform1f(get_uniform_loc(shader.id, name), self);
         }
     }
 }
 
 impl Uniform_Value for Vec2f {
-    fn apply_to(self, shader: &mut Shader, name: &str) {
+    fn apply_to(self, shader: &mut Shader, name: &CStr) {
         unsafe {
-            gl::Uniform2f(
-                get_uniform_loc(shader.id, &str_to_cstring(name)),
-                self.x,
-                self.y,
+            gl::UseProgram(shader.id); // @Speed: don't do this every time!
+            gl::Uniform2f(get_uniform_loc(shader.id, name), self.x, self.y);
+        }
+    }
+}
+
+impl Uniform_Value for &Matrix3<f32> {
+    fn apply_to(self, shader: &mut Shader, name: &CStr) {
+        unsafe {
+            gl::UseProgram(shader.id); // @Speed: don't do this every time!
+            gl::UniformMatrix3fv(
+                get_uniform_loc(shader.id, name),
+                1,
+                gl::FALSE,
+                self.as_slice().as_ptr() as _,
             );
         }
     }
 }
 
 impl Uniform_Value for Color {
-    fn apply_to(self, shader: &mut Shader, name: &str) {
+    fn apply_to(self, shader: &mut Shader, name: &CStr) {
         let v: Glsl_Vec4 = self.into();
         unsafe {
-            gl::Uniform4f(
-                get_uniform_loc(shader.id, &str_to_cstring(name)),
-                v.x,
-                v.y,
-                v.z,
-                v.w,
-            );
+            gl::UseProgram(shader.id); // @Speed: don't do this every time!
+            gl::Uniform4f(get_uniform_loc(shader.id, name), v.x, v.y, v.z, v.w);
         }
     }
 }
 
 impl Uniform_Value for &Texture<'_> {
-    fn apply_to(self, shader: &mut Shader, name: &str) {
-        let loc = get_uniform_loc(shader.id, &str_to_cstring(name));
-        shader.textures.insert(loc, self.id);
+    fn apply_to(self, shader: &mut Shader, name: &CStr) {
+        use std::collections::hash_map::Entry;
+
+        let loc = get_uniform_loc(shader.id, name);
+        if loc == -1 {
+            return;
+        }
+
+        let n_tex = shader.textures.len();
+        match shader.textures.entry(loc) {
+            Entry::Occupied(mut v) => {
+                v.insert(self.id);
+            }
+            Entry::Vacant(mut v) => {
+                if n_tex == max_texture_units() {
+                    lerr!("Cannot set uniform {:?}: texture units are full.", name);
+                } else {
+                    v.insert(self.id);
+                }
+            }
+        }
     }
 }
 
@@ -323,24 +355,6 @@ pub struct Text<'font> {
 impl Font<'_> {
     pub fn from_file(_: &str) -> Option<Self> {
         Some(Self { _pd: PhantomData })
-    }
-}
-
-impl Shader<'_> {
-    pub fn from_memory(_: Option<&str>, _: Option<&str>, _: Option<&str>) -> Option<Self> {
-        Some(Self {
-            id: 0,
-            textures: HashMap::default(),
-            _pd: PhantomData,
-        })
-    }
-
-    pub fn from_file(_: Option<&str>, _: Option<&str>, _: Option<&str>) -> Option<Self> {
-        Some(Self {
-            id: 0,
-            textures: HashMap::default(),
-            _pd: PhantomData,
-        })
     }
 }
 
@@ -750,24 +764,34 @@ pub fn render_vbuf_ws_ex(
         return;
     }
 
-    use_vbuf_ws_shader(
-        window,
-        transform,
-        camera,
-        if extra_params.texture.is_some() {
-            window.gl.vbuf_texture_shader
-        } else {
-            window.gl.vbuf_shader
-        },
-    );
-
     unsafe {
-        if let Some(tex) = extra_params.texture {
-            gl::ActiveTexture(gl::TEXTURE0);
-            gl::BindTexture(gl::TEXTURE_2D, tex.id);
-        }
+        if let Some(shader) = extra_params.shader {
+            gl::UseProgram(shader.id);
 
-        // @Incomplete: shader
+            for (i, (loc, tex)) in shader.textures.iter().enumerate() {
+                gl::Uniform1i(*loc, i as i32);
+                gl::ActiveTexture(gl::TEXTURE0 + i as u32);
+                gl::BindTexture(gl::TEXTURE_2D, *tex);
+                check_gl_err();
+            }
+            check_gl_err();
+        } else {
+            use_vbuf_ws_shader(
+                window,
+                transform,
+                camera,
+                if extra_params.texture.is_some() {
+                    window.gl.vbuf_texture_shader
+                } else {
+                    window.gl.vbuf_shader
+                },
+            );
+
+            if let Some(tex) = extra_params.texture {
+                gl::ActiveTexture(gl::TEXTURE0);
+                gl::BindTexture(gl::TEXTURE_2D, tex.id);
+            }
+        }
 
         gl::BindVertexArray(vbuf.vao);
         check_gl_err();
@@ -865,7 +889,8 @@ pub fn new_texture_from_image<'img, 'tex>(
     }
 
     ldebug!(
-        "Loaded texture with size {}x{}, color type {:?} and pixel type {}",
+        "Loaded texture ({}) with size {}x{}, color type {:?} and pixel type {}",
+        id,
         image.width,
         image.height,
         image.color_type,
@@ -948,7 +973,7 @@ pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[
 }
 
 pub fn shaders_are_available() -> bool {
-    false
+    true
 }
 
 pub fn geom_shaders_are_available() -> bool {

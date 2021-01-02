@@ -317,7 +317,7 @@ impl Particle_Manager {
 
         let shader = shader_cache.get_shader_mut(self.particle_shader);
         let (ww, wh) = inle_win::window::get_window_real_size(window);
-        render::set_uniform(shader, "camera_scale", 1.0 / camera.scale().x);
+        render::set_uniform(shader, c_str!("camera_scale"), 1.0 / camera.scale().x);
 
         for (particles, vbuf) in self
             .active_particles
@@ -333,7 +333,7 @@ impl Particle_Manager {
                 let (tw, th) = render::get_texture_size(tex);
                 render::set_uniform(
                     shader,
-                    "tex_size_normalized",
+                    c_str!("tex_size_normalized"),
                     v2!(tw as f32 / ww as f32, th as f32 / wh as f32),
                 );
             }

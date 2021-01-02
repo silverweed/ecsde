@@ -8,6 +8,7 @@ use inle_gfx_backend::render::{Shader, Texture, Vertex};
 use inle_gfx_backend::render_window::Render_Window_Handle;
 use inle_math::angle::Angle;
 use inle_math::math::{lerp, lerp_clamped};
+use inle_math::matrix::Matrix3;
 use inle_math::rect::Rect;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
@@ -140,22 +141,35 @@ fn set_shader_uniforms(
     gres: &Gfx_Resources,
     lights: &Lights,
     texture: &Texture,
+    view_projection: &Matrix3<f32>,
 ) {
     use super::set_uniform;
 
+    set_uniform(shader, c_str!("tex"), texture);
+    set_uniform(shader, c_str!("vp"), view_projection);
+    return;
+
     if material.normals.is_some() {
         let normals = gres.get_texture(material.normals);
-        set_uniform(shader, "normals", normals);
+        set_uniform(shader, c_str!("normals"), normals);
     }
-    set_uniform(shader, "ambient_light.color", lights.ambient_light.color);
     set_uniform(
         shader,
-        "ambient_light.intensity",
+        c_str!("ambient_light.color"),
+        lights.ambient_light.color,
+    );
+    set_uniform(
+        shader,
+        c_str!("ambient_light.intensity"),
         lights.ambient_light.intensity,
     );
-    set_uniform(shader, "texture", texture);
     let (tex_w, tex_h) = super::get_texture_size(texture);
-    set_uniform(shader, "texture_size", v2!(tex_w as f32, tex_h as f32));
+    set_uniform(
+        shader,
+        c_str!("texture_size"),
+        v2!(tex_w as f32, tex_h as f32),
+    );
+    /*
     for (i, pl) in lights.point_lights.iter().enumerate() {
         set_uniform(
             shader,
@@ -199,12 +213,13 @@ fn set_shader_uniforms(
             rl.intensity,
         );
     }
+    */
     set_uniform(
         shader,
-        "shininess",
+        c_str!("shininess"),
         Material::decode_shininess(material.shininess),
     );
-    set_uniform(shader, "specular_color", material.specular_color);
+    set_uniform(shader, c_str!("specular_color"), material.specular_color);
 }
 
 #[derive(Copy, Clone)]
@@ -236,6 +251,7 @@ pub fn draw_batches(
     trace!("draw_all_batches");
 
     let n_threads = rayon::current_num_threads();
+    let view_projection = get_vp_matrix(window, camera);
 
     // for each Z-index...
     for sprite_map in batches.textures_ws.values_mut() {
@@ -256,13 +272,13 @@ pub fn draw_batches(
             let shader = if draw_params.enable_shaders {
                 material.shader.map(|id| {
                     let shader = shader_cache.get_shader_mut(Some(id));
-                    set_shader_uniforms(shader, material, gres, lights, texture);
+                    set_shader_uniforms(shader, material, gres, lights, texture, &view_projection);
                     shader
                 })
             } else {
                 None
             };
-            let has_shader = shader.is_some();
+            let has_shader = false; //shader.is_some();
 
             let cast_shadows = draw_params.enable_shadows && material.cast_shadows;
             // @Temporary
@@ -625,4 +641,21 @@ fn fill_vertices(
                 vert_chunk[i * 6 + 5] = v1;
             }
         });
+}
+
+fn get_vp_matrix(window: &Render_Window_Handle, camera: &Transform2D) -> Matrix3<f32> {
+    let (width, height) = inle_win::window::get_window_target_size(window);
+    let view = camera.inverse();
+    let projection = Matrix3::new(
+        2. / width as f32,
+        0.,
+        0.,
+        0.,
+        -2. / height as f32,
+        0.,
+        0.,
+        0.,
+        1.,
+    );
+    projection * view.get_matrix()
 }

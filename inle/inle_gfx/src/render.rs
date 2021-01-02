@@ -312,7 +312,7 @@ pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[
     backend::update_texture_pixels(texture, rect, pixels);
 }
 
-pub fn set_uniform<T: Uniform_Value>(shader: &mut Shader, name: &str, val: T) {
+pub fn set_uniform<T: Uniform_Value>(shader: &mut Shader, name: &std::ffi::CStr, val: T) {
     inle_gfx_backend::render::set_uniform(shader, name, val);
 }
 

@@ -43,7 +43,7 @@ pub enum Primitive_Type {
 }
 
 pub trait Uniform_Value: Copy {
-    fn apply_to(self, shader: &mut Shader, name: &str);
+    fn apply_to(self, shader: &mut Shader, name: &std::ffi::CStr);
 }
 
 pub use backend::geom_shaders_are_available;
@@ -57,6 +57,6 @@ pub use backend::shaders_are_available;
 
 pub(crate) use backend::new_shader_internal;
 
-pub fn set_uniform<T: Uniform_Value>(shader: &mut Shader, name: &str, val: T) {
+pub fn set_uniform<T: Uniform_Value>(shader: &mut Shader, name: &std::ffi::CStr, val: T) {
     val.apply_to(shader, name);
 }
