@@ -8,7 +8,7 @@ use inle_math::shapes::Circle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
 
-pub use inle_gfx_backend::render::{Primitive_Type, Render_Extra_Params, Uniform_Value};
+pub use inle_gfx_backend::render::{Primitive_Type, Uniform_Value};
 
 pub mod batcher;
 
@@ -130,15 +130,26 @@ pub fn render_vbuf_ws(
     backend::render_vbuf_ws(window, vbuf, transform, camera);
 }
 
-pub fn render_vbuf_ws_ex(
+pub fn render_vbuf_ws_with_texture(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
     camera: &Transform2D,
-    extra_params: Render_Extra_Params,
+    texture: &Texture,
 ) {
-    trace!("render_vbuf_ws");
-    backend::render_vbuf_ws_ex(window, vbuf, transform, camera, extra_params);
+    trace!("render_vbuf_ws_with_texture");
+    backend::render_vbuf_ws_with_texture(window, vbuf, transform, camera, texture);
+}
+
+pub fn render_vbuf_ws_with_shader(
+    window: &mut Render_Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
+    camera: &Transform2D,
+    shader: &Shader,
+) {
+    trace!("render_vbuf_ws_with_shader");
+    backend::render_vbuf_ws_with_shader(window, vbuf, transform, camera, shader);
 }
 
 // Note: this always renders a line with thickness = 1px

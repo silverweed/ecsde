@@ -418,31 +418,28 @@ pub fn draw_batches(
                 let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
                 shadow_vbuffer.update(shadow_vertices, n_shadow_vertices);
 
-                render::render_vbuf_ws_ex(
+                render::render_vbuf_ws_with_texture(
                     window,
                     &shadow_vbuffer.vbuf,
                     &Transform2D::default(),
                     camera,
-                    inle_gfx_backend::render::Render_Extra_Params {
-                        texture: Some(texture),
-                        ..Default::default()
-                    },
+                    texture,
                 );
             }
 
             vbuffer.update(vertices, n_vertices_without_shadows);
 
-            let shader = shader.map(|s| s as &_);
-            render::render_vbuf_ws_ex(
-                window,
-                &vbuffer.vbuf,
-                &Transform2D::default(),
-                camera,
-                inle_gfx_backend::render::Render_Extra_Params {
-                    texture: Some(texture),
+            if let Some(shader) = shader.map(|s| s as &_) {
+                render::render_vbuf_ws_with_shader(
+                    window,
+                    &vbuffer.vbuf,
+                    &Transform2D::default(),
+                    camera,
                     shader,
-                },
-            );
+                );
+            } else {
+                render::render_vbuf_ws(window, &vbuffer.vbuf, &Transform2D::default(), camera);
+            }
         }
     }
 }

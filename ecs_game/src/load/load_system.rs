@@ -1,7 +1,6 @@
 use crate::entities;
 use crate::gameplay_system::Gameplay_System_Config;
 use crate::gfx::multi_sprite_animation_system::C_Multi_Renderable_Animation;
-use crate::gfx::shaders::*;
 use crate::levels::Level;
 use crate::spatial::World_Chunks;
 use crate::systems::camera_system::{C_Camera_Follow, Camera_Follow_Target};

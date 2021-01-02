@@ -26,10 +26,16 @@ pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
 pub type Color_Type = backend::Color_Type;
 
-#[derive(Default)]
-pub struct Render_Extra_Params<'t, 's> {
-    pub texture: Option<&'t Texture<'t>>,
-    pub shader: Option<&'s Shader<'s>>,
+pub enum Render_Settings<'t> {
+    Basic,
+    With_Texture(&'t Texture<'t>),
+    With_Shader(&'t Shader<'t>),
+}
+
+impl Default for Render_Settings<'_> {
+    fn default() -> Self {
+        Self::Basic
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

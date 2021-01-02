@@ -185,7 +185,7 @@ pub fn render_particles(
     particles: &Particles,
     window: &mut Render_Window_Handle,
     gres: &Gfx_Resources,
-    shader: &Shader,
+    shader: &mut Shader,
     camera: &Transform2D,
     vbuf: &mut Vertex_Buffer_Holder,
     frame_alloc: &mut temp::Temp_Allocator,
@@ -209,17 +209,11 @@ pub fn render_particles(
 
     vbuf.update(&mut vertices, particles.transforms.len() as u32);
 
-    render::render_vbuf_ws_ex(
-        window,
-        &vbuf.vbuf,
-        &particles.transform,
-        &camera,
-        render::Render_Extra_Params {
-            texture,
-            shader: Some(shader),
-            ..Default::default()
-        },
-    );
+    if let Some(texture) = texture {
+        render::set_uniform(shader, c_str!("tex"), texture);
+    }
+
+    render::render_vbuf_ws_with_shader(window, &vbuf.vbuf, &particles.transform, &camera, shader);
 }
 
 fn random_pos_in(shape: &Emission_Shape, rng: &Precomputed_Rand_Pool) -> Vec2f {

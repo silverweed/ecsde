@@ -1,4 +1,4 @@
-use super::{Primitive_Type, Render_Extra_Params, Uniform_Value};
+use super::{Primitive_Type, Uniform_Value};
 use crate::render_window::Render_Window_Handle;
 use gl::types::*;
 use inle_common::colors::{self, Color, Color3};
@@ -774,54 +774,75 @@ pub fn render_vbuf_ws(
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
-    render_vbuf_ws_ex(
-        window,
-        vbuf,
-        transform,
-        camera,
-        Render_Extra_Params::default(),
-    );
+    if vbuf_cur_vertices(vbuf) == 0 {
+        return;
+    }
+
+    use_vbuf_ws_shader(window, transform, camera, window.gl.vbuf_shader);
+
+    unsafe {
+        gl::BindVertexArray(vbuf.vao);
+        check_gl_err();
+
+        window.gl.draw_arrays(
+            to_gl_primitive_type(vbuf.primitive_type),
+            0,
+            vbuf.cur_vertices as _,
+        );
+        check_gl_err();
+    }
 }
 
-pub fn render_vbuf_ws_ex(
+pub fn render_vbuf_ws_with_texture(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
     camera: &Transform2D,
-    extra_params: Render_Extra_Params,
+    texture: &Texture,
+) {
+    if vbuf_cur_vertices(vbuf) == 0 {
+        return;
+    }
+
+    use_vbuf_ws_shader(window, transform, camera, window.gl.vbuf_texture_shader);
+
+    unsafe {
+        gl::ActiveTexture(gl::TEXTURE0);
+        gl::BindTexture(gl::TEXTURE_2D, texture.id);
+
+        gl::BindVertexArray(vbuf.vao);
+        check_gl_err();
+
+        window.gl.draw_arrays(
+            to_gl_primitive_type(vbuf.primitive_type),
+            0,
+            vbuf.cur_vertices as _,
+        );
+        check_gl_err();
+    }
+}
+
+pub fn render_vbuf_ws_with_shader(
+    window: &mut Render_Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
+    camera: &Transform2D,
+    shader: &Shader,
 ) {
     if vbuf_cur_vertices(vbuf) == 0 {
         return;
     }
 
     unsafe {
-        if let Some(shader) = extra_params.shader {
-            gl::UseProgram(shader.id);
+        gl::UseProgram(shader.id);
 
-            for (i, (loc, tex)) in shader.textures.iter().enumerate() {
-                gl::Uniform1i(*loc, i as i32);
-                gl::ActiveTexture(gl::TEXTURE0 + i as u32);
-                gl::BindTexture(gl::TEXTURE_2D, *tex);
-                check_gl_err();
-            }
+        for (i, (loc, tex)) in shader.textures.iter().enumerate() {
+            gl::Uniform1i(*loc, i as i32);
+            gl::ActiveTexture(gl::TEXTURE0 + i as u32);
+            gl::BindTexture(gl::TEXTURE_2D, *tex);
             check_gl_err();
-        } else {
-            use_vbuf_ws_shader(
-                window,
-                transform,
-                camera,
-                if extra_params.texture.is_some() {
-                    window.gl.vbuf_texture_shader
-                } else {
-                    window.gl.vbuf_shader
-                },
-            );
-
-            if let Some(tex) = extra_params.texture {
-                gl::ActiveTexture(gl::TEXTURE0);
-                gl::BindTexture(gl::TEXTURE_2D, tex.id);
-            }
         }
+        check_gl_err();
 
         gl::BindVertexArray(vbuf.vao);
         check_gl_err();
@@ -896,7 +917,6 @@ pub fn new_texture_from_image<'img, 'tex>(
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as _);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as _);
 
-        // @Audit: not 100% sure that the internal format and pixel format/type conversions are correct..
         gl::TexStorage2D(
             gl::TEXTURE_2D,
             1,
