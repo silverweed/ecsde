@@ -1,3 +1,4 @@
+use crate::backend_common::misc::check_gl_err;
 use gl::types::*;
 use inle_common::colors::Color;
 use inle_math::rect::{Rect, Rectf};
@@ -277,26 +278,6 @@ extern "system" fn gl_msg_callback(
         str::from_utf8(message).unwrap()
     );
 }
-
-// @Cleanup: don't duplicate this code from render/gl.rs! Share it!
-#[cfg(debug_assertions)]
-#[inline]
-#[track_caller]
-fn check_gl_err() {
-    unsafe {
-        let err = gl::GetError();
-        match err {
-            gl::NO_ERROR => {}
-            gl::INVALID_ENUM => panic!("GL_INVALID_ENUM"),
-            gl::INVALID_OPERATION => panic!("GL_INVALID_OPERATION"),
-            gl::INVALID_VALUE => panic!("GL_INVALID_VALUE"),
-            _ => panic!("Other GL error: {}", err),
-        }
-    }
-}
-
-#[cfg(not(debug_assertions))]
-fn check_gl_err() {}
 
 const N_CIRCLE_POINTS: usize = 32;
 const CIRCLE_VERTICES: [GLfloat; 2 * (N_CIRCLE_POINTS + 2)] = [

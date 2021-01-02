@@ -1,4 +1,5 @@
 use super::{Primitive_Type, Uniform_Value};
+use crate::backend_common::misc::check_gl_err;
 use crate::render_window::Render_Window_Handle;
 use gl::types::*;
 use inle_common::colors::{self, Color, Color3};
@@ -13,8 +14,6 @@ use std::ffi::{c_void, CStr, CString};
 use std::marker::PhantomData;
 use std::sync::Once;
 use std::{mem, ptr, str};
-
-mod alloc;
 
 fn max_texture_units() -> usize {
     static mut MAX_TEXTURE_UNITS: usize = 0;
@@ -1310,25 +1309,6 @@ fn get_uniform_loc(shader: GLuint, name: &CStr) -> GLint {
         loc
     }
 }
-
-#[cfg(debug_assertions)]
-#[inline]
-#[track_caller]
-fn check_gl_err() {
-    unsafe {
-        let err = gl::GetError();
-        match err {
-            gl::NO_ERROR => {}
-            gl::INVALID_ENUM => fatal!("GL_INVALID_ENUM"),
-            gl::INVALID_OPERATION => fatal!("GL_INVALID_OPERATION"),
-            gl::INVALID_VALUE => fatal!("GL_INVALID_VALUE"),
-            _ => fatal!("Other GL error: {}", err),
-        }
-    }
-}
-
-#[cfg(not(debug_assertions))]
-fn check_gl_err() {}
 
 fn get_mvp_matrix(
     window: &Render_Window_Handle,

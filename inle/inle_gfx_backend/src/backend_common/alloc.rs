@@ -1,7 +1,20 @@
+use super::misc::check_gl_err;
 use gl::types::*;
 use std::ptr;
 
 const MIN_BUCKET_SIZE: usize = 32 * 1024;
+
+pub struct Buffer_Allocators {
+    pub array_buffer: Buffer_Allocator,
+}
+
+impl Default for Buffer_Allocators {
+    fn default() -> Self {
+        Self {
+            array_buffer: Buffer_Allocator::new(gl::ARRAY_BUFFER),
+        }
+    }
+}
 
 pub struct Buffer_Allocator {
     buckets: Vec<Buffer_Allocator_Bucket>,
@@ -18,6 +31,17 @@ impl Buffer_Allocator {
         Self {
             buckets: vec![],
             buf_type,
+        }
+    }
+
+    pub fn dealloc_all(&mut self) {
+        let bucket_idx = self
+            .buckets
+            .iter()
+            .map(|bucket| bucket.id)
+            .collect::<Vec<_>>();
+        unsafe {
+            gl::DeleteBuffers(bucket_idx.len() as _, bucket_idx.as_ptr() as _);
         }
     }
 
@@ -204,6 +228,7 @@ fn write_data_to_bucket(
             length as _,
             data,
         );
+        check_gl_err();
     }
 }
 

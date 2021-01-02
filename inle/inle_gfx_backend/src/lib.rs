@@ -13,5 +13,6 @@ extern crate inle_diagnostics;
 #[macro_use]
 extern crate inle_math;
 
+pub(crate) mod backend_common;
 pub mod render;
 pub mod render_window;
