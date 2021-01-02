@@ -22,10 +22,10 @@ struct Rect_Light {
     float intensity;
 };
 
-#define MAX_POINT_LIGHTS 8
-#define MAX_RECT_LIGHTS 8
+#define MAX_POINT_LIGHTS 4
+#define MAX_RECT_LIGHTS 4
 
-uniform sampler2D texture;
+uniform sampler2D tex;
 uniform Ambient_Light ambient_light;
 uniform Point_Light point_lights[MAX_POINT_LIGHTS];
 uniform Rect_Light rect_lights[MAX_RECT_LIGHTS];
@@ -49,7 +49,7 @@ vec2 point_to_rect_vector(vec2 point_pos, vec2 rect_pos_min, vec2 rect_pos_max) 
 }
 
 void main() {
-    vec4 pixel = texture2D(texture, tex_coord);
+    vec4 pixel = texture(tex, tex_coord);
 
     vec3 color = vec3(1.0);
     color *= vec3(ambient_light.color) * ambient_light.intensity;
@@ -78,5 +78,5 @@ void main() {
         color += vec3(diffuse) * atten;
     }
 
-    frag_color = vec4(color.rgb * pixel.rgb, pixel.a);
+    frag_color = vec4(color * pixel.rgb, pixel.a);
 }

@@ -39,7 +39,7 @@ impl Default for Ambient_Light {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct Rect_Light {
     pub color: Color,
     // Light inside this rect is at its maximum intensity

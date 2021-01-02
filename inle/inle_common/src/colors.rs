@@ -14,6 +14,13 @@ pub struct Color {
     pub a: u8,
 }
 
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct Color3 {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+}
+
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Color_Hsv {
     pub h: Angle,
@@ -144,6 +151,39 @@ pub fn to_gray_scale(c: Color) -> Color {
     rgba(avg, avg, avg, c.a)
 }
 
+impl From<Color> for Color3 {
+    fn from(c: Color) -> Self {
+        Self {
+            r: c.r,
+            g: c.g,
+            b: c.b,
+        }
+    }
+}
+
+impl From<Color3> for Color {
+    fn from(c: Color3) -> Self {
+        Self {
+            r: c.r,
+            g: c.g,
+            b: c.b,
+            a: 255,
+        }
+    }
+}
+
+impl PartialEq<Color3> for Color {
+    fn eq(&self, c: &Color3) -> bool {
+        self.r == c.r && self.g == c.g && self.b == c.b
+    }
+}
+
+impl PartialEq<Color> for Color3 {
+    fn eq(&self, c: &Color) -> bool {
+        self.r == c.r && self.g == c.g && self.b == c.b
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -154,6 +194,33 @@ mod tests {
         fn cmp_list(&self) -> Vec<f32> {
             vec![self.h.as_rad(), self.s, self.v]
         }
+    }
+
+    #[test]
+    fn color_to_color3() {
+        let c = rgb(23, 67, 219);
+        let c3: Color3 = c.into();
+        assert_eq!(c, c3);
+
+        let c: Color = c3.into();
+        assert_eq!(c, c3);
+
+        let c = rgba(23, 67, 219, 0);
+        let c3: Color3 = c.into();
+        assert_eq!(c, c3);
+    }
+
+    #[test]
+    fn color3_to_color() {
+        let c: Color3 = rgb(23, 67, 219).into();
+        let c4: Color = c.into();
+        assert_eq!(c, c4);
+
+        let c: Color3 = c4.into();
+        assert_eq!(c, c4);
+
+        let c4 = rgba(23, 67, 219, 0);
+        assert_eq!(c, c4);
     }
 
     #[test]

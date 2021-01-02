@@ -176,12 +176,13 @@ where
 mod tests {
     use super::*;
     use crate::config::Config;
+    use inle_core::env::Env_Info;
     use inle_test::env as test_env;
     use inle_test::test_common::*;
 
     #[test]
     fn cfg_var_load() {
-        let (_, _, env) = create_test_resources_and_env();
+        let env = Env_Info::gather().expect("Failed to gather env info!");
         let config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
 
         let entry_int = Cfg_Var::<i32>::new("test/entry_int", &config);
@@ -206,7 +207,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn cfg_read_invalid() {
-        let (_, _, env) = create_test_resources_and_env();
+        let env = Env_Info::gather().expect("Failed to gather env info!");
         let config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
 
         let entry_nonexisting = Cfg_Var::<i32>::new("entry non existing", &config);
@@ -215,7 +216,7 @@ mod tests {
 
     #[test]
     fn cfg_new_from_val() {
-        let (_, _, env) = create_test_resources_and_env();
+        let env = Env_Info::gather().expect("Failed to gather env info!");
         let mut config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
 
         let var: Cfg_Var<i32> = Cfg_Var::new_from_val(42, &mut config);
@@ -228,7 +229,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn cfg_incompatible_type() {
-        let (_, _, env) = create_test_resources_and_env();
+        let env = Env_Info::gather().expect("Failed to gather env info!");
+        let mut config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
         let config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
 
         let entry_float_mistyped = Cfg_Var::<i32>::new("test/entry_float", &config);

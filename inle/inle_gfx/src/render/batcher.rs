@@ -1,9 +1,9 @@
-use crate::light::{Lights, Point_Light};
+use crate::light::{Lights, Point_Light, Rect_Light};
 use crate::material::Material;
 use crate::render::{self, Primitive_Type};
 use crate::vbuf_holder::Vertex_Buffer_Holder;
 use inle_alloc::temp;
-use inle_common::colors::{self, Color};
+use inle_common::colors::{self, Color, Color3};
 use inle_gfx_backend::render::{Shader, Texture, Vertex};
 use inle_gfx_backend::render_window::Render_Window_Handle;
 use inle_math::angle::Angle;
@@ -135,6 +135,71 @@ fn encode_rot_and_alpha_as_color(rot: Angle, alpha: u8) -> Color {
     }
 }
 
+macro_rules! set_point_light_uniforms {
+    ($idx: expr, $shader: expr, $pl: expr) => {
+        set_uniform(
+            $shader,
+            c_str!(concat!("point_lights[", $idx, "].position")),
+            $pl.position,
+        );
+        set_uniform(
+            $shader,
+            c_str!(concat!("point_lights[", $idx, "].color")),
+            Color3::from($pl.color),
+        );
+        set_uniform(
+            $shader,
+            c_str!(concat!("point_lights[", $idx, "].radius")),
+            $pl.radius,
+        );
+        set_uniform(
+            $shader,
+            c_str!(concat!("point_lights[", $idx, "].attenuation")),
+            $pl.attenuation,
+        );
+        set_uniform(
+            $shader,
+            c_str!(concat!("point_lights[", $idx, "].intensity")),
+            $pl.intensity,
+        );
+    };
+}
+
+macro_rules! set_rect_light_uniforms {
+    ($idx: expr, $shader: expr, $rl: expr) => {
+        set_uniform(
+            $shader,
+            c_str!(concat!("rect_lights[", $idx, "].pos_min")),
+            $rl.rect.pos_min(),
+        );
+        set_uniform(
+            $shader,
+            c_str!(concat!("rect_lights[", $idx, "].pos_max")),
+            $rl.rect.pos_max(),
+        );
+        set_uniform(
+            $shader,
+            c_str!(concat!("rect_lights[", $idx, "].color")),
+            Color3::from($rl.color),
+        );
+        set_uniform(
+            $shader,
+            c_str!(concat!("rect_lights[", $idx, "].radius")),
+            $rl.radius,
+        );
+        set_uniform(
+            $shader,
+            c_str!(concat!("rect_lights[", $idx, "].attenuation")),
+            $rl.attenuation,
+        );
+        set_uniform(
+            $shader,
+            c_str!(concat!("rect_lights[", $idx, "].intensity")),
+            $rl.intensity,
+        );
+    };
+}
+
 fn set_shader_uniforms(
     shader: &mut Shader,
     material: &Material,
@@ -147,7 +212,6 @@ fn set_shader_uniforms(
 
     set_uniform(shader, c_str!("tex"), texture);
     set_uniform(shader, c_str!("vp"), view_projection);
-    return;
 
     if material.normals.is_some() {
         let normals = gres.get_texture(material.normals);
@@ -156,70 +220,49 @@ fn set_shader_uniforms(
     set_uniform(
         shader,
         c_str!("ambient_light.color"),
-        lights.ambient_light.color,
+        Color3::from(lights.ambient_light.color),
     );
     set_uniform(
         shader,
         c_str!("ambient_light.intensity"),
         lights.ambient_light.intensity,
     );
-    let (tex_w, tex_h) = super::get_texture_size(texture);
-    set_uniform(
-        shader,
-        c_str!("texture_size"),
-        v2!(tex_w as f32, tex_h as f32),
-    );
-    /*
-    for (i, pl) in lights.point_lights.iter().enumerate() {
-        set_uniform(
-            shader,
-            &format!("point_lights[{}].position", i),
-            pl.position,
-        );
-        set_uniform(shader, &format!("point_lights[{}].color", i), pl.color);
-        set_uniform(shader, &format!("point_lights[{}].radius", i), pl.radius);
-        set_uniform(
-            shader,
-            &format!("point_lights[{}].attenuation", i),
-            pl.attenuation,
-        );
-        set_uniform(
-            shader,
-            &format!("point_lights[{}].intensity", i),
-            pl.intensity,
-        );
+    // @Cleanup: currently unused: was used by old terrain shader
+    //let (tex_w, tex_h) = super::get_texture_size(texture);
+    //set_uniform(
+    //shader,
+    //c_str!("texture_size"),
+    //v2!(tex_w as f32, tex_h as f32),
+    //);
+
+    {
+        let pls = &lights.point_lights;
+        let pld = Point_Light::default();
+        set_point_light_uniforms!(0, shader, pls.get(0).unwrap_or(&pld));
+        set_point_light_uniforms!(1, shader, pls.get(1).unwrap_or(&pld));
+        set_point_light_uniforms!(2, shader, pls.get(2).unwrap_or(&pld));
+        set_point_light_uniforms!(3, shader, pls.get(3).unwrap_or(&pld));
     }
-    for (i, rl) in lights.rect_lights.iter().enumerate() {
-        set_uniform(
-            shader,
-            &format!("rect_lights[{}].pos_min", i),
-            rl.rect.pos_min(),
-        );
-        set_uniform(
-            shader,
-            &format!("rect_lights[{}].pos_max", i),
-            rl.rect.pos_max(),
-        );
-        set_uniform(shader, &format!("rect_lights[{}].color", i), rl.color);
-        set_uniform(shader, &format!("rect_lights[{}].radius", i), rl.radius);
-        set_uniform(
-            shader,
-            &format!("rect_lights[{}].attenuation", i),
-            rl.attenuation,
-        );
-        set_uniform(
-            shader,
-            &format!("rect_lights[{}].intensity", i),
-            rl.intensity,
-        );
+
+    {
+        let rls = &lights.rect_lights;
+        let rld = Rect_Light::default();
+        set_rect_light_uniforms!(0, shader, rls.get(0).unwrap_or(&rld));
+        set_rect_light_uniforms!(1, shader, rls.get(1).unwrap_or(&rld));
+        set_rect_light_uniforms!(2, shader, rls.get(2).unwrap_or(&rld));
+        set_rect_light_uniforms!(3, shader, rls.get(3).unwrap_or(&rld));
     }
-    */
+
     set_uniform(
         shader,
         c_str!("shininess"),
         Material::decode_shininess(material.shininess),
     );
-    set_uniform(shader, c_str!("specular_color"), material.specular_color);
+    set_uniform(
+        shader,
+        c_str!("specular_color"),
+        Color3::from(material.specular_color),
+    );
 }
 
 #[derive(Copy, Clone)]

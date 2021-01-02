@@ -22,13 +22,13 @@ struct Rect_Light {
     float intensity;
 };
 
-#define MAX_POINT_LIGHTS 8
-#define MAX_RECT_LIGHTS 8
+#define MAX_POINT_LIGHTS 4
+#define MAX_RECT_LIGHTS 4
 #define DIFFUSE_BIAS 0.2
 #define MAX_ENCODED_ANGLE 65535
 #define PI 3.14159265359
 
-uniform sampler2D texture;
+uniform sampler2D tex;
 uniform sampler2D normals;
 uniform Ambient_Light ambient_light;
 uniform Point_Light point_lights[MAX_POINT_LIGHTS];
@@ -36,7 +36,11 @@ uniform float shininess;
 uniform vec3 specular_color;
 uniform Rect_Light rect_lights[MAX_RECT_LIGHTS];
 
-varying vec2 world_pos;
+in vec4 color;
+in vec2 world_pos;
+in vec2 tex_coord;
+
+out vec4 frag_color;
 
 float decode_rot(vec4 color) {
     int r = int(255.0 * color.r);
@@ -53,21 +57,21 @@ vec2 point_to_rect_vector(vec2 point_pos, vec2 rect_pos_min, vec2 rect_pos_max) 
 
     float rect_half_height = 0.5 * (rect_pos_max.y - rect_pos_min.y);
     float dist_y = max(0.0, abs(pos_relative_to_rect.y - rect_half_height) - rect_half_height);
-    
+
     return -vec2(dist_x * sign(pos_relative_to_rect.x - rect_half_width), dist_y * sign(pos_relative_to_rect.y - rect_half_height));
 }
 
 void main() {
-    vec4 pixel = texture2D(texture, gl_TexCoord[0].xy);
+    vec4 pixel = texture(tex, tex_coord);
 
     // Note: gl_Color.rg contains the sprite's rotation
-    float sprite_rot = decode_rot(gl_Color);
-    float vert_alpha = gl_Color.a;
+    float sprite_rot = decode_rot(color);
+    float vert_alpha = color.a;
     vec3 color = vec3(1.0);
 
     color *= ambient_light.color * ambient_light.intensity;
 
-    vec3 normal = 2.0 * (texture2D(normals, gl_TexCoord[0].xy).xyz - 0.5);
+    vec3 normal = 2.0 * (texture(normals, tex_coord).xyz - 0.5);
     float cos_a = cos(sprite_rot);
     float sin_a = sin(sprite_rot);
     mat3 rotation = mat3(
@@ -123,5 +127,5 @@ void main() {
         color += result * atten;
     }
 
-    gl_FragColor = vec4(color.rgb * pixel.rgb, pixel.a * vert_alpha);
+    frag_color = vec4(color.rgb * pixel.rgb, pixel.a * vert_alpha);
 }

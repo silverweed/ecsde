@@ -13,8 +13,8 @@ uniform mat3 vp;
 
 void main() {
     vec3 pos = vp * vec3(in_pos, 1.0);
-    world_pos = pos.xy;
     gl_Position = vec4(pos.xy, 0.0, 1.0);
+    world_pos = in_pos.xy;
     tex_coord = in_tex_coord;
     color = in_color;
 }

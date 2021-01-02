@@ -1,7 +1,7 @@
 use super::{Primitive_Type, Render_Extra_Params, Uniform_Value};
 use crate::render_window::Render_Window_Handle;
 use gl::types::*;
-use inle_common::colors::{self, Color};
+use inle_common::colors::{self, Color, Color3};
 use inle_common::paint_props::Paint_Properties;
 use inle_math::matrix::Matrix3;
 use inle_math::rect::Rect;
@@ -164,6 +164,26 @@ impl From<Glsl_Vec4> for Color {
 
 #[repr(C)]
 #[derive(Default, Copy, Clone, Debug)]
+struct Glsl_Vec3 {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+const_assert!(mem::size_of::<Glsl_Vec3>() == mem::size_of::<GLfloat>() * 3);
+
+impl From<Color3> for Glsl_Vec3 {
+    fn from(c: Color3) -> Self {
+        Self {
+            x: c.r as f32 / 255.0,
+            y: c.g as f32 / 255.0,
+            z: c.b as f32 / 255.0,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Default, Copy, Clone, Debug)]
 pub struct Vertex {
     color: Glsl_Vec4,  // 16 B
     position: Vec2f,   // 8 B
@@ -314,6 +334,16 @@ impl Uniform_Value for Color {
         unsafe {
             gl::UseProgram(shader.id); // @Speed: don't do this every time!
             gl::Uniform4f(get_uniform_loc(shader.id, name), v.x, v.y, v.z, v.w);
+        }
+    }
+}
+
+impl Uniform_Value for Color3 {
+    fn apply_to(self, shader: &mut Shader, name: &CStr) {
+        let v: Glsl_Vec3 = self.into();
+        unsafe {
+            gl::UseProgram(shader.id); // @Speed: don't do this every time!
+            gl::Uniform3f(get_uniform_loc(shader.id, name), v.x, v.y, v.z);
         }
     }
 }
