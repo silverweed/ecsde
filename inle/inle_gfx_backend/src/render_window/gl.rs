@@ -1,3 +1,4 @@
+use crate::backend_common::alloc::Buffer_Allocators;
 use crate::backend_common::misc::check_gl_err;
 use gl::types::*;
 use inle_common::colors::Color;
@@ -28,6 +29,8 @@ const RECT_INDICES: [GLuint; 6] = [0, 1, 2, 2, 3, 0];
 
 #[derive(Default)]
 pub struct Gl {
+    pub buffer_allocators: Buffer_Allocators,
+
     pub rect_vao: GLuint,
     pub rect_ebo: GLuint,
     pub rect_shader: GLuint,

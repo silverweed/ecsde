@@ -52,6 +52,7 @@ struct Sprite {
 }
 
 pub(super) fn add_texture_ws(
+    window: &mut Render_Window_Handle,
     batches: &mut Batches,
     material: Material,
     tex_rect: &Rect<i32>,
@@ -75,6 +76,7 @@ pub(super) fn add_texture_ws(
                 ldebug!("creating buffer for material {:?}", material);
                 Sprite_Batch {
                     vbuffer: Vertex_Buffer_Holder::with_initial_vertex_count(
+                        window,
                         6 * 48,
                         Primitive_Type::Triangles,
                         #[cfg(debug_assertions)]
@@ -82,6 +84,7 @@ pub(super) fn add_texture_ws(
                     ),
                     shadow_vbuffer: if material.cast_shadows {
                         Some(Vertex_Buffer_Holder::with_initial_vertex_count(
+                            window,
                             6 * 4 * 48,
                             Primitive_Type::Triangles,
                             #[cfg(debug_assertions)]
@@ -360,7 +363,7 @@ pub fn draw_batches(
 
             // Ensure the vbuffer has enough room to write in
             if n_vertices_without_shadows > super::vbuf_max_vertices(&vbuffer.vbuf) {
-                vbuffer.grow(n_vertices_without_shadows);
+                vbuffer.grow(window, n_vertices_without_shadows);
             }
             debug_assert!(n_vertices_without_shadows <= super::vbuf_max_vertices(&vbuffer.vbuf));
 
@@ -369,6 +372,7 @@ pub fn draw_batches(
 
                 if cast_shadows {
                     fill_vertices_with_shadows(
+                        window,
                         texture,
                         sprites,
                         vert_chunks,
@@ -416,7 +420,7 @@ pub fn draw_batches(
                 trace!("batcher::cast_shadows");
 
                 let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
-                shadow_vbuffer.update(shadow_vertices, n_shadow_vertices);
+                shadow_vbuffer.update(window, shadow_vertices, n_shadow_vertices);
 
                 render::render_vbuf_ws_with_texture(
                     window,
@@ -427,7 +431,7 @@ pub fn draw_batches(
                 );
             }
 
-            vbuffer.update(vertices, n_vertices_without_shadows);
+            vbuffer.update(window, vertices, n_vertices_without_shadows);
 
             if let Some(shader) = shader.map(|s| s as &_) {
                 render::render_vbuf_with_shader(window, &vbuffer.vbuf, shader);
@@ -472,6 +476,7 @@ fn collect_entity_shadow_data<'a>(
 }
 
 fn fill_vertices_with_shadows(
+    window: &mut Render_Window_Handle,
     texture: &Texture,
     sprites: &[Sprite],
     vert_chunks: rayon::slice::ChunksMut<'_, Vertex>,
@@ -485,7 +490,7 @@ fn fill_vertices_with_shadows(
     let n_vert_per_chunk = n_sprites_per_chunk * VERTICES_PER_SPRITE;
 
     if n_shadow_vertices > super::vbuf_max_vertices(&shadow_vbuffer.vbuf) {
-        shadow_vbuffer.grow(n_shadow_vertices);
+        shadow_vbuffer.grow(window, n_shadow_vertices);
     }
     debug_assert!(n_shadow_vertices <= super::vbuf_max_vertices(&shadow_vbuffer.vbuf));
 

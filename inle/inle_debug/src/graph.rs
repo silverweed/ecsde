@@ -202,14 +202,14 @@ impl Debug_Element for Debug_Graph_View {
             .iter()
             .filter(|Vec2f { x, y }| xr.contains(x) && yr.contains(y))
             .collect::<Vec<_>>();
-        let mut vbuf = render::start_draw_linestrip(drawn_points.len() as _);
+        let mut vbuf = render::start_draw_linestrip(window, drawn_points.len() as _);
         let mut avg = 0.0;
         for (i, &&point) in drawn_points.iter().enumerate() {
             let vpos = self.get_coords_for(point);
             let col = self.get_color_for(point);
             let vertex = render::new_vertex(vpos, col, Vec2f::default());
             avg += point.y;
-            render::add_vertex(&mut vbuf, &vertex);
+            render::add_vertex(window, &mut vbuf, &vertex);
 
             // Draw selection line
             if let Some(x) = self.selected_point {

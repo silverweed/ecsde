@@ -746,6 +746,7 @@ fn update_debug(
     let draw_lights = cvars.draw_lights.read(&engine_state.config);
     let lv_batches = &mut game_state.level_batches;
     let global_painter = &mut debug_systems.global_painter;
+    let window = &mut game_state.window;
 
     game_state
         .gameplay_system
@@ -775,7 +776,7 @@ fn update_debug(
 
             if draw_entity_prev_frame_ghost {
                 let batches = lv_batches.get_mut(&level.id).unwrap();
-                debug_draw_entities_prev_frame_ghost(batches, &mut level.world, is_paused);
+                debug_draw_entities_prev_frame_ghost(window, batches, &mut level.world, is_paused);
             }
 
             if draw_component_lists {
@@ -1265,6 +1266,7 @@ fn debug_draw_lights(
 
 #[cfg(debug_assertions)]
 fn debug_draw_entities_prev_frame_ghost(
+    window: &mut Render_Window_Handle,
     batches: &mut inle_gfx::render::batcher::Batches,
     ecs_world: &mut Ecs_World,
     is_paused: bool,
@@ -1306,7 +1308,7 @@ fn debug_draw_entities_prev_frame_ghost(
                 modulate.b,
                 200 - 10 * (debug_data.prev_positions.len() - i as usize) as u8,
             );
-            render::render_texture_ws(batches, material, &rect, color, &transform, z_index);
+            render::render_texture_ws(window, batches, material, &rect, color, &transform, z_index);
         }
     });
 }

@@ -207,7 +207,7 @@ pub fn render_particles(
         ));
     }
 
-    vbuf.update(&mut vertices, particles.transforms.len() as u32);
+    vbuf.update(window, &mut vertices, particles.transforms.len() as u32);
 
     if let Some(texture) = texture {
         render::set_uniform(shader, c_str!("tex"), texture);
@@ -259,6 +259,7 @@ impl Particle_Manager {
 
     pub fn add_particles(
         &mut self,
+        window: &mut Render_Window_Handle,
         props: &Particle_Props,
         rng: &mut Default_Rng,
     ) -> Particles_Handle {
@@ -266,6 +267,7 @@ impl Particle_Manager {
         self.active_particles.push(create_particles(props, rng));
         self.active_particles_vbufs
             .push(Vertex_Buffer_Holder::with_initial_vertex_count(
+                window,
                 props.n_particles as u32,
                 Primitive_Type::Points,
                 #[cfg(debug_assertions)]

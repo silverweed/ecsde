@@ -1,4 +1,5 @@
 use super::{Primitive_Type, Uniform_Value};
+use crate::backend_common::alloc::{Buffer_Allocators, Buffer_Handle};
 use crate::backend_common::misc::check_gl_err;
 use crate::render_window::Render_Window_Handle;
 use gl::types::*;
@@ -40,7 +41,7 @@ pub struct Vertex_Buffer {
     cur_vertices: u32,
     max_vertices: u32,
     primitive_type: Primitive_Type,
-    vbo: GLuint,
+    vbo: Buffer_Handle,
     vao: GLuint,
 }
 
@@ -49,30 +50,22 @@ impl Vertex_Buffer {
     const LOC_IN_POS: GLuint = 1;
     const LOC_IN_TEXCOORD: GLuint = 2;
 
-    fn new(primitive_type: Primitive_Type, max_vertices: u32) -> Self {
+    fn new(
+        buffer_allocators: &mut Buffer_Allocators,
+        primitive_type: Primitive_Type,
+        max_vertices: u32,
+    ) -> Self {
         let mut vao = 0;
-        let mut vbo = 0;
+        let vbo = buffer_allocators
+            .array_buffer
+            .allocate(max_vertices as usize * mem::size_of::<Vertex>());
+
         if max_vertices > 0 {
             unsafe {
                 gl::GenVertexArrays(1, &mut vao);
-                gl::GenBuffers(1, &mut vbo);
-
                 debug_assert!(vao != 0);
-                debug_assert!(vbo != 0);
 
                 gl::BindVertexArray(vao);
-
-                gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-                check_gl_err();
-
-                // NOTE: using a BufferStorage means that this buffer is unresizable.
-                gl::BufferStorage(
-                    gl::ARRAY_BUFFER,
-                    (max_vertices * mem::size_of::<Vertex>() as u32) as _,
-                    ptr::null(),
-                    gl::DYNAMIC_STORAGE_BIT,
-                );
-                check_gl_err();
 
                 gl::VertexAttribPointer(
                     Self::LOC_IN_COLOR,
@@ -127,7 +120,7 @@ impl Drop for Vertex_Buffer {
         // We should avoid RAII for these buffers, and instead use a sort of arena-allocator approach, which
         // we can then free just before dropping the game state.
         unsafe {
-            gl::DeleteBuffers(1, &mut self.vbo);
+            //gl::DeleteBuffers(1, &mut self.vbo);;
             gl::DeleteVertexArrays(1, &mut self.vao);
         }
     }
@@ -693,37 +686,47 @@ pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
 }
 
 #[inline(always)]
-pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
-    Vertex_Buffer::new(primitive, n_vertices)
+pub fn new_vbuf(
+    window: &mut Render_Window_Handle,
+    primitive: Primitive_Type,
+    n_vertices: u32,
+) -> Vertex_Buffer {
+    Vertex_Buffer::new(&mut window.gl.buffer_allocators, primitive, n_vertices)
 }
 
 #[inline(always)]
-pub fn add_vertices(vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
+pub fn add_vertices(
+    window: &mut Render_Window_Handle,
+    vbuf: &mut Vertex_Buffer,
+    vertices: &[Vertex],
+) {
     debug_assert!(vbuf.cur_vertices as usize + vertices.len() <= vbuf.max_vertices as usize);
-    unsafe {
-        gl::NamedBufferSubData(
-            vbuf.vbo,
-            (vbuf.cur_vertices * mem::size_of::<Vertex>() as u32) as _,
-            (vertices.len() * mem::size_of::<Vertex>()) as _,
-            vertices.as_ptr() as _,
-        );
-        check_gl_err();
-    }
-    debug_assert!(vbuf.cur_vertices as usize + vertices.len() < std::u32::MAX as usize);
-    vbuf.cur_vertices += vertices.len() as u32;
+    update_vbuf(window, vbuf, vertices, vbuf.cur_vertices);
 }
 
 #[inline(always)]
-pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
-    unsafe {
-        gl::NamedBufferSubData(
-            vbuf.vbo,
-            (offset as usize * mem::size_of::<Vertex>()) as _,
-            (vertices.len() * mem::size_of::<Vertex>()) as _,
-            vertices.as_ptr() as _,
-        );
-        check_gl_err();
-    }
+pub fn update_vbuf(
+    window: &mut Render_Window_Handle,
+    vbuf: &mut Vertex_Buffer,
+    vertices: &[Vertex],
+    offset: u32,
+) {
+    window.gl.buffer_allocators.array_buffer.update_buffer(
+        &vbuf.vbo,
+        (offset as usize * mem::size_of::<Vertex>()),
+        vertices.len() * mem::size_of::<Vertex>(),
+        vertices.as_ptr() as _,
+    );
+
+    let written_len = offset as usize + vertices.len();
+
+    debug_assert!(
+        written_len <= vbuf.max_vertices as usize,
+        "Written past max vertices! {}/{}",
+        written_len,
+        vbuf.max_vertices
+    );
+    vbuf.cur_vertices = vbuf.cur_vertices.max(written_len as u32);
 }
 
 #[inline(always)]

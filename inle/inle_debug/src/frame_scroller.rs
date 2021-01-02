@@ -209,7 +209,7 @@ impl Debug_Frame_Scroller {
     ) {
         trace!("frame_scroller::draw");
 
-        let mut vbuf = render::start_draw_quads((self.n_frames + self.n_seconds) as _);
+        let mut vbuf = render::start_draw_quads(window, (self.n_frames + self.n_seconds) as _);
 
         self.draw_row(window, &mut vbuf, gres, Row::Seconds, debug_log);
         self.draw_row(window, &mut vbuf, gres, Row::Frames, debug_log);
@@ -305,6 +305,7 @@ impl Debug_Frame_Scroller {
                 ..Default::default()
             };
             render::add_quad(
+                window,
                 vbuf,
                 &render::new_vertex(subdiv_rect.pos_min(), paint_props.color, v2!(0., 0.)),
                 &render::new_vertex(

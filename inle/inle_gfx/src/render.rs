@@ -75,6 +75,7 @@ pub fn render_circle_ws<P>(
 }
 
 pub fn render_texture_ws(
+    window: &mut Render_Window_Handle,
     batches: &mut batcher::Batches,
     material: Material,
     tex_rect: &Rect<i32>,
@@ -83,7 +84,9 @@ pub fn render_texture_ws(
     z_index: Z_Index,
 ) {
     trace!("render_texture_ws");
-    batcher::add_texture_ws(batches, material, tex_rect, color, transform, z_index);
+    batcher::add_texture_ws(
+        window, batches, material, tex_rect, color, transform, z_index,
+    );
 }
 
 pub fn render_text<P>(
@@ -238,61 +241,90 @@ pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {
     backend::new_image(width, height, color_type)
 }
 
-pub fn new_vbuf(primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
+pub fn new_vbuf(
+    window: &mut Render_Window_Handle,
+    primitive: Primitive_Type,
+    n_vertices: u32,
+) -> Vertex_Buffer {
     trace!("new_vbuf");
-    backend::new_vbuf(primitive, n_vertices)
+    backend::new_vbuf(window, primitive, n_vertices)
 }
 
 pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
     backend::vbuf_primitive_type(vbuf)
 }
 
-pub fn start_draw_quads(n_quads: u32) -> Vertex_Buffer_Quads {
-    Vertex_Buffer_Quads(new_vbuf(Primitive_Type::Triangles, n_quads * 6))
+pub fn start_draw_quads(window: &mut Render_Window_Handle, n_quads: u32) -> Vertex_Buffer_Quads {
+    Vertex_Buffer_Quads(new_vbuf(window, Primitive_Type::Triangles, n_quads * 6))
 }
 
-pub fn start_draw_triangles(n_triangles: u32) -> Vertex_Buffer_Triangles {
-    Vertex_Buffer_Triangles(new_vbuf(Primitive_Type::Triangles, n_triangles * 3))
+pub fn start_draw_triangles(
+    window: &mut Render_Window_Handle,
+    n_triangles: u32,
+) -> Vertex_Buffer_Triangles {
+    Vertex_Buffer_Triangles(new_vbuf(window, Primitive_Type::Triangles, n_triangles * 3))
 }
 
-pub fn start_draw_linestrip(n_vertices: u32) -> Vertex_Buffer_Linestrip {
-    Vertex_Buffer_Linestrip(new_vbuf(Primitive_Type::Line_Strip, n_vertices))
+pub fn start_draw_linestrip(
+    window: &mut Render_Window_Handle,
+    n_vertices: u32,
+) -> Vertex_Buffer_Linestrip {
+    Vertex_Buffer_Linestrip(new_vbuf(window, Primitive_Type::Line_Strip, n_vertices))
 }
 
-pub fn start_draw_lines(n_lines: u32) -> Vertex_Buffer_Lines {
-    Vertex_Buffer_Lines(new_vbuf(Primitive_Type::Lines, n_lines * 2))
+pub fn start_draw_lines(window: &mut Render_Window_Handle, n_lines: u32) -> Vertex_Buffer_Lines {
+    Vertex_Buffer_Lines(new_vbuf(window, Primitive_Type::Lines, n_lines * 2))
 }
 
-pub fn start_draw_points(n_vertices: u32) -> Vertex_Buffer_Points {
-    Vertex_Buffer_Points(new_vbuf(Primitive_Type::Points, n_vertices))
+pub fn start_draw_points(
+    window: &mut Render_Window_Handle,
+    n_vertices: u32,
+) -> Vertex_Buffer_Points {
+    Vertex_Buffer_Points(new_vbuf(window, Primitive_Type::Points, n_vertices))
 }
 
 ///////////////////////////////// UPDATING ///////////////////////////////////
 
 pub fn add_quad(
+    window: &mut Render_Window_Handle,
     vbuf: &mut Vertex_Buffer_Quads,
     v1: &Vertex,
     v2: &Vertex,
     v3: &Vertex,
     v4: &Vertex,
 ) {
-    backend::add_vertices(vbuf, &[*v1, *v2, *v3, *v3, *v4, *v1]);
+    backend::add_vertices(window, vbuf, &[*v1, *v2, *v3, *v3, *v4, *v1]);
 }
 
-pub fn add_triangle(vbuf: &mut Vertex_Buffer_Triangles, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
-    backend::add_vertices(vbuf, &[*v1, *v2, *v3]);
+pub fn add_triangle(
+    window: &mut Render_Window_Handle,
+    vbuf: &mut Vertex_Buffer_Triangles,
+    v1: &Vertex,
+    v2: &Vertex,
+    v3: &Vertex,
+) {
+    backend::add_vertices(window, vbuf, &[*v1, *v2, *v3]);
 }
 
-pub fn add_line(vbuf: &mut Vertex_Buffer_Lines, from: &Vertex, to: &Vertex) {
-    backend::add_vertices(vbuf, &[*from, *to]);
+pub fn add_line(
+    window: &mut Render_Window_Handle,
+    vbuf: &mut Vertex_Buffer_Lines,
+    from: &Vertex,
+    to: &Vertex,
+) {
+    backend::add_vertices(window, vbuf, &[*from, *to]);
 }
 
-pub fn add_vertex(vbuf: &mut Vertex_Buffer_Linestrip, v: &Vertex) {
-    backend::add_vertices(vbuf, &[*v]);
+pub fn add_vertex(
+    window: &mut Render_Window_Handle,
+    vbuf: &mut Vertex_Buffer_Linestrip,
+    v: &Vertex,
+) {
+    backend::add_vertices(window, vbuf, &[*v]);
 }
 
-pub fn add_point(vbuf: &mut Vertex_Buffer_Points, v: &Vertex) {
-    backend::add_vertices(vbuf, &[*v]);
+pub fn add_point(window: &mut Render_Window_Handle, vbuf: &mut Vertex_Buffer_Points, v: &Vertex) {
+    backend::add_vertices(window, vbuf, &[*v]);
 }
 
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
@@ -307,8 +339,13 @@ pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
     backend::swap_vbuf(a, b)
 }
 
-pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
-    backend::update_vbuf(vbuf, vertices, offset);
+pub fn update_vbuf(
+    window: &mut Render_Window_Handle,
+    vbuf: &mut Vertex_Buffer,
+    vertices: &[Vertex],
+    offset: u32,
+) {
+    backend::update_vbuf(window, vbuf, vertices, offset);
 }
 
 pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {

@@ -47,7 +47,7 @@ pub fn update(args: Render_System_Update_Args) {
         ecs_world,
         frame_alloc,
         cfg,
-        window: _,
+        window,
         camera: _,
         gres,
         ..
@@ -95,6 +95,7 @@ pub fn update(args: Render_System_Update_Args) {
                             (*z_index - min_z) as f32 / (max_z - min_z) as f32,
                         );
                         render::render_texture_ws(
+                            window,
                             batches,
                             mat,
                             src_rect,
@@ -118,6 +119,7 @@ pub fn update(args: Render_System_Update_Args) {
             }
 
             render::render_texture_ws(
+                window,
                 batches,
                 material,
                 src_rect,
@@ -176,6 +178,7 @@ pub fn update(args: Render_System_Update_Args) {
                             (*z_index - min_z) as f32 / (max_z - min_z) as f32,
                         );
                         render::render_texture_ws(
+                            window,
                             batches,
                             mat,
                             src_rect,
@@ -198,7 +201,9 @@ pub fn update(args: Render_System_Update_Args) {
                 }
             }
 
-            render::render_texture_ws(batches, material, src_rect, *modulate, &transform, *z_index);
+            render::render_texture_ws(
+                window, batches, material, src_rect, *modulate, &transform, *z_index,
+            );
         }
     }
 }

@@ -1,5 +1,6 @@
 use crate::render::{self, Vertex};
 use crate::render::{Primitive_Type, Vertex_Buffer};
+use crate::render_window::Render_Window_Handle;
 use inle_common::colors;
 
 // @Cutnpaste from batcher.rs
@@ -15,18 +16,24 @@ pub struct Vertex_Buffer_Holder {
 
 impl Vertex_Buffer_Holder {
     pub fn with_initial_vertex_count(
+        window: &mut Render_Window_Handle,
         initial_cap: u32,
         primitive: Primitive_Type,
         #[cfg(debug_assertions)] id: String,
     ) -> Self {
         Self {
-            vbuf: render::new_vbuf(primitive, initial_cap),
+            vbuf: render::new_vbuf(window, primitive, initial_cap),
             #[cfg(debug_assertions)]
             id,
         }
     }
 
-    pub fn update(&mut self, vertices: &mut [Vertex], n_vertices: u32) {
+    pub fn update(
+        &mut self,
+        window: &mut Render_Window_Handle,
+        vertices: &mut [Vertex],
+        n_vertices: u32,
+    ) {
         trace!("vbuf_update");
 
         debug_assert!(vertices.len() <= std::u32::MAX as usize);
@@ -47,11 +54,11 @@ impl Vertex_Buffer_Holder {
             *vertex = null_vertex();
         }
 
-        render::update_vbuf(&mut self.vbuf, vertices, 0);
+        render::update_vbuf(window, &mut self.vbuf, vertices, 0);
         render::set_vbuf_cur_vertices(&mut self.vbuf, vertices.len() as u32);
     }
 
-    pub fn grow(&mut self, vertices_to_hold_at_least: u32) {
+    pub fn grow(&mut self, window: &mut Render_Window_Handle, vertices_to_hold_at_least: u32) {
         let new_cap = vertices_to_hold_at_least.next_power_of_two();
         ldebug!(
             "Growing Vertex_Buffer_Holder {} to hold {} vertices ({} requested).",
@@ -60,7 +67,8 @@ impl Vertex_Buffer_Holder {
             vertices_to_hold_at_least
         );
 
-        let mut new_vbuf = render::new_vbuf(render::vbuf_primitive_type(&self.vbuf), new_cap);
+        let mut new_vbuf =
+            render::new_vbuf(window, render::vbuf_primitive_type(&self.vbuf), new_cap);
         let _res = render::swap_vbuf(&mut new_vbuf, &mut self.vbuf);
         #[cfg(debug_assertions)]
         {
