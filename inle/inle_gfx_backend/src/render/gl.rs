@@ -14,6 +14,8 @@ use std::marker::PhantomData;
 use std::sync::Once;
 use std::{mem, ptr, str};
 
+mod alloc;
+
 fn max_texture_units() -> usize {
     static mut MAX_TEXTURE_UNITS: usize = 0;
     static INIT: Once = Once::new();
@@ -31,6 +33,10 @@ fn max_texture_units() -> usize {
     }
 }
 
+/// A Vertex_Buffer is an unresizable vertex buffer that accepts vertices in this format:
+/// (location = 0) vec4 color;
+/// (location = 1) vec2 pos;
+/// (location = 2) vec2 tex_coords;
 pub struct Vertex_Buffer {
     cur_vertices: u32,
     max_vertices: u32,
@@ -362,7 +368,7 @@ impl Uniform_Value for &Texture<'_> {
             Entry::Occupied(mut v) => {
                 v.insert(self.id);
             }
-            Entry::Vacant(mut v) => {
+            Entry::Vacant(v) => {
                 if n_tex == max_texture_units() {
                     lerr!("Cannot set uniform {:?}: texture units are full.", name);
                 } else {
