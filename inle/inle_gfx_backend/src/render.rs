@@ -42,10 +42,21 @@ pub enum Primitive_Type {
     Triangle_Fan,
 }
 
+pub trait Uniform_Value: Copy {
+    fn apply_to(self, shader: &mut Shader, name: &str);
+}
+
 pub use backend::geom_shaders_are_available;
 pub use backend::new_image;
 pub use backend::new_image_with_data;
+pub use backend::new_shader;
 pub use backend::new_texture_from_image;
 pub use backend::set_image_pixel;
 pub use backend::set_texture_repeated;
 pub use backend::shaders_are_available;
+
+pub(crate) use backend::new_shader_internal;
+
+pub fn set_uniform<T: Uniform_Value>(shader: &mut Shader, name: &str, val: T) {
+    val.apply_to(shader, name);
+}

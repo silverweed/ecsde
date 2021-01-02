@@ -29,15 +29,10 @@ impl<'l> loaders::Resource_Loader<'l, Shader<'l>> for Shader_Loader {
 
     fn load(&'l self, args: &Self::Args) -> Result<Shader<'l>, String> {
         let (vertex, fragment, geometry) = args;
-        Shader::from_file(
-            Some(&vertex),
-            geometry.as_ref().map(|s| s.as_str()),
-            Some(&fragment),
-        )
-        .ok_or_else(|| {
+        super::shader::load_shader_from_file(&vertex, &fragment).map_err(|err| {
             format!(
-                concat!("[ WARNING ] Failed to load Shader from {} / {} / {:?}"),
-                vertex, fragment, geometry
+                concat!("[ WARNING ] Failed to load Shader from {} / {} / {:?}: {}"),
+                vertex, fragment, geometry, err
             )
         })
     }

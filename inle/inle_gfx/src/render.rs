@@ -8,7 +8,7 @@ use inle_math::shapes::Circle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
 
-pub use inle_gfx_backend::render::{Primitive_Type, Render_Extra_Params};
+pub use inle_gfx_backend::render::{Primitive_Type, Render_Extra_Params, Uniform_Value};
 
 pub mod batcher;
 
@@ -312,20 +312,8 @@ pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[
     backend::update_texture_pixels(texture, rect, pixels);
 }
 
-pub fn set_uniform_float(shader: &mut Shader, name: &str, val: f32) {
-    backend::set_uniform_float(shader, name, val);
-}
-
-pub fn set_uniform_vec2(shader: &mut Shader, name: &str, val: Vec2f) {
-    backend::set_uniform_vec2(shader, name, val);
-}
-
-pub fn set_uniform_color(shader: &mut Shader, name: &str, val: Color) {
-    backend::set_uniform_color(shader, name, val);
-}
-
-pub fn set_uniform_texture(shader: &mut Shader, name: &str, val: &Texture) {
-    backend::set_uniform_texture(shader, name, val);
+pub fn set_uniform<T: Uniform_Value>(shader: &mut Shader, name: &str, val: T) {
+    inle_gfx_backend::render::set_uniform(shader, name, val);
 }
 
 pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {

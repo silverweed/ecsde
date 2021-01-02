@@ -62,7 +62,8 @@ pub fn create_jelly(
         .with_normals(gres, env, "jelly_n.png")
         .with_cast_shadows(true)
         .with_shininess(10.0)
-        .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS)
+        //.with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS)
+        .with_shader(shader_cache, env, SHD_SPRITE_FLAT)
         .with_n_frames(N_ANIM_FRAMES);
     world.add_component(entity, renderable);
 
@@ -446,7 +447,8 @@ pub fn create_wall(
         wall,
         C_Renderable::new_with_diffuse(gres, env, "wall.png")
             .with_normals(gres, env, "wall_n.png")
-            .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS),
+            //.with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS),
+            .with_shader(shader_cache, env, SHD_SPRITE_FLAT),
     );
     renderable.rect.width = wall_size.x as i32;
     renderable.rect.height = wall_size.y as i32;

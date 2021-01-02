@@ -83,16 +83,32 @@ impl Gl {
     }
 }
 
+macro_rules! create_shader_from {
+    ($vert: expr, $frag: expr) => {{
+        const VERT_SHADER_SRC: &str =
+            include_str!(concat!("./gl/builtin_shaders/", $vert, ".vert"));
+        const FRAG_SHADER_SRC: &str =
+            include_str!(concat!("./gl/builtin_shaders/", $frag, ".frag"));
+
+        crate::render::new_shader_internal(
+            VERT_SHADER_SRC.as_bytes(),
+            FRAG_SHADER_SRC.as_bytes(),
+            concat!($vert, "+", $frag),
+        )
+    }};
+}
+
 fn init_gl() -> Gl {
     let mut gl = Gl::default();
 
     fill_rect_buffers(&mut gl);
-    init_rect_shader(&mut gl);
-    init_line_shader(&mut gl);
-    init_vbuf_shader(&mut gl);
-    init_vbuf_texture_shader(&mut gl);
     fill_circle_buffers(&mut gl);
-    init_circle_shader(&mut gl);
+
+    gl.rect_shader = create_shader_from!("rect", "basic_color");
+    gl.line_shader = create_shader_from!("line", "vbuf");
+    gl.vbuf_shader = create_shader_from!("vbuf", "vbuf");
+    gl.vbuf_texture_shader = create_shader_from!("vbuf", "vbuf_texture");
+    gl.circle_shader = create_shader_from!("circle", "basic_color");
 
     unsafe {
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
@@ -167,123 +183,6 @@ fn fill_circle_buffers(gl: &mut Gl) {
 
     gl.circle_vao = vao;
     gl.circle_vbo = vbo;
-}
-
-const GL_TRUE: GLint = gl::TRUE as _;
-const GL_FALSE: GLint = gl::FALSE as _;
-
-macro_rules! create_shader_from {
-    ($vert: expr, $frag: expr) => {{
-        const VERT_SHADER_SRC: &str =
-            include_str!(concat!("./gl/builtin_shaders/", $vert, ".vert"));
-        const FRAG_SHADER_SRC: &str =
-            include_str!(concat!("./gl/builtin_shaders/", $frag, ".frag"));
-
-        create_shader(VERT_SHADER_SRC, FRAG_SHADER_SRC, concat!($vert, "+", $frag))
-    }};
-}
-
-fn init_rect_shader(gl: &mut Gl) {
-    gl.rect_shader = create_shader_from!("rect", "basic_color");
-}
-
-fn init_line_shader(gl: &mut Gl) {
-    gl.line_shader = create_shader_from!("line", "vbuf");
-}
-
-fn init_vbuf_shader(gl: &mut Gl) {
-    gl.vbuf_shader = create_shader_from!("vbuf", "vbuf");
-}
-
-fn init_vbuf_texture_shader(gl: &mut Gl) {
-    gl.vbuf_texture_shader = create_shader_from!("vbuf", "vbuf_texture");
-}
-
-fn init_circle_shader(gl: &mut Gl) {
-    gl.circle_shader = create_shader_from!("circle", "basic_color");
-}
-
-fn create_shader(vertex_src: &str, fragment_src: &str, shader_src: &str) -> GLuint {
-    unsafe {
-        let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
-        let c_str_vert = CString::new(vertex_src.as_bytes()).unwrap();
-
-        gl::ShaderSource(vertex_shader, 1, &c_str_vert.as_ptr(), ptr::null());
-        gl::CompileShader(vertex_shader);
-
-        const INFO_LOG_CAP: GLint = 512;
-        let mut info_log = Vec::with_capacity(INFO_LOG_CAP as usize);
-        info_log.set_len(INFO_LOG_CAP as usize - 1); // subtract 1 to skip the trailing null character
-
-        let mut success = GL_FALSE;
-        gl::GetShaderiv(vertex_shader, gl::COMPILE_STATUS, &mut success);
-        let mut info_len = 0;
-        if success != GL_TRUE {
-            gl::GetShaderInfoLog(
-                vertex_shader,
-                INFO_LOG_CAP,
-                &mut info_len,
-                info_log.as_mut_ptr() as *mut GLchar,
-            );
-            panic!(
-                "Vertex shader `{}` failed to compile:\n----------\n{}\n-----------",
-                shader_src,
-                str::from_utf8(&info_log[..info_len as usize]).unwrap()
-            );
-        }
-
-        let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
-        let c_str_frag = CString::new(fragment_src.as_bytes()).unwrap();
-
-        gl::ShaderSource(fragment_shader, 1, &c_str_frag.as_ptr(), ptr::null());
-        gl::CompileShader(fragment_shader);
-
-        gl::GetShaderiv(fragment_shader, gl::COMPILE_STATUS, &mut success);
-        if success != GL_TRUE {
-            gl::GetShaderInfoLog(
-                fragment_shader,
-                INFO_LOG_CAP,
-                &mut info_len,
-                info_log.as_mut_ptr() as *mut GLchar,
-            );
-            panic!(
-                "Fragment shader `{}` failed to compile:\n----------\n{}\n-----------",
-                shader_src,
-                str::from_utf8(&info_log[..info_len as usize]).unwrap()
-            );
-        }
-
-        let shader_program = gl::CreateProgram();
-        gl::AttachShader(shader_program, vertex_shader);
-        gl::AttachShader(shader_program, fragment_shader);
-        gl::LinkProgram(shader_program);
-
-        gl::GetProgramiv(shader_program, gl::LINK_STATUS, &mut success);
-        if success != GL_TRUE {
-            gl::GetProgramInfoLog(
-                shader_program,
-                INFO_LOG_CAP,
-                &mut info_len,
-                info_log.as_mut_ptr() as *mut GLchar,
-            );
-            panic!(
-                "Shader `{}` failed to link:\n----------\n{}\n-----------",
-                shader_src,
-                str::from_utf8(&info_log[..info_len as usize]).unwrap()
-            );
-        }
-        gl::DeleteShader(vertex_shader);
-        gl::DeleteShader(fragment_shader);
-
-        debug_assert!(shader_program != 0);
-        ldebug!(
-            "Shader `{}` ({}) linked successfully.",
-            shader_src,
-            shader_program
-        );
-
-        shader_program
-    }
 }
 
 pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {

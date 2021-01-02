@@ -1,4 +1,4 @@
-#extension GL_EXT_gpu_shader4 : enable // required for bitshift operator
+#version 330 core
 
 struct Ambient_Light {
     vec3 color;

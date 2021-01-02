@@ -1,4 +1,4 @@
-use super::{Primitive_Type, Render_Extra_Params};
+use super::{Primitive_Type, Render_Extra_Params, Uniform_Value};
 use crate::render_window::Render_Window_Handle;
 use gl::types::*;
 use inle_common::colors::{self, Color};
@@ -8,7 +8,8 @@ use inle_math::rect::Rect;
 use inle_math::shapes;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use std::ffi::{c_void, CStr};
+use std::collections::HashMap;
+use std::ffi::{c_void, CStr, CString};
 use std::marker::PhantomData;
 use std::{mem, ptr, str};
 
@@ -211,7 +212,7 @@ impl Image {
             8 => gl::UNSIGNED_BYTE,
             16 => gl::UNSIGNED_SHORT,
             32 => gl::UNSIGNED_INT,
-            _ => panic!("Unsupported bit depth {}", self.bit_depth),
+            _ => fatal!("Unsupported bit depth {}", self.bit_depth),
         }
     }
 
@@ -223,9 +224,10 @@ impl Image {
             (Color_Type::RGB, 16) => gl::RGB16,
             (Color_Type::RGBA, 8) => gl::RGBA8,
             (Color_Type::RGBA, 16) => gl::RGBA16,
-            _ => panic!(
+            _ => fatal!(
                 "combination {:?} / {}bits is not implemented",
-                self.color_type, self.bit_depth
+                self.color_type,
+                self.bit_depth
             ),
         }
     }
@@ -236,7 +238,7 @@ impl Image {
             gl::RGBA8 | gl::RGBA16 => gl::RGBA,
             gl::R8 => gl::RED,
             gl::RG8 => gl::RG,
-            x => panic!("color type {} is unsupported", x),
+            x => fatal!("color type {} is unsupported", x),
         }
     }
 }
@@ -254,7 +256,59 @@ pub struct Texture<'a> {
 }
 
 pub struct Shader<'texture> {
+    id: GLuint,
+
+    // [uniform location => texture id]
+    textures: HashMap<GLint, GLuint>,
+
     _pd: PhantomData<&'texture ()>,
+}
+
+#[inline(always)]
+fn str_to_cstring(s: &str) -> CString {
+    CString::new(s).unwrap()
+}
+
+impl Uniform_Value for f32 {
+    fn apply_to(self, shader: &mut Shader, name: &str) {
+        unsafe {
+            gl::Uniform1f(get_uniform_loc(shader.id, &str_to_cstring(name)), self);
+        }
+    }
+}
+
+impl Uniform_Value for Vec2f {
+    fn apply_to(self, shader: &mut Shader, name: &str) {
+        unsafe {
+            gl::Uniform2f(
+                get_uniform_loc(shader.id, &str_to_cstring(name)),
+                self.x,
+                self.y,
+            );
+        }
+    }
+}
+
+impl Uniform_Value for Color {
+    fn apply_to(self, shader: &mut Shader, name: &str) {
+        let v: Glsl_Vec4 = self.into();
+        unsafe {
+            gl::Uniform4f(
+                get_uniform_loc(shader.id, &str_to_cstring(name)),
+                v.x,
+                v.y,
+                v.z,
+                v.w,
+            );
+        }
+    }
+}
+
+impl Uniform_Value for &Texture<'_> {
+    fn apply_to(self, shader: &mut Shader, name: &str) {
+        let loc = get_uniform_loc(shader.id, &str_to_cstring(name));
+        shader.textures.insert(loc, self.id);
+    }
 }
 
 pub struct Font<'a> {
@@ -274,11 +328,113 @@ impl Font<'_> {
 
 impl Shader<'_> {
     pub fn from_memory(_: Option<&str>, _: Option<&str>, _: Option<&str>) -> Option<Self> {
-        Some(Self { _pd: PhantomData })
+        Some(Self {
+            id: 0,
+            textures: HashMap::default(),
+            _pd: PhantomData,
+        })
     }
 
     pub fn from_file(_: Option<&str>, _: Option<&str>, _: Option<&str>) -> Option<Self> {
-        Some(Self { _pd: PhantomData })
+        Some(Self {
+            id: 0,
+            textures: HashMap::default(),
+            _pd: PhantomData,
+        })
+    }
+}
+
+pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) -> GLuint {
+    unsafe {
+        let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
+        check_gl_err();
+
+        let c_str_vert = CString::new(vert_src)
+            .unwrap_or_else(|_| fatal!("Vertex source did not contain a valid string."));
+
+        gl::ShaderSource(vertex_shader, 1, &c_str_vert.as_ptr(), ptr::null());
+        gl::CompileShader(vertex_shader);
+
+        const INFO_LOG_CAP: GLint = 512;
+        let mut info_log = Vec::with_capacity(INFO_LOG_CAP as usize);
+        info_log.set_len(INFO_LOG_CAP as usize - 1); // subtract 1 to skip the trailing null character
+
+        let mut success = gl::FALSE as GLint;
+        gl::GetShaderiv(vertex_shader, gl::COMPILE_STATUS, &mut success);
+        let mut info_len = 0;
+        if success != gl::TRUE.into() {
+            gl::GetShaderInfoLog(
+                vertex_shader,
+                INFO_LOG_CAP,
+                &mut info_len,
+                info_log.as_mut_ptr() as *mut GLchar,
+            );
+            fatal!(
+                "Vertex shader `{}` failed to compile:\n----------\n{}\n-----------",
+                shader_name,
+                str::from_utf8(&info_log[..info_len as usize]).unwrap()
+            );
+        }
+
+        let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
+        let c_str_frag = CString::new(frag_src).unwrap();
+
+        gl::ShaderSource(fragment_shader, 1, &c_str_frag.as_ptr(), ptr::null());
+        gl::CompileShader(fragment_shader);
+
+        gl::GetShaderiv(fragment_shader, gl::COMPILE_STATUS, &mut success);
+        if success != gl::TRUE.into() {
+            gl::GetShaderInfoLog(
+                fragment_shader,
+                INFO_LOG_CAP,
+                &mut info_len,
+                info_log.as_mut_ptr() as *mut GLchar,
+            );
+            fatal!(
+                "Fragment shader `{}` failed to compile:\n----------\n{}\n-----------",
+                shader_name,
+                str::from_utf8(&info_log[..info_len as usize]).unwrap()
+            );
+        }
+
+        let shader_program = gl::CreateProgram();
+        gl::AttachShader(shader_program, vertex_shader);
+        gl::AttachShader(shader_program, fragment_shader);
+        gl::LinkProgram(shader_program);
+
+        gl::GetProgramiv(shader_program, gl::LINK_STATUS, &mut success);
+        if success != gl::TRUE.into() {
+            gl::GetProgramInfoLog(
+                shader_program,
+                INFO_LOG_CAP,
+                &mut info_len,
+                info_log.as_mut_ptr() as *mut GLchar,
+            );
+            fatal!(
+                "Shader `{}` failed to link:\n----------\n{}\n-----------",
+                shader_name,
+                str::from_utf8(&info_log[..info_len as usize]).unwrap()
+            );
+        }
+        gl::DeleteShader(vertex_shader);
+        gl::DeleteShader(fragment_shader);
+
+        debug_assert!(shader_program != 0);
+        ldebug!(
+            "Shader `{}` ({}) linked successfully.",
+            shader_name,
+            shader_program
+        );
+
+        shader_program
+    }
+}
+
+pub fn new_shader<'a>(vert_src: &[u8], frag_src: &[u8], shader_name: Option<&str>) -> Shader<'a> {
+    Shader {
+        id: new_shader_internal(vert_src, frag_src, shader_name.unwrap_or("(unnamed)")),
+        textures: HashMap::default(),
+        _pd: PhantomData,
     }
 }
 
@@ -799,14 +955,6 @@ pub fn geom_shaders_are_available() -> bool {
     false
 }
 
-pub fn set_uniform_float(_shader: &mut Shader, _name: &str, _val: f32) {}
-
-pub fn set_uniform_vec2(_shader: &mut Shader, _name: &str, _val: Vec2f) {}
-
-pub fn set_uniform_color(_shader: &mut Shader, _name: &str, _val: Color) {}
-
-pub fn set_uniform_texture(_shader: &mut Shader, _name: &str, _val: &Texture) {}
-
 pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
     unsafe {
         gl::BindTexture(gl::TEXTURE_2D, texture.id);
@@ -1090,10 +1238,10 @@ fn check_gl_err() {
         let err = gl::GetError();
         match err {
             gl::NO_ERROR => {}
-            gl::INVALID_ENUM => panic!("GL_INVALID_ENUM"),
-            gl::INVALID_OPERATION => panic!("GL_INVALID_OPERATION"),
-            gl::INVALID_VALUE => panic!("GL_INVALID_VALUE"),
-            _ => panic!("Other GL error: {}", err),
+            gl::INVALID_ENUM => fatal!("GL_INVALID_ENUM"),
+            gl::INVALID_OPERATION => fatal!("GL_INVALID_OPERATION"),
+            gl::INVALID_VALUE => fatal!("GL_INVALID_VALUE"),
+            _ => fatal!("Other GL error: {}", err),
         }
     }
 }

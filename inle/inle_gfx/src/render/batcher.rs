@@ -141,70 +141,70 @@ fn set_shader_uniforms(
     lights: &Lights,
     texture: &Texture,
 ) {
-    use super::{set_uniform_color, set_uniform_float, set_uniform_texture, set_uniform_vec2};
+    use super::set_uniform;
 
     if material.normals.is_some() {
         let normals = gres.get_texture(material.normals);
-        set_uniform_texture(shader, "normals", normals);
+        set_uniform(shader, "normals", normals);
     }
-    set_uniform_color(shader, "ambient_light.color", lights.ambient_light.color);
-    set_uniform_float(
+    set_uniform(shader, "ambient_light.color", lights.ambient_light.color);
+    set_uniform(
         shader,
         "ambient_light.intensity",
         lights.ambient_light.intensity,
     );
-    set_uniform_texture(shader, "texture", texture);
+    set_uniform(shader, "texture", texture);
     let (tex_w, tex_h) = super::get_texture_size(texture);
-    set_uniform_vec2(shader, "texture_size", v2!(tex_w as f32, tex_h as f32));
+    set_uniform(shader, "texture_size", v2!(tex_w as f32, tex_h as f32));
     for (i, pl) in lights.point_lights.iter().enumerate() {
-        set_uniform_vec2(
+        set_uniform(
             shader,
             &format!("point_lights[{}].position", i),
             pl.position,
         );
-        set_uniform_color(shader, &format!("point_lights[{}].color", i), pl.color);
-        set_uniform_float(shader, &format!("point_lights[{}].radius", i), pl.radius);
-        set_uniform_float(
+        set_uniform(shader, &format!("point_lights[{}].color", i), pl.color);
+        set_uniform(shader, &format!("point_lights[{}].radius", i), pl.radius);
+        set_uniform(
             shader,
             &format!("point_lights[{}].attenuation", i),
             pl.attenuation,
         );
-        set_uniform_float(
+        set_uniform(
             shader,
             &format!("point_lights[{}].intensity", i),
             pl.intensity,
         );
     }
     for (i, rl) in lights.rect_lights.iter().enumerate() {
-        set_uniform_vec2(
+        set_uniform(
             shader,
             &format!("rect_lights[{}].pos_min", i),
             rl.rect.pos_min(),
         );
-        set_uniform_vec2(
+        set_uniform(
             shader,
             &format!("rect_lights[{}].pos_max", i),
             rl.rect.pos_max(),
         );
-        set_uniform_color(shader, &format!("rect_lights[{}].color", i), rl.color);
-        set_uniform_float(shader, &format!("rect_lights[{}].radius", i), rl.radius);
-        set_uniform_float(
+        set_uniform(shader, &format!("rect_lights[{}].color", i), rl.color);
+        set_uniform(shader, &format!("rect_lights[{}].radius", i), rl.radius);
+        set_uniform(
             shader,
             &format!("rect_lights[{}].attenuation", i),
             rl.attenuation,
         );
-        set_uniform_float(
+        set_uniform(
             shader,
             &format!("rect_lights[{}].intensity", i),
             rl.intensity,
         );
     }
-    set_uniform_float(
+    set_uniform(
         shader,
         "shininess",
         Material::decode_shininess(material.shininess),
     );
-    set_uniform_color(shader, "specular_color", material.specular_color);
+    set_uniform(shader, "specular_color", material.specular_color);
 }
 
 #[derive(Copy, Clone)]

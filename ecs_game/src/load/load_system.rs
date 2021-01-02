@@ -202,8 +202,8 @@ fn init_demo_entities(
     use inle_math::angle;
     use inle_resources::gfx::shader_path;
 
-    let sprite_normal_shader =
-        shader_cache.load_shader(&shader_path(&env, SHD_SPRITE_WITH_NORMALS));
+    //let sprite_normal_shader =
+    //shader_cache.load_shader(&shader_path(&env, SHD_SPRITE_WITH_NORMALS));
     let sprite_flat_shader = shader_cache.load_shader(&shader_path(&env, SHD_SPRITE_FLAT));
     let terrain_shader = shader_cache.load_shader(&shader_path(&env, SHD_TERRAIN));
     let sprite_unlit_shader = shader_cache.load_shader(&shader_path(&env, SHD_SPRITE_UNLIT));

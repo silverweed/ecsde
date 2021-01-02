@@ -1,3 +1,5 @@
+#version 330 core
+
 struct Ambient_Light {
     vec3 color;
     float intensity;
@@ -28,7 +30,11 @@ uniform Ambient_Light ambient_light;
 uniform Point_Light point_lights[MAX_POINT_LIGHTS];
 uniform Rect_Light rect_lights[MAX_RECT_LIGHTS];
 
-varying vec2 world_pos;
+in vec4 color;
+in vec2 world_pos;
+in vec2 tex_coord;
+
+out vec4 frag_color;
 
 vec2 point_to_rect_vector(vec2 point_pos, vec2 rect_pos_min, vec2 rect_pos_max) {
     vec2 pos_relative_to_rect = point_pos - rect_pos_min;
@@ -38,12 +44,12 @@ vec2 point_to_rect_vector(vec2 point_pos, vec2 rect_pos_min, vec2 rect_pos_max) 
 
     float rect_half_height = 0.5 * (rect_pos_max.y - rect_pos_min.y);
     float dist_y = max(0.0, abs(pos_relative_to_rect.y - rect_half_height) - rect_half_height);
-    
+
     return vec2(dist_x * sign(pos_relative_to_rect.x - rect_half_width), dist_y * sign(pos_relative_to_rect.y - rect_half_height));
 }
 
 void main() {
-    vec4 pixel = texture2D(texture, gl_TexCoord[0].xy);
+    vec4 pixel = texture2D(texture, tex_coord);
 
     vec3 color = vec3(1.0);
     color *= vec3(ambient_light.color) * ambient_light.intensity;
@@ -72,5 +78,5 @@ void main() {
         color += vec3(diffuse) * atten;
     }
 
-    gl_FragColor = vec4(color.rgb * pixel.rgb, pixel.a);
+    frag_color = vec4(color.rgb * pixel.rgb, pixel.a);
 }

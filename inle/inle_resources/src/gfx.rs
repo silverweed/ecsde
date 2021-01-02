@@ -1,6 +1,7 @@
 mod cache;
 mod font;
 mod image;
+mod shader;
 
 use super::asset_path;
 use super::loaders;
