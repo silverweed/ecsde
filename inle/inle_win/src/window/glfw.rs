@@ -42,7 +42,7 @@ pub fn create_window(
     title: &str,
 ) -> Window_Handle {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-    glfw.window_hint(glfw::WindowHint::ContextVersion(4, 5));
+    glfw.window_hint(glfw::WindowHint::ContextVersion(4, 4));
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(
         glfw::OpenGlProfileHint::Core,
     ));
