@@ -253,6 +253,8 @@ pub unsafe extern "C" fn game_shutdown(
             .unwrap_or_else(|err| lwarn!("Failed to save console history: {}", err));
     }
 
+    inle_gfx::render_window::shutdown(&mut (*game_state).window);
+
     std::ptr::drop_in_place(game_state);
     dealloc(game_state as *mut u8, Layout::new::<Game_State>());
 

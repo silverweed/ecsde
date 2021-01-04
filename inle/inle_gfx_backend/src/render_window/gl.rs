@@ -196,6 +196,11 @@ pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
     }
 }
 
+#[inline(always)]
+pub fn shutdown(window: &mut Render_Window_Handle) {
+    window.gl.buffer_allocators.destroy();
+}
+
 pub fn recreate_render_window(window: &mut Render_Window_Handle) {
     gl::load_with(|symbol| inle_win::window::get_gl_handle(&mut window.window, symbol));
 }
@@ -252,10 +257,15 @@ pub fn raw_project_world_pos(
 }
 
 #[inline(always)]
-pub fn start_new_frame(_window: &mut Render_Window_Handle) {
+pub fn start_new_frame(window: &mut Render_Window_Handle) {
+    let (perm, temp) = window.gl.buffer_allocators.cur_allocated_buffer_handles();
+    ldebug!("cur allocated vbufs: {} + {} = {}", perm, temp, perm + temp);
+
+    window.gl.buffer_allocators.temp_array_buffer.dealloc_all();
+
     #[cfg(debug_assertions)]
     {
-        _window.gl.n_draw_calls_this_frame = 0;
+        window.gl.n_draw_calls_this_frame = 0;
     }
 }
 

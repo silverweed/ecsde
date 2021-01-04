@@ -209,7 +209,7 @@ impl Debug_Frame_Scroller {
     ) {
         trace!("frame_scroller::draw");
 
-        let mut vbuf = render::start_draw_quads(window, (self.n_frames + self.n_seconds) as _);
+        let mut vbuf = render::start_draw_quads_temp(window, (self.n_frames + self.n_seconds) as _);
 
         self.draw_row(window, &mut vbuf, gres, Row::Seconds, debug_log);
         self.draw_row(window, &mut vbuf, gres, Row::Frames, debug_log);

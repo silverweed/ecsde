@@ -1,5 +1,5 @@
 use super::{Primitive_Type, Uniform_Value};
-use crate::backend_common::alloc::{Buffer_Allocators, Buffer_Handle};
+use crate::backend_common::alloc::{Buffer_Allocator, Buffer_Handle};
 use crate::backend_common::misc::check_gl_err;
 use crate::render_window::Render_Window_Handle;
 use gl::types::*;
@@ -41,8 +41,7 @@ pub struct Vertex_Buffer {
     cur_vertices: u32,
     max_vertices: u32,
     primitive_type: Primitive_Type,
-    vbo: Buffer_Handle,
-    vao: GLuint,
+    buf: Buffer_Handle,
 }
 
 impl Vertex_Buffer {
@@ -51,22 +50,14 @@ impl Vertex_Buffer {
     const LOC_IN_TEXCOORD: GLuint = 2;
 
     fn new(
-        buffer_allocators: &mut Buffer_Allocators,
+        buffer_allocator: &mut Buffer_Allocator,
         primitive_type: Primitive_Type,
         max_vertices: u32,
     ) -> Self {
-        let mut vao = 0;
-        let vbo = buffer_allocators
-            .array_buffer
-            .allocate(max_vertices as usize * mem::size_of::<Vertex>());
+        let buf = buffer_allocator.allocate(max_vertices as usize * mem::size_of::<Vertex>());
 
         if max_vertices > 0 {
             unsafe {
-                gl::GenVertexArrays(1, &mut vao);
-                debug_assert!(vao != 0);
-
-                gl::BindVertexArray(vao);
-
                 gl::VertexAttribPointer(
                     Self::LOC_IN_COLOR,
                     4,
@@ -105,23 +96,10 @@ impl Vertex_Buffer {
         }
 
         Self {
-            vao,
-            vbo,
+            buf,
             cur_vertices: 0,
             max_vertices,
             primitive_type,
-        }
-    }
-}
-
-impl Drop for Vertex_Buffer {
-    fn drop(&mut self) {
-        // @FIXME: we are crashing here on shutdown because the window is destroyed before this happens!
-        // We should avoid RAII for these buffers, and instead use a sort of arena-allocator approach, which
-        // we can then free just before dropping the game state.
-        unsafe {
-            //gl::DeleteBuffers(1, &mut self.vbo);;
-            gl::DeleteVertexArrays(1, &mut self.vao);
         }
     }
 }
@@ -691,7 +669,24 @@ pub fn new_vbuf(
     primitive: Primitive_Type,
     n_vertices: u32,
 ) -> Vertex_Buffer {
-    Vertex_Buffer::new(&mut window.gl.buffer_allocators, primitive, n_vertices)
+    Vertex_Buffer::new(
+        &mut window.gl.buffer_allocators.array_buffer,
+        primitive,
+        n_vertices,
+    )
+}
+
+#[inline(always)]
+pub fn new_vbuf_temp(
+    window: &mut Render_Window_Handle,
+    primitive: Primitive_Type,
+    n_vertices: u32,
+) -> Vertex_Buffer {
+    Vertex_Buffer::new(
+        &mut window.gl.buffer_allocators.temp_array_buffer,
+        primitive,
+        n_vertices,
+    )
 }
 
 #[inline(always)]
@@ -712,7 +707,7 @@ pub fn update_vbuf(
     offset: u32,
 ) {
     window.gl.buffer_allocators.array_buffer.update_buffer(
-        &vbuf.vbo,
+        &vbuf.buf,
         (offset as usize * mem::size_of::<Vertex>()),
         vertices.len() * mem::size_of::<Vertex>(),
         vertices.as_ptr() as _,
@@ -764,7 +759,7 @@ pub fn render_vbuf(
     use_vbuf_shader(window, transform);
 
     unsafe {
-        gl::BindVertexArray(vbuf.vao);
+        gl::BindVertexArray(vbuf.buf.vao());
         check_gl_err();
 
         window.gl.draw_arrays(
@@ -789,7 +784,7 @@ pub fn render_vbuf_ws(
     use_vbuf_ws_shader(window, transform, camera, window.gl.vbuf_shader);
 
     unsafe {
-        gl::BindVertexArray(vbuf.vao);
+        gl::BindVertexArray(vbuf.buf.vao());
         check_gl_err();
 
         window.gl.draw_arrays(
@@ -818,7 +813,7 @@ pub fn render_vbuf_ws_with_texture(
         gl::ActiveTexture(gl::TEXTURE0);
         gl::BindTexture(gl::TEXTURE_2D, texture.id);
 
-        gl::BindVertexArray(vbuf.vao);
+        gl::BindVertexArray(vbuf.buf.vao());
         check_gl_err();
 
         window.gl.draw_arrays(
@@ -850,7 +845,7 @@ pub fn render_vbuf_with_shader(
         }
         check_gl_err();
 
-        gl::BindVertexArray(vbuf.vao);
+        gl::BindVertexArray(vbuf.buf.vao());
         check_gl_err();
 
         window.gl.draw_arrays(

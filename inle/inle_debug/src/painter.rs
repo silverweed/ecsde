@@ -184,7 +184,7 @@ fn draw_line(
     props: &Paint_Properties,
     camera: &Transform2D,
 ) {
-    let mut vbuf = render::start_draw_quads(window, 1);
+    let mut vbuf = render::start_draw_quads_temp(window, 1);
     let direction = line.to - line.from;
     draw_line_internal(
         window,
@@ -205,7 +205,7 @@ fn draw_arrow(
     props: &Paint_Properties,
     camera: &Transform2D,
 ) {
-    let mut vbuf = render::start_draw_quads(window, 2);
+    let mut vbuf = render::start_draw_quads_temp(window, 2);
     let magnitude = arrow.direction.magnitude();
     draw_line_internal(window, &mut vbuf, magnitude, arrow.thickness, props);
 

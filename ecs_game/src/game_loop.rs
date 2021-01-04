@@ -475,6 +475,22 @@ fn update_graphics<'a, 's, 'r>(
         inle_gfx::render_window::clear(window);
     }
 
+<<<<<<< HEAD
+=======
+    #[cfg(debug_assertions)]
+    fn get_render_system_debug_visualization(
+        debug_cvars: &super::game_state::Debug_CVars,
+        cfg: &inle_cfg::Config,
+    ) -> render_system::Debug_Visualization {
+        match debug_cvars.render_debug_visualization.read(cfg).as_str() {
+            "1" | "b" | "bounds" => render_system::Debug_Visualization::Sprites_Boundaries,
+            "2" | "n" | "normals" => render_system::Debug_Visualization::Normals,
+            "3" | "m" | "materials" => render_system::Debug_Visualization::Materials,
+            _ => render_system::Debug_Visualization::None,
+        }
+    }
+
+>>>>>>> c88f682 (introduce temp vbuf allocator)
     let cfg = &game_state.engine_state.config;
     let render_cfg = render_system::Render_System_Config {
         clear_color: colors::color_from_hex(game_state.cvars.clear_color.read(cfg) as u32),

@@ -250,37 +250,65 @@ pub fn new_vbuf(
     backend::new_vbuf(window, primitive, n_vertices)
 }
 
+/// Creates a Vertex_Buffer that gets deallocated automatically at the end of the frame
+pub fn new_vbuf_temp(
+    window: &mut Render_Window_Handle,
+    primitive: Primitive_Type,
+    n_vertices: u32,
+) -> Vertex_Buffer {
+    trace!("new_vbuf_temp");
+    backend::new_vbuf_temp(window, primitive, n_vertices)
+}
+
 pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
     backend::vbuf_primitive_type(vbuf)
 }
 
-pub fn start_draw_quads(window: &mut Render_Window_Handle, n_quads: u32) -> Vertex_Buffer_Quads {
-    Vertex_Buffer_Quads(new_vbuf(window, Primitive_Type::Triangles, n_quads * 6))
+pub fn start_draw_quads_temp(
+    window: &mut Render_Window_Handle,
+    n_quads: u32,
+) -> Vertex_Buffer_Quads {
+    Vertex_Buffer_Quads(new_vbuf_temp(
+        window,
+        Primitive_Type::Triangles,
+        n_quads * 6,
+    ))
 }
 
-pub fn start_draw_triangles(
+pub fn start_draw_triangles_temp(
     window: &mut Render_Window_Handle,
     n_triangles: u32,
 ) -> Vertex_Buffer_Triangles {
-    Vertex_Buffer_Triangles(new_vbuf(window, Primitive_Type::Triangles, n_triangles * 3))
+    Vertex_Buffer_Triangles(new_vbuf_temp(
+        window,
+        Primitive_Type::Triangles,
+        n_triangles * 3,
+    ))
 }
 
-pub fn start_draw_linestrip(
+pub fn start_draw_linestrip_temp(
     window: &mut Render_Window_Handle,
     n_vertices: u32,
 ) -> Vertex_Buffer_Linestrip {
-    Vertex_Buffer_Linestrip(new_vbuf(window, Primitive_Type::Line_Strip, n_vertices))
+    Vertex_Buffer_Linestrip(new_vbuf_temp(
+        window,
+        Primitive_Type::Line_Strip,
+        n_vertices,
+    ))
 }
 
-pub fn start_draw_lines(window: &mut Render_Window_Handle, n_lines: u32) -> Vertex_Buffer_Lines {
-    Vertex_Buffer_Lines(new_vbuf(window, Primitive_Type::Lines, n_lines * 2))
+pub fn start_draw_lines_temp(
+    window: &mut Render_Window_Handle,
+    n_lines: u32,
+) -> Vertex_Buffer_Lines {
+    Vertex_Buffer_Lines(new_vbuf_temp(window, Primitive_Type::Lines, n_lines * 2))
 }
 
-pub fn start_draw_points(
+pub fn start_draw_points_temp(
     window: &mut Render_Window_Handle,
     n_vertices: u32,
 ) -> Vertex_Buffer_Points {
-    Vertex_Buffer_Points(new_vbuf(window, Primitive_Type::Points, n_vertices))
+    Vertex_Buffer_Points(new_vbuf_temp(window, Primitive_Type::Points, n_vertices))
 }
 
 ///////////////////////////////// UPDATING ///////////////////////////////////

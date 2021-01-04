@@ -86,3 +86,8 @@ pub fn mouse_pos_in_world(
 pub fn start_new_frame(window: &mut Render_Window_Handle) {
     backend::start_new_frame(window);
 }
+
+#[inline(always)]
+pub fn shutdown(window: &mut Render_Window_Handle) {
+    backend::shutdown(window);
+}

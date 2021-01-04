@@ -202,7 +202,7 @@ impl Debug_Element for Debug_Graph_View {
             .iter()
             .filter(|Vec2f { x, y }| xr.contains(x) && yr.contains(y))
             .collect::<Vec<_>>();
-        let mut vbuf = render::start_draw_linestrip(window, drawn_points.len() as _);
+        let mut vbuf = render::start_draw_linestrip_temp(window, drawn_points.len() as _);
         let mut avg = 0.0;
         for (i, &&point) in drawn_points.iter().enumerate() {
             let vpos = self.get_coords_for(point);
