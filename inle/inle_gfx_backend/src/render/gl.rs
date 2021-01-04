@@ -690,25 +690,15 @@ pub fn new_vbuf_temp(
 }
 
 #[inline(always)]
-pub fn add_vertices(
-    window: &mut Render_Window_Handle,
-    vbuf: &mut Vertex_Buffer,
-    vertices: &[Vertex],
-) {
+pub fn add_vertices(vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
     debug_assert!(vbuf.cur_vertices as usize + vertices.len() <= vbuf.max_vertices as usize);
-    update_vbuf(window, vbuf, vertices, vbuf.cur_vertices);
+    update_vbuf(vbuf, vertices, vbuf.cur_vertices);
 }
 
 #[inline(always)]
-pub fn update_vbuf(
-    window: &mut Render_Window_Handle,
-    vbuf: &mut Vertex_Buffer,
-    vertices: &[Vertex],
-    offset: u32,
-) {
-    window.gl.buffer_allocators.array_buffer.update_buffer(
-        &vbuf.buf,
-        (offset as usize * mem::size_of::<Vertex>()),
+pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
+    vbuf.buf.write(
+        offset as usize * mem::size_of::<Vertex>(),
         vertices.len() * mem::size_of::<Vertex>(),
         vertices.as_ptr() as _,
     );

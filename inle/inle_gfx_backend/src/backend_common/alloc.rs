@@ -1,6 +1,7 @@
 use super::misc::check_gl_err;
 use gl::types::*;
-use std::ptr;
+use std::ffi::c_void;
+use std::{mem, ptr};
 
 #[cfg(debug_assertions)]
 use std::collections::HashSet;
@@ -39,6 +40,11 @@ impl Buffer_Allocators {
     }
 }
 
+/// Buffer_Allocator holds a list of buckets, each backed by one openGL VAO + VBO.
+/// The backing VBOs are mapped write-only through the buckets' `mapped_ptr` and
+/// never unmapped.
+/// "Virtual" buffers are allocated from these buckets and can write to their allocated
+/// memory range via their Buffer_Handle.
 pub struct Buffer_Allocator {
     buckets: Vec<Buffer_Allocator_Bucket>,
     buf_type: GLenum,
@@ -66,6 +72,8 @@ struct Non_Empty_Buffer_Handle {
 
     bucket_idx: u16,
     slot: Bucket_Slot,
+
+    data: *mut c_void,
 }
 
 impl Buffer_Handle {
@@ -84,10 +92,23 @@ impl Buffer_Handle {
             0
         }
     }
+
+    /// `offset` and `len` are in bytes.
+    pub fn write(&mut self, offset: usize, len: usize, data: *const c_void) {
+        if let Buffer_Handle_Inner::Non_Empty(h) = &mut self.inner {
+            debug_assert!(h.slot.start + h.slot.len >= offset + len);
+            unsafe {
+                let write_start = h.data.add(offset / mem::size_of::<c_void>());
+                ptr::copy_nonoverlapping(data, write_start, len / mem::size_of::<c_void>());
+            }
+        }
+    }
 }
 
 impl Buffer_Allocator {
     pub fn new(buf_type: GLenum) -> Self {
+        debug_assert!(buf_type == gl::ARRAY_BUFFER, "Currently we are not really supporting buffers other than ARRAY_BUFFER. If we need to, the VAO should be made optional");
+
         Self {
             buckets: vec![],
             buf_type,
@@ -121,7 +142,6 @@ impl Buffer_Allocator {
         {
             self.cur_allocated.clear();
         }
-        ldebug!("Dealloc'd all");
     }
 
     pub fn allocate(&mut self, min_capacity: usize) -> Buffer_Handle {
@@ -153,11 +173,13 @@ impl Buffer_Allocator {
 
         let bucket = &self.buckets[bucket_idx];
 
+        let data = unsafe { bucket.mapped_ptr.add(slot.start / mem::size_of::<c_void>()) };
         let h = Non_Empty_Buffer_Handle {
             bucket_idx: bucket_idx as _,
             slot,
             vao: bucket.vao,
             vbo: bucket.vbo,
+            data,
         };
 
         #[cfg(debug_assertions)]
@@ -168,8 +190,6 @@ impl Buffer_Allocator {
         let handle = Buffer_Handle {
             inner: Buffer_Handle_Inner::Non_Empty(h),
         };
-
-        ldebug!("Allocated vbuf handle {:?}", handle);
 
         handle
     }
@@ -182,29 +202,7 @@ impl Buffer_Allocator {
             #[cfg(debug_assertions)]
             {
                 self.cur_allocated.remove(&h);
-                ldebug!("deallocated {:?}", h);
             }
-        }
-    }
-
-    pub fn update_buffer(
-        &mut self,
-        handle: &Buffer_Handle,
-        offset: usize,
-        length: usize,
-        data: *const std::ffi::c_void,
-    ) {
-        ldebug!("Updating vbuf handle {:?}", handle);
-        ldebug!("cur alloc: {:?}", self.cur_allocated);
-        if let Buffer_Handle_Inner::Non_Empty(h) = &handle.inner {
-            debug_assert!(self.cur_allocated.contains(&h));
-            write_data_to_bucket(
-                &mut self.buckets[h.bucket_idx as usize],
-                &h.slot,
-                offset,
-                length,
-                data,
-            );
         }
     }
 
@@ -247,10 +245,13 @@ struct Buffer_Allocator_Bucket {
 
     free_list: Vec<Bucket_Slot>,
     capacity: usize,
+
+    mapped_ptr: *mut c_void,
 }
 
 fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket {
     let (mut vao, mut vbo) = (0, 0);
+    let mapped_ptr;
     unsafe {
         gl::GenVertexArrays(1, &mut vao);
         debug_assert!(vao != 0);
@@ -266,8 +267,15 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
             buf_type,
             capacity as _,
             ptr::null(),
-            gl::DYNAMIC_STORAGE_BIT,
+            gl::DYNAMIC_STORAGE_BIT
+                | gl::MAP_WRITE_BIT
+                | gl::MAP_PERSISTENT_BIT
+                | gl::MAP_COHERENT_BIT,
         );
+
+        mapped_ptr = gl::MapNamedBuffer(vbo, gl::WRITE_ONLY);
+
+        check_gl_err();
     }
 
     Buffer_Allocator_Bucket {
@@ -278,6 +286,7 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
             len: capacity,
         }],
         capacity,
+        mapped_ptr,
     }
 }
 
@@ -357,27 +366,6 @@ fn deallocate_in_bucket(bucket: &mut Buffer_Allocator_Bucket, slot: Bucket_Slot)
 
 fn reset_bucket(bucket: &mut Buffer_Allocator_Bucket) {
     bucket.free_list = vec![Bucket_Slot::new(0, bucket.capacity)];
-}
-
-fn write_data_to_bucket(
-    bucket: &mut Buffer_Allocator_Bucket,
-    slot: &Bucket_Slot,
-    offset_in_slot: usize,
-    length: usize,
-    data: *const std::ffi::c_void,
-) {
-    debug_assert!(!is_bucket_slot_free(bucket, slot));
-    debug_assert!(length <= slot.len - offset_in_slot);
-
-    unsafe {
-        gl::NamedBufferSubData(
-            bucket.vbo,
-            (slot.start + offset_in_slot) as _,
-            length as _,
-            data,
-        );
-        check_gl_err();
-    }
 }
 
 #[cfg(test)]
