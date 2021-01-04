@@ -602,7 +602,7 @@ fn fill_vertices_with_shadows(
                         ));
                     }
 
-                    shadow_chunk[6 * (SHADOWS_PER_ENTITY * i + light_idx) + 0] = v[0];
+                    shadow_chunk[6 * (SHADOWS_PER_ENTITY * i + light_idx)] = v[0];
                     shadow_chunk[6 * (SHADOWS_PER_ENTITY * i + light_idx) + 1] = v[1];
                     shadow_chunk[6 * (SHADOWS_PER_ENTITY * i + light_idx) + 2] = v[2];
                     shadow_chunk[6 * (SHADOWS_PER_ENTITY * i + light_idx) + 3] = v[2];

@@ -201,7 +201,7 @@ pub fn get_text_size(text: &sfml::graphics::Text<'_>) -> Vec2f {
 
 #[inline(always)]
 pub fn new_image(width: u32, height: u32) -> Image {
-	Image::new(width, height)
+    Image::new(width, height)
 }
 
 #[inline(always)]
@@ -425,15 +425,15 @@ pub fn copy_texture_to_image(texture: &Texture) -> Image {
 }
 
 #[inline(always)]
-pub fn new_texture_from_image(image: &Image, rect: Option<Rect<i32>>) -> Option<Texture>{
-	if let Some(rect) = rect {
-		let rect: sfml::graphics::IntRect = rect.into();
-		let tex = sfml::graphics::Texture::from_image_with_rect(image, &rect)?;
-		Some(Texture::with_inner(tex))
-	} else {
-		let tex = sfml::graphics::Texture::from_image(image)?;
-		Some(Texture::with_inner(tex))
-	}
+pub fn new_texture_from_image(image: &Image, rect: Option<Rect<i32>>) -> Option<Texture> {
+    if let Some(rect) = rect {
+        let rect: sfml::graphics::IntRect = rect.into();
+        let tex = sfml::graphics::Texture::from_image_with_rect(image, &rect)?;
+        Some(Texture::with_inner(tex))
+    } else {
+        let tex = sfml::graphics::Texture::from_image(image)?;
+        Some(Texture::with_inner(tex))
+    }
 }
 
 #[inline(always)]

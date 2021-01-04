@@ -187,11 +187,9 @@ impl Buffer_Allocator {
             self.cur_allocated.insert(h.clone());
         }
 
-        let handle = Buffer_Handle {
+        Buffer_Handle {
             inner: Buffer_Handle_Inner::Non_Empty(h),
-        };
-
-        handle
+        }
     }
 
     pub fn deallocate(&mut self, handle: Buffer_Handle) {
@@ -322,7 +320,7 @@ fn allocate_from_bucket(
 
     debug_assert!(free_list_is_sorted(&bucket.free_list));
     debug_assert!(
-        bucket.free_list.len() == 0
+        bucket.free_list.is_empty()
             || (bucket.free_list[bucket.free_list.len() - 1].start
                 + bucket.free_list[bucket.free_list.len() - 1].len
                 <= bucket.capacity)
@@ -354,7 +352,7 @@ fn deallocate_in_bucket(bucket: &mut Buffer_Allocator_Bucket, slot: Bucket_Slot)
         }
     } else {
         let last_idx = bucket.free_list.len() - 1;
-        if bucket.free_list.len() > 0
+        if !bucket.free_list.is_empty()
             && bucket.free_list[last_idx].start + bucket.free_list[last_idx].len == slot.start
         {
             bucket.free_list[last_idx].len += slot.len;
