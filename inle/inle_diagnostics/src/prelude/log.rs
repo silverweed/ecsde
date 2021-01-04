@@ -1,3 +1,6 @@
+use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
+
 #[macro_export]
 macro_rules! fatal {
     ($fmt:tt $(,$arg:expr)* $(,)?) => {
@@ -60,5 +63,74 @@ macro_rules! ldebug {
 macro_rules! ldebug {
     ($fmt:tt $(,$arg:expr)* $(,)?) => {
         ()
+    };
+}
+
+lazy_static! {
+    pub static ref ONCE_LOGS: Arc<Mutex<HashSet<String>>> =
+        Arc::new(Mutex::new(HashSet::default()));
+}
+
+#[macro_export]
+macro_rules! log_once {
+    ($key: expr, $prelude: tt, $($arg: expr),* $(,)*) => {
+        unsafe {
+            let mut logs = $crate::prelude::ONCE_LOGS.lock().unwrap();
+            if logs.contains($key) {
+            } else {
+                println!("[ {} ] {}", $prelude, $($arg),*);
+                logs.insert(String::from($key));
+            }
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! elog_once {
+    ($key: expr, $prelude: tt, $($arg: expr),* $(,)*) => {
+        unsafe {
+            let mut logs = $crate::prelude::ONCE_LOGS.lock().unwrap();
+            if logs.contains($key) {
+            } else {
+                elog!($prelude, $($arg),*);
+                logs.insert(String::from($key));
+            }
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! lok_once {
+    ($key:expr, $fmt:tt $(,$arg:expr)* $(,)?) => {
+        log_once!($key, "OK", format_args!($fmt, $($arg),*));
+    };
+}
+
+#[macro_export]
+macro_rules! lerr_once {
+    ($key:expr, $fmt:tt $(,$arg:expr)* $(,)?) => {
+        log_once!($key, "ERROR", format_args!($fmt, $($arg),*));
+    };
+}
+
+#[macro_export]
+macro_rules! lwarn_once {
+    ($key:expr, $fmt:tt $(,$arg:expr)* $(,)?) => {
+        log_once!($key, "WARNING", format_args!($fmt, $($arg),*));
+    };
+}
+
+#[macro_export]
+macro_rules! linfo_once {
+    ($key:expr, $fmt:tt $(,$arg:expr)* $(,)?) => {
+        log_once!($key, "INFO", format_args!($fmt, $($arg),*));
+    };
+}
+
+#[macro_export]
+#[cfg(debug_assertions)]
+macro_rules! ldebug_once {
+    ($key:expr, $fmt:tt $(,$arg:expr)* $(,)?) => {
+        elog_once!($key, "DEBUG", format_args!($fmt, $($arg),*));
     };
 }

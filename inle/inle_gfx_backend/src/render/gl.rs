@@ -1286,7 +1286,9 @@ fn get_uniform_loc(shader: GLuint, name: &CStr) -> GLint {
         let loc = gl::GetUniformLocation(shader, name.as_ptr());
         #[cfg(debug_assertions)]
         if loc == -1 {
-            lerr!(
+            let key = format!("{}.{:?}", shader, name);
+            lerr_once!(
+                &key,
                 "Failed to get location of uniform `{:?}` in shader {}",
                 name,
                 shader

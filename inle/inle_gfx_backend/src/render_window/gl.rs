@@ -258,9 +258,6 @@ pub fn raw_project_world_pos(
 
 #[inline(always)]
 pub fn start_new_frame(window: &mut Render_Window_Handle) {
-    let (perm, temp) = window.gl.buffer_allocators.cur_allocated_buffer_handles();
-    ldebug!("cur allocated vbufs: {} + {} = {}", perm, temp, perm + temp);
-
     window.gl.buffer_allocators.temp_array_buffer.dealloc_all();
 
     #[cfg(debug_assertions)]
