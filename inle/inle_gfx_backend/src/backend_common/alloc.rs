@@ -271,7 +271,7 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
                 | gl::MAP_COHERENT_BIT,
         );
 
-        mapped_ptr = gl::MapNamedBuffer(vbo, gl::WRITE_ONLY);
+        mapped_ptr = gl::MapBuffer(buf_type, gl::WRITE_ONLY);
 
         check_gl_err();
     }
