@@ -252,6 +252,7 @@ impl std::cmp::PartialOrd for Bucket_Slot {
 struct Buffer_Allocator_Bucket {
     vao: GLuint,
     vbo: GLuint,
+    buf_type: GLenum,
 
     free_list: Vec<Bucket_Slot>,
     capacity: usize,
@@ -288,6 +289,7 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
     Buffer_Allocator_Bucket {
         vao,
         vbo,
+        buf_type,
         free_list: vec![Bucket_Slot {
             start: 0,
             len: capacity,
@@ -375,8 +377,9 @@ fn write_to_bucket(bucket: &mut Buffer_Allocator_Bucket, handle: &Non_Empty_Buff
     debug_assert!(len <= handle.slot.len);
 
     unsafe {
-        gl::NamedBufferSubData(
-            bucket.vbo,
+        gl::BindBuffer(bucket.buf_type, bucket.vbo);
+        gl::BufferSubData(
+            bucket.buf_type,
             (handle.slot.start + offset) as _,
             len as _,
             data);
