@@ -186,7 +186,7 @@ fn draw_line(
 ) {
     let mut vbuf = render::start_draw_quads_temp(window, 1);
     let direction = line.to - line.from;
-    draw_line_internal(&mut vbuf, direction.magnitude(), line.thickness, props);
+    draw_line_internal(window, &mut vbuf, direction.magnitude(), line.thickness, props);
 
     let rot = rad(direction.y.atan2(direction.x));
     let transform = Transform2D::from_pos_rot_scale(line.from, rot, Vec2f::new(1., 1.));
@@ -201,7 +201,7 @@ fn draw_arrow(
 ) {
     let mut vbuf = render::start_draw_quads_temp(window, 2);
     let magnitude = arrow.direction.magnitude();
-    draw_line_internal(&mut vbuf, magnitude, arrow.thickness, props);
+    draw_line_internal(window, &mut vbuf, magnitude, arrow.thickness, props);
 
     // Draw arrow tip
     {
@@ -217,7 +217,7 @@ fn draw_arrow(
         );
         let v7 = render::new_vertex(Vec2f::new(magnitude, 0.), props.color, Vec2f::default());
 
-        render::add_quad(&mut vbuf, &v5, &v7, &v7, &v6);
+        render::add_quad(window, &mut vbuf, &v5, &v7, &v7, &v6);
     }
 
     let rot = rad(arrow.direction.y.atan2(arrow.direction.x));
@@ -227,6 +227,7 @@ fn draw_arrow(
 }
 
 fn draw_line_internal(
+    window: &mut Render_Window_Handle,
     vbuf: &mut Vertex_Buffer_Quads,
     length: f32,
     thickness: f32,
@@ -253,5 +254,5 @@ fn draw_line_internal(
         Vec2f::default(),
     );
 
-    render::add_quad(vbuf, &v1, &v2, &v3, &v4);
+    render::add_quad(window, vbuf, &v1, &v2, &v3, &v4);
 }

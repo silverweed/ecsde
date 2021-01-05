@@ -8,46 +8,53 @@ use std::collections::HashSet;
 
 const MIN_BUCKET_SIZE: usize = 32 * 1024;
 
-pub struct Buffer_Allocators {
-    pub array_buffer: Buffer_Allocator,
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(debug_assertions, derive(Hash))]
+pub enum Buffer_Allocator_Id {
+    Array_Permanent = 0,
+    Array_Temporary = 1,
+}
 
-    /// This is deallocated every frame
-    pub temp_array_buffer: Buffer_Allocator,
+pub struct Buffer_Allocators {
+    buffers: [Buffer_Allocator; 2],
 }
 
 impl Default for Buffer_Allocators {
     fn default() -> Self {
         Self {
-            array_buffer: Buffer_Allocator::new(gl::ARRAY_BUFFER),
-            temp_array_buffer: Buffer_Allocator::new(gl::ARRAY_BUFFER),
+            buffers: [
+                Buffer_Allocator::new(gl::ARRAY_BUFFER, Buffer_Allocator_Id::Array_Permanent),
+                Buffer_Allocator::new(gl::ARRAY_BUFFER, Buffer_Allocator_Id::Array_Temporary),
+            ]
         }
     }
 }
 
 impl Buffer_Allocators {
     pub fn destroy(&mut self) {
-        self.array_buffer.destroy();
-        self.temp_array_buffer.destroy();
+        for buf in &mut self.buffers {
+            buf.destroy();
+        }
     }
 
-    #[cfg(debug_assertions)]
-    /// Returns (permanent, temp)
-    pub fn cur_allocated_buffer_handles(&self) -> (usize, usize) {
-        (
-            self.array_buffer.cur_allocated.len(),
-            self.temp_array_buffer.cur_allocated.len(),
-        )
+    pub fn dealloc_all_temp(&mut self) {
+        self.buffers[Buffer_Allocator_Id::Array_Temporary as usize].dealloc_all();
+    }
+
+    pub fn get_buffer_mut(&mut self, id: Buffer_Allocator_Id) -> &mut Buffer_Allocator {
+        &mut self.buffers[id as usize]
     }
 }
 
 /// Buffer_Allocator holds a list of buckets, each backed by one openGL VAO + VBO.
-/// The backing VBOs are mapped write-only through the buckets' `mapped_ptr` and
-/// never unmapped.
 /// "Virtual" buffers are allocated from these buckets and can write to their allocated
 /// memory range via their Buffer_Handle.
 pub struct Buffer_Allocator {
     buckets: Vec<Buffer_Allocator_Bucket>,
     buf_type: GLenum,
+
+    id: Buffer_Allocator_Id,
 
     #[cfg(debug_assertions)]
     cur_allocated: HashSet<Non_Empty_Buffer_Handle>,
@@ -72,8 +79,7 @@ struct Non_Empty_Buffer_Handle {
 
     bucket_idx: u16,
     slot: Bucket_Slot,
-
-    data: *mut c_void,
+    allocator_id: Buffer_Allocator_Id,
 }
 
 impl Buffer_Handle {
@@ -93,25 +99,25 @@ impl Buffer_Handle {
         }
     }
 
-    /// `offset` and `len` are in bytes.
-    pub fn write(&mut self, offset: usize, len: usize, data: *const c_void) {
-        if let Buffer_Handle_Inner::Non_Empty(h) = &mut self.inner {
-            debug_assert!(h.slot.start + h.slot.len >= offset + len);
-            unsafe {
-                let write_start = h.data.add(offset / mem::size_of::<c_void>());
-                ptr::copy_nonoverlapping(data, write_start, len / mem::size_of::<c_void>());
-            }
+    pub fn allocator_id(&self) -> Buffer_Allocator_Id {
+        if let Buffer_Handle_Inner::Non_Empty(h) = &self.inner {
+            h.allocator_id
+        } else {
+            // @Robustness: this is quite sloppy and relies on other parts of the code doing the proper checks;
+            // maybe change logic a bit so we never end up here
+            Buffer_Allocator_Id::Array_Temporary
         }
     }
 }
 
 impl Buffer_Allocator {
-    pub fn new(buf_type: GLenum) -> Self {
+    pub fn new(buf_type: GLenum, id: Buffer_Allocator_Id) -> Self {
         debug_assert!(buf_type == gl::ARRAY_BUFFER, "Currently we are not really supporting buffers other than ARRAY_BUFFER. If we need to, the VAO should be made optional");
 
         Self {
             buckets: vec![],
             buf_type,
+            id,
             #[cfg(debug_assertions)]
             cur_allocated: HashSet::default(),
         }
@@ -173,13 +179,12 @@ impl Buffer_Allocator {
 
         let bucket = &self.buckets[bucket_idx];
 
-        let data = unsafe { bucket.mapped_ptr.add(slot.start / mem::size_of::<c_void>()) };
         let h = Non_Empty_Buffer_Handle {
             bucket_idx: bucket_idx as _,
             slot,
             vao: bucket.vao,
             vbo: bucket.vbo,
-            data,
+            allocator_id: self.id,
         };
 
         #[cfg(debug_assertions)]
@@ -201,6 +206,13 @@ impl Buffer_Allocator {
             {
                 self.cur_allocated.remove(&h);
             }
+        }
+    }
+
+    pub fn update_buffer(&mut self, handle: &Buffer_Handle, offset: usize, len: usize, data: *const c_void) {
+        if let Buffer_Handle_Inner::Non_Empty(h) = &handle.inner {
+            debug_assert!(self.cur_allocated.contains(&h));
+            write_to_bucket(&mut self.buckets[h.bucket_idx as usize], h, offset, len, data);
         }
     }
 
@@ -243,13 +255,10 @@ struct Buffer_Allocator_Bucket {
 
     free_list: Vec<Bucket_Slot>,
     capacity: usize,
-
-    mapped_ptr: *mut c_void,
 }
 
 fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket {
     let (mut vao, mut vbo) = (0, 0);
-    let mapped_ptr;
     unsafe {
         gl::GenVertexArrays(1, &mut vao);
         debug_assert!(vao != 0);
@@ -266,12 +275,7 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
             capacity as _,
             ptr::null(),
             gl::DYNAMIC_STORAGE_BIT
-                | gl::MAP_WRITE_BIT
-                | gl::MAP_PERSISTENT_BIT
-                | gl::MAP_COHERENT_BIT,
         );
-
-        mapped_ptr = gl::MapBuffer(buf_type, gl::WRITE_ONLY);
 
         check_gl_err();
     }
@@ -289,7 +293,6 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
             len: capacity,
         }],
         capacity,
-        mapped_ptr,
     }
 }
 
@@ -364,6 +367,19 @@ fn deallocate_in_bucket(bucket: &mut Buffer_Allocator_Bucket, slot: Bucket_Slot)
         } else {
             bucket.free_list.push(slot);
         }
+    }
+}
+
+fn write_to_bucket(bucket: &mut Buffer_Allocator_Bucket, handle: &Non_Empty_Buffer_Handle, offset: usize, len: usize, data: *const c_void) {
+    debug_assert!(!is_bucket_slot_free(bucket, &handle.slot));
+    debug_assert!(len <= handle.slot.len);
+
+    unsafe {
+        gl::NamedBufferSubData(
+            bucket.vbo,
+            (handle.slot.start + offset) as _,
+            len as _,
+            data);
     }
 }
 

@@ -209,7 +209,7 @@ impl Debug_Element for Debug_Graph_View {
             let col = self.get_color_for(point);
             let vertex = render::new_vertex(vpos, col, Vec2f::default());
             avg += point.y;
-            render::add_vertex(&mut vbuf, &vertex);
+            render::add_vertex(window, &mut vbuf, &vertex);
 
             // Draw selection line
             if let Some(x) = self.selected_point {

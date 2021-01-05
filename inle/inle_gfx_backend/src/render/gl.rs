@@ -1,5 +1,5 @@
 use super::{Primitive_Type, Uniform_Value};
-use crate::backend_common::alloc::{Buffer_Allocator, Buffer_Handle};
+use crate::backend_common::alloc::{Buffer_Allocator, Buffer_Handle, Buffer_Allocator_Id};
 use crate::backend_common::misc::check_gl_err;
 use crate::render_window::Render_Window_Handle;
 use gl::types::*;
@@ -670,7 +670,7 @@ pub fn new_vbuf(
     n_vertices: u32,
 ) -> Vertex_Buffer {
     Vertex_Buffer::new(
-        &mut window.gl.buffer_allocators.array_buffer,
+        window.gl.buffer_allocators.get_buffer_mut(Buffer_Allocator_Id::Array_Permanent),
         primitive,
         n_vertices,
     )
@@ -683,21 +683,23 @@ pub fn new_vbuf_temp(
     n_vertices: u32,
 ) -> Vertex_Buffer {
     Vertex_Buffer::new(
-        &mut window.gl.buffer_allocators.temp_array_buffer,
+        window.gl.buffer_allocators.get_buffer_mut(Buffer_Allocator_Id::Array_Temporary),
         primitive,
         n_vertices,
     )
 }
 
 #[inline(always)]
-pub fn add_vertices(vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
+pub fn add_vertices(window: &mut Render_Window_Handle, vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
     debug_assert!(vbuf.cur_vertices as usize + vertices.len() <= vbuf.max_vertices as usize);
-    update_vbuf(vbuf, vertices, vbuf.cur_vertices);
+    update_vbuf(window, vbuf, vertices, vbuf.cur_vertices);
 }
 
 #[inline(always)]
-pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
-    vbuf.buf.write(
+pub fn update_vbuf(window: &mut Render_Window_Handle, vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
+    let alloc = window.gl.buffer_allocators.get_buffer_mut(vbuf.buf.allocator_id());
+    alloc.update_buffer(
+        &vbuf.buf,
         offset as usize * mem::size_of::<Vertex>(),
         vertices.len() * mem::size_of::<Vertex>(),
         vertices.as_ptr() as _,

@@ -258,7 +258,7 @@ pub fn raw_project_world_pos(
 
 #[inline(always)]
 pub fn start_new_frame(window: &mut Render_Window_Handle) {
-    window.gl.buffer_allocators.temp_array_buffer.dealloc_all();
+    window.gl.buffer_allocators.dealloc_all_temp();
 
     #[cfg(debug_assertions)]
     {

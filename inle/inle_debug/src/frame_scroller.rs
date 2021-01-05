@@ -305,6 +305,7 @@ impl Debug_Frame_Scroller {
                 ..Default::default()
             };
             render::add_quad(
+                window,
                 vbuf,
                 &render::new_vertex(subdiv_rect.pos_min(), paint_props.color, v2!(0., 0.)),
                 &render::new_vertex(
