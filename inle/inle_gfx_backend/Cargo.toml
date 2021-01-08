@@ -9,7 +9,7 @@ edition = "2018"
 [features]
 gfx-null = []
 gfx-sfml = ["sfml/graphics"]
-gfx-gl = ["gl"]
+gfx-gl = ["gl", "rusttype"]
 default = ["gfx-gl"]
 #default = ["gfx-sfml"]
 
@@ -29,3 +29,7 @@ default-features = false
 [dependencies.gl]
 optional = true
 version = "0.14"
+
+[dependencies.rusttype]
+optional = true
+version = "0.9"

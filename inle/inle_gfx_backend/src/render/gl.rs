@@ -1,9 +1,10 @@
 use super::{Primitive_Type, Uniform_Value};
+use rusttype as rt;
 use crate::backend_common::alloc::{Buffer_Allocator, Buffer_Handle, Buffer_Allocator_Id};
 use crate::backend_common::misc::check_gl_err;
 use crate::render_window::Render_Window_Handle;
 use gl::types::*;
-use inle_common::colors::{Color, Color3};
+use inle_common::colors::{self, Color, Color3};
 use inle_common::paint_props::Paint_Properties;
 use inle_math::matrix::Matrix3;
 use inle_math::rect::Rect;
@@ -350,18 +351,19 @@ impl Uniform_Value for &Texture<'_> {
 }
 
 pub struct Font<'a> {
-    _pd: PhantomData<&'a ()>,
+    rt: rt::Font<'a>,
 }
+
 pub struct Text<'font> {
+    font: &'font Font<'font>,
+    glyphs: Vec<rt::ScaledGlyph<'font>>,
+    scale: rt::Scale,
+    //width: usize,
     _pd: PhantomData<&'font ()>,
 }
 
-// @Cleanup
-// we should actually have API functions for these, not methods...
-impl Font<'_> {
-    pub fn from_file(_: &str) -> Option<Self> {
-        Some(Self { _pd: PhantomData })
-    }
+pub fn new_font<'a>(rt: rt::Font<'a>) -> Font<'a> {
+    Font { rt }
 }
 
 pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) -> GLuint {
@@ -604,11 +606,51 @@ pub fn fill_color_circle_ws(
 }
 
 pub fn render_text(
-    _window: &mut Render_Window_Handle,
-    _text: &mut Text,
-    _paint_props: &Paint_Properties,
-    _screen_pos: Vec2f,
+    window: &mut Render_Window_Handle,
+    text: &mut Text,
+    paint_props: &Paint_Properties,
+    screen_pos: Vec2f,
 ) {
+    // @Temporary
+    let v_metrics = text.font.rt.v_metrics(text.scale);
+    let offset = rt::point(0.0, v_metrics.ascent);
+    let glyphs = text.glyphs.clone().into_iter().map(|g| g.positioned(offset)).collect::<Vec<_>>();
+    let glyphs_height = (v_metrics.ascent - v_metrics.descent).ceil() as u32;
+    let glyphs_width = {
+        let min_x = glyphs
+            .first()
+            .map(|g| g.pixel_bounding_box().unwrap().min.x)
+            .unwrap();
+        let max_x = glyphs
+            .last()
+            .map(|g| g.pixel_bounding_box().unwrap().max.x)
+            .unwrap();
+        (max_x - min_x) as u32
+    };
+    debug_assert!(glyphs_height > 0);
+    debug_assert!(glyphs_width > 0);
+    let mut image = new_image(glyphs_width + 20, glyphs_height + 20, Color_Type::RGBA);
+    for glyph in glyphs {
+        if let Some(bbox) = glyph.pixel_bounding_box() {
+            glyph.draw(|x, y, v| {
+                set_image_pixel(&mut image, x , y , colors::rgba(255, 255, 255, (v * 255.0) as _));
+            });
+        }
+    }
+
+    let tex = new_texture_from_image(&image, None).unwrap();
+    let mut vbuf = new_vbuf_temp(window, Primitive_Type::Triangles, 6);
+    let (w, h) = get_image_size(&image);
+    add_vertices(window, &mut vbuf, &[
+        new_vertex(screen_pos, colors::WHITE, v2!(0., 0.)),
+        new_vertex(screen_pos + v2!(w as f32, 0.), colors::WHITE, v2!(1., 1.)),
+        new_vertex(screen_pos + v2!(w as f32, h as f32), colors::WHITE, v2!(1., 0.)),
+        new_vertex(screen_pos + v2!(w as f32, h as f32), colors::WHITE, v2!(1., 0.)),
+        new_vertex(screen_pos + v2!(0., h as f32), colors::WHITE, v2!(0., 1.)),
+        new_vertex(screen_pos, colors::WHITE, v2!(0., 0.)),
+    ]);
+    render_vbuf(window, &vbuf, &Transform2D::default());
+    //render_vbuf_ws_with_texture(window, &vbuf, &Transform2D::default(), &Transform2D::default(), &tex);
 }
 
 pub fn render_text_ws(
@@ -849,8 +891,22 @@ pub fn render_vbuf_with_shader(
     }
 }
 
-pub fn create_text<'a>(_string: &str, _font: &'a Font, _size: u16) -> Text<'a> {
-    Text { _pd: PhantomData }
+pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
+    let scale = rt::Scale::uniform(size as f32);
+    let v_metrics = font.rt.v_metrics(scale);
+    let offset = rt::point(0.0, v_metrics.ascent);
+    let glyphs = font.rt.glyphs_for(string.chars()).map(|g| g.scaled(scale)).collect::<Vec<_>>();
+    // ???
+    //let width = glyphs.iter().rev().map(|g| g.position().x as f32 + g.unpositioned().h_metrics().advance_width)
+    //        .next().unwrap_or(0.0).ceil() as usize;
+
+    Text {
+        font,
+        glyphs,
+        scale,
+     //   width,
+        _pd: PhantomData,
+    }
 }
 
 pub fn render_line(window: &mut Render_Window_Handle, start: &Vertex, end: &Vertex) {

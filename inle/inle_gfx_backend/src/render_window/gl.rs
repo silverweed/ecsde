@@ -271,11 +271,15 @@ extern "system" fn gl_msg_callback(
     _source: GLenum,
     typ: GLenum,
     _id: GLuint,
-    _severity: GLenum,
+    severity: GLenum,
     length: GLsizei,
     message: *const GLchar,
     _user_param: *mut std::ffi::c_void,
 ) {
+    if severity == gl::DEBUG_SEVERITY_NOTIFICATION {
+        return;
+    }
+
     let message: &[u8] =
         unsafe { std::slice::from_raw_parts(message as *const u8, length as usize) };
     lerr!(

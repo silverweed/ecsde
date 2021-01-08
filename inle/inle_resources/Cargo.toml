@@ -8,7 +8,8 @@ edition = "2018"
 
 [features]
 load-png = ["png"]
-default = ["load-png"]
+font-rusttype = ["rusttype"]
+default = ["load-png", "font-rusttype"]
 
 [dependencies]
 inle_common = { path = "../inle_common" }
@@ -20,3 +21,7 @@ inle_audio_backend = { path = "../inle_audio_backend" }
 [dependencies.png]
 optional = true
 version = "0.16"
+
+[dependencies.rusttype]
+optional = true
+version = "0.9"
