@@ -199,7 +199,10 @@ impl Buffer_Allocator {
 
     pub fn deallocate(&mut self, handle: Buffer_Handle) {
         if let Buffer_Handle_Inner::Non_Empty(h) = handle.inner {
-            debug_assert!(self.cur_allocated.contains(&h));
+            #[cfg(debug_assertions)]
+            {
+                debug_assert!(self.cur_allocated.contains(&h));
+            }
             deallocate_in_bucket(&mut self.buckets[h.bucket_idx as usize], h.slot);
 
             #[cfg(debug_assertions)]
@@ -211,7 +214,10 @@ impl Buffer_Allocator {
 
     pub fn update_buffer(&mut self, handle: &Buffer_Handle, offset: usize, len: usize, data: *const c_void) {
         if let Buffer_Handle_Inner::Non_Empty(h) = &handle.inner {
-            debug_assert!(self.cur_allocated.contains(&h));
+            #[cfg(debug_assertions)]
+            {
+                debug_assert!(self.cur_allocated.contains(&h));
+            }
             write_to_bucket(&mut self.buckets[h.bucket_idx as usize], h, offset, len, data);
         }
     }
