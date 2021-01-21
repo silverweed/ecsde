@@ -1047,6 +1047,31 @@ pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
     }
 }
 
+pub fn set_texture_smooth(texture: &mut Texture, smooth: bool) {
+    // @TODO: make this work
+    unsafe {
+        gl::BindTexture(gl::TEXTURE_2D, texture.id);
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_MIN_FILTER,
+            if smooth {
+                gl::LINEAR
+            } else {
+                gl::NEAREST
+            } as _,
+        );
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_MAG_FILTER,
+            if smooth {
+                gl::LINEAR
+            } else {
+                gl::NEAREST
+            } as _,
+        );
+    }
+}
+
 // -----------------------------------------------------------------------
 
 fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<f32>) {

@@ -436,7 +436,7 @@ pub fn draw_batches(
             if let Some(shader) = shader.map(|s| s as &_) {
                 render::render_vbuf_with_shader(window, &vbuffer.vbuf, shader);
             } else {
-                render::render_vbuf_ws(window, &vbuffer.vbuf, &Transform2D::default(), camera);
+                render::render_vbuf_ws_with_texture(window, &vbuffer.vbuf, &Transform2D::default(), camera, texture);
             }
         }
     }

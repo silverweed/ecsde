@@ -66,6 +66,10 @@ pub fn create_jelly(
         .with_n_frames(N_ANIM_FRAMES);
     world.add_component(entity, renderable);
 
+    let tex = renderable.material.texture;
+    let tex = gres.get_texture_mut(tex);
+    render::set_texture_smooth(tex, false);
+
     // @Temporary
     if make_controllable {
         world.add_component(

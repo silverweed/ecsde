@@ -373,3 +373,7 @@ pub fn set_uniform<T: Uniform_Value>(shader: &mut Shader, name: &std::ffi::CStr,
 pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
     backend::set_texture_repeated(texture, repeated);
 }
+
+pub fn set_texture_smooth(texture: &mut Texture, smooth: bool) {
+    backend::set_texture_repeated(texture, smooth);
+}
