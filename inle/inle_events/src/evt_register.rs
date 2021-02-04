@@ -152,4 +152,35 @@ mod tests {
 
         assert_eq!(res.lock().unwrap().len(), 2);
     }
+
+    #[test]
+    fn use_with_cb_data() {
+        let mut reg = Event_Register::new();
+        reg.subscribe::<Evt_Test>(
+            Box::new(|_, cb_data| {
+                with_cb_data(cb_data.unwrap(), |data: &mut String| {
+                    println!("{}", data);
+                });
+            }),
+            Some(wrap_cb_data(String::from("Test"))),
+        );
+
+        reg.raise::<Evt_Test>((0, 0));
+    }
+
+    #[test]
+    #[should_panic]
+    fn use_with_cb_data_wrong() {
+        let mut reg = Event_Register::new();
+        reg.subscribe::<Evt_Test>(
+            Box::new(|_, cb_data| {
+                with_cb_data(cb_data.unwrap(), |data: &mut String| {
+                    println!("{}", data);
+                });
+            }),
+            Some(wrap_cb_data(42)),
+        );
+
+        reg.raise::<Evt_Test>((0, 0));
+    }
 }

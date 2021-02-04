@@ -308,9 +308,10 @@ impl Component_Manager {
     }
 
     /// # Safety
-    /// The caller must ensure that `handle` corresponds to a non-ZST storage
+    /// The caller must ensure that `handle` is valid and that it corresponds to a non-ZST storage
     unsafe fn must_get_storage(&self, handle: Component_Handle) -> &Component_Storage {
-        let storage = self.storages[handle as usize].as_ref();
+        debug_assert!(handle as usize < self.storages.len());
+        let storage = self.storages.get_unchecked(handle as usize).as_ref();
         debug_assert!(
             storage.is_some(),
             "must_get_storage[{}] failed!",
@@ -323,9 +324,10 @@ impl Component_Manager {
     }
 
     /// # Safety
-    /// The caller must ensure that `handle` corresponds to a non-ZST storage
+    /// The caller must ensure that `handle` is valid and that it corresponds to a non-ZST storage
     unsafe fn must_get_storage_mut(&mut self, handle: Component_Handle) -> &mut Component_Storage {
-        let storage = self.storages[handle as usize].as_mut();
+        debug_assert!(handle as usize < self.storages.len());
+        let storage = self.storages.get_unchecked(handle as usize).as_mut();
         debug_assert!(
             storage.is_some(),
             "must_get_storage_mut[{}] failed!",
