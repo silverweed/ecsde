@@ -66,6 +66,7 @@ pub fn create_window(
     window.set_size_limits(Some(1), Some(1), None, None);
     // We handle aspect ratio ourselves
     window.set_aspect_ratio(glfw::ffi::DONT_CARE as u32, glfw::ffi::DONT_CARE as u32);
+    window.set_mouse_button_polling(true);
     // @Incomplete: vsync, etc
 
     Window_Handle {
