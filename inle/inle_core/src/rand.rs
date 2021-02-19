@@ -49,7 +49,7 @@ pub fn rand_01(rng: &mut Rand_Xoshiro256) -> f32 {
 }
 
 pub fn rand_range(rng: &mut Rand_Xoshiro256, min: f32, max: f32) -> f32 {
-    assert!(min <= max);
+    debug_assert!(min <= max);
     min + rand_01(rng) * (max - min)
 }
 
