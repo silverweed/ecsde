@@ -1,5 +1,5 @@
 use super::{Primitive_Type, Uniform_Value};
-use crate::backend_common::alloc::{Buffer_Allocator, Buffer_Handle, Buffer_Allocator_Id};
+use crate::backend_common::alloc::{Buffer_Allocator, Buffer_Allocator_Id, Buffer_Handle};
 use crate::backend_common::misc::check_gl_err;
 use crate::render_window::Render_Window_Handle;
 use gl::types::*;
@@ -670,7 +670,10 @@ pub fn new_vbuf(
     n_vertices: u32,
 ) -> Vertex_Buffer {
     Vertex_Buffer::new(
-        window.gl.buffer_allocators.get_buffer_mut(Buffer_Allocator_Id::Array_Permanent),
+        window
+            .gl
+            .buffer_allocators
+            .get_buffer_mut(Buffer_Allocator_Id::Array_Permanent),
         primitive,
         n_vertices,
     )
@@ -683,21 +686,36 @@ pub fn new_vbuf_temp(
     n_vertices: u32,
 ) -> Vertex_Buffer {
     Vertex_Buffer::new(
-        window.gl.buffer_allocators.get_buffer_mut(Buffer_Allocator_Id::Array_Temporary),
+        window
+            .gl
+            .buffer_allocators
+            .get_buffer_mut(Buffer_Allocator_Id::Array_Temporary),
         primitive,
         n_vertices,
     )
 }
 
 #[inline(always)]
-pub fn add_vertices(window: &mut Render_Window_Handle, vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
+pub fn add_vertices(
+    window: &mut Render_Window_Handle,
+    vbuf: &mut Vertex_Buffer,
+    vertices: &[Vertex],
+) {
     debug_assert!(vbuf.cur_vertices as usize + vertices.len() <= vbuf.max_vertices as usize);
     update_vbuf(window, vbuf, vertices, vbuf.cur_vertices);
 }
 
 #[inline(always)]
-pub fn update_vbuf(window: &mut Render_Window_Handle, vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
-    let alloc = window.gl.buffer_allocators.get_buffer_mut(vbuf.buf.allocator_id());
+pub fn update_vbuf(
+    window: &mut Render_Window_Handle,
+    vbuf: &mut Vertex_Buffer,
+    vertices: &[Vertex],
+    offset: u32,
+) {
+    let alloc = window
+        .gl
+        .buffer_allocators
+        .get_buffer_mut(vbuf.buf.allocator_id());
     alloc.update_buffer(
         &vbuf.buf,
         offset as usize * mem::size_of::<Vertex>(),
@@ -1054,20 +1072,12 @@ pub fn set_texture_smooth(texture: &mut Texture, smooth: bool) {
         gl::TexParameteri(
             gl::TEXTURE_2D,
             gl::TEXTURE_MIN_FILTER,
-            if smooth {
-                gl::LINEAR
-            } else {
-                gl::NEAREST
-            } as _,
+            if smooth { gl::LINEAR } else { gl::NEAREST } as _,
         );
         gl::TexParameteri(
             gl::TEXTURE_2D,
             gl::TEXTURE_MAG_FILTER,
-            if smooth {
-                gl::LINEAR
-            } else {
-                gl::NEAREST
-            } as _,
+            if smooth { gl::LINEAR } else { gl::NEAREST } as _,
         );
     }
 }

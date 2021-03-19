@@ -1,7 +1,7 @@
 use super::misc::check_gl_err;
 use gl::types::*;
 use std::ffi::c_void;
-use std::{mem, ptr};
+use std::ptr;
 
 #[cfg(debug_assertions)]
 use std::collections::HashSet;
@@ -26,7 +26,7 @@ impl Default for Buffer_Allocators {
             buffers: [
                 Buffer_Allocator::new(gl::ARRAY_BUFFER, Buffer_Allocator_Id::Array_Permanent),
                 Buffer_Allocator::new(gl::ARRAY_BUFFER, Buffer_Allocator_Id::Array_Temporary),
-            ]
+            ],
         }
     }
 }
@@ -209,10 +209,22 @@ impl Buffer_Allocator {
         }
     }
 
-    pub fn update_buffer(&mut self, handle: &Buffer_Handle, offset: usize, len: usize, data: *const c_void) {
+    pub fn update_buffer(
+        &mut self,
+        handle: &Buffer_Handle,
+        offset: usize,
+        len: usize,
+        data: *const c_void,
+    ) {
         if let Buffer_Handle_Inner::Non_Empty(h) = &handle.inner {
             debug_assert!(self.cur_allocated.contains(&h));
-            write_to_bucket(&mut self.buckets[h.bucket_idx as usize], h, offset, len, data);
+            write_to_bucket(
+                &mut self.buckets[h.bucket_idx as usize],
+                h,
+                offset,
+                len,
+                data,
+            );
         }
     }
 
@@ -275,7 +287,7 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
             buf_type,
             capacity as _,
             ptr::null(),
-            gl::DYNAMIC_STORAGE_BIT
+            gl::DYNAMIC_STORAGE_BIT,
         );
 
         check_gl_err();
@@ -372,7 +384,13 @@ fn deallocate_in_bucket(bucket: &mut Buffer_Allocator_Bucket, slot: Bucket_Slot)
     }
 }
 
-fn write_to_bucket(bucket: &mut Buffer_Allocator_Bucket, handle: &Non_Empty_Buffer_Handle, offset: usize, len: usize, data: *const c_void) {
+fn write_to_bucket(
+    bucket: &mut Buffer_Allocator_Bucket,
+    handle: &Non_Empty_Buffer_Handle,
+    offset: usize,
+    len: usize,
+    data: *const c_void,
+) {
     debug_assert!(!is_bucket_slot_free(bucket, &handle.slot));
     debug_assert!(len <= handle.slot.len);
 
@@ -382,7 +400,8 @@ fn write_to_bucket(bucket: &mut Buffer_Allocator_Bucket, handle: &Non_Empty_Buff
             bucket.buf_type,
             (handle.slot.start + offset) as _,
             len as _,
-            data);
+            data,
+        );
     }
 }
 

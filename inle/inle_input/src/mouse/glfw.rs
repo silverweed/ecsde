@@ -1,5 +1,5 @@
 use super::Mouse_Button;
-use glfw::Action;
+use glfw::{Action, WindowEvent};
 use inle_win::window::Event;
 
 pub type Button = glfw::MouseButton;
@@ -35,11 +35,6 @@ pub(super) fn num_to_mouse_btn(num: usize) -> Option<Mouse_Button> {
     }
 }
 
-pub(super) fn is_mouse_btn_pressed(button: Mouse_Button) -> bool {
-    // @Incomplete
-    false
-}
-
 impl std::convert::From<Mouse_Button> for Button {
     fn from(b: Mouse_Button) -> Button {
         match b {
@@ -52,17 +47,25 @@ impl std::convert::From<Mouse_Button> for Button {
 
 #[inline(always)]
 pub const fn mousepressed(button: Button) -> Event {
-    Event::MouseButton(button, Action::Press, glfw::Modifiers::empty())
+    Event::Window(WindowEvent::MouseButton(
+        button,
+        Action::Press,
+        glfw::Modifiers::empty(),
+    ))
 }
 
 #[inline(always)]
 pub const fn mousereleased(button: Button) -> Event {
-    Event::MouseButton(button, Action::Release, glfw::Modifiers::empty())
+    Event::Window(WindowEvent::MouseButton(
+        button,
+        Action::Release,
+        glfw::Modifiers::empty(),
+    ))
 }
 
 #[inline(always)]
 pub const fn wheelscrolled(delta: f32) -> Event {
-    Event::Scroll(0., delta as _)
+    Event::Window(WindowEvent::Scroll(0., delta as _))
 }
 
 #[cfg(test)]

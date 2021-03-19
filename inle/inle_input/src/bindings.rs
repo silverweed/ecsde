@@ -1,5 +1,4 @@
-use super::joystick::{self, Joystick_Button};
-use super::joystick_state::Joystick_State;
+use super::joystick::{self, Joystick_Button, Joystick_State};
 use super::keyboard::Key;
 use super::mouse::{self, Mouse_Button};
 use inle_common::stringid::String_Id;
@@ -111,7 +110,7 @@ impl Input_Bindings {
                 joystick_id
             )
         });
-        let joystick = joystick::get_joy_btn_from_id(*joystick, button)?;
+        let joystick = joystick::get_joy_btn_from_id(joystick.joy_type, button)?;
         // @Incomplete: do we want to support modifiers on joysticks?
         let input_action = Input_Action::new(Input_Action_Simple::Joystick(joystick));
         self.action_bindings.get(&input_action).map(Vec::as_slice)
@@ -163,7 +162,7 @@ impl Input_Bindings {
         self.axis_bindings
             .emulated
             .get(&Input_Action::new(Input_Action_Simple::Joystick(
-                joystick::get_joy_btn_from_id(*joystick, button)?,
+                joystick::get_joy_btn_from_id(joystick.joy_type, button)?,
             )))
     }
 

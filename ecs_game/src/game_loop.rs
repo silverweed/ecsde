@@ -816,7 +816,7 @@ fn update_debug(
 #[cfg(debug_assertions)]
 fn update_joystick_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
-    joy_state: &inle_input::joystick_state::Joystick_State,
+    joy_state: &inle_input::joystick::Joystick_State,
     input_cfg: crate::input_utils::Input_Config,
     cfg: &inle_cfg::Config,
 ) {
@@ -826,7 +826,7 @@ fn update_joystick_debug_overlay(
 
     let deadzone = input_cfg.joy_deadzone.read(cfg);
 
-    let (real_axes, joy_mask) = inle_input::joystick_state::all_joysticks_values(joy_state);
+    let (real_axes, joy_mask) = inle_input::joystick::get_all_joysticks_axes_values(joy_state);
 
     for (joy_id, axes) in real_axes.iter().enumerate() {
         if (joy_mask & (1 << joy_id)) != 0 {

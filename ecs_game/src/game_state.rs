@@ -208,6 +208,7 @@ fn create_game_state<'a>(
     linfo!("Exe = {:?}", engine_state.env.full_exe_path);
 
     app::init_engine_systems(
+        &window,
         &mut engine_state,
         &mut game_resources.gfx,
         &mut game_resources.shader_cache,

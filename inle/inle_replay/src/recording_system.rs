@@ -5,8 +5,7 @@ use inle_common::Maybe_Error;
 use inle_core::env::Env_Info;
 use inle_core::rand::Default_Rng_Seed;
 use inle_input::input_state::Input_Raw_State;
-use inle_input::joystick::{self, Joystick_Axis};
-use inle_input::joystick_state::{self, Real_Axes_Values};
+use inle_input::joystick::{self, Joystick_Axis, Real_Axes_Values};
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::JoinHandle;
@@ -82,7 +81,7 @@ impl Replay_Recording_System {
         let mut joy_data: [Replay_Joystick_Data; joystick::JOY_COUNT as usize] =
             std::default::Default::default();
 
-        let (axes, joy_mask) = joystick_state::all_joysticks_values(&input_raw_state.joy_state);
+        let (axes, joy_mask) = joystick::get_all_joysticks_axes_values(&input_raw_state.joy_state);
 
         for (i, axes) in axes.iter().enumerate() {
             if (joy_mask & (1 << i)) == 0 {

@@ -16,7 +16,6 @@ pub mod core_actions;
 pub mod events;
 pub mod input_state;
 pub mod joystick;
-pub mod joystick_state;
 pub mod keyboard;
 pub mod mouse;
 pub mod serialize;

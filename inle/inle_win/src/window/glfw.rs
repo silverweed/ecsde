@@ -1,7 +1,15 @@
 use glfw::Context;
 use std::collections::VecDeque;
+use std::sync::mpsc::{channel, Receiver, Sender};
 
-pub type Event = glfw::WindowEvent;
+pub enum Event {
+    Window(glfw::WindowEvent),
+    Joystick {
+        joy_id: glfw::JoystickId,
+        connected: bool,
+        guid: Option<Box<str>>,
+    },
+}
 
 pub struct Create_Window_Args {
     pub vsync: bool,
@@ -20,8 +28,9 @@ pub struct Window_Handle {
     target_size: (u32, u32),
     vsync: bool,
     pub glfw: glfw::Glfw,
-    pub event_receiver: std::sync::mpsc::Receiver<(f64, Event)>,
+    pub event_receiver: Receiver<(f64, glfw::WindowEvent)>,
     events_buffer: VecDeque<Event>,
+    joystick_events: Receiver<Event>,
 
     /// We keep track of these ourselves because going through GLFW queries may be costly
     // Cursor pos in pixels (relative to the window)
@@ -67,6 +76,26 @@ pub fn create_window(
     // We handle aspect ratio ourselves
     window.set_aspect_ratio(glfw::ffi::DONT_CARE as u32, glfw::ffi::DONT_CARE as u32);
     window.set_mouse_button_polling(true);
+    let (joy_evt_sender, joy_evt_recv) = channel();
+    glfw.set_joystick_callback(Some(glfw::Callback {
+        f: |joy_id, joy_evt, (joy_evt_sender, glfw): &(Sender<Event>, glfw::Glfw)| {
+            ldebug!("joy {:?} connected", joy_id);
+            let joy = glfw::Joystick {
+                id: joy_id,
+                glfw: glfw.clone(),
+            };
+            joy_evt_sender
+                .send(Event::Joystick {
+                    joy_id,
+                    connected: joy_evt == glfw::JoystickEvent::Connected,
+                    guid: joy.get_guid().map(|s| s.into_boxed_str()),
+                })
+                .unwrap_or_else(|err| {
+                    lerr!("Failed to send Joystick event from callback: {:?}", err)
+                });
+        },
+        data: (joy_evt_sender, glfw.clone()),
+    }));
     // @Incomplete: vsync, etc
 
     Window_Handle {
@@ -78,6 +107,7 @@ pub fn create_window(
         events_buffer: VecDeque::with_capacity(8),
         cursor_pos: (0., 0.),
         real_size: (1, 1),
+        joystick_events: joy_evt_recv,
     }
 }
 
@@ -110,13 +140,17 @@ pub fn prepare_poll_events(window: &mut Window_Handle) {
     window.glfw.poll_events();
     window.events_buffer.clear();
     for (_, evt) in glfw::flush_messages(&window.event_receiver) {
+        window.events_buffer.push_back(Event::Window(evt));
+    }
+
+    while let Ok(evt) = window.joystick_events.try_recv() {
         window.events_buffer.push_back(evt);
     }
 }
 
 pub fn poll_event(window: &mut Window_Handle) -> Option<Event> {
     let evt = window.events_buffer.pop_front();
-    if let Some(Event::FramebufferSize(x, y)) = evt {
+    if let Some(Event::Window(glfw::WindowEvent::FramebufferSize(x, y))) = evt {
         window.real_size = (x as u32, y as u32);
     }
     evt

@@ -1,3 +1,5 @@
+use crate::events::Input_Raw_Event;
+use inle_win::window::Window_Handle;
 use std::convert::TryFrom;
 
 #[cfg(feature = "win-sfml")]
@@ -29,7 +31,7 @@ pub struct Joystick {
     pub joy_type: Joystick_Type,
 }
 
-// Don't change the order of these!
+// Don't change the order of these! @Volatile with the mappings below.
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum Joystick_Button {
@@ -129,24 +131,169 @@ pub fn string_to_joy_axis(s: &str) -> Option<Joystick_Axis> {
 }
 
 #[inline]
-pub fn is_joy_connected(id: Joystick_Id) -> bool {
-    backend::is_connected(id)
+pub fn is_joy_connected(state: &Joystick_State, id: Joystick_Id) -> bool {
+    state.joysticks[id as usize].is_some()
 }
 
 #[inline]
-pub fn get_joy_type(id: Joystick_Id) -> Result<Joystick_Type, &'static str> {
-    backend::get_joy_type(id)
+pub fn get_joy_type(state: &Joystick_State, id: Joystick_Id) -> Option<Joystick_Type> {
+    state.joysticks[id as usize].map(|j| j.joy_type)
 }
 
 #[inline]
-pub fn get_connected_joysticks_mask() -> Joystick_Mask {
-    backend::get_connected_joysticks_mask()
+pub fn get_connected_joysticks_mask(state: &Joystick_State) -> Joystick_Mask {
+    let mut mask = 0u8;
+    for i in 0..JOY_COUNT {
+        mask |= (is_joy_connected(state, i.into()) as u8) << i;
+    }
+    mask
 }
 
-pub fn get_joy_btn_id(joystick: Joystick, button: Joystick_Button) -> Option<Button_Id> {
-    match joystick.joy_type {
+pub fn get_joy_btn_id(joy_type: Joystick_Type, button: Joystick_Button) -> Option<Button_Id> {
+    match joy_type {
         Joystick_Type::XBox360 => get_joy_btn_id_xbox360(button),
     }
+}
+
+pub fn get_joy_btn_from_id(joy_type: Joystick_Type, btn_id: Button_Id) -> Option<Joystick_Button> {
+    match joy_type {
+        Joystick_Type::XBox360 => get_joy_btn_from_id_xbox360(btn_id),
+    }
+}
+
+/// Returns the normalized value [-1, 1] of the given axis
+pub fn get_joy_axis_value(state: &Joystick_State, joy_id: Joystick_Id, axis: Joystick_Axis) -> f32 {
+    if state.joysticks[joy_id as usize].is_some() {
+        state.values[joy_id as usize][axis as usize]
+    } else {
+        0.0
+    }
+}
+
+/// Returns the values of all axes for a single joystick
+pub fn get_joy_axes_values(
+    joy_state: &Joystick_State,
+    joy_id: Joystick_Id,
+) -> Option<&Real_Axes_Values> {
+    if joy_state.joysticks[joy_id as usize].is_some() {
+        Some(&joy_state.values[joy_id as usize])
+    } else {
+        None
+    }
+}
+
+pub fn get_all_joysticks_axes_values(
+    joy_state: &Joystick_State,
+) -> (&[Real_Axes_Values; JOY_COUNT as usize], Joystick_Mask) {
+    (&joy_state.values, get_connected_joysticks_mask(joy_state))
+}
+
+pub type Real_Axes_Values = [f32; Joystick_Axis::_Count as usize];
+
+#[derive(Clone, Default, Debug)]
+pub struct Joystick_State {
+    pub joysticks: [Option<Joystick>; JOY_COUNT as usize],
+    pub values: [Real_Axes_Values; JOY_COUNT as usize],
+}
+
+pub fn init_joysticks<T: AsRef<Window_Handle>>(window: &T, joy_state: &mut Joystick_State) {
+    update_joysticks();
+
+    let win = window.as_ref();
+    let mut joy_found = 0;
+    for i in 0..(JOY_COUNT as u32) {
+        let (connected, guid) = is_joy_connected_internal(win, i);
+        if connected && register_joystick(joy_state, i, &guid) {
+            joy_found += 1;
+        }
+    }
+
+    linfo!("Found {} valid joysticks.", joy_found);
+}
+
+pub fn update_joystick_state(
+    joy_state: &mut Joystick_State,
+    events: &[Input_Raw_Event],
+    window: &Window_Handle,
+) {
+    update_joysticks();
+
+    for event in events {
+        match event {
+            Input_Raw_Event::Joy_Connected { id, guid } => {
+                register_joystick(joy_state, *id, guid);
+            }
+            Input_Raw_Event::Joy_Disconnected { id, .. } => {
+                unregister_joystick(joy_state, *id);
+            }
+            _ => {}
+        }
+    }
+
+    // TODO: update axes and values
+    for (joy_id, joy) in joy_state
+        .joysticks
+        .iter_mut()
+        .filter_map(|j| j.as_ref())
+        .enumerate()
+    {
+        for (axis_id, axis_val) in joy_state.values[joy_id].iter_mut().enumerate() {
+            *axis_val = get_joy_axis_value_internal(
+                window,
+                joy,
+                Joystick_Axis::try_from(axis_id as u8).unwrap(),
+            );
+        }
+    }
+}
+
+fn register_joystick(
+    joy_state: &mut Joystick_State,
+    joystick_id: Joystick_Id,
+    joystick_guid: &Option<Box<str>>,
+) -> bool {
+    ldebug!("Registering joystick {}", joystick_id);
+
+    match get_joy_type_internal(joystick_guid) {
+        Ok(joy_type) => {
+            joy_state.joysticks[joystick_id as usize] = Some(Joystick {
+                id: joystick_id,
+                joy_type,
+            });
+            true
+        }
+        Err(msg) => {
+            lwarn!("Failed to get type of joystick {}: {}", joystick_id, msg);
+            false
+        }
+    }
+}
+
+fn unregister_joystick(joy_state: &mut Joystick_State, joystick_id: Joystick_Id) {
+    ldebug!("Unregistering joystick {}", joystick_id);
+    joy_state.joysticks[joystick_id as usize] = None;
+}
+
+fn get_joy_type_internal(_guid: &Option<Box<str>>) -> Result<Joystick_Type, &'static str> {
+    // @Incomplete
+    Ok(Joystick_Type::XBox360)
+}
+
+fn get_joy_axis_value_internal(
+    window: &Window_Handle,
+    joystick: &Joystick,
+    axis: Joystick_Axis,
+) -> f32 {
+    match joystick.joy_type {
+        Joystick_Type::XBox360 => get_joy_axis_value_xbox360(window, joystick.id, axis),
+    }
+}
+
+fn is_joy_connected_internal(
+    window: &Window_Handle,
+    joy_id: Joystick_Id,
+) -> (bool, Option<Box<str>>) {
+    backend::is_joy_connected_internal(window, joy_id)
 }
 
 #[inline]
@@ -155,10 +302,12 @@ fn get_joy_btn_id_xbox360(button: Joystick_Button) -> Option<Button_Id> {
     BUTTONS_TO_IDS_XBOX360[button as usize]
 }
 
-pub fn get_joy_btn_from_id(joystick: Joystick, btn_id: Button_Id) -> Option<Joystick_Button> {
-    match joystick.joy_type {
-        Joystick_Type::XBox360 => get_joy_btn_from_id_xbox360(btn_id),
-    }
+fn get_joy_axis_value_xbox360(
+    window: &Window_Handle,
+    joystick_id: Joystick_Id,
+    axis: Joystick_Axis,
+) -> f32 {
+    backend::get_joy_axis_value_xbox360(window, joystick_id, axis)
 }
 
 #[inline]
@@ -170,19 +319,8 @@ fn get_joy_btn_from_id_xbox360(btn_id: Button_Id) -> Option<Joystick_Button> {
     }
 }
 
-/// Returns the normalized value [-1, 1] of the given axis
-pub fn get_joy_axis_value(joystick: Joystick, axis: Joystick_Axis) -> f32 {
-    match joystick.joy_type {
-        Joystick_Type::XBox360 => get_joy_axis_value_xbox360(joystick.id, axis),
-    }
-}
-
-fn get_joy_axis_value_xbox360(joystick_id: Joystick_Id, axis: Joystick_Axis) -> f32 {
-    backend::get_axis_value_xbox360(joystick_id, axis)
-}
-
 /// Forces to update the joysticks' state
-pub fn update_joysticks() {
+fn update_joysticks() {
     backend::update_joysticks();
 }
 

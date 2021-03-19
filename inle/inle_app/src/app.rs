@@ -121,6 +121,7 @@ pub fn start_config_watch(env: &Env_Info, config: &mut inle_cfg::Config) -> Mayb
 }
 
 pub fn init_engine_systems(
+    window: &Render_Window_Handle,
     engine_state: &mut Engine_State,
     gres: &mut Gfx_Resources,
     shader_cache: &mut Shader_Cache,
@@ -128,7 +129,7 @@ pub fn init_engine_systems(
     gres.init();
     shader_cache.init();
 
-    inle_input::joystick_state::init_joysticks(&mut engine_state.input_state.raw.joy_state);
+    inle_input::joystick::init_joysticks(window, &mut engine_state.input_state.raw.joy_state);
     inle_ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
 
     linfo!("Number of Rayon threads: {}", rayon::current_num_threads());
@@ -371,22 +372,12 @@ pub fn handle_core_actions(
     engine_state: &mut Engine_State,
 ) -> bool {
     use inle_input::core_actions::Core_Action;
-    use inle_input::joystick_state;
 
     for action in actions.iter() {
         match action {
             Core_Action::Quit => return true,
             Core_Action::Resize(new_width, new_height) => {
                 inle_gfx::render_window::resize_keep_ratio(window, *new_width, *new_height);
-            }
-            Core_Action::Joystick_Connected { id } => {
-                joystick_state::register_joystick(&mut engine_state.input_state.raw.joy_state, *id);
-            }
-            Core_Action::Joystick_Disconnected { id } => {
-                joystick_state::unregister_joystick(
-                    &mut engine_state.input_state.raw.joy_state,
-                    *id,
-                );
             }
             Core_Action::Focus_Lost => {
                 engine_state.input_state.raw.kb_state.modifiers_pressed = 0;

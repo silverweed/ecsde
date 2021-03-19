@@ -18,7 +18,7 @@ use self::sfml as backend;
 
 // Abstraction layer for input events
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub enum Input_Raw_Event {
     Quit,
@@ -57,9 +57,11 @@ pub enum Input_Raw_Event {
     },
     Joy_Connected {
         id: Joystick_Id,
+        guid: Option<Box<str>>,
     },
     Joy_Disconnected {
         id: Joystick_Id,
+        guid: Option<Box<str>>,
     },
 }
 

@@ -6,7 +6,7 @@ pub struct Sound_Buffer<'a>(PhantomData<&'a ()>);
 static mut INSTANCE: () = ();
 
 impl Sound_Buffer<'_> {
-    pub fn from_file(fname: &str) -> Option<Self> {
+    pub fn from_file(_fname: &str) -> Option<Self> {
         Some(Self(PhantomData))
     }
 }

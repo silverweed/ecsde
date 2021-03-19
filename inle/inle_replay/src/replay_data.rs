@@ -3,8 +3,7 @@
 use inle_core::rand::Default_Rng_Seed;
 use inle_input::events::Input_Raw_Event;
 use inle_input::input_state::Input_Raw_State;
-use inle_input::joystick::{self, Joystick_Mask};
-use inle_input::joystick_state::Joystick_State;
+use inle_input::joystick::{self, Joystick_Mask, Joystick_State};
 use inle_input::mouse::Mouse_State;
 use inle_input::serialize;
 use inle_serialize::{Binary_Serializable, Byte_Stream};

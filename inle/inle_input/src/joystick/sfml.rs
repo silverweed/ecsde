@@ -50,7 +50,7 @@ pub(super) fn get_axis_value_xbox360(joystick_id: u32, axis: Joystick_Axis) -> f
 }
 
 #[inline(always)]
-pub(super) fn is_connected(joystick_id: u32) -> bool {
+pub(super) fn is_joy_connected(joystick_id: u32) -> bool {
     joystick::is_connected(joystick_id)
 }
 
@@ -66,14 +66,6 @@ pub fn get_joy_type(id: u32) -> Result<Joystick_Type, &'static str> {
 #[inline(always)]
 fn norm_minus_one_to_one(x: f32, min: f32, max: f32) -> f32 {
     2.0 * (x - min) / (max - min) - 1.0
-}
-
-pub(super) fn get_connected_joysticks_mask() -> super::Joystick_Mask {
-    let mut mask = 0u8;
-    for i in 0..joystick::COUNT {
-        mask |= (is_connected(i) as u8) << i;
-    }
-    mask
 }
 
 #[inline(always)]

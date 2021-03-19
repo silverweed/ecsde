@@ -130,7 +130,7 @@ impl Console {
 
     pub fn update(&mut self, input_state: &Input_State) {
         for event in &input_state.raw.events {
-            self.process_event(*event, input_state.raw.kb_state.modifiers_pressed);
+            self.process_event(event, input_state.raw.kb_state.modifiers_pressed);
         }
     }
 
@@ -152,12 +152,12 @@ impl Console {
         self.output.push((line.to_string(), color));
     }
 
-    fn process_event(&mut self, event: Input_Raw_Event, modifiers: Input_Action_Modifiers) {
+    fn process_event(&mut self, event: &Input_Raw_Event, modifiers: Input_Action_Modifiers) {
         debug_assert!(self.cur_pos <= self.cur_line.len());
 
         let line_changed = match event {
-            Input_Raw_Event::Key_Pressed { code } => self.process_key(code, modifiers),
-            Input_Raw_Event::Key_Repeated { code } => self.process_key(code, modifiers),
+            &Input_Raw_Event::Key_Pressed { code } => self.process_key(code, modifiers),
+            &Input_Raw_Event::Key_Repeated { code } => self.process_key(code, modifiers),
             _ => false,
         };
 
