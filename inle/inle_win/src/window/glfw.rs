@@ -44,6 +44,39 @@ pub fn get_gl_handle(window: &mut Window_Handle, s: &'static str) -> *const std:
     window.handle.get_proc_address(s)
 }
 
+#[must_use]
+fn create_joystick_callback(
+    glfw: &glfw::Glfw,
+) -> (
+    glfw::JoystickCallback<(Sender<Event>, glfw::Glfw)>,
+    Receiver<Event>,
+) {
+    let (joy_evt_sender, joy_evt_recv) = channel();
+    (
+        glfw::Callback {
+            f: |joy_id, joy_evt, (joy_evt_sender, glfw): &(Sender<Event>, glfw::Glfw)| {
+                ldebug!("Joystick {:?} connected", joy_id);
+
+                let joy = glfw::Joystick {
+                    id: joy_id,
+                    glfw: glfw.clone(),
+                };
+                joy_evt_sender
+                    .send(Event::Joystick {
+                        joy_id,
+                        connected: joy_evt == glfw::JoystickEvent::Connected,
+                        guid: joy.get_guid().map(|s| s.into_boxed_str()),
+                    })
+                    .unwrap_or_else(|err| {
+                        lerr!("Failed to send Joystick event from callback: {:?}", err)
+                    });
+            },
+            data: (joy_evt_sender, glfw.clone()),
+        },
+        joy_evt_recv,
+    )
+}
+
 #[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn create_window(
     args: &Create_Window_Args,
@@ -76,27 +109,8 @@ pub fn create_window(
     // We handle aspect ratio ourselves
     window.set_aspect_ratio(glfw::ffi::DONT_CARE as u32, glfw::ffi::DONT_CARE as u32);
     window.set_mouse_button_polling(true);
-    let (joy_evt_sender, joy_evt_recv) = channel();
-    glfw.set_joystick_callback(Some(glfw::Callback {
-        f: |joy_id, joy_evt, (joy_evt_sender, glfw): &(Sender<Event>, glfw::Glfw)| {
-            ldebug!("Joystick {:?} connected", joy_id);
-
-            let joy = glfw::Joystick {
-                id: joy_id,
-                glfw: glfw.clone(),
-            };
-            joy_evt_sender
-                .send(Event::Joystick {
-                    joy_id,
-                    connected: joy_evt == glfw::JoystickEvent::Connected,
-                    guid: joy.get_guid().map(|s| s.into_boxed_str()),
-                })
-                .unwrap_or_else(|err| {
-                    lerr!("Failed to send Joystick event from callback: {:?}", err)
-                });
-        },
-        data: (joy_evt_sender, glfw.clone()),
-    }));
+    let (joy_cb, joy_evt_recv) = create_joystick_callback(&glfw);
+    glfw.set_joystick_callback(Some(joy_cb));
     // @Incomplete: vsync, etc
 
     Window_Handle {
@@ -110,6 +124,15 @@ pub fn create_window(
         real_size: (1, 1),
         joystick_events: joy_evt_recv,
     }
+}
+
+pub fn recreate_window(window: &mut Window_Handle) {
+    window.glfw.set_joystick_callback::<()>(None);
+    let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+    let (joy_cb, joy_evt_recv) = create_joystick_callback(&glfw);
+    glfw.set_joystick_callback(Some(joy_cb));
+    window.glfw = glfw;
+    window.joystick_events = joy_evt_recv;
 }
 
 pub fn has_vsync(window: &Window_Handle) -> bool {

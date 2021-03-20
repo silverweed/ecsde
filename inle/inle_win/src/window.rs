@@ -46,6 +46,10 @@ pub fn create_window(
     backend::create_window(args, target_size, title)
 }
 
+pub fn recreate_window<W: AsMut<Window_Handle>>(window: &mut W) {
+    backend::recreate_window(window.as_mut());
+}
+
 #[inline(always)]
 pub fn has_vsync<W: AsRef<Window_Handle>>(window: &W) -> bool {
     backend::has_vsync(window.as_ref())
