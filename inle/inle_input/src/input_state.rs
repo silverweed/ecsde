@@ -139,12 +139,12 @@ fn process_event_core_actions(
     _bindings: &Input_Bindings,
     processed: &mut Processed_Input,
 ) -> bool {
-    match event {
-        &Input_Raw_Event::Quit => processed.core_actions.push(Core_Action::Quit),
-        &Input_Raw_Event::Resized(width, height) => processed
+    match *event {
+        Input_Raw_Event::Quit => processed.core_actions.push(Core_Action::Quit),
+        Input_Raw_Event::Resized(width, height) => processed
             .core_actions
             .push(Core_Action::Resize(width, height)),
-        &Input_Raw_Event::Focus_Lost => processed.core_actions.push(Core_Action::Focus_Lost),
+        Input_Raw_Event::Focus_Lost => processed.core_actions.push(Core_Action::Focus_Lost),
         _ => {
             return false;
         }
@@ -186,9 +186,9 @@ fn process_event_game_actions(
     processed: &mut Processed_Input,
 ) -> bool {
     let modifiers = raw_state.kb_state.modifiers_pressed;
-    match event {
+    match *event {
         // Game Actions
-        &Input_Raw_Event::Key_Pressed { code } => {
+        Input_Raw_Event::Key_Pressed { code } => {
             let modifiers = remove_modifier(modifiers, code);
             if let Some(names) = bindings.get_key_actions(code, modifiers) {
                 handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
@@ -197,7 +197,7 @@ fn process_event_game_actions(
                 handle_axis_pressed(&mut processed.virtual_axes, names);
             }
         }
-        &Input_Raw_Event::Key_Released { code } => {
+        Input_Raw_Event::Key_Released { code } => {
             let modifiers = remove_modifier(modifiers, code);
             if let Some(names) = bindings.get_key_actions(code, modifiers) {
                 handle_actions(&mut processed.game_actions, Action_Kind::Released, names);
@@ -206,7 +206,7 @@ fn process_event_game_actions(
                 handle_axis_released(&mut processed.virtual_axes, names);
             }
         }
-        &Input_Raw_Event::Joy_Button_Pressed {
+        Input_Raw_Event::Joy_Button_Pressed {
             joystick_id,
             button,
         } => {
@@ -221,7 +221,7 @@ fn process_event_game_actions(
                 handle_axis_pressed(&mut processed.virtual_axes, names);
             }
         }
-        &Input_Raw_Event::Joy_Button_Released {
+        Input_Raw_Event::Joy_Button_Released {
             joystick_id,
             button,
         } => {
@@ -236,7 +236,7 @@ fn process_event_game_actions(
                 handle_axis_released(&mut processed.virtual_axes, names);
             }
         }
-        &Input_Raw_Event::Mouse_Button_Pressed { button } => {
+        Input_Raw_Event::Mouse_Button_Pressed { button } => {
             if let Some(names) = bindings.get_mouse_actions(button, modifiers) {
                 handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
             }
@@ -244,7 +244,7 @@ fn process_event_game_actions(
                 handle_axis_pressed(&mut processed.virtual_axes, names);
             }
         }
-        &Input_Raw_Event::Mouse_Button_Released { button } => {
+        Input_Raw_Event::Mouse_Button_Released { button } => {
             if let Some(names) = bindings.get_mouse_actions(button, modifiers) {
                 handle_actions(&mut processed.game_actions, Action_Kind::Released, names);
             }
@@ -252,7 +252,7 @@ fn process_event_game_actions(
                 handle_axis_released(&mut processed.virtual_axes, names);
             }
         }
-        &Input_Raw_Event::Mouse_Wheel_Scrolled { delta } => {
+        Input_Raw_Event::Mouse_Wheel_Scrolled { delta } => {
             if let Some(names) = bindings.get_mouse_wheel_actions(delta > 0., modifiers) {
                 // Note: MouseWheel actions always count as 'Pressed'.
                 handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);

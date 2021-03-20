@@ -155,9 +155,9 @@ impl Console {
     fn process_event(&mut self, event: &Input_Raw_Event, modifiers: Input_Action_Modifiers) {
         debug_assert!(self.cur_pos <= self.cur_line.len());
 
-        let line_changed = match event {
-            &Input_Raw_Event::Key_Pressed { code } => self.process_key(code, modifiers),
-            &Input_Raw_Event::Key_Repeated { code } => self.process_key(code, modifiers),
+        let line_changed = match *event {
+            Input_Raw_Event::Key_Pressed { code } => self.process_key(code, modifiers),
+            Input_Raw_Event::Key_Repeated { code } => self.process_key(code, modifiers),
             _ => false,
         };
 

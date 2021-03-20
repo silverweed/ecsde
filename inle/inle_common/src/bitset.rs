@@ -75,8 +75,10 @@ impl BitAnd for &Bit_Set {
     type Output = Bit_Set;
 
     fn bitand(self, rhs: Self) -> Bit_Set {
-        let mut res = Bit_Set::default();
-        res.fast_bits = self.fast_bits & rhs.fast_bits;
+        let mut res = Bit_Set {
+            fast_bits: self.fast_bits & rhs.fast_bits,
+            ..Default::default()
+        };
 
         let my_size = self.slow_bits.len();
         let rhs_size = rhs.slow_bits.len();

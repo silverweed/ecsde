@@ -15,7 +15,6 @@ use inle_math::vector::{Vec2f, Vec2u};
 use inle_resources::gfx::{Font_Handle, Gfx_Resources};
 use std::collections::{HashMap, VecDeque};
 use std::convert::TryFrom;
-use std::iter::FromIterator;
 use std::ops::Range;
 
 #[derive(Copy, Clone, Debug)]
@@ -381,7 +380,7 @@ impl Debug_Graph {
         self.max_y_value = Some(self.max_y_value.unwrap_or(y).max(y));
         self.points.push_back(Vec2f::new(x, y));
         self.points_metadata
-            .push_back(HashMap::from_iter(metadata.iter().cloned()));
+            .push_back(metadata.iter().cloned().collect());
     }
 
     pub fn remove_points_before_x_range(&mut self) {

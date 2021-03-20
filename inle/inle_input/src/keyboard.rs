@@ -22,12 +22,12 @@ pub struct Keyboard_State {
 
 pub fn update_kb_state(kb_state: &mut Keyboard_State, events: &[Input_Raw_Event]) {
     for evt in events {
-        match evt {
-            &Input_Raw_Event::Key_Pressed { code } => {
+        match *evt {
+            Input_Raw_Event::Key_Pressed { code } => {
                 kb_state.modifiers_pressed |= input_action_modifier_from_key(code);
                 kb_state.keys_pressed.insert(code);
             }
-            &Input_Raw_Event::Key_Released { code } => {
+            Input_Raw_Event::Key_Released { code } => {
                 kb_state.modifiers_pressed &= !input_action_modifier_from_key(code);
                 kb_state.keys_pressed.remove(&code);
             }

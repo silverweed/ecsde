@@ -12,10 +12,10 @@ run: build
 build:
 	cargo build --all
 
-release:
+rel:
 	cargo build --all --release
 
-run_release: release
+run_rel: rel
 	cargo run --release
 
 watch:

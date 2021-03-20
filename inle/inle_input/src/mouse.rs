@@ -62,14 +62,14 @@ pub fn update_mouse_state(state: &mut Mouse_State, events: &[Input_Raw_Event]) {
     }
 
     for evt in events {
-        match evt {
-            &Input_Raw_Event::Mouse_Button_Pressed { button } => {
+        match *evt {
+            Input_Raw_Event::Mouse_Button_Pressed { button } => {
                 state.is_pressed[button as usize] = true;
             }
-            &Input_Raw_Event::Mouse_Button_Released { button } => {
+            Input_Raw_Event::Mouse_Button_Released { button } => {
                 state.is_pressed[button as usize] = false;
             }
-            &Input_Raw_Event::Mouse_Moved { x, y } => {
+            Input_Raw_Event::Mouse_Moved { x, y } => {
                 state.cursor = (x, y);
             }
             _ => (),

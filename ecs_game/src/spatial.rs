@@ -10,7 +10,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 #[cfg(debug_assertions)]
-use {inle_debug::painter::Debug_Painter, std::collections::HashSet, std::iter::FromIterator};
+use {inle_debug::painter::Debug_Painter, std::collections::HashSet};
 
 // @Speed: tune these numbers
 const CHUNK_WIDTH: f32 = 2000.;
@@ -225,20 +225,18 @@ impl World_Chunks {
 
         #[cfg(debug_assertions)]
         {
-            let to_remove = HashSet::<Chunk_Coords>::from_iter(
-                all_chunks
-                    .iter()
-                    .cloned()
-                    .skip(chunks_to_remove_offset)
-                    .take(n_chunks_to_remove),
-            );
-            let to_add = HashSet::from_iter(
-                all_chunks
-                    .iter()
-                    .cloned()
-                    .skip(chunks_to_add_offset)
-                    .take(n_chunks_to_add),
-            );
+            let to_remove = all_chunks
+                .iter()
+                .cloned()
+                .skip(chunks_to_remove_offset)
+                .take(n_chunks_to_remove)
+                .collect::<HashSet<_>>();
+            let to_add = all_chunks
+                .iter()
+                .cloned()
+                .skip(chunks_to_add_offset)
+                .take(n_chunks_to_add)
+                .collect::<HashSet<_>>();
             debug_assert_eq!(to_remove.intersection(&to_add).count(), 0);
         }
 

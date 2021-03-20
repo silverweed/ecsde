@@ -3,7 +3,7 @@
 use inle_core::rand::Default_Rng_Seed;
 use inle_input::events::Input_Raw_Event;
 use inle_input::input_state::Input_Raw_State;
-use inle_input::joystick::{self, Joystick_Mask, Joystick_State};
+use inle_input::joystick::{self, Joystick_Mask};
 use inle_input::mouse::Mouse_State;
 use inle_input::serialize;
 use inle_serialize::{Binary_Serializable, Byte_Stream};
@@ -72,10 +72,11 @@ impl Replay_Data_Point {
 
 impl From<Replay_Data_Point> for Input_Raw_State {
     fn from(rdp: Replay_Data_Point) -> Self {
-        let mut input_raw_state = Input_Raw_State::default();
-        input_raw_state.events = rdp.events.clone();
-        input_raw_state.mouse_state = Mouse_State::default(); // @Incomplete
-        input_raw_state.joy_state = Joystick_State::default();
+        let mut input_raw_state = Input_Raw_State {
+            events: rdp.events.clone(),
+            mouse_state: Mouse_State::default(), // @Incomplete
+            ..Default::default()
+        };
 
         for joy_id in 0..input_raw_state.joy_state.joysticks.len() {
             if (rdp.joy_mask & (1 << joy_id)) != 0 {
@@ -244,10 +245,11 @@ impl Replay_Data {
 
 impl Binary_Serializable for Replay_Data {
     fn deserialize(input: &mut Byte_Stream) -> std::io::Result<Replay_Data> {
-        let mut replay = Replay_Data::default();
-
-        replay.ms_per_frame = input.read_f32()?;
-        replay.seed = Default_Rng_Seed::deserialize(input)?;
+        let mut replay = Replay_Data {
+            ms_per_frame: input.read_f32()?,
+            seed: Default_Rng_Seed::deserialize(input)?,
+            ..Default::default()
+        };
 
         while (input.pos() as usize) < input.len() {
             replay.data.push(Replay_Data_Point::deserialize(input)?);

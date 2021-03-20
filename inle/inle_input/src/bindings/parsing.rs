@@ -158,10 +158,10 @@ fn parse_action(mods_and_key: &str) -> SmallVec<[Input_Action; 2]> {
 }
 
 fn parse_action_simple(s: &str) -> Option<Input_Action_Simple> {
-    if s.starts_with("Joy_") {
-        joystick::string_to_joy_btn(&s["Joy_".len()..]).map(Input_Action_Simple::Joystick)
-    } else if s.starts_with("Mouse_") {
-        mouse::string_to_mouse_btn(&s["Mouse_".len()..]).map(Input_Action_Simple::Mouse)
+    if let Some(strip) = s.strip_prefix("Joy_") {
+        joystick::string_to_joy_btn(strip).map(Input_Action_Simple::Joystick)
+    } else if let Some(strip) = s.strip_prefix("Mouse_") {
+        mouse::string_to_mouse_btn(strip).map(Input_Action_Simple::Mouse)
     } else if s == "Wheel_Up" {
         Some(Input_Action_Simple::Mouse_Wheel { up: true })
     } else if s == "Wheel_Down" {
