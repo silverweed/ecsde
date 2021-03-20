@@ -42,7 +42,6 @@ pub fn update(
 
         velocity.x += movement * acceleration * dt_secs;
         if actions.contains(&(sid!("jump"), Action_Kind::Pressed)) {
-            ldebug!("JUMP");
             velocity.y -= jump_impulse;
         }
         let velocity_norm = velocity.normalized_or_zero();

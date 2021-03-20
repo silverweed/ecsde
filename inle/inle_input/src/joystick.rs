@@ -1,6 +1,7 @@
 use crate::events::Input_Raw_Event;
 use inle_win::window::Window_Handle;
 use std::convert::TryFrom;
+use std::fmt;
 
 #[cfg(feature = "win-sfml")]
 mod sfml;
@@ -18,7 +19,7 @@ pub const JOY_COUNT: u8 = 8;
 
 pub type Joystick_Mask = u8;
 pub type Joystick_Id = u32;
-pub type Button_Id = u32;
+type Button_Id = u32;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Joystick_Type {
@@ -66,6 +67,17 @@ pub enum Joystick_Button {
     /// R2
     Trigger_Right,
     _Count,
+}
+
+impl TryFrom<u8> for Joystick_Button {
+    type Error = String;
+
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        if v >= Joystick_Button::_Count as u8 {
+            return Err(format!("Invalid Joystick_Button: {}", v));
+        }
+        Ok(unsafe { std::mem::transmute(v) })
+    }
 }
 
 #[repr(u8)]
@@ -149,34 +161,22 @@ pub fn get_connected_joysticks_mask(state: &Joystick_State) -> Joystick_Mask {
     mask
 }
 
-pub fn get_joy_btn_id(joy_type: Joystick_Type, button: Joystick_Button) -> Option<Button_Id> {
-    match joy_type {
-        Joystick_Type::XBox360 => get_joy_btn_id_xbox360(button),
-    }
-}
-
-pub fn get_joy_btn_from_id(joy_type: Joystick_Type, btn_id: Button_Id) -> Option<Joystick_Button> {
-    match joy_type {
-        Joystick_Type::XBox360 => get_joy_btn_from_id_xbox360(btn_id),
-    }
-}
-
 /// Returns the normalized value [-1, 1] of the given axis
 pub fn get_joy_axis_value(state: &Joystick_State, joy_id: Joystick_Id, axis: Joystick_Axis) -> f32 {
     if state.joysticks[joy_id as usize].is_some() {
-        state.values[joy_id as usize][axis as usize]
+        state.axes[joy_id as usize][axis as usize]
     } else {
         0.0
     }
 }
 
-/// Returns the values of all axes for a single joystick
+/// Returns the axes of all axes for a single joystick
 pub fn get_joy_axes_values(
     joy_state: &Joystick_State,
     joy_id: Joystick_Id,
 ) -> Option<&Real_Axes_Values> {
     if joy_state.joysticks[joy_id as usize].is_some() {
-        Some(&joy_state.values[joy_id as usize])
+        Some(&joy_state.axes[joy_id as usize])
     } else {
         None
     }
@@ -185,15 +185,49 @@ pub fn get_joy_axes_values(
 pub fn get_all_joysticks_axes_values(
     joy_state: &Joystick_State,
 ) -> (&[Real_Axes_Values; JOY_COUNT as usize], Joystick_Mask) {
-    (&joy_state.values, get_connected_joysticks_mask(joy_state))
+    (&joy_state.axes, get_connected_joysticks_mask(joy_state))
 }
 
 pub type Real_Axes_Values = [f32; Joystick_Axis::_Count as usize];
 
+#[derive(Copy, Clone, Default)]
+pub struct Joystick_Button_Values {
+    /// The bits in this mask are ordered as Joystick_Button, so they're now "raw"
+    /// values but they are already reordered to match our enum's order, rather
+    /// than the framework's.
+    button_mask: u32,
+}
+
+const_assert!(
+    std::mem::size_of::<u32>() * inle_common::WORD_SIZE >= Joystick_Button::_Count as usize
+);
+
+impl fmt::Debug for Joystick_Button_Values {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:b}", self.button_mask)
+    }
+}
+
+impl Joystick_Button_Values {
+    fn is_pressed(self, button: Joystick_Button) -> bool {
+        (self.button_mask & (1 << button as u32)) != 0
+    }
+
+    fn set_pressed(&mut self, button: Joystick_Button, pressed: bool) {
+        if pressed {
+            self.button_mask |= 1 << button as u32;
+        } else {
+            self.button_mask &= !(1 << button as u32);
+        }
+    }
+}
+
 #[derive(Clone, Default, Debug)]
 pub struct Joystick_State {
     pub joysticks: [Option<Joystick>; JOY_COUNT as usize],
-    pub values: [Real_Axes_Values; JOY_COUNT as usize],
+    pub axes: [Real_Axes_Values; JOY_COUNT as usize],
+    buttons: [Joystick_Button_Values; JOY_COUNT as usize],
+    buttons_prev_state: [Joystick_Button_Values; JOY_COUNT as usize],
 }
 
 pub fn init_joysticks<T: AsRef<Window_Handle>>(window: &T, joy_state: &mut Joystick_State) {
@@ -211,13 +245,7 @@ pub fn init_joysticks<T: AsRef<Window_Handle>>(window: &T, joy_state: &mut Joyst
     linfo!("Found {} valid joysticks.", joy_found);
 }
 
-pub fn update_joystick_state(
-    joy_state: &mut Joystick_State,
-    events: &[Input_Raw_Event],
-    window: &Window_Handle,
-) {
-    update_joysticks();
-
+pub fn update_joystick_state(joy_state: &mut Joystick_State, events: &[Input_Raw_Event]) {
     for event in events {
         match event {
             Input_Raw_Event::Joy_Connected { id, guid } => {
@@ -229,20 +257,59 @@ pub fn update_joystick_state(
             _ => {}
         }
     }
+}
 
-    // Update axes and values
+pub fn pre_update_joystick_state(
+    window: &Window_Handle,
+    joy_state: &mut Joystick_State,
+    events_out: &mut Vec<Input_Raw_Event>,
+) {
+    update_joysticks();
+
+    // Update axes and buttons
     for (joy_id, joy) in joy_state
         .joysticks
         .iter_mut()
         .filter_map(|j| j.as_ref())
         .enumerate()
     {
-        for (axis_id, axis_val) in joy_state.values[joy_id].iter_mut().enumerate() {
+        for (axis_id, axis_val) in joy_state.axes[joy_id].iter_mut().enumerate() {
             *axis_val = get_joy_axis_value_internal(
                 window,
                 joy,
                 Joystick_Axis::try_from(axis_id as u8).unwrap(),
             );
+        }
+
+        let btn_prev_values = joy_state.buttons[joy_id];
+        joy_state.buttons_prev_state[joy_id] = btn_prev_values;
+
+        let mut btn_values = Joystick_Button_Values::default();
+        for btn_id in 0..Joystick_Button::_Count as usize {
+            let joy_btn = Joystick_Button::try_from(btn_id as u8).unwrap();
+            let pressed = is_joy_btn_pressed_internal(window, joy, joy_btn);
+            btn_values.set_pressed(joy_btn, pressed);
+        }
+        joy_state.buttons[joy_id] = btn_values;
+
+        // Create events for all buttons that flipped value
+        let mut diff_values = btn_values.button_mask ^ btn_prev_values.button_mask;
+        while diff_values != 0 {
+            let first_diff_btn_id = diff_values.trailing_zeros();
+            let evt = if btn_values.button_mask & (1 << first_diff_btn_id) != 0 {
+                Input_Raw_Event::Joy_Button_Pressed {
+                    joystick_id: joy_id as Joystick_Id,
+                    button: Joystick_Button::try_from(first_diff_btn_id as u8).unwrap(),
+                }
+            } else {
+                Input_Raw_Event::Joy_Button_Released {
+                    joystick_id: joy_id as Joystick_Id,
+                    button: Joystick_Button::try_from(first_diff_btn_id as u8).unwrap(),
+                }
+            };
+            events_out.push(evt);
+
+            diff_values &= !(1 << first_diff_btn_id);
         }
     }
 }
@@ -301,12 +368,6 @@ fn is_joy_connected_internal(
     backend::is_joy_connected_internal(window, joy_id)
 }
 
-#[inline]
-fn get_joy_btn_id_xbox360(button: Joystick_Button) -> Option<Button_Id> {
-    assert!((button as usize) < BUTTONS_TO_IDS_XBOX360.len());
-    BUTTONS_TO_IDS_XBOX360[button as usize]
-}
-
 fn get_joy_axis_value_xbox360(
     window: &Window_Handle,
     joystick_id: Joystick_Id,
@@ -315,126 +376,26 @@ fn get_joy_axis_value_xbox360(
     backend::get_joy_axis_value_xbox360(window, joystick_id, axis)
 }
 
-#[inline]
-fn get_joy_btn_from_id_xbox360(btn_id: Button_Id) -> Option<Joystick_Button> {
-    if (btn_id as usize) < IDS_TO_BUTTONS_XBOX360.len() {
-        Some(IDS_TO_BUTTONS_XBOX360[btn_id as usize])
-    } else {
-        None
+fn is_joy_btn_pressed_internal(
+    window: &Window_Handle,
+    joy: &Joystick,
+    btn: Joystick_Button,
+) -> bool {
+    match joy.joy_type {
+        Joystick_Type::XBox360 => is_joy_btn_pressed_internal_xbox360(window, joy.id, btn),
     }
+}
+
+#[inline]
+fn is_joy_btn_pressed_internal_xbox360(
+    window: &Window_Handle,
+    joy_id: Joystick_Id,
+    btn: Joystick_Button,
+) -> bool {
+    backend::is_joy_btn_pressed_internal_xbox360(window, joy_id, btn)
 }
 
 /// Forces to update the joysticks' state
 fn update_joysticks() {
     backend::update_joysticks();
 }
-
-// Map (Joystick_Button as u8) => (button id)
-#[cfg(target_os = "linux")]
-const BUTTONS_TO_IDS_XBOX360: [Option<Button_Id>; Joystick_Button::_Count as usize] = [
-    Some(3),  // Face_Top
-    Some(1),  // Face_Right
-    Some(0),  // Face_Bottom
-    Some(2),  // Face_Left
-    Some(6),  // Special_Left
-    Some(7),  // Special_Right
-    Some(8),  // Special_Middle
-    Some(9),  // Stick_Left
-    Some(10), // Stick_Right
-    Some(4),  // Shoulder_Left
-    Some(5),  // Shoulder_Right
-    None,     // Dpad_Top
-    None,     // Dpad_Right
-    None,     // Dpad_Bottom
-    None,     // Dpad_Left
-    None,     // Trigger_Left
-    None,     // Trigger_Right
-];
-
-#[cfg(target_os = "windows")]
-const BUTTONS_TO_IDS_XBOX360: [Option<Button_Id>; Joystick_Button::_Count as usize] = [
-    Some(3),  // Face_Top
-    Some(1),  // Face_Right
-    Some(0),  // Face_Bottom
-    Some(2),  // Face_Left
-    Some(6),  // Special_Left
-    Some(7),  // Special_Right
-    None,     // Special_Middle
-    Some(9),  // Stick_Left
-    Some(10), // Stick_Right
-    Some(4),  // Shoulder_Left
-    Some(5),  // Shoulder_Right
-    None,     // Dpad_Top
-    None,     // Dpad_Right
-    None,     // Dpad_Bottom
-    None,     // Dpad_Left
-    None,     // Trigger_Left
-    None,     // Trigger_Right
-];
-
-#[cfg(target_os = "macos")]
-const BUTTONS_TO_IDS_XBOX360: [Option<Button_Id>; Joystick_Button::_Count as usize] = [
-    Some(3),  // Face_Top
-    Some(2),  // Face_Right
-    Some(1),  // Face_Bottom
-    Some(0),  // Face_Left
-    Some(8),  // Special_Left
-    Some(9),  // Special_Right
-    Some(12), // Special_Middle
-    Some(10), // Stick_Left
-    Some(11), // Stick_Right
-    Some(4),  // Shoulder_Left
-    Some(5),  // Shoulder_Right
-    None,     // Dpad_Top
-    None,     // Dpad_Right
-    None,     // Dpad_Bottom
-    None,     // Dpad_Left
-    Some(6),  // Trigger_Left
-    Some(7),  // Trigger_Right
-];
-
-#[cfg(target_os = "linux")]
-const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 11] = [
-    Joystick_Button::Face_Bottom,
-    Joystick_Button::Face_Right,
-    Joystick_Button::Face_Left,
-    Joystick_Button::Face_Top,
-    Joystick_Button::Shoulder_Left,
-    Joystick_Button::Shoulder_Right,
-    Joystick_Button::Special_Left,
-    Joystick_Button::Special_Right,
-    Joystick_Button::Special_Middle,
-    Joystick_Button::Stick_Left,
-    Joystick_Button::Stick_Right,
-];
-
-#[cfg(target_os = "windows")]
-const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 10] = [
-    Joystick_Button::Face_Bottom,
-    Joystick_Button::Face_Right,
-    Joystick_Button::Face_Left,
-    Joystick_Button::Face_Top,
-    Joystick_Button::Shoulder_Left,
-    Joystick_Button::Shoulder_Right,
-    Joystick_Button::Special_Left,
-    Joystick_Button::Special_Right,
-    Joystick_Button::Stick_Left,
-    Joystick_Button::Stick_Right,
-];
-
-#[cfg(target_os = "macos")]
-const IDS_TO_BUTTONS_XBOX360: [Joystick_Button; 13] = [
-    Joystick_Button::Face_Left,
-    Joystick_Button::Face_Bottom,
-    Joystick_Button::Face_Right,
-    Joystick_Button::Face_Top,
-    Joystick_Button::Shoulder_Left,
-    Joystick_Button::Shoulder_Right,
-    Joystick_Button::Trigger_Left,
-    Joystick_Button::Trigger_Right,
-    Joystick_Button::Special_Left,
-    Joystick_Button::Special_Right,
-    Joystick_Button::Stick_Left,
-    Joystick_Button::Stick_Right,
-    Joystick_Button::Special_Middle,
-];

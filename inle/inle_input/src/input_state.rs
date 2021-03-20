@@ -76,6 +76,15 @@ pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut
     raw_state.core_events.clear();
     raw_state.events.clear();
 
+    // Note: this is a leaky abstraction due to GLFW:
+    // differently from mouse and keyboard, joystick button events are not provided
+    // by GLFW, so we must do the other way around.
+    // Instead of updating the joystick state from the window events, in this case
+    // we update the joystick state by polling the button states and then we
+    // generate the events from it.
+    // This is why this is the only update_state function that accepts a window and a mutable vec of events.
+    joystick::pre_update_joystick_state(window, &mut raw_state.joy_state, &mut raw_state.events);
+
     window::prepare_poll_events(window);
     while let Some(evt) = window::poll_event(window) {
         if let Some(evt) = events::framework_to_engine_event(evt) {
@@ -88,7 +97,7 @@ pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut
 
     mouse::update_mouse_state(&mut raw_state.mouse_state, &raw_state.events);
     keyboard::update_kb_state(&mut raw_state.kb_state, &raw_state.events);
-    joystick::update_joystick_state(&mut raw_state.joy_state, &raw_state.events, window);
+    joystick::update_joystick_state(&mut raw_state.joy_state, &raw_state.events);
 }
 
 pub fn process_raw_input(
@@ -207,32 +216,24 @@ fn process_event_game_actions(
             }
         }
         Input_Raw_Event::Joy_Button_Pressed {
-            joystick_id,
+            joystick_id: _,
             button,
         } => {
-            if let Some(names) =
-                bindings.get_joystick_actions(joystick_id, button, &raw_state.joy_state)
-            {
+            if let Some(names) = bindings.get_joystick_actions(button) {
                 handle_actions(&mut processed.game_actions, Action_Kind::Pressed, names);
             }
-            if let Some(names) =
-                bindings.get_joystick_emulated_axes(joystick_id, button, &raw_state.joy_state)
-            {
+            if let Some(names) = bindings.get_joystick_emulated_axes(button) {
                 handle_axis_pressed(&mut processed.virtual_axes, names);
             }
         }
         Input_Raw_Event::Joy_Button_Released {
-            joystick_id,
+            joystick_id: _,
             button,
         } => {
-            if let Some(names) =
-                bindings.get_joystick_actions(joystick_id, button, &raw_state.joy_state)
-            {
+            if let Some(names) = bindings.get_joystick_actions(button) {
                 handle_actions(&mut processed.game_actions, Action_Kind::Released, names);
             }
-            if let Some(names) =
-                bindings.get_joystick_emulated_axes(joystick_id, button, &raw_state.joy_state)
-            {
+            if let Some(names) = bindings.get_joystick_emulated_axes(button) {
                 handle_axis_released(&mut processed.virtual_axes, names);
             }
         }

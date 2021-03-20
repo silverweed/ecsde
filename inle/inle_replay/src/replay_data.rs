@@ -80,7 +80,7 @@ impl From<Replay_Data_Point> for Input_Raw_State {
 
         for joy_id in 0..input_raw_state.joy_state.joysticks.len() {
             if (rdp.joy_mask & (1 << joy_id)) != 0 {
-                let joy_axes = &mut input_raw_state.joy_state.values[joy_id];
+                let joy_axes = &mut input_raw_state.joy_state.axes[joy_id];
                 let joy_data = rdp.joy_data[joy_id];
                 for (axis_id, axis) in joy_axes.iter_mut().enumerate() {
                     if (joy_data.axes_mask & (1 << axis_id)) != 0 {

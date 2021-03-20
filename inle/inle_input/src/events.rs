@@ -1,4 +1,4 @@
-use crate::joystick::{Button_Id as Joystick_Button_Id, Joystick_Id};
+use crate::joystick::{Joystick_Button, Joystick_Id};
 use crate::keyboard::Key;
 use crate::mouse::Mouse_Button;
 use inle_win::window::Event as Win_Event;
@@ -49,11 +49,11 @@ pub enum Input_Raw_Event {
     },
     Joy_Button_Pressed {
         joystick_id: Joystick_Id,
-        button: Joystick_Button_Id,
+        button: Joystick_Button,
     },
     Joy_Button_Released {
         joystick_id: Joystick_Id,
-        button: Joystick_Button_Id,
+        button: Joystick_Button,
     },
     Joy_Connected {
         id: Joystick_Id,

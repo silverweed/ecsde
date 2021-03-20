@@ -9,6 +9,7 @@ lazy_static! {
         Arc::new(Mutex::new(HashSet::default()));
 }
 
+#[cfg(debug_assertions)]
 static mut VERBOSE: AtomicBool = AtomicBool::new(false);
 
 #[inline(always)]
@@ -24,10 +25,10 @@ pub fn is_verbose() -> bool {
 }
 
 #[inline(always)]
-pub fn set_verbose(verbose: bool) {
+pub fn set_verbose(_verbose: bool) {
     #[cfg(debug_assertions)]
     unsafe {
-        VERBOSE.store(verbose, Ordering::Release);
+        VERBOSE.store(_verbose, Ordering::Release);
     }
 }
 

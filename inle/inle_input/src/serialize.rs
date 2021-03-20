@@ -78,12 +78,14 @@ impl Binary_Serializable for Input_Raw_Event {
                 let code = keyboard::num_to_key(code as _).ok_or(io::ErrorKind::InvalidData)?;
                 Ok(Input_Raw_Event::Key_Released { code })
             }
+            // @Incomplete @Refactor: including Joystick_Button causes a cyclic dependency!
+            /*
             PRE_JOY_PRESSED => {
                 let joystick_id = input.read_u8()?.into();
                 let button = input.read_u8()?.into();
                 Ok(Input_Raw_Event::Joy_Button_Pressed {
                     joystick_id,
-                    button,
+                    button: Joystick_Button::try_from(button)?,
                 })
             }
             PRE_JOY_RELEASED => {
@@ -91,9 +93,10 @@ impl Binary_Serializable for Input_Raw_Event {
                 let button = input.read_u8()?.into();
                 Ok(Input_Raw_Event::Joy_Button_Released {
                     joystick_id,
-                    button,
+                    button: Joystick_Button::try_from(button)?,
                 })
             }
+            */
             PRE_MOUSE_PRESSED => {
                 let button = input.read_u8()?;
                 let button =

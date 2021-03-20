@@ -1,4 +1,4 @@
-use super::joystick::{self, Joystick_Button, Joystick_State};
+use super::joystick::{self, Joystick_Button};
 use super::keyboard::Key;
 use super::mouse::{self, Mouse_Button};
 use inle_common::stringid::String_Id;
@@ -98,21 +98,9 @@ impl Input_Bindings {
         ))
     }
 
-    pub(super) fn get_joystick_actions(
-        &self,
-        joystick_id: u32,
-        button: u32,
-        joy_state: &Joystick_State,
-    ) -> Option<&[String_Id]> {
-        let joystick = &joy_state.joysticks[joystick_id as usize].unwrap_or_else(|| {
-            fatal!(
-                "Tried to get action for joystick {}, but it is not registered!",
-                joystick_id
-            )
-        });
-        let joystick = joystick::get_joy_btn_from_id(joystick.joy_type, button)?;
+    pub(super) fn get_joystick_actions(&self, button: Joystick_Button) -> Option<&[String_Id]> {
         // @Incomplete: do we want to support modifiers on joysticks?
-        let input_action = Input_Action::new(Input_Action_Simple::Joystick(joystick));
+        let input_action = Input_Action::new(Input_Action_Simple::Joystick(button));
         self.action_bindings.get(&input_action).map(Vec::as_slice)
     }
 
@@ -149,21 +137,11 @@ impl Input_Bindings {
 
     pub(super) fn get_joystick_emulated_axes(
         &self,
-        joystick_id: u32,
-        button: u32,
-        joy_state: &Joystick_State,
+        button: Joystick_Button,
     ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
-        let joystick = &joy_state.joysticks[joystick_id as usize].unwrap_or_else(|| {
-            panic!(
-                "[ ERROR ] Tried to get emulated axes for joystick {}, but it is not registered!",
-                joystick_id
-            )
-        });
         self.axis_bindings
             .emulated
-            .get(&Input_Action::new(Input_Action_Simple::Joystick(
-                joystick::get_joy_btn_from_id(joystick.joy_type, button)?,
-            )))
+            .get(&Input_Action::new(Input_Action_Simple::Joystick(button)))
     }
 
     pub(super) fn get_mouse_emulated_axes(
