@@ -79,7 +79,8 @@ pub fn create_window(
     let (joy_evt_sender, joy_evt_recv) = channel();
     glfw.set_joystick_callback(Some(glfw::Callback {
         f: |joy_id, joy_evt, (joy_evt_sender, glfw): &(Sender<Event>, glfw::Glfw)| {
-            ldebug!("joy {:?} connected", joy_id);
+            ldebug!("Joystick {:?} connected", joy_id);
+
             let joy = glfw::Joystick {
                 id: joy_id,
                 glfw: glfw.clone(),

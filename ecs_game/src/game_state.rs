@@ -155,6 +155,11 @@ fn create_game_state<'a>(
     game_resources: &mut Game_Resources<'_>,
     cmdline_args: &[String],
 ) -> Result<(Box<Game_State<'a>>, cmdline::Cmdline_Args), Box<dyn std::error::Error>> {
+    let mut_in_debug!(parsed_cmdline_args) = cmdline::parse_cmdline_args(cmdline_args.iter());
+    if parsed_cmdline_args.verbose {
+        inle_diagnostics::prelude::set_verbose(true);
+    }
+
     // Load Config first, as it's needed to setup everything that follows.
     let env = Env_Info::gather().unwrap();
     let config = inle_cfg::Config::new_from_dir(&env.cfg_root);
@@ -173,7 +178,6 @@ fn create_game_state<'a>(
         }
     };
 
-    let mut_in_debug!(parsed_cmdline_args) = cmdline::parse_cmdline_args(cmdline_args.iter());
     #[cfg(debug_assertions)]
     {
         if let Some(in_replay_file) = parsed_cmdline_args.in_replay_file.take() {

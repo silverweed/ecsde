@@ -8,6 +8,7 @@ pub(super) struct Cmdline_Args {
 
     pub n_entities_to_spawn: Option<usize>,
     pub start_from_menu: bool,
+    pub verbose: bool,
 }
 
 macro_rules! opt_with_arg {
@@ -46,6 +47,10 @@ pub(super) fn parse_cmdline_args<'a>(mut args: impl Iterator<Item = &'a String>)
 
             "--from-menu" => {
                 cmdline_args.start_from_menu = true;
+            }
+
+            "--verbose" => {
+                cmdline_args.verbose = true;
             }
 
             _ => eprintln!("Unknown argument {}", arg),

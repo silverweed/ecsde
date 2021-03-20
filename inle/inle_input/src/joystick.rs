@@ -252,10 +252,15 @@ fn register_joystick(
     joystick_id: Joystick_Id,
     joystick_guid: &Option<Box<str>>,
 ) -> bool {
-    ldebug!("Registering joystick {}", joystick_id);
+    ldebug!(
+        "Registering joystick {} with guid {:?}",
+        joystick_id,
+        joystick_guid
+    );
 
     match get_joy_type_internal(joystick_guid) {
         Ok(joy_type) => {
+            ldebug!("Interpreting as type {:?}", joy_type);
             joy_state.joysticks[joystick_id as usize] = Some(Joystick {
                 id: joystick_id,
                 joy_type,

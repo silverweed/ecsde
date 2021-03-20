@@ -6,5 +6,6 @@ mod log;
 mod tracer;
 
 pub use log::*;
+
 #[cfg(feature = "tracer")]
 pub use tracer::*;
