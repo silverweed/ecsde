@@ -293,38 +293,45 @@ mod tests {
     use super::mouse::Mouse_Button;
     use super::*;
 
-    // @Fixme: make this test compile
-    //#[test]
-    //fn test_parse_action() {
-    //assert_eq!(
-    //parse_action("Space"),
-    //smallvec!(Input_Action::new(Input_Action_Simple::Key(Key::Space)))
-    //);
-    //assert_eq!(parse_action("Spacex"), smallvec![]);
-    //assert_eq!(
-    //parse_action("Dash"),
-    //smallvec!(Input_Action::new(Input_Action_Simple::Key(Key::Dash)))
-    //);
-    //assert_eq!(
-    //parse_action("  Dash  "),
-    //smallvec!(Input_Action::new(Input_Action_Simple::Key(Key::Dash)))
-    //);
-    //assert_eq!(parse_action("Joy_"), smallvec![]);
-    //assert_eq!(
-    //parse_action("Joy_Shoulder_Right"),
-    //smallvec!(Input_Action::new(Input_Action_Simple::Joystick(
-    //Joystick_Button::Shoulder_Right
-    //)))
-    //);
-    //assert_eq!(parse_action("Mouse_"), smallvec![]);
-    //assert_eq!(
-    //parse_action("Mouse_Left"),
-    //smallvec!(Input_Action::new(Input_Action_Simple::Mouse(
-    //Mouse_Button::Left
-    //)))
-    //);
-    //assert_eq!(parse_action(""), smallvec![]);
-    //}
+    macro_rules! actionvec {
+        ($($x: expr)?) => {{
+            let v: SmallVec<[Input_Action; 2]> = smallvec![$($x)?];
+            v
+        }};
+    }
+
+    #[test]
+    fn test_parse_action() {
+        assert_eq!(
+            parse_action("Space"),
+            actionvec!(Input_Action::new(Input_Action_Simple::Key(Key::Space)))
+        );
+        assert_eq!(parse_action("Spacex"), actionvec![]);
+        assert_eq!(
+            parse_action("Dash"),
+            actionvec!(Input_Action::new(Input_Action_Simple::Key(Key::Dash)))
+        );
+        assert_eq!(
+            parse_action("  Dash  "),
+            actionvec!(Input_Action::new(Input_Action_Simple::Key(Key::Dash)))
+        );
+        assert_eq!(parse_action("Joy_"), actionvec![]);
+        assert_eq!(
+            parse_action("Joy_Shoulder_Right"),
+            actionvec!(Input_Action::new(Input_Action_Simple::Joystick(
+                Joystick_Button::Shoulder_Right
+            )))
+        );
+        assert_eq!(parse_action("Mouse_"), actionvec![]);
+        assert_eq!(
+            parse_action("Mouse_Left"),
+            actionvec!(Input_Action::new(Input_Action_Simple::Mouse(
+                Mouse_Button::Left
+            )))
+        );
+        assert_eq!(parse_action(""), actionvec![]);
+    }
+
     #[test]
     fn test_parse_axis() {
         use joystick::Joystick_Axis as J;

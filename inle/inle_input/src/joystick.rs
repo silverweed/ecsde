@@ -230,7 +230,7 @@ pub fn update_joystick_state(
         }
     }
 
-    // TODO: update axes and values
+    // Update axes and values
     for (joy_id, joy) in joy_state
         .joysticks
         .iter_mut()

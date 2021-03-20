@@ -21,26 +21,26 @@ pub(super) const AXES_ENGINE_TO_FRAMEWORK_XBOX360: [Option<GamepadAxis>;
 
 #[cfg(target_os = "linux")]
 pub(super) const AXES_RANGES_XBOX360: [(f32, f32); Joystick_Axis::_Count as usize] = [
-    (-100.0, 100.0),
-    (-100.0, 100.0),
-    (-100.0, 100.0),
-    (-100.0, 100.0),
-    (-100.0, 100.0),
-    (-100.0, 100.0),
-    (-100.0, 100.0),
-    (-100.0, 100.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
 ];
 
 #[cfg(any(target_os = "windows", target_os = "macos"))]
 pub(super) const AXES_RANGES_XBOX360: [(f32, f32); Joystick_Axis::_Count as usize] = [
-    (-100.0, 100.0),
-    (-100.0, 100.0),
-    (-100.0, 100.0),
-    (-100.0, 100.0),
-    (-100.0, 100.0),
-    (-100.0, 100.0),
-    (-100.0, 100.0),
-    (100.0, -100.0), // The Dpad_V is inverted on Windows and OSX
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (-1.0, 1.0),
+    (1.0, -1.0), // The Dpad_V is inverted on Windows and OSX
 ];
 
 pub(super) fn get_joy_axis_value_xbox360(

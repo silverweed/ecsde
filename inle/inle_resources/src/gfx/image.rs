@@ -20,7 +20,7 @@ pub fn load_image_from_file(fname: &str) -> Result<Image, Box<dyn Error>> {
     let mut buf = vec![0; info.buffer_size()];
     reader.next_frame(&mut buf)?;
 
-    ldebug!("loaded image with info {:#?}", info);
+    lverbose!("loaded image with info {:#?}", info);
 
     Ok(render::new_image_with_data(
         info.width,

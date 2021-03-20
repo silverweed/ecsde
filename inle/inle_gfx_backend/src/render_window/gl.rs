@@ -278,15 +278,11 @@ extern "system" fn gl_msg_callback(
 ) {
     let message: &[u8] =
         unsafe { std::slice::from_raw_parts(message as *const u8, length as usize) };
-    lerr!(
-        "GL MSG: {} message = {}\n",
-        if typ == gl::DEBUG_TYPE_ERROR {
-            "** GL ERROR **"
-        } else {
-            ""
-        },
-        str::from_utf8(message).unwrap()
-    );
+    if typ == gl::DEBUG_TYPE_ERROR {
+        lerr!("[GL ERROR] {}\n", str::from_utf8(message).unwrap());
+    } else {
+        lverbose!("[GL MSG] {}\n", str::from_utf8(message).unwrap());
+    }
 }
 
 const N_CIRCLE_POINTS: usize = 32;

@@ -300,7 +300,7 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
         check_gl_err();
     }
 
-    ldebug!(
+    lverbose!(
         "Buffer_Allocator: allocated new bucket with capacity {} B",
         capacity
     );
