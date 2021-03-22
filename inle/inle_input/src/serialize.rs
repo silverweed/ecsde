@@ -1,6 +1,8 @@
 use crate::events::Input_Raw_Event;
+use crate::joystick::Joystick_Button;
 use crate::{keyboard, mouse};
 use inle_serialize::{Binary_Serializable, Byte_Stream};
+use std::convert::TryFrom;
 use std::io;
 
 const PRE_KEY_PRESSED: u8 = 0x0;
@@ -78,25 +80,24 @@ impl Binary_Serializable for Input_Raw_Event {
                 let code = keyboard::num_to_key(code as _).ok_or(io::ErrorKind::InvalidData)?;
                 Ok(Input_Raw_Event::Key_Released { code })
             }
-            // @Incomplete @Refactor: including Joystick_Button causes a cyclic dependency!
-            /*
             PRE_JOY_PRESSED => {
                 let joystick_id = input.read_u8()?.into();
-                let button = input.read_u8()?.into();
+                let button = input.read_u8()?;
                 Ok(Input_Raw_Event::Joy_Button_Pressed {
                     joystick_id,
-                    button: Joystick_Button::try_from(button)?,
+                    button: Joystick_Button::try_from(button)
+                        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?,
                 })
             }
             PRE_JOY_RELEASED => {
                 let joystick_id = input.read_u8()?.into();
-                let button = input.read_u8()?.into();
+                let button = input.read_u8()?;
                 Ok(Input_Raw_Event::Joy_Button_Released {
                     joystick_id,
-                    button: Joystick_Button::try_from(button)?,
+                    button: Joystick_Button::try_from(button)
+                        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?,
                 })
             }
-            */
             PRE_MOUSE_PRESSED => {
                 let button = input.read_u8()?;
                 let button =

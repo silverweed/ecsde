@@ -186,7 +186,13 @@ fn draw_line(
 ) {
     let mut vbuf = render::start_draw_quads_temp(window, 1);
     let direction = line.to - line.from;
-    draw_line_internal(window, &mut vbuf, direction.magnitude(), line.thickness, props);
+    draw_line_internal(
+        window,
+        &mut vbuf,
+        direction.magnitude(),
+        line.thickness,
+        props,
+    );
 
     let rot = rad(direction.y.atan2(direction.x));
     let transform = Transform2D::from_pos_rot_scale(line.from, rot, Vec2f::new(1., 1.));

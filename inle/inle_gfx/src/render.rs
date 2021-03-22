@@ -324,15 +324,30 @@ pub fn add_quad(
     backend::add_vertices(window, vbuf, &[*v1, *v2, *v3, *v3, *v4, *v1]);
 }
 
-pub fn add_triangle(window: &mut Render_Window_Handle, vbuf: &mut Vertex_Buffer_Triangles, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
+pub fn add_triangle(
+    window: &mut Render_Window_Handle,
+    vbuf: &mut Vertex_Buffer_Triangles,
+    v1: &Vertex,
+    v2: &Vertex,
+    v3: &Vertex,
+) {
     backend::add_vertices(window, vbuf, &[*v1, *v2, *v3]);
 }
 
-pub fn add_line(window: &mut Render_Window_Handle, vbuf: &mut Vertex_Buffer_Lines, from: &Vertex, to: &Vertex) {
+pub fn add_line(
+    window: &mut Render_Window_Handle,
+    vbuf: &mut Vertex_Buffer_Lines,
+    from: &Vertex,
+    to: &Vertex,
+) {
     backend::add_vertices(window, vbuf, &[*from, *to]);
 }
 
-pub fn add_vertex(window: &mut Render_Window_Handle, vbuf: &mut Vertex_Buffer_Linestrip, v: &Vertex) {
+pub fn add_vertex(
+    window: &mut Render_Window_Handle,
+    vbuf: &mut Vertex_Buffer_Linestrip,
+    v: &Vertex,
+) {
     backend::add_vertices(window, vbuf, &[*v]);
 }
 
@@ -352,7 +367,12 @@ pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
     backend::swap_vbuf(a, b)
 }
 
-pub fn update_vbuf(window: &mut Render_Window_Handle, vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
+pub fn update_vbuf(
+    window: &mut Render_Window_Handle,
+    vbuf: &mut Vertex_Buffer,
+    vertices: &[Vertex],
+    offset: u32,
+) {
     backend::update_vbuf(window, vbuf, vertices, offset);
 }
 

@@ -106,7 +106,6 @@ const AXES_RANGES_XBOX360: [(f32, f32); Joystick_Axis::_Count as usize] = [
     (1.0, -1.0), // The Dpad_V is inverted on Windows and OSX
 ];
 
-#[cfg(target_os = "linux")]
 const BUTTONS_ENGINE_TO_FRAMEWORK_XBOX360: [Option<GamepadButton>;
     Joystick_Button::_Count as usize] = [
     Some(GamepadButton::ButtonY),           // Face_Top
