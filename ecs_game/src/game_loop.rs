@@ -1102,7 +1102,7 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
         debug_painter.add_arrow(
             Arrow {
                 center: transform.position(),
-                direction: spatial.velocity,
+                direction: spatial.velocity * 0.5,
                 thickness: 3.,
                 arrow_size: 20.,
             },
