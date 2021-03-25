@@ -9,6 +9,7 @@ use inle_common::colors;
 use inle_common::stringid::{const_sid_from_str, String_Id};
 use inle_core::env::Env_Info;
 use inle_gfx_backend::render::{self, Font, Image, Shader, Texture};
+use std::path::Path;
 
 pub type Texture_Handle = loaders::Res_Handle;
 pub type Font_Handle = loaders::Res_Handle;
@@ -43,7 +44,7 @@ impl<'l> Gfx_Resources<'l> {
         }
     }
 
-    pub fn load_texture(&mut self, fname: &str) -> Texture_Handle {
+    pub fn load_texture(&mut self, fname: &Path) -> Texture_Handle {
         self.textures.load(fname)
     }
 
@@ -62,7 +63,7 @@ impl<'l> Gfx_Resources<'l> {
         Some(WHITE_TEXTURE_KEY)
     }
 
-    pub fn load_font(&mut self, fname: &str) -> Font_Handle {
+    pub fn load_font(&mut self, fname: &Path) -> Font_Handle {
         self.fonts.load(fname)
     }
 
@@ -86,17 +87,17 @@ impl<'l> Shader_Cache<'l> {
         self.0.cache.insert(BASIC_SHADER_KEY, load_basic_shader());
     }
 
-    pub fn load_shader(&mut self, fname: &str) -> Shader_Handle {
+    pub fn load_shader(&mut self, shader_name: &str) -> Shader_Handle {
         if render::shaders_are_available() {
-            self.0.load(fname, false)
+            self.0.load(shader_name, false)
         } else {
             None
         }
     }
 
-    pub fn load_shader_with_geom(&mut self, fname: &str) -> Shader_Handle {
+    pub fn load_shader_with_geom(&mut self, shader_name: &str) -> Shader_Handle {
         if render::geom_shaders_are_available() {
-            self.0.load(fname, true)
+            self.0.load(shader_name, true)
         } else {
             None
         }
@@ -124,16 +125,18 @@ impl<'l> Shader_Cache<'l> {
     }
 }
 
-pub fn tex_path(env: &Env_Info, file: &str) -> String {
+pub fn tex_path(env: &Env_Info, file: &str) -> Box<Path> {
     asset_path(env, "textures", file)
 }
 
-pub fn font_path(env: &Env_Info, file: &str) -> String {
+pub fn font_path(env: &Env_Info, file: &str) -> Box<Path> {
     asset_path(env, "fonts", file)
 }
 
+// NOTE: we return this by String because it's more convenient to use due to
+// the shader cache API. We may want to change this in the future.
 pub fn shader_path(env: &Env_Info, file: &str) -> String {
-    asset_path(env, "shaders", file)
+    String::from(asset_path(env, "shaders", file).to_str().unwrap())
 }
 
 const WHITE_TEXTURE_KEY: String_Id = const_sid_from_str("__white__");
@@ -155,7 +158,7 @@ unsafe fn create_white_texture(tex_cache: &mut cache::Texture_Cache) {
     let img = WHITE_IMAGE
         .as_ref()
         .expect("white image was not created yet!");
-    let mut tex = render::new_texture_from_image(&img, None).unwrap();
+    let mut tex = render::new_texture_from_image(&img, None);
     render::set_texture_repeated(&mut tex, true);
     tex_cache.cache.insert(WHITE_TEXTURE_KEY, tex);
 }

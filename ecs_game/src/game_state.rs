@@ -14,7 +14,7 @@ use std::time::Duration;
 #[rustfmt::skip]
 use {
     inle_common::colors,
-    inle_debug 
+    inle_debug
 };
 
 pub type Level_Batches = HashMap<String_Id, inle_gfx::render::batcher::Batches>;

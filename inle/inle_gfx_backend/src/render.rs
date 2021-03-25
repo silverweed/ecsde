@@ -18,6 +18,7 @@ pub use self::gl as backend;
 
 pub type Text<'a> = backend::Text<'a>;
 pub type Font<'a> = backend::Font<'a>;
+pub type Font_Metadata = backend::Font_Metadata;
 pub type Texture<'a> = backend::Texture<'a>;
 pub type Shader<'a> = backend::Shader<'a>;
 pub type Image = backend::Image;
@@ -31,6 +32,11 @@ pub enum Render_Settings<'t> {
     With_Texture(&'t Texture<'t>),
     With_Shader(&'t Shader<'t>),
 }
+
+// @Refactoring @Cleanup: we're currently exposing data that's supposed to be backend-specific.
+// Rethink this later!
+pub type Glyph_Data = backend::Glyph_Data;
+pub type Glyph_Bounds = backend::Glyph_Bounds;
 
 impl Default for Render_Settings<'_> {
     fn default() -> Self {
@@ -53,6 +59,7 @@ pub trait Uniform_Value: Copy {
 }
 
 pub use backend::geom_shaders_are_available;
+pub use backend::get_texture_size;
 pub use backend::new_image;
 pub use backend::new_image_with_data;
 pub use backend::new_shader;

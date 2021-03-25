@@ -63,7 +63,7 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
         for t in &tree.children {
             add_tree_lines(t, total_traced_time, indent + 1, overlay, prune_duration);
         }
-    };
+    }
 
     let ui_scale = engine_state.debug_systems.debug_ui.cfg.ui_scale;
     let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;

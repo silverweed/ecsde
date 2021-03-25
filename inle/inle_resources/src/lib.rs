@@ -17,12 +17,12 @@ pub mod audio;
 pub mod gfx;
 
 use inle_core::env::Env_Info;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 // @Speed: when we have a frame temp allocator, this should probably allocate there.
-pub fn asset_path(env: &Env_Info, dir: &str, file: &str) -> String {
+pub fn asset_path(env: &Env_Info, dir: &str, file: &str) -> Box<Path> {
     let mut s = PathBuf::from(env.assets_root.as_ref());
     s.push(dir);
     s.push(file);
-    s.into_os_string().into_string().unwrap()
+    s.into_boxed_path()
 }

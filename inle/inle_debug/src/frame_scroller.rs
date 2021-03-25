@@ -100,7 +100,7 @@ impl Debug_Frame_Scroller {
         fn calc_filled_frames(this: &Debug_Frame_Scroller) -> u16 {
             (this.tot_scroller_filled_frames - (this.cur_second as u32 * this.n_frames as u32))
                 .min(this.n_frames as u32) as _
-        };
+        }
 
         for event in events {
             match event {

@@ -1,6 +1,7 @@
 use inle_gfx_backend::render::{self, Color_Type, Image, Texture};
 use std::error::Error;
 use std::fs::File;
+use std::path::Path;
 
 const fn png_to_engine_color_type(c: png::ColorType) -> Color_Type {
     match c {
@@ -12,7 +13,7 @@ const fn png_to_engine_color_type(c: png::ColorType) -> Color_Type {
     }
 }
 
-pub fn load_image_from_file(fname: &str) -> Result<Image, Box<dyn Error>> {
+pub fn load_image_from_file(fname: &Path) -> Result<Image, Box<dyn Error>> {
     // @Incomplete: we may want to choose different decoders. For now, png is the only option.
     let decoder = png::Decoder::new(File::open(fname)?);
     let (info, mut reader) = decoder.read_info()?;
@@ -31,7 +32,7 @@ pub fn load_image_from_file(fname: &str) -> Result<Image, Box<dyn Error>> {
     ))
 }
 
-pub fn load_texture_from_file<'a>(fname: &str) -> Result<Texture<'a>, Box<dyn Error>> {
+pub fn load_texture_from_file<'a>(fname: &Path) -> Result<Texture<'a>, Box<dyn Error>> {
     let image = load_image_from_file(fname)?;
-    Ok(render::new_texture_from_image(&image, None).ok_or_else(|| error!())?)
+    Ok(render::new_texture_from_image(&image, None))
 }

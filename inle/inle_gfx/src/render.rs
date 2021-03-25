@@ -168,7 +168,7 @@ pub fn copy_texture_to_image(texture: &Texture) -> Image {
     backend::copy_texture_to_image(texture)
 }
 
-pub fn new_texture_from_image(image: &Image, rect: Option<Rect<i32>>) -> Option<Texture> {
+pub fn new_texture_from_image(image: &Image, rect: Option<Rect<i32>>) -> Texture {
     backend::new_texture_from_image(image, rect)
 }
 

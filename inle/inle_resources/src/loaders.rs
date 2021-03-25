@@ -1,6 +1,7 @@
 use inle_common::stringid::String_Id;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::path::Path;
 
 pub trait Resource_Loader<'l, R> {
     type Args: ?Sized;
@@ -10,7 +11,7 @@ pub trait Resource_Loader<'l, R> {
 
 pub struct Cache<'l, Res, Loader>
 where
-    Loader: 'l + Resource_Loader<'l, Res, Args = str>,
+    Loader: 'l + Resource_Loader<'l, Res, Args = Path>,
 {
     loader: &'l Loader,
     pub(super) cache: HashMap<String_Id, Res>,
@@ -20,7 +21,7 @@ pub(super) type Res_Handle = Option<String_Id>;
 
 impl<'l, Res, Loader> Cache<'l, Res, Loader>
 where
-    Loader: 'l + Resource_Loader<'l, Res, Args = str>,
+    Loader: 'l + Resource_Loader<'l, Res, Args = Path>,
 {
     pub fn new_with_loader(loader: &'l Loader) -> Self {
         Cache {
@@ -29,17 +30,17 @@ where
         }
     }
 
-    pub fn load(&mut self, fname: &str) -> Res_Handle {
-        let id = String_Id::from(fname);
+    pub fn load(&mut self, fname: &Path) -> Res_Handle {
+        let id = String_Id::from(fname.to_str().unwrap());
         match self.cache.entry(id) {
             Entry::Occupied(_) => Some(id),
             Entry::Vacant(v) => {
                 let res = self
                     .loader
                     .load(fname)
-                    .unwrap_or_else(|err| fatal!("Error loading {}: {}", fname, err));
+                    .unwrap_or_else(|err| fatal!("Error loading {}: {}", fname.display(), err));
                 v.insert(res);
-                lok!("Loaded resource {}", fname);
+                lok!("Loaded resource {}", fname.display());
                 Some(id)
             }
         }
@@ -64,9 +65,9 @@ macro_rules! define_file_loader {
         pub(super) struct $loader_name;
 
         impl<'l> loaders::Resource_Loader<'l, $loaded_res<'l>> for $loader_name {
-            type Args = str;
+            type Args = std::path::Path;
 
-            fn load(&'l self, fname: &str) -> Result<$loaded_res<'l>, String> {
+            fn load(&'l self, fname: &std::path::Path) -> Result<$loaded_res<'l>, String> {
                 $load_fn(fname).map_err(|err| {
                     format!(
                         concat!(
@@ -74,7 +75,7 @@ macro_rules! define_file_loader {
                             stringify!($loaded_res),
                             " from {}: {}"
                         ),
-                        fname,
+                        fname.display(),
                         err.to_string()
                     )
                 })

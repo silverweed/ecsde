@@ -1,10 +1,11 @@
-mod cache;
-mod sound;
-
 use super::asset_path;
 use super::loaders;
 use inle_audio_backend::sound::Sound_Buffer;
 use inle_core::env::Env_Info;
+use std::path::Path;
+
+mod cache;
+mod sound;
 
 pub type Sound_Handle = loaders::Res_Handle;
 
@@ -19,7 +20,7 @@ impl<'l> Audio_Resources<'l> {
         }
     }
 
-    pub fn load_sound(&mut self, fname: &str) -> Sound_Handle {
+    pub fn load_sound(&mut self, fname: &Path) -> Sound_Handle {
         self.sounds.load(fname)
     }
 
@@ -32,6 +33,6 @@ impl<'l> Audio_Resources<'l> {
     }
 }
 
-pub fn sound_path(env: &Env_Info, file: &str) -> String {
+pub fn sound_path(env: &Env_Info, file: &str) -> Box<Path> {
     asset_path(env, "sounds", file)
 }

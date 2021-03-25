@@ -70,6 +70,23 @@ impl<T> Rect<T> {
     }
 }
 
+impl<T> Rect<T>
+where
+    T: Sub<Output = T> + PartialOrd + Copy,
+{
+    // @WaitForStable: mark this const
+    pub fn from_topleft_botright(topleft: Vector2<T>, botright: Vector2<T>) -> Rect<T> {
+        debug_assert!(topleft.x <= botright.x);
+        debug_assert!(topleft.y <= botright.y);
+        Rect {
+            x: topleft.x,
+            y: topleft.y,
+            width: botright.x - topleft.x,
+            height: botright.y - topleft.y,
+        }
+    }
+}
+
 impl<T: Copy> Rect<T> {
     #[inline]
     // @WaitForStable: mark this const

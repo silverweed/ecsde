@@ -350,18 +350,51 @@ impl Uniform_Value for &Texture<'_> {
 }
 
 pub struct Font<'a> {
-    _pd: PhantomData<&'a ()>,
-}
-pub struct Text<'font> {
-    _pd: PhantomData<&'font ()>,
+    pub atlas: Texture<'a>,
+    pub metadata: Font_Metadata,
 }
 
-// @Cleanup
-// we should actually have API functions for these, not methods...
-impl Font<'_> {
-    pub fn from_file(_: &str) -> Option<Self> {
-        Some(Self { _pd: PhantomData })
+pub struct Font_Metadata {
+    pub glyph_data: [Glyph_Data; 256],
+}
+
+impl Default for Font_Metadata {
+    fn default() -> Self {
+        Self {
+            glyph_data: [Glyph_Data::default(); 256],
+        }
     }
+}
+
+#[derive(Copy, Clone, Debug, Default)]
+pub struct Glyph_Data {
+    pub advance: f32,
+
+    /// Bounding box relative to the baseline
+    pub plane_bounds: Glyph_Bounds,
+
+    /// Normalized coordinates (uv) inside atlas
+    pub normalized_atlas_bounds: Glyph_Bounds,
+}
+
+#[derive(Copy, Clone, Debug, Default)]
+pub struct Glyph_Bounds {
+    pub left: f32,
+    pub bot: f32,
+    pub right: f32,
+    pub top: f32,
+}
+
+impl Font_Metadata {
+    fn get_glyph_data(&self, glyph: char) -> &Glyph_Data {
+        &self.glyph_data[glyph as usize]
+    }
+}
+
+pub struct Text<'font> {
+    string: String,
+    font: &'font Font<'font>,
+    size: u16,
 }
 
 pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) -> GLuint {
@@ -604,11 +637,79 @@ pub fn fill_color_circle_ws(
 }
 
 pub fn render_text(
-    _window: &mut Render_Window_Handle,
-    _text: &mut Text,
-    _paint_props: &Paint_Properties,
-    _screen_pos: Vec2f,
+    window: &mut Render_Window_Handle,
+    text: &mut Text,
+    paint_props: &Paint_Properties,
+    screen_pos: Vec2f,
 ) {
+    use inle_common::colors;
+
+    if text.string.is_empty() {
+        return;
+    }
+
+    use_text_shader(window, paint_props, &Transform2D::from_pos(screen_pos));
+
+    // @Temporary
+    let atlas_rect = Rect::new(0., 0., 216., 216.);
+
+    let mut vbuf = new_vbuf_temp(
+        window,
+        Primitive_Type::Triangles,
+        (6 * text.string.len() as u32),
+    );
+    let mut pos_x = 0.;
+    for chr in text.string.chars() {
+        let glyph_data = text.font.metadata.get_glyph_data(chr);
+        let bounds = &glyph_data.normalized_atlas_bounds;
+        // @Temporary
+        let rect = Rect::new(pos_x, 0., 50., 50.);
+        pos_x += 50. * glyph_data.advance + 50.;
+        let uv = [
+            bounds.left,
+            bounds.top,
+            bounds.right,
+            bounds.top,
+            bounds.right,
+            bounds.bot,
+            bounds.left,
+            bounds.bot,
+        ];
+
+        let v1 = new_vertex(
+            v2!(rect.x, rect.y),
+            colors::WHITE,
+            v2!(bounds.left, bounds.top),
+        );
+        let v2 = new_vertex(
+            v2!(rect.x + rect.width, rect.y),
+            colors::WHITE,
+            v2!(bounds.right, bounds.top),
+        );
+        let v3 = new_vertex(
+            v2!(rect.x + rect.width, rect.y + rect.height),
+            colors::WHITE,
+            v2!(bounds.right, bounds.bot),
+        );
+        let v4 = new_vertex(
+            v2!(rect.x, rect.y + rect.height),
+            colors::WHITE,
+            v2!(bounds.left, bounds.bot),
+        );
+        add_vertices(window, &mut vbuf, &[v1, v2, v3, v3, v4, v1]);
+    }
+
+    unsafe {
+        gl::ActiveTexture(gl::TEXTURE0);
+        gl::BindTexture(gl::TEXTURE_2D, text.font.atlas.id);
+
+        gl::BindVertexArray(vbuf.buf.vao());
+        window.gl.draw_arrays(
+            to_gl_primitive_type(vbuf.primitive_type),
+            0,
+            vbuf.cur_vertices as _,
+        );
+    }
 }
 
 pub fn render_text_ws(
@@ -629,7 +730,8 @@ pub fn get_image_size(image: &Image) -> (u32, u32) {
 }
 
 pub fn get_text_size(_text: &Text) -> Vec2f {
-    Vec2f::default()
+    // @Incomplete
+    v2!(30.0, 30.0)
 }
 
 pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {
@@ -701,7 +803,11 @@ pub fn add_vertices(
     vbuf: &mut Vertex_Buffer,
     vertices: &[Vertex],
 ) {
-    debug_assert!(vbuf.cur_vertices as usize + vertices.len() <= vbuf.max_vertices as usize);
+    debug_assert!(
+        vbuf.cur_vertices as usize + vertices.len() <= vbuf.max_vertices as usize,
+        "vbuf max vertices exceeded! ({})",
+        vbuf.max_vertices
+    );
     update_vbuf(window, vbuf, vertices, vbuf.cur_vertices);
 }
 
@@ -867,8 +973,12 @@ pub fn render_vbuf_with_shader(
     }
 }
 
-pub fn create_text<'a>(_string: &str, _font: &'a Font, _size: u16) -> Text<'a> {
-    Text { _pd: PhantomData }
+pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
+    Text {
+        string: String::from(string),
+        font,
+        size,
+    }
 }
 
 pub fn render_line(window: &mut Render_Window_Handle, start: &Vertex, end: &Vertex) {
@@ -909,7 +1019,7 @@ pub fn copy_texture_to_image(texture: &Texture) -> Image {
 pub fn new_texture_from_image<'img, 'tex>(
     image: &'img Image,
     _rect: Option<Rect<i32>>,
-) -> Option<Texture<'tex>> {
+) -> Texture<'tex> {
     assert!(image.width < gl::MAX_TEXTURE_SIZE);
     assert!(image.height < gl::MAX_TEXTURE_SIZE);
 
@@ -958,13 +1068,13 @@ pub fn new_texture_from_image<'img, 'tex>(
         pixel_type
     );
 
-    Some(Texture {
+    Texture {
         id,
         width: image.width,
         height: image.height,
         pixel_type,
         _pd: PhantomData,
-    })
+    }
 }
 
 pub fn get_image_pixel(image: &Image, x: u32, y: u32) -> Color {
@@ -1097,6 +1207,7 @@ fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<
         rect.y + rect.height,
     ];
     let mvp = get_mvp_screen_matrix(window, &Transform2D::default());
+    let shader = window.gl.rect_shader;
 
     // @TODO: consider using UBOs
     unsafe {
@@ -1104,7 +1215,7 @@ fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<
         check_gl_err();
 
         gl::UniformMatrix3fv(
-            get_uniform_loc(window.gl.rect_shader, c_str!("mvp")),
+            get_uniform_loc(shader, c_str!("mvp")),
             1,
             gl::FALSE,
             mvp.as_slice().as_ptr(),
@@ -1112,13 +1223,13 @@ fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<
         check_gl_err();
 
         gl::Uniform2fv(
-            get_uniform_loc(window.gl.rect_shader, c_str!("rect")),
+            get_uniform_loc(shader, c_str!("rect")),
             (rect_vertices.len() / 2) as _,
             rect_vertices.as_ptr(),
         );
 
         gl::Uniform4f(
-            get_uniform_loc(window.gl.rect_shader, c_str!("color")),
+            get_uniform_loc(shader, c_str!("color")),
             color.r as f32 / 255.0,
             color.g as f32 / 255.0,
             color.b as f32 / 255.0,
@@ -1147,6 +1258,7 @@ fn use_rect_ws_shader(
         rect.y + rect.height,
     ];
     let mvp = get_mvp_matrix(window, transform, camera);
+    let shader = window.gl.rect_shader;
 
     // @TODO: consider using UBOs
     unsafe {
@@ -1154,7 +1266,7 @@ fn use_rect_ws_shader(
         check_gl_err();
 
         gl::UniformMatrix3fv(
-            get_uniform_loc(window.gl.rect_shader, c_str!("mvp")),
+            get_uniform_loc(shader, c_str!("mvp")),
             1,
             gl::FALSE,
             mvp.as_slice().as_ptr(),
@@ -1162,13 +1274,13 @@ fn use_rect_ws_shader(
         check_gl_err();
 
         gl::Uniform2fv(
-            get_uniform_loc(window.gl.rect_shader, c_str!("rect")),
+            get_uniform_loc(shader, c_str!("rect")),
             (rect_vertices.len() / 2) as _,
             rect_vertices.as_ptr(),
         );
 
         gl::Uniform4f(
-            get_uniform_loc(window.gl.rect_shader, c_str!("color")),
+            get_uniform_loc(shader, c_str!("color")),
             color.r as f32 / 255.0,
             color.g as f32 / 255.0,
             color.b as f32 / 255.0,
@@ -1312,6 +1424,35 @@ fn use_circle_ws_shader(
             color.g as f32 / 255.0,
             color.b as f32 / 255.0,
             color.a as f32 / 255.0,
+        );
+        check_gl_err();
+    }
+}
+
+fn use_text_shader(
+    window: &mut Render_Window_Handle,
+    paint_props: &Paint_Properties,
+    transform: &Transform2D,
+) {
+    let mvp = get_mvp_screen_matrix(window, &transform);
+    let shader = window.gl.text_shader;
+
+    unsafe {
+        gl::UseProgram(shader);
+
+        gl::UniformMatrix3fv(
+            get_uniform_loc(shader, c_str!("mvp")),
+            1,
+            gl::FALSE,
+            mvp.as_slice().as_ptr(),
+        );
+
+        gl::Uniform4f(
+            get_uniform_loc(shader, c_str!("color")),
+            paint_props.color.r as f32 / 255.0,
+            paint_props.color.g as f32 / 255.0,
+            paint_props.color.b as f32 / 255.0,
+            paint_props.color.a as f32 / 255.0,
         );
         check_gl_err();
     }

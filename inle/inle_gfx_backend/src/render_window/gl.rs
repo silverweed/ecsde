@@ -8,6 +8,8 @@ use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::Window_Handle;
 use std::{mem, ptr, str};
 
+mod font_atlas;
+
 pub struct Render_Window_Handle {
     window: Window_Handle,
     pub gl: Gl,
@@ -44,6 +46,8 @@ pub struct Gl {
     pub circle_vbo: GLuint,
     pub circle_shader: GLuint,
 
+    pub text_shader: GLuint,
+    //    pub font_atlases: font_atlas::Font_Atlases,
     #[cfg(debug_assertions)]
     pub n_draw_calls_this_frame: u32,
 }
@@ -112,6 +116,7 @@ fn init_gl() -> Gl {
     gl.vbuf_shader = create_shader_from!("vbuf", "vbuf");
     gl.vbuf_texture_shader = create_shader_from!("vbuf", "vbuf_texture");
     gl.circle_shader = create_shader_from!("circle", "basic_color");
+    gl.text_shader = create_shader_from!("vbuf", "msdf");
 
     unsafe {
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
