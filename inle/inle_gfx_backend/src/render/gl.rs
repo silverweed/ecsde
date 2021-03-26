@@ -356,11 +356,13 @@ pub struct Font<'a> {
 
 pub struct Font_Metadata {
     pub glyph_data: [Glyph_Data; 256],
+    pub atlas_size: (u32, u32),
 }
 
-impl Default for Font_Metadata {
-    fn default() -> Self {
+impl Font_Metadata {
+    pub fn with_atlas_size(width: u32, height: u32) -> Self {
         Self {
+            atlas_size: (width, height),
             glyph_data: [Glyph_Data::default(); 256],
         }
     }
@@ -650,31 +652,18 @@ pub fn render_text(
 
     use_text_shader(window, paint_props, &Transform2D::from_pos(screen_pos));
 
-    // @Temporary
-    let atlas_rect = Rect::new(0., 0., 216., 216.);
-
     let mut vbuf = new_vbuf_temp(
         window,
         Primitive_Type::Triangles,
-        (6 * text.string.len() as u32),
+        6 * text.string.len() as u32,
     );
     let mut pos_x = 0.;
     for chr in text.string.chars() {
         let glyph_data = text.font.metadata.get_glyph_data(chr);
         let bounds = &glyph_data.normalized_atlas_bounds;
-        // @Temporary
-        let rect = Rect::new(pos_x, 0., 50., 50.);
-        pos_x += 50. * glyph_data.advance + 50.;
-        let uv = [
-            bounds.left,
-            bounds.top,
-            bounds.right,
-            bounds.top,
-            bounds.right,
-            bounds.bot,
-            bounds.left,
-            bounds.bot,
-        ];
+        // @Temporary: we should actually use plane_bounds for positioning the glyph
+        let rect = Rect::new(pos_x, 0., text.size as f32, text.size as f32);
+        pos_x += (text.size as f32) * (glyph_data.advance + 1.);
 
         let v1 = new_vertex(
             v2!(rect.x, rect.y),

@@ -22,10 +22,10 @@ pub fn load_font_from_file<'a>(fname: &Path) -> Result<Font<'a>, Box<dyn Error>>
 }
 
 fn parse_font_metadata_from_csv(csv: &str, atlas_size: (u32, u32)) -> Font_Metadata {
-    let mut metadata = Font_Metadata::default();
+    let mut metadata = Font_Metadata::with_atlas_size(atlas_size.0, atlas_size.1);
 
     for line in csv.lines() {
-        let toks: Vec<_> = line.split(",").collect();
+        let toks: Vec<_> = line.split(',').collect();
         // expected line:
         // glyph_id, advance, plane_bounds_l, b, r, t, atlas_bounds_l, b, r, t
         if toks.len() != 10 {

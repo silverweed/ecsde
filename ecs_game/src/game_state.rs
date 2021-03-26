@@ -97,8 +97,7 @@ pub struct Game_Bundle<'a> {
 pub(super) fn internal_game_init<'a>(
     args: &[String],
 ) -> Result<(Box<Game_State<'a>>, Box<Game_Resources<'a>>), Box<dyn std::error::Error>> {
-    let mut game_resources = create_game_resources()
-        .unwrap_or_else(|err| fatal!("create_game_resources() failed with err {}", err));
+    let mut game_resources = create_game_resources();
     let (mut game_state, parsed_cmdline_args) = create_game_state(&mut game_resources, args)
         .unwrap_or_else(|err| fatal!("create_game_state() failed with err {}", err));
 
@@ -340,15 +339,15 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     }
 }
 
-fn create_game_resources<'a>() -> Result<Box<Game_Resources<'a>>, Box<dyn std::error::Error>> {
+fn create_game_resources<'a>() -> Box<Game_Resources<'a>> {
     let gfx = inle_resources::gfx::Gfx_Resources::new();
     let audio = inle_resources::audio::Audio_Resources::new();
     let shader_cache = inle_resources::gfx::Shader_Cache::new();
-    Ok(Box::new(Game_Resources {
+    Box::new(Game_Resources {
         gfx,
         audio,
         shader_cache,
-    }))
+    })
 }
 
 fn init_states(
