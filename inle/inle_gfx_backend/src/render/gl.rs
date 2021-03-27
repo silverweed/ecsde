@@ -659,6 +659,14 @@ pub fn render_text(
     );
     let mut pos_x = 0.;
     for chr in text.string.chars() {
+        if chr > '\u{256}' {
+            lerr_once!(
+                &format!("skip_{}", chr),
+                "WE ARE NOT SUPPORTING NON-ASCII BUT WE SHOULD! Skipping character {}",
+                chr
+            );
+            continue;
+        }
         let glyph_data = text.font.metadata.get_glyph_data(chr);
         let bounds = &glyph_data.normalized_atlas_bounds;
         // @Temporary: we should actually use plane_bounds for positioning the glyph
