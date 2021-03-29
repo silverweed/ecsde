@@ -19,7 +19,6 @@ inle_common = { path = "../inle_common" }
 inle_diagnostics = { path = "../inle_diagnostics" }
 inle_math = { path = "../inle_math" }
 inle_win = { path = "../inle_win" }
-rayon = "*"
 
 [dependencies.sfml]
 version = "0.15.1"
