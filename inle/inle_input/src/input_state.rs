@@ -73,6 +73,8 @@ fn is_core_event(evt: &Input_Raw_Event) -> bool {
 }
 
 pub fn update_raw_input<W: AsMut<Window_Handle>>(window: &mut W, raw_state: &mut Input_Raw_State) {
+    trace!("update_raw_input");
+
     let window = window.as_mut();
 
     raw_state.core_events.clear();

@@ -432,13 +432,6 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
             *t -= engine_state.time.real_dt().as_secs_f32();
         }
 
-        // @Temporary DEBUG
-        if tracer::total_traced_time(&final_traces) > std::time::Duration::from_millis(20) {
-            *t = 0.;
-        } else {
-            *t = 1.;
-        }
-
         if *t <= 0. {
             let trace_view_flat =
                 Cfg_Var::<bool>::new("engine/debug/trace/view_flat", &engine_state.config)
