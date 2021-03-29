@@ -657,46 +657,53 @@ pub fn render_text(
         Primitive_Type::Triangles,
         6 * text.string.len() as u32,
     );
-    let mut pos_x = 0.;
-    for chr in text.string.chars() {
-        if chr > '\u{256}' {
-            lerr_once!(
-                &format!("skip_{}", chr),
-                "WE ARE NOT SUPPORTING NON-ASCII BUT WE SHOULD! Skipping character {}",
-                chr
-            );
-            continue;
-        }
-        let glyph_data = text.font.metadata.get_glyph_data(chr);
-        let bounds = &glyph_data.normalized_atlas_bounds;
-        // @Temporary: we should actually use plane_bounds for positioning the glyph
-        let rect = Rect::new(pos_x, 0., text.size as f32, text.size as f32);
-        pos_x += (text.size as f32) * (glyph_data.advance + 1.);
 
-        let v1 = new_vertex(
-            v2!(rect.x, rect.y),
-            colors::WHITE,
-            v2!(bounds.left, bounds.top),
-        );
-        let v2 = new_vertex(
-            v2!(rect.x + rect.width, rect.y),
-            colors::WHITE,
-            v2!(bounds.right, bounds.top),
-        );
-        let v3 = new_vertex(
-            v2!(rect.x + rect.width, rect.y + rect.height),
-            colors::WHITE,
-            v2!(bounds.right, bounds.bot),
-        );
-        let v4 = new_vertex(
-            v2!(rect.x, rect.y + rect.height),
-            colors::WHITE,
-            v2!(bounds.left, bounds.bot),
-        );
-        add_vertices(window, &mut vbuf, &[v1, v2, v3, v3, v4, v1]);
+    {
+        trace!("fill_text_vbuf");
+
+        let mut pos_x = 0.;
+        for chr in text.string.chars() {
+            if chr > '\u{256}' {
+                lerr_once!(
+                    &format!("skip_{}", chr),
+                    "WE ARE NOT SUPPORTING NON-ASCII BUT WE SHOULD! Skipping character {}",
+                    chr
+                );
+                continue;
+            }
+            let glyph_data = text.font.metadata.get_glyph_data(chr);
+            let bounds = &glyph_data.normalized_atlas_bounds;
+            // @Temporary: we should actually use plane_bounds for positioning the glyph
+            let rect = Rect::new(pos_x, 0., text.size as f32, text.size as f32);
+            pos_x += (text.size as f32) * (glyph_data.advance + 1.);
+
+            let v1 = new_vertex(
+                v2!(rect.x, rect.y),
+                colors::WHITE,
+                v2!(bounds.left, bounds.top),
+            );
+            let v2 = new_vertex(
+                v2!(rect.x + rect.width, rect.y),
+                colors::WHITE,
+                v2!(bounds.right, bounds.top),
+            );
+            let v3 = new_vertex(
+                v2!(rect.x + rect.width, rect.y + rect.height),
+                colors::WHITE,
+                v2!(bounds.right, bounds.bot),
+            );
+            let v4 = new_vertex(
+                v2!(rect.x, rect.y + rect.height),
+                colors::WHITE,
+                v2!(bounds.left, bounds.bot),
+            );
+            add_vertices(window, &mut vbuf, &[v1, v2, v3, v3, v4, v1]);
+        }
     }
 
     unsafe {
+        trace!("draw_text_vbuf");
+
         gl::ActiveTexture(gl::TEXTURE0);
         gl::BindTexture(gl::TEXTURE_2D, text.font.atlas.id);
 

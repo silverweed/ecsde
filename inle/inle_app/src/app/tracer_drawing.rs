@@ -112,10 +112,6 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
     for tree in &trace_trees {
         add_tree_lines(tree, &total_traced_time, 0, overlay, &prune_duration);
     }
-
-    for line in &overlay.lines {
-        println!("{}", line.text);
-    }
 }
 
 pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
