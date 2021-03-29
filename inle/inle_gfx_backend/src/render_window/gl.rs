@@ -6,11 +6,13 @@ use inle_math::rect::{Rect, Rectf};
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::Window_Handle;
+use inle_alloc::temp;
 use std::{mem, ptr, str};
 
 pub struct Render_Window_Handle {
     window: Window_Handle,
     pub gl: Gl,
+    pub temp_allocator: temp::Temp_Allocator,
 }
 
 impl AsRef<Window_Handle> for Render_Window_Handle {
@@ -196,6 +198,7 @@ pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
     Render_Window_Handle {
         window,
         gl: init_gl(),
+        temp_allocator: temp::Temp_Allocator::with_capacity(inle_common::units::megabytes(10)),
     }
 }
 
@@ -262,6 +265,7 @@ pub fn raw_project_world_pos(
 #[inline(always)]
 pub fn start_new_frame(window: &mut Render_Window_Handle) {
     window.gl.buffer_allocators.dealloc_all_temp();
+    unsafe { window.temp_allocator.dealloc_all(); }
 
     #[cfg(debug_assertions)]
     {

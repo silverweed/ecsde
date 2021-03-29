@@ -658,9 +658,11 @@ pub fn render_text(
         6 * text.string.len() as u32,
     );
 
+            //let n_sprites_per_chunk = cmp::min(n_sprites, n_sprites / n_threads + 1);
     {
         trace!("fill_text_vbuf");
 
+        let mut vertices = inle_alloc::temp::excl_temp_array(&mut window.temp_allocator);
         let mut pos_x = 0.;
         for chr in text.string.chars() {
             if chr > '\u{256}' {
@@ -697,8 +699,17 @@ pub fn render_text(
                 colors::WHITE,
                 v2!(bounds.left, bounds.bot),
             );
-            add_vertices(window, &mut vbuf, &[v1, v2, v3, v3, v4, v1]);
+            //add_vertices(window, &mut vbuf, &[v1, v2, v3, v3, v4, v1]);
+            vertices.push(v1);
+            vertices.push(v2);
+            vertices.push(v3);
+            vertices.push(v3);
+            vertices.push(v4);
+            vertices.push(v1);
         }
+
+        let vertices = unsafe { vertices.into_read_only() };
+        update_vbuf(window, &mut vbuf, &vertices, 0);
     }
 
     unsafe {
