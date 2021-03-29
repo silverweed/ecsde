@@ -658,7 +658,6 @@ pub fn render_text(
         6 * text.string.len() as u32,
     );
 
-            //let n_sprites_per_chunk = cmp::min(n_sprites, n_sprites / n_threads + 1);
     {
         trace!("fill_text_vbuf");
 
@@ -699,7 +698,6 @@ pub fn render_text(
                 colors::WHITE,
                 v2!(bounds.left, bounds.bot),
             );
-            //add_vertices(window, &mut vbuf, &[v1, v2, v3, v3, v4, v1]);
             vertices.push(v1);
             vertices.push(v2);
             vertices.push(v3);
