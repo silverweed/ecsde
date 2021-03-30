@@ -78,7 +78,7 @@ fn parse_config_dir(dir_path: &Path) -> Result<Vec<Cfg_Section>, std::io::Error>
 
 pub(super) fn parse_config_file(path: &Path) -> Result<Vec<Cfg_Section>, std::io::Error> {
     let file = File::open(path)?;
-    let lines = BufReader::new(file).lines().filter_map(|l| Some(l.ok()?));
+    let lines = BufReader::new(file).lines().filter_map(|l| l.ok());
     Ok(parse_lines(lines))
 }
 

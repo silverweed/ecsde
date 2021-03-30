@@ -8,7 +8,7 @@ use std::time::Duration;
 
 #[derive(Default)]
 struct Menu_Button {
-    pub id: inle_ui::UI_Id,
+    pub id: inle_ui::Ui_Id,
     pub props: inle_ui::Button_Props,
     pub text: &'static str,
     pub size: Vec2f,

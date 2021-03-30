@@ -1,4 +1,4 @@
-use super::ui_context::UI_Context;
+use super::ui_context::Ui_Context;
 use inle_common::colors;
 //use crate::gfx::align::Align;
 use super::widgets::*;
@@ -37,7 +37,7 @@ pub enum Draw_Command {
     },
 }
 
-pub fn draw_all_ui(window: &mut Render_Window_Handle, gres: &Gfx_Resources, ui: &mut UI_Context) {
+pub fn draw_all_ui(window: &mut Render_Window_Handle, gres: &Gfx_Resources, ui: &mut Ui_Context) {
     for cmd in &ui.draw_cmd_queue {
         match cmd {
             Draw_Command::Rect { rect, props } => {
@@ -59,7 +59,7 @@ pub fn draw_all_ui(window: &mut Render_Window_Handle, gres: &Gfx_Resources, ui: 
 
 pub fn draw_button(
     gres: &Gfx_Resources,
-    ui: &UI_Context,
+    ui: &Ui_Context,
     text: &str,
     rect: Rectf,
     active: bool,

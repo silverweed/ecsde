@@ -143,11 +143,11 @@ mod tests {
             },
             Input_Raw_Event::Joy_Button_Pressed {
                 joystick_id: 0,
-                button: 2,
+                button: Joystick_Button::Face_Bottom,
             },
             Input_Raw_Event::Joy_Button_Released {
                 joystick_id: 3,
-                button: 0,
+                button: Joystick_Button::Face_Top,
             },
         ];
 

@@ -193,6 +193,7 @@ impl Vertex {
 }
 
 #[derive(Copy, Clone, Debug)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum Color_Type {
     Grayscale,
     RGB,

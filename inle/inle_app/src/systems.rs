@@ -15,7 +15,7 @@ use {
 pub struct Core_Systems<'r> {
     pub audio_system: audio_system::Audio_System<'r>,
     pub evt_register: evt_register::Event_Register,
-    pub ui: inle_ui::UI_Context,
+    pub ui: inle_ui::Ui_Context,
     pub physics_settings: inle_physics::physics::Physics_Settings,
     // One particle manager per level
     pub particle_mgrs: HashMap<String_Id, inle_gfx::particles::Particle_Manager>,
@@ -45,7 +45,7 @@ impl Core_Systems<'_> {
                 max_concurrent_sounds: 10,
             }),
             evt_register: evt_register::Event_Register::new(),
-            ui: inle_ui::UI_Context::default(),
+            ui: inle_ui::Ui_Context::default(),
             physics_settings: inle_physics::physics::Physics_Settings::default(),
             particle_mgrs: HashMap::new(),
         }
