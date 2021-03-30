@@ -356,6 +356,7 @@ pub struct Font<'a> {
 }
 
 pub struct Font_Metadata {
+    // @Temporary: we want to support more than ASCII
     pub glyph_data: [Glyph_Data; 256],
     pub atlas_size: (u32, u32),
 }
@@ -365,6 +366,15 @@ impl Font_Metadata {
         Self {
             atlas_size: (width, height),
             glyph_data: [Glyph_Data::default(); 256],
+        }
+    }
+
+    fn get_glyph_data(&self, glyph: char) -> Option<&Glyph_Data> {
+        // @Temporary
+        if (glyph as usize) < self.glyph_data.len() {
+            Some(&self.glyph_data[glyph as usize])
+        } else {
+            None
         }
     }
 }
@@ -388,9 +398,13 @@ pub struct Glyph_Bounds {
     pub top: f32,
 }
 
-impl Font_Metadata {
-    fn get_glyph_data(&self, glyph: char) -> &Glyph_Data {
-        &self.glyph_data[glyph as usize]
+impl Glyph_Bounds {
+    fn width(&self) -> f32 {
+        self.right - self.left
+    }
+
+    fn height(&self) -> f32 {
+        self.bot - self.top
     }
 }
 
@@ -664,6 +678,7 @@ pub fn render_text(
 
         let mut vertices = inle_alloc::temp::excl_temp_array(&mut window.temp_allocator);
         let mut pos_x = 0.;
+        let tsize = text.size as f32;
         for chr in text.string.chars() {
             if chr > '\u{256}' {
                 lerr_once!(
@@ -673,38 +688,48 @@ pub fn render_text(
                 );
                 continue;
             }
-            let glyph_data = text.font.metadata.get_glyph_data(chr);
-            let bounds = &glyph_data.normalized_atlas_bounds;
-            // @Temporary: we should actually use plane_bounds for positioning the glyph
-            let rect = Rect::new(pos_x, 0., text.size as f32, text.size as f32);
-            pos_x += (text.size as f32) * (glyph_data.advance + 1.);
+            if let Some(glyph_data) = text.font.metadata.get_glyph_data(chr) {
+                let atlas_bounds = &glyph_data.normalized_atlas_bounds;
+                let pb = &glyph_data.plane_bounds;
+                // NOTE: currently we are basically drawing *below* the baseline, rather than on it.
+                // We may want to change this later, but that'd require also changing the caller sites' code,
+                // so it's fine for now.
+                let rect = Rect::new(
+                    pos_x + pb.left,
+                    (1.0 - pb.top) * tsize,
+                    (1.0 + pb.right - pb.left) * tsize,
+                    (1.0 + pb.top - pb.bot) * tsize,
+                );
 
-            let v1 = new_vertex(
-                v2!(rect.x, rect.y),
-                colors::WHITE,
-                v2!(bounds.left, bounds.top),
-            );
-            let v2 = new_vertex(
-                v2!(rect.x + rect.width, rect.y),
-                colors::WHITE,
-                v2!(bounds.right, bounds.top),
-            );
-            let v3 = new_vertex(
-                v2!(rect.x + rect.width, rect.y + rect.height),
-                colors::WHITE,
-                v2!(bounds.right, bounds.bot),
-            );
-            let v4 = new_vertex(
-                v2!(rect.x, rect.y + rect.height),
-                colors::WHITE,
-                v2!(bounds.left, bounds.bot),
-            );
-            vertices.push(v1);
-            vertices.push(v2);
-            vertices.push(v3);
-            vertices.push(v3);
-            vertices.push(v4);
-            vertices.push(v1);
+                pos_x += tsize * (glyph_data.advance + 1.);
+
+                let v1 = new_vertex(
+                    v2!(rect.x, rect.y),
+                    colors::WHITE,
+                    v2!(atlas_bounds.left, atlas_bounds.top),
+                );
+                let v2 = new_vertex(
+                    v2!(rect.x + rect.width, rect.y),
+                    colors::WHITE,
+                    v2!(atlas_bounds.right, atlas_bounds.top),
+                );
+                let v3 = new_vertex(
+                    v2!(rect.x + rect.width, rect.y + rect.height),
+                    colors::WHITE,
+                    v2!(atlas_bounds.right, atlas_bounds.bot),
+                );
+                let v4 = new_vertex(
+                    v2!(rect.x, rect.y + rect.height),
+                    colors::WHITE,
+                    v2!(atlas_bounds.left, atlas_bounds.bot),
+                );
+                vertices.push(v1);
+                vertices.push(v2);
+                vertices.push(v3);
+                vertices.push(v3);
+                vertices.push(v4);
+                vertices.push(v1);
+            }
         }
 
         let vertices = unsafe { vertices.into_read_only() };
@@ -743,9 +768,27 @@ pub fn get_image_size(image: &Image) -> (u32, u32) {
     (image.width, image.height)
 }
 
-pub fn get_text_size(_text: &Text) -> Vec2f {
-    // @Incomplete
-    v2!(30.0, 30.0)
+pub fn get_text_size(text: &Text) -> Vec2f {
+    // @FIXME
+    let font = &text.font;
+    let tsize = text.size as f32;
+    let (width, height) = text
+        .string
+        .chars()
+        .map(|chr| {
+            if let Some(data) = font.metadata.get_glyph_data(chr) {
+                (
+                    data.normalized_atlas_bounds.width() + data.advance,
+                    data.normalized_atlas_bounds.height(),
+                )
+            } else {
+                (0., 0.)
+            }
+        })
+        .fold((0_f32, 0_f32), |(acc_w, acc_h), (w, h)| {
+            (acc_w + w, acc_h.max(h))
+        });
+    dbg!(v2!(tsize * width, tsize * height))
 }
 
 pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {
