@@ -118,12 +118,12 @@ pub fn clear_batches(batches: &mut Batches) {
 }
 
 #[inline(always)]
-// This returns the vec4 value that will be put into gl_Color.
-// It contains:
-//    r: rotation high byte
-//    g: rotation low byte
-//    b: empty
-//    a: vertex alpha
+/// This returns the vec4 value that will be put into the vertex color.
+/// It contains:
+///    r: rotation high byte
+///    g: rotation low byte
+///    b: empty
+///    a: vertex alpha
 fn encode_rot_and_alpha_as_color(rot: Angle, alpha: u8) -> Color {
     const TAU: f32 = std::f32::consts::PI * 2.0;
     const MAX_ENCODED: u32 = u16::MAX as u32;
@@ -324,10 +324,9 @@ pub fn draw_batches(
             } else {
                 None
             };
-            let has_shader = false; //shader.is_some();
+            let has_shader = shader.is_some();
 
             let cast_shadows = draw_params.enable_shadows && material.cast_shadows;
-            // @Temporary
             let shadow_data =
                 collect_entity_shadow_data(lights, sprites.iter(), cast_shadows, frame_alloc);
 

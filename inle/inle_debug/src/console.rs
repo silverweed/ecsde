@@ -464,7 +464,6 @@ impl Console {
             return;
         }
 
-        // @Temporary
         let pad_x = 5.0;
         let linesep = self.font_size as f32 * 1.2;
 

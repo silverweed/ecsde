@@ -48,18 +48,12 @@ pub struct Mouse_State {
 }
 
 pub fn reset_mouse_state(state: &mut Mouse_State) {
-    // @WaitForStable: use const_assert if const len() ever becomes a thing
-    debug_assert!(state.is_pressed.len() == state.was_pressed_latest_frame.len());
-    for i in 0..state.is_pressed.len() {
-        state.was_pressed_latest_frame[i] = false;
-        state.is_pressed[i] = false;
-    }
+    state.is_pressed.fill(false);
+    state.was_pressed_latest_frame.fill(false);
 }
 
 pub fn update_mouse_state(state: &mut Mouse_State, events: &[Input_Raw_Event]) {
-    for i in 0..state.was_pressed_latest_frame.len() {
-        state.was_pressed_latest_frame[i] = state.is_pressed[i];
-    }
+    state.was_pressed_latest_frame = state.is_pressed;
 
     for evt in events {
         match *evt {
