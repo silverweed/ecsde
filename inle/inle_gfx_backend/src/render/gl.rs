@@ -404,7 +404,7 @@ impl Glyph_Bounds {
     }
 
     fn height(&self) -> f32 {
-        self.bot - self.top
+        self.top - self.bot
     }
 }
 
@@ -769,7 +769,6 @@ pub fn get_image_size(image: &Image) -> (u32, u32) {
 }
 
 pub fn get_text_size(text: &Text) -> Vec2f {
-    // @FIXME
     let font = &text.font;
     let tsize = text.size as f32;
     let (width, height) = text
@@ -778,8 +777,8 @@ pub fn get_text_size(text: &Text) -> Vec2f {
         .map(|chr| {
             if let Some(data) = font.metadata.get_glyph_data(chr) {
                 (
-                    data.normalized_atlas_bounds.width() + data.advance,
-                    data.normalized_atlas_bounds.height(),
+                    tsize * data.plane_bounds.width() + data.advance,
+                    tsize * data.plane_bounds.height(),
                 )
             } else {
                 (0., 0.)
@@ -788,7 +787,9 @@ pub fn get_text_size(text: &Text) -> Vec2f {
         .fold((0_f32, 0_f32), |(acc_w, acc_h), (w, h)| {
             (acc_w + w, acc_h.max(h))
         });
-    dbg!(v2!(tsize * width, tsize * height))
+    //v2!(width, 2. * height) // Why the 2x?
+    // @Temporary hack to make the font monospaced
+    v2!(1.6 * tsize, 2. * tsize)
 }
 
 pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {
