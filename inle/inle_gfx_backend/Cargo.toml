@@ -30,3 +30,6 @@ default-features = false
 [dependencies.gl]
 optional = true
 version = "0.14"
+
+[dev-dependencies]
+inle_test = { path = "../inle_test" }

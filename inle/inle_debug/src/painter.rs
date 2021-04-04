@@ -245,7 +245,7 @@ fn draw_line_internal(
         Vec2f::default(),
     );
     let v2 = render::new_vertex(
-        Vec2f::new(0., thickness * 0.5),
+        Vec2f::new(length, -thickness * 0.5),
         props.color,
         Vec2f::default(),
     );
@@ -255,7 +255,7 @@ fn draw_line_internal(
         Vec2f::default(),
     );
     let v4 = render::new_vertex(
-        Vec2f::new(length, -thickness * 0.5),
+        Vec2f::new(0., thickness * 0.5),
         props.color,
         Vec2f::default(),
     );

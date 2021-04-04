@@ -1,12 +1,13 @@
 use super::misc::check_gl_err;
 use gl::types::*;
+use inle_common::units::{self, format_bytes_pretty};
 use std::ffi::c_void;
 use std::ptr;
 
 #[cfg(debug_assertions)]
 use std::collections::HashSet;
 
-const MIN_BUCKET_SIZE: usize = 32 * 1024;
+const MIN_BUCKET_SIZE: usize = units::kilobytes(128);
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -58,6 +59,15 @@ pub struct Buffer_Allocator {
 
     #[cfg(debug_assertions)]
     cur_allocated: HashSet<Non_Empty_Buffer_Handle>,
+
+    #[cfg(debug_assertions)]
+    cur_allocated_bytes: usize,
+
+    #[cfg(debug_assertions)]
+    high_water_mark: usize,
+
+    #[cfg(debug_assertions)]
+    is_destroyed: bool,
 }
 
 #[derive(Debug)]
@@ -120,6 +130,12 @@ impl Buffer_Allocator {
             id,
             #[cfg(debug_assertions)]
             cur_allocated: HashSet::default(),
+            #[cfg(debug_assertions)]
+            cur_allocated_bytes: 0,
+            #[cfg(debug_assertions)]
+            high_water_mark: 0,
+            #[cfg(debug_assertions)]
+            is_destroyed: false,
         }
     }
 
@@ -138,6 +154,11 @@ impl Buffer_Allocator {
             gl::DeleteBuffers(bucket_vbos.len() as _, bucket_vbos.as_ptr() as _);
             gl::DeleteVertexArrays(bucket_vaos.len() as _, bucket_vaos.as_ptr() as _);
         }
+
+        #[cfg(debug_assertions)]
+        {
+            self.is_destroyed = true;
+        }
     }
 
     pub fn dealloc_all(&mut self) {
@@ -147,10 +168,20 @@ impl Buffer_Allocator {
         #[cfg(debug_assertions)]
         {
             self.cur_allocated.clear();
+            self.cur_allocated_bytes = 0;
         }
     }
 
     pub fn allocate(&mut self, min_capacity: usize) -> Buffer_Handle {
+        #[cfg(debug_assertions)]
+        {
+            debug_assert!(
+                !self.is_destroyed,
+                "Tried to allocate from a destroyed Buffer Allocator (with id {:?})",
+                self.id
+            );
+        }
+
         if min_capacity == 0 {
             return Buffer_Handle {
                 inner: Buffer_Handle_Inner::Empty,
@@ -158,6 +189,11 @@ impl Buffer_Allocator {
         }
 
         let capacity_to_allocate = min_capacity.max(MIN_BUCKET_SIZE);
+        lverbose!(
+            "Requesting {} B from {:?} Buffer Allocator",
+            format_bytes_pretty(capacity_to_allocate),
+            self.id
+        );
 
         let (bucket_idx, slot) = if let Some((bucket_idx, free_slot_idx)) =
             self.find_first_bucket_with_capacity(min_capacity)
@@ -190,7 +226,15 @@ impl Buffer_Allocator {
         #[cfg(debug_assertions)]
         {
             self.cur_allocated.insert(h.clone());
+            self.cur_allocated_bytes += capacity_to_allocate;
+            self.high_water_mark = self.high_water_mark.max(self.cur_allocated_bytes);
         }
+
+        lverbose!(
+            "...high water mark is now {}. Number of buckets: {}.",
+            format_bytes_pretty(self.high_water_mark),
+            self.buckets.len()
+        );
 
         Buffer_Handle {
             inner: Buffer_Handle_Inner::Non_Empty(h),
@@ -208,6 +252,7 @@ impl Buffer_Allocator {
 
             #[cfg(debug_assertions)]
             {
+                self.cur_allocated_bytes -= h.slot.len;
                 self.cur_allocated.remove(&h);
             }
         }
@@ -301,8 +346,8 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
     }
 
     lverbose!(
-        "Buffer_Allocator: allocated new bucket with capacity {} B",
-        capacity
+        "Buffer_Allocator: allocated new bucket with capacity {}",
+        format_bytes_pretty(capacity)
     );
 
     Buffer_Allocator_Bucket {
@@ -419,10 +464,11 @@ fn reset_bucket(bucket: &mut Buffer_Allocator_Bucket) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use inle_test::test_common::*;
 
-    #[ignore] // until we can load gl ptrs in tests
     #[test]
     fn test_allocate_from_bucket() {
+        let glfw = load_gl_pointers();
         let mut bucket = allocate_bucket(gl::ARRAY_BUFFER, 100);
         debug_assert!(is_bucket_slot_free(&bucket, &Bucket_Slot::new(0, 100)));
     }

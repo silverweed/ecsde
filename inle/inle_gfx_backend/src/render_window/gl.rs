@@ -1,12 +1,12 @@
 use crate::backend_common::alloc::Buffer_Allocators;
 use crate::backend_common::misc::check_gl_err;
 use gl::types::*;
+use inle_alloc::temp;
 use inle_common::colors::Color;
 use inle_math::rect::{Rect, Rectf};
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::Window_Handle;
-use inle_alloc::temp;
 use std::{mem, ptr, str};
 
 pub struct Render_Window_Handle {
@@ -247,25 +247,32 @@ pub fn set_viewport(window: &mut Render_Window_Handle, viewport: &Rectf, _view_r
 }
 
 pub fn raw_unproject_screen_pos(
-    _screen_pos: Vec2i,
+    screen_pos: Vec2i,
     _window: &Render_Window_Handle,
-    _camera: &Transform2D,
+    camera: &Transform2D,
 ) -> Vec2f {
-    Vec2f::default()
+    (*camera * Vec2f::from(screen_pos)).into()
 }
 
 pub fn raw_project_world_pos(
-    _world_pos: Vec2f,
-    _window: &Render_Window_Handle,
-    _camera: &Transform2D,
+    world_pos: Vec2f,
+    window: &Render_Window_Handle,
+    camera: &Transform2D,
 ) -> Vec2i {
-    Vec2i::default()
+    let pos_cam_space = camera.inverse() * world_pos;
+    //let screen_pos = window
+    //.raw_handle()
+    //.map_coords_to_pixel_current_view(pos_cam_space);
+    //screen_pos.into()
+    pos_cam_space.into()
 }
 
 #[inline(always)]
 pub fn start_new_frame(window: &mut Render_Window_Handle) {
     window.gl.buffer_allocators.dealloc_all_temp();
-    unsafe { window.temp_allocator.dealloc_all(); }
+    unsafe {
+        window.temp_allocator.dealloc_all();
+    }
 
     #[cfg(debug_assertions)]
     {

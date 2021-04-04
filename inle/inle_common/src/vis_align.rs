@@ -33,7 +33,9 @@ mod tests {
             let ex = 0.0;
             assert!(
                 r.approx_eq(ex, (0.0, 2)),
-                format!("expected_approx: {}, got: {}", ex, r)
+                "expected_approx: {}, got: {}",
+                ex,
+                r
             );
         }
 
@@ -42,7 +44,9 @@ mod tests {
             let ex = -55.0;
             assert!(
                 r.approx_eq(ex, (0.0, 2)),
-                format!("expected_approx: {}, got: {}", ex, r)
+                "expected_approx: {}, got: {}",
+                ex,
+                r
             );
         }
 
@@ -51,7 +55,9 @@ mod tests {
             let ex = -110.0;
             assert!(
                 r.approx_eq(ex, (0.0, 2)),
-                format!("expected_approx: {}, got: {}", ex, r)
+                "expected_approx: {}, got: {}",
+                ex,
+                r
             );
         }
     }

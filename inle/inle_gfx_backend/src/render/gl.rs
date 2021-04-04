@@ -1468,6 +1468,7 @@ fn use_circle_ws_shader(
 
     unsafe {
         gl::UseProgram(window.gl.circle_shader);
+        check_gl_err();
 
         gl::UniformMatrix3fv(
             get_uniform_loc(window.gl.circle_shader, c_str!("mvp")),
