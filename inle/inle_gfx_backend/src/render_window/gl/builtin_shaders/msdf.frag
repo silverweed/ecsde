@@ -16,10 +16,6 @@ void main()
 {
     vec2 pos = tex_coord;
     vec3 sample = texture(tex, tex_coord).rgb;
-    ivec2 sz = textureSize(tex, 0).xy;
-    float dx = dFdx(pos.x) * sz.x;
-    float dy = dFdy(pos.y) * sz.y;
-    float to_pixels = 8.0 * inversesqrt(dx * dx + dy * dy);
     float sig_dist = median(sample.r, sample.g, sample.b);
     float w = fwidth(sig_dist);
     float opacity = smoothstep(0.5 - w, 0.5 + w, sig_dist);
