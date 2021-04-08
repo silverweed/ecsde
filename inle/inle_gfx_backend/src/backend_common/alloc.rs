@@ -18,13 +18,13 @@ pub enum Buffer_Allocator_Id {
 }
 
 pub struct Buffer_Allocators {
-    buffers: [Buffer_Allocator; 2],
+    allocs: [Buffer_Allocator; 2],
 }
 
 impl Default for Buffer_Allocators {
     fn default() -> Self {
         Self {
-            buffers: [
+            allocs: [
                 Buffer_Allocator::new(gl::ARRAY_BUFFER, Buffer_Allocator_Id::Array_Permanent),
                 Buffer_Allocator::new(gl::ARRAY_BUFFER, Buffer_Allocator_Id::Array_Temporary),
             ],
@@ -34,22 +34,22 @@ impl Default for Buffer_Allocators {
 
 impl Buffer_Allocators {
     pub fn destroy(&mut self) {
-        for buf in &mut self.buffers {
+        for buf in &mut self.allocs {
             buf.destroy();
         }
     }
 
     pub fn dealloc_all_temp(&mut self) {
-        self.buffers[Buffer_Allocator_Id::Array_Temporary as usize].dealloc_all();
+        self.allocs[Buffer_Allocator_Id::Array_Temporary as usize].dealloc_all();
     }
 
-    pub fn get_buffer_mut(&mut self, id: Buffer_Allocator_Id) -> &mut Buffer_Allocator {
-        &mut self.buffers[id as usize]
+    pub fn get_alloc_mut(&mut self, id: Buffer_Allocator_Id) -> &mut Buffer_Allocator {
+        &mut self.allocs[id as usize]
     }
 }
 
 /// Buffer_Allocator holds a list of buckets, each backed by one openGL VAO + VBO.
-/// "Virtual" buffers are allocated from these buckets and can write to their allocated
+/// "Virtual" allocs are allocated from these buckets and can write to their allocated
 /// memory range via their Buffer_Handle.
 pub struct Buffer_Allocator {
     buckets: Vec<Buffer_Allocator_Bucket>,
@@ -122,7 +122,7 @@ impl Buffer_Handle {
 
 impl Buffer_Allocator {
     pub fn new(buf_type: GLenum, id: Buffer_Allocator_Id) -> Self {
-        debug_assert!(buf_type == gl::ARRAY_BUFFER, "Currently we are not really supporting buffers other than ARRAY_BUFFER. If we need to, the VAO should be made optional");
+        debug_assert!(buf_type == gl::ARRAY_BUFFER, "Currently we are not really supporting allocs other than ARRAY_BUFFER. If we need to, the VAO should be made optional");
 
         Self {
             buckets: vec![],
@@ -172,6 +172,7 @@ impl Buffer_Allocator {
         }
     }
 
+    #[must_use]
     pub fn allocate(&mut self, min_capacity: usize) -> Buffer_Handle {
         #[cfg(debug_assertions)]
         {
@@ -373,6 +374,7 @@ fn is_bucket_slot_free(bucket: &Buffer_Allocator_Bucket, slot: &Bucket_Slot) -> 
     bucket.free_list.iter().any(|s| s.contains(slot))
 }
 
+#[must_use]
 fn allocate_from_bucket(
     bucket: &mut Buffer_Allocator_Bucket,
     free_slot_idx: usize,
@@ -419,26 +421,32 @@ fn deallocate_in_bucket(bucket: &mut Buffer_Allocator_Bucket, slot: Bucket_Slot)
     let slot_end = slot.end();
     if let Some(insert_pos) = bucket.free_list.iter().position(|s| s.start > slot.start) {
         // Check if we can merge this to the previous one...
+        let mut inserted_pos = insert_pos;
         if insert_pos > 0 && bucket.free_list[insert_pos - 1].end() == slot.start {
             bucket.free_list[insert_pos - 1].len += slot.len;
+            inserted_pos -= 1;
         } else {
             // ...else just insert it after
             bucket.free_list.insert(insert_pos, slot);
         }
 
         // Check if we can merge this to the next one (after we placed it)
-        if insert_pos < bucket.free_list.len() - 1 && slot_end == bucket.free_list[insert_pos + 1].start {
-            bucket.free_list[insert_pos].len += bucket.free_list[insert_pos + 1].len;
-            bucket.free_list.remove(insert_pos + 1);
+        if inserted_pos < bucket.free_list.len() - 1 && slot_end == bucket.free_list[inserted_pos + 1].start {
+            bucket.free_list[inserted_pos].len += bucket.free_list[inserted_pos + 1].len;
+            bucket.free_list.remove(inserted_pos + 1);
         }
 
     } else {
         // Inserting in last place
-        let last_idx = bucket.free_list.len() - 1;
-        if !bucket.free_list.is_empty() && bucket.free_list[last_idx].end() == slot.start {
-            bucket.free_list[last_idx].len += slot.len;
-        } else {
+        if bucket.free_list.is_empty() {
             bucket.free_list.push(slot);
+        } else {
+            let last_idx = bucket.free_list.len() - 1;
+            if bucket.free_list[last_idx].end() == slot.start {
+                bucket.free_list[last_idx].len += slot.len;
+            } else {
+                bucket.free_list.push(slot);
+            }
         }
     }
 }
@@ -482,13 +490,88 @@ mod tests {
         assert!(is_bucket_slot_free(&bucket, &Bucket_Slot::new(0, 100)));
 
         let slot = allocate_from_bucket(&mut bucket, 0, 50);
-        assert!(slot.start == 0);
-        assert!(slot.len == 50);
+        assert_eq!(slot.start, 0);
+        assert_eq!(slot.len, 50);
         assert!(!is_bucket_slot_free(&bucket, &slot));
         assert!(bucket_has_contiguous_capacity(&bucket, 60).is_none());
         assert!(bucket_has_contiguous_capacity(&bucket, 50).is_some());
 
         deallocate_in_bucket(&mut bucket, slot);
         assert!(is_bucket_slot_free(&bucket, &Bucket_Slot::new(0, 100)));
+        assert_eq!(bucket_has_contiguous_capacity(&bucket, 100), Some(0));
+    }
+
+    #[test]
+    fn test_allocate_from_bucket_fragmented() {
+        let (_win, _glfw) = load_gl_pointers();
+
+        let mut bucket = allocate_bucket(gl::ARRAY_BUFFER, 100);
+        let slot1 = allocate_from_bucket(&mut bucket, 0, 20);
+        let slot2 = allocate_from_bucket(&mut bucket, 0, 10);
+        let slot3 = allocate_from_bucket(&mut bucket, 0, 30);
+
+        deallocate_in_bucket(&mut bucket, slot2);
+
+        assert!(bucket_has_contiguous_capacity(&bucket, 60).is_none());
+        assert_eq!(bucket_has_contiguous_capacity(&bucket, 20), Some(1));
+        assert_eq!(bucket_has_contiguous_capacity(&bucket, 10), Some(0));
+
+        deallocate_in_bucket(&mut bucket, slot3);
+        assert_eq!(bucket_has_contiguous_capacity(&bucket, 60), Some(0));
+    }
+
+    #[test]
+    fn test_reset_bucket() {
+        let (_win, _glfw) = load_gl_pointers();
+        let mut bucket = allocate_bucket(gl::ARRAY_BUFFER, 100);
+
+        let slot1 = allocate_from_bucket(&mut bucket, 0, 10);
+        let slot2 = allocate_from_bucket(&mut bucket, 0, 20);
+        let slot3 = allocate_from_bucket(&mut bucket, 0, 30);
+        let slot4 = allocate_from_bucket(&mut bucket, 0, 40);
+
+        assert_eq!(slot1.start, 0);
+        assert_eq!(slot1.len, 10);
+        assert_eq!(slot2.start, 10);
+        assert_eq!(slot2.len, 20);
+        assert_eq!(slot3.start, 30);
+        assert_eq!(slot3.len, 30);
+        assert_eq!(slot4.start, 60);
+        assert_eq!(slot4.len, 40);
+
+        assert!(bucket.free_list.is_empty());
+
+        reset_bucket(&mut bucket);
+
+        assert_eq!(bucket_has_contiguous_capacity(&bucket, 100), Some(0));
+    }
+
+    #[test]
+    fn allocate_from_buffer_allocators() {
+        let (_win, _glfw) = load_gl_pointers();
+        let mut allocators = Buffer_Allocators::default();
+        let alloc = allocators.get_alloc_mut(Buffer_Allocator_Id::Array_Permanent);
+
+        let buf = alloc.allocate(200);
+        assert!(matches!(buf.inner, Buffer_Handle_Inner::Non_Empty(_)));
+        assert!(alloc.cur_allocated_bytes >= 200);
+
+        alloc.deallocate(buf);
+        assert_eq!(alloc.cur_allocated_bytes, 0);
+
+        let _b1 = alloc.allocate(100);
+        let _b2 = alloc.allocate(200);
+        let _b3 = alloc.allocate(300);
+
+        assert!(alloc.cur_allocated_bytes >= 600);
+        let high_water_mark = alloc.high_water_mark;
+
+        alloc.dealloc_all();
+
+        assert_eq!(alloc.cur_allocated_bytes, 0);
+        assert!(high_water_mark == alloc.high_water_mark);
+
+        let _b = alloc.allocate(200);
+        assert!(high_water_mark == alloc.high_water_mark);
     }
 }

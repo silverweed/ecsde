@@ -833,7 +833,7 @@ pub fn new_vbuf(
         window
             .gl
             .buffer_allocators
-            .get_buffer_mut(Buffer_Allocator_Id::Array_Permanent),
+            .get_alloc_mut(Buffer_Allocator_Id::Array_Permanent),
         primitive,
         n_vertices,
     )
@@ -849,7 +849,7 @@ pub fn new_vbuf_temp(
         window
             .gl
             .buffer_allocators
-            .get_buffer_mut(Buffer_Allocator_Id::Array_Temporary),
+            .get_alloc_mut(Buffer_Allocator_Id::Array_Temporary),
         primitive,
         n_vertices,
     )
@@ -879,7 +879,7 @@ pub fn update_vbuf(
     let alloc = window
         .gl
         .buffer_allocators
-        .get_buffer_mut(vbuf.buf.allocator_id());
+        .get_alloc_mut(vbuf.buf.allocator_id());
     alloc.update_buffer(
         &vbuf.buf,
         offset as usize * mem::size_of::<Vertex>(),
