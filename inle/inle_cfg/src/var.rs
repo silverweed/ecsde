@@ -178,7 +178,6 @@ mod tests {
     use crate::config::Config;
     use inle_core::env::Env_Info;
     use inle_test::env as test_env;
-    use inle_test::test_common::*;
 
     #[test]
     fn cfg_var_load() {
@@ -230,7 +229,6 @@ mod tests {
     #[should_panic]
     fn cfg_incompatible_type() {
         let env = Env_Info::gather().expect("Failed to gather env info!");
-        let mut config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
         let config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
 
         let entry_float_mistyped = Cfg_Var::<i32>::new("test/entry_float", &config);

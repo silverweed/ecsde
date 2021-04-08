@@ -5,7 +5,6 @@ use {
     inle_resources::gfx::Gfx_Resources,
 };
 
-// @FIXME: load_texture is not usable unless we load the gl functions!
 // Used for setting up tests which need resources
 pub fn create_test_resources_and_env<'a>() -> (Gfx_Resources<'a>, Audio_Resources<'a>, Env_Info) {
     let mut gfx = Gfx_Resources::new();
@@ -15,11 +14,15 @@ pub fn create_test_resources_and_env<'a>() -> (Gfx_Resources<'a>, Audio_Resource
     (gfx, audio, env)
 }
 
-pub fn load_gl_pointers() -> glfw::Glfw {
-    let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+#[cfg(feature = "gfx-gl")]
+pub fn load_gl_pointers() -> (glfw::Window, glfw::Glfw) {
+    use glfw::Context;
+
+    let glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     let (mut window, _) = glfw
         .create_window(1, 1, "", glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window");
+    window.make_current();
     gl::load_with(|symbol| window.get_proc_address(symbol));
-    glfw
+    (window, glfw)
 }
