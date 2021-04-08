@@ -12,9 +12,7 @@ float median(float r, float g, float b) {
     return max(min(r, g), min(max(r, g), b));
 }
 
-void main()
-{
-    vec2 pos = tex_coord;
+void main() {
     vec3 sample = texture(tex, tex_coord).rgb;
     float sig_dist = median(sample.r, sample.g, sample.b);
     float w = fwidth(sig_dist);
