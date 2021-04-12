@@ -7,7 +7,7 @@ use std::ptr;
 #[cfg(debug_assertions)]
 use std::collections::HashSet;
 
-const MIN_BUCKET_SIZE: usize = units::kilobytes(128);
+const MIN_BUCKET_SIZE: usize = units::kilobytes(64);
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -191,7 +191,7 @@ impl Buffer_Allocator {
 
         let capacity_to_allocate = min_capacity.max(MIN_BUCKET_SIZE);
         lverbose!(
-            "Requesting {} B from {:?} Buffer Allocator",
+            "Requesting {} from {:?} Buffer Allocator",
             format_bytes_pretty(capacity_to_allocate),
             self.id
         );
