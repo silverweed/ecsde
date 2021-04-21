@@ -100,7 +100,7 @@ impl Console {
             status: Console_Status::Closed,
             pos: Vec2u::default(),
             size: Vec2u::default(),
-            font_size: 14,
+            font_size: 12,
             cur_line: String::new(),
             cur_pos: 0,
             font: None,
@@ -114,9 +114,8 @@ impl Console {
         }
     }
 
-    pub fn init(&mut self, gres: &mut gfx::Gfx_Resources, env: &Env_Info) {
-        const FONT_NAME: &str = "Hack-Regular.ttf";
-        self.font = gres.load_font(&gfx::font_path(env, FONT_NAME));
+    pub fn init(&mut self, font: gfx::Font_Handle) {
+        self.font = font;
     }
 
     pub fn toggle(&mut self) -> Console_Status {
@@ -465,7 +464,8 @@ impl Console {
         }
 
         let pad_x = 5.0;
-        let linesep = self.font_size as f32 * 1.2;
+        // @Cleanup: this * 3.0 is pretty random
+        let linesep = self.font_size as f32 * 3.0;
 
         // Draw background
         let Vec2u { x, y } = self.pos;

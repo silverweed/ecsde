@@ -65,7 +65,12 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
         }
     }
 
-    let ui_scale = engine_state.debug_systems.debug_ui.cfg.ui_scale;
+    let ui_scale = engine_state
+        .debug_systems
+        .debug_ui
+        .cfg
+        .ui_scale
+        .read(&engine_state.config);
     let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
     let debug_log = &mut engine_state.debug_systems.log;
     let frame = scroller.get_real_selected_frame();
@@ -115,7 +120,12 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
 }
 
 pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
-    let ui_scale = engine_state.debug_systems.debug_ui.cfg.ui_scale;
+    let ui_scale = engine_state
+        .debug_systems
+        .debug_ui
+        .cfg
+        .ui_scale
+        .read(&engine_state.config);
     let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
     let debug_log = &mut engine_state.debug_systems.log;
     let frame = scroller.get_real_selected_frame();

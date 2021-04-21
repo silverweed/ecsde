@@ -431,11 +431,12 @@ fn deallocate_in_bucket(bucket: &mut Buffer_Allocator_Bucket, slot: Bucket_Slot)
         }
 
         // Check if we can merge this to the next one (after we placed it)
-        if inserted_pos < bucket.free_list.len() - 1 && slot_end == bucket.free_list[inserted_pos + 1].start {
+        if inserted_pos < bucket.free_list.len() - 1
+            && slot_end == bucket.free_list[inserted_pos + 1].start
+        {
             bucket.free_list[inserted_pos].len += bucket.free_list[inserted_pos + 1].len;
             bucket.free_list.remove(inserted_pos + 1);
         }
-
     } else {
         // Inserting in last place
         if bucket.free_list.is_empty() {

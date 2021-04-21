@@ -789,7 +789,8 @@ pub fn get_text_size(text: &Text) -> Vec2f {
         });
     //v2!(width, 2. * height) // Why the 2x?
     // @Temporary hack to make the font monospaced
-    v2!(1.6 * tsize, 2. * tsize)
+    let tlen = text.string.chars().count();
+    v2!(1.6 * tsize * tlen as f32, 2. * tsize)
 }
 
 pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {

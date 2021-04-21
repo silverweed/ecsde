@@ -260,8 +260,11 @@ impl Debug_Element for Debug_Graph_View {
                         },
                         circle_col,
                     );
-                    let mut text =
-                        render::create_text(&format!("{:.2}", self.data.points[x].y), font, 12);
+                    let mut text = render::create_text(
+                        &format!("{:.2}", self.data.points[x].y),
+                        font,
+                        (1.5 * self.config.label_font_size as f32) as _,
+                    );
                     render::render_text(
                         window,
                         &mut text,
@@ -287,7 +290,11 @@ impl Debug_Element for Debug_Graph_View {
                 v2!(0.0, 0.0),
             );
             render::render_line(window, &start, &end);
-            let mut text = render::create_text(&format!("{:.2}", avg), font, 12);
+            let mut text = render::create_text(
+                &format!("{:.2}", avg),
+                font,
+                (1.5 * self.config.label_font_size as f32) as _,
+            );
             render::render_text(
                 window,
                 &mut text,

@@ -155,9 +155,11 @@ pub fn init_engine_debug(
     use inle_debug::{fadeout_overlay, graph, overlay};
     use inle_math::vector::{Vec2f, Vec2u};
 
+    // @Convenience: rather than reading the font cfg var here, we could pass it to the configs
+    // so it can be updated at any time after creating the widgets.
     let font = gfx_resources.load_font(&inle_resources::gfx::font_path(
         &engine_state.env,
-        &cfg.font,
+        &cfg.font.read(&engine_state.config),
     ));
 
     engine_state
@@ -169,12 +171,20 @@ pub fn init_engine_debug(
         engine_state.app_config.target_win_size.0 as f32,
         engine_state.app_config.target_win_size.1 as f32,
     );
-    let ui_scale = cfg.ui_scale;
+    // @Convenience: rather than reading the cfg var here, we could pass it to the configs
+    // so it can be updated at any time after creating the widgets.
+    let ui_scale = cfg.ui_scale.read(&engine_state.config);
+    let font_size = cfg.font_size.read(&engine_state.config);
     let debug_ui = &mut engine_state.debug_systems.debug_ui;
     debug_ui.cfg = cfg;
 
     // Frame scroller
     {
+        let scroller_label_font_size = Cfg_Var::<f32>::new(
+            "engine/debug/frame_scroller/label_font_size",
+            &engine_state.config,
+        )
+        .read(&engine_state.config);
         let scroller = &mut debug_ui.frame_scroller;
         scroller.size.x = (win_w * 0.75) as _;
         scroller.pos.x = (win_w * 0.125) as _;
@@ -182,7 +192,7 @@ pub fn init_engine_debug(
         scroller.pos.y = 15;
         scroller.cfg = inle_debug::frame_scroller::Debug_Frame_Scroller_Config {
             font,
-            font_size: (7. * ui_scale) as _,
+            font_size: (scroller_label_font_size * ui_scale) as _,
         };
     }
 
@@ -190,7 +200,7 @@ pub fn init_engine_debug(
     {
         let mut debug_overlay_config = overlay::Debug_Overlay_Config {
             row_spacing: 2.0 * ui_scale,
-            font_size: (10.0 * ui_scale) as _,
+            font_size: (font_size * ui_scale) as _,
             pad_x: 5.0 * ui_scale,
             pad_y: 5.0 * ui_scale,
             background: colors::rgba(25, 25, 25, 210),
@@ -205,7 +215,7 @@ pub fn init_engine_debug(
         joy_overlay.config.vert_align = Align::Middle;
         joy_overlay.position = Vec2f::new(win_w, win_h * 0.5);
 
-        debug_overlay_config.font_size = (13.0 * ui_scale) as _;
+        debug_overlay_config.font_size = (font_size * ui_scale) as _;
         let time_overlay = debug_ui
             .create_overlay(sid!("time"), debug_overlay_config)
             .unwrap();
@@ -262,7 +272,7 @@ pub fn init_engine_debug(
     {
         let fadeout_overlay_config = fadeout_overlay::Fadeout_Debug_Overlay_Config {
             row_spacing: 2.0 * ui_scale,
-            font_size: (20.0 * ui_scale) as _,
+            font_size: (font_size * ui_scale) as _,
             pad_x: 5.0 * ui_scale,
             pad_y: 5.0 * ui_scale,
             background: colors::rgba(25, 25, 25, 210),
@@ -281,12 +291,18 @@ pub fn init_engine_debug(
 
     // Graphs
     {
+        let graph_label_font_size =
+            Cfg_Var::<f32>::new("engine/debug/graphs/label_font_size", &engine_state.config)
+                .read(&engine_state.config);
+        let graph_title_font_size =
+            Cfg_Var::<f32>::new("engine/debug/graphs/title_font_size", &engine_state.config)
+                .read(&engine_state.config);
         let mut graph_config = graph::Debug_Graph_View_Config {
             grid_xstep: Some(graph::Grid_Step::Fixed_Step(5.)),
             grid_ystep: Some(graph::Grid_Step::Fixed_Step(30.)),
-            label_font_size: (10.0 * ui_scale) as _,
+            label_font_size: (graph_label_font_size * ui_scale) as _,
             title: Some(String::from("FPS")),
-            title_font_size: (18.0 * ui_scale) as _,
+            title_font_size: (graph_title_font_size * ui_scale) as _,
             color: colors::YELLOW,
             low_threshold: Some((25.0, colors::RED)),
             high_threshold: Some((55.0, colors::GREEN)),
@@ -339,9 +355,14 @@ pub fn init_engine_debug(
     {
         use inle_input::bindings::{Input_Action, Input_Action_Simple};
 
+        // @Convenience: rather than reading the cfg var here, we could pass it to the configs
+        // so it can be updated at any time after creating the widgets.
+        let console_font_size =
+            Cfg_Var::<f32>::new("engine/debug/console/font_size", &engine_state.config)
+                .read(&engine_state.config);
         let console = &mut engine_state.debug_systems.console;
         console.size = Vec2u::new(win_w as _, win_h as u32 / 2);
-        console.font_size = (console.font_size as f32 * ui_scale) as _;
+        console.font_size = (console_font_size * ui_scale) as _;
         console.toggle_console_keys = engine_state
             .input_state
             .bindings
@@ -359,7 +380,7 @@ pub fn init_engine_debug(
                 }
             })
             .collect();
-        console.init(gfx_resources, &engine_state.env);
+        console.init(font);
     }
 
     Ok(())

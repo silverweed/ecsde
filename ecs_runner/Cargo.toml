@@ -5,12 +5,14 @@ version = "0.1.0"
 authors = ["silverweed <silverweed1991@gmail.com>"]
 
 [features]
-hotload = []
-default = ["hotload"]
+hotload = ["notify"]
+#default = ["hotload"]
+default = []
 
 [dependencies]
 libloading = "0.5"
 
-# debug-only deps
-notify = "4.0"
+[dependencies.notify]
+optional = true
+version = "4.0"
 

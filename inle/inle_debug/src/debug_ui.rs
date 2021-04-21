@@ -5,6 +5,7 @@ use super::graph;
 use super::log::Debug_Log;
 use super::overlay;
 use inle_alloc::temp;
+use inle_cfg::Cfg_Var;
 use inle_common::stringid::String_Id;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input::input_state::Input_State;
@@ -16,17 +17,19 @@ use std::time::Duration;
 
 #[derive(Debug)]
 pub struct Debug_Ui_System_Config {
-    pub ui_scale: f32,
+    pub ui_scale: Cfg_Var<f32>,
     pub target_win_size: (u32, u32),
-    pub font: String,
+    pub font: Cfg_Var<String>,
+    pub font_size: Cfg_Var<f32>,
 }
 
 impl Default for Debug_Ui_System_Config {
     fn default() -> Self {
         Self {
-            ui_scale: 1.0,
+            ui_scale: Cfg_Var::new_from_val(1.),
+            font_size: Cfg_Var::new_from_val(10.),
             target_win_size: (800, 600),
-            font: String::default(),
+            font: Cfg_Var::default(),
         }
     }
 }
