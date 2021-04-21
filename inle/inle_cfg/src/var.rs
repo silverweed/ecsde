@@ -3,7 +3,7 @@ use super::value::Cfg_Value;
 use inle_common::stringid::String_Id;
 use std::any::type_name;
 use std::convert::{From, Into, TryFrom};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 fn read_cfg<T>(path_id: String_Id, cfg: &Config) -> T
 where
@@ -42,12 +42,21 @@ fn read_cfg_str(path_id: String_Id, cfg: &Config) -> &String {
 
 #[cfg(debug_assertions)]
 #[derive(Debug, Clone)]
+enum Cfg_Var_Content<T> {
+    Fixed(T),
+    Hot_Reloadable(String_Id),
+}
+
+#[cfg(debug_assertions)]
+impl<T> Copy for Cfg_Var_Content<T> where T: Copy {}
+
+#[cfg(debug_assertions)]
+#[derive(Debug, Clone)]
 pub struct Cfg_Var<T>
 where
     T: Default + Into<Cfg_Value>,
 {
-    id: String_Id,
-    _marker: std::marker::PhantomData<T>,
+    content: Cfg_Var_Content<T>,
 }
 
 impl<T> Default for Cfg_Var<T>
@@ -57,8 +66,7 @@ where
     #[cfg(debug_assertions)]
     fn default() -> Self {
         Cfg_Var {
-            id: String_Id::from(""),
-            _marker: std::marker::PhantomData,
+            content: Cfg_Var_Content::Fixed(T::default()),
         }
     }
 
@@ -81,40 +89,38 @@ where
     T: Default + Into<Cfg_Value> + TryFrom<Cfg_Value>,
 {
     #[cfg(debug_assertions)]
-    pub fn new(path: &str, _cfg: &Config) -> Cfg_Var<T> {
-        Cfg_Var {
-            id: String_Id::from(path),
-            _marker: std::marker::PhantomData,
+    pub fn new(path: &str, _cfg: &Config) -> Self {
+        Self {
+            content: Cfg_Var_Content::Hot_Reloadable(String_Id::from(path)),
         }
     }
 
     #[cfg(not(debug_assertions))]
-    pub fn new(path: &str, cfg: &Config) -> Cfg_Var<T> {
+    pub fn new(path: &str, cfg: &Config) -> Self {
         let id = String_Id::from(path);
-        Cfg_Var(read_cfg(id, cfg))
+        Self(read_cfg(id, cfg))
     }
 
     #[cfg(debug_assertions)]
-    fn new_from_sid(id: String_Id) -> Cfg_Var<T> {
-        Cfg_Var {
-            id,
-            _marker: std::marker::PhantomData,
+    fn new_from_sid(id: String_Id) -> Self {
+        Self {
+            content: Cfg_Var_Content::Hot_Reloadable(id),
         }
     }
 
     #[cfg(debug_assertions)]
-    pub fn new_from_val(value: T, cfg: &mut Config) -> Cfg_Var<T>
+    pub fn new_from_val(value: T) -> Self
     where
         T: Debug,
     {
-        let id = String_Id::from(format!("{:?}", value).as_str());
-        cfg.write_cfg(id, value.into());
-        Self::new_from_sid(id)
+        Self {
+            content: Cfg_Var_Content::Fixed(value),
+        }
     }
 
     #[cfg(not(debug_assertions))]
-    pub fn new_from_val(value: T, _: &mut Config) -> Cfg_Var<T> {
-        Cfg_Var(value)
+    pub fn new_from_val(value: T) -> Self {
+        Self(value)
     }
 }
 
@@ -124,7 +130,10 @@ macro_rules! impl_cfg_vars {
             impl Cfg_Var<$type> {
                 #[cfg(debug_assertions)]
                 pub fn read(self, cfg: &Config) -> $type {
-                    read_cfg(self.id, cfg)
+                    match self.content {
+                        Cfg_Var_Content::Fixed(x) => x,
+                        Cfg_Var_Content::Hot_Reloadable(id) => read_cfg(id, cfg),
+                    }
                 }
 
                 #[cfg(not(debug_assertions))]
@@ -139,8 +148,12 @@ macro_rules! impl_cfg_vars {
         $(
             impl Cfg_Var<$type> {
                 #[cfg(debug_assertions)]
-                pub fn read<'c>(&self, cfg: &'c Config) -> &'c $type {
-                    read_cfg_str(self.id, cfg)
+                pub fn read<'s, 'c>(&'s self, cfg: &'c Config) -> &'s $type
+                where 'c: 's {
+                    match &self.content {
+                        Cfg_Var_Content::Fixed(x) => &x,
+                        Cfg_Var_Content::Hot_Reloadable(id) => read_cfg_str(*id, cfg),
+                    }
                 }
 
                 #[cfg(not(debug_assertions))]
@@ -157,13 +170,16 @@ macro_rules! impl_cfg_vars {
 impl_cfg_vars!(copy: bool, i32, u32, f32);
 impl_cfg_vars!(noncopy: String);
 
-impl<T: std::fmt::Display> std::fmt::Display for Cfg_Var<T>
+impl<T: Display> Display for Cfg_Var<T>
 where
     T: Default + Into<Cfg_Value>,
 {
     #[cfg(debug_assertions)]
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", &self.id)
+        match &self.content {
+            Cfg_Var_Content::Fixed(x) => write!(f, "{}", x),
+            Cfg_Var_Content::Hot_Reloadable(id) => write!(f, "(REF {})", id),
+        }
     }
 
     #[cfg(not(debug_assertions))]
@@ -216,12 +232,12 @@ mod tests {
     #[test]
     fn cfg_new_from_val() {
         let env = Env_Info::gather().expect("Failed to gather env info!");
-        let mut config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
+        let config = Config::new_from_dir(&test_env::get_test_cfg_root(&env));
 
-        let var: Cfg_Var<i32> = Cfg_Var::new_from_val(42, &mut config);
+        let var: Cfg_Var<i32> = Cfg_Var::new_from_val(42);
         assert_eq!(var.read(&config), 42);
 
-        let var = Cfg_Var::new_from_val(String::from("foo"), &mut config);
+        let var = Cfg_Var::new_from_val(String::from("foo"));
         assert_eq!(var.read(&config), "foo");
     }
 
