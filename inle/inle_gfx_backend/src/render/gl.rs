@@ -1,5 +1,5 @@
 use super::{Primitive_Type, Uniform_Value};
-use crate::backend_common::alloc::{Buffer_Allocator, Buffer_Allocator_Id, Buffer_Handle};
+use crate::backend_common::alloc::{Buffer_Allocator_Id, Buffer_Allocator_Ptr, Buffer_Handle};
 use crate::backend_common::misc::check_gl_err;
 use crate::render_window::Render_Window_Handle;
 use gl::types::*;
@@ -42,6 +42,7 @@ pub struct Vertex_Buffer {
     max_vertices: u32,
     primitive_type: Primitive_Type,
     buf: Buffer_Handle,
+    parent_alloc: Buffer_Allocator_Ptr,
 }
 
 impl Vertex_Buffer {
@@ -50,10 +51,11 @@ impl Vertex_Buffer {
     const LOC_IN_TEXCOORD: GLuint = 2;
 
     fn new(
-        buffer_allocator: &mut Buffer_Allocator,
+        buf_allocator_ptr: Buffer_Allocator_Ptr,
         primitive_type: Primitive_Type,
         max_vertices: u32,
     ) -> Self {
+        let mut buffer_allocator = buf_allocator_ptr.borrow_mut();
         let buf = buffer_allocator.allocate(max_vertices as usize * mem::size_of::<Vertex>());
 
         if max_vertices > 0 {
@@ -100,6 +102,7 @@ impl Vertex_Buffer {
             cur_vertices: 0,
             max_vertices,
             primitive_type,
+            parent_alloc: buf_allocator_ptr.clone(),
         }
     }
 }
@@ -733,7 +736,7 @@ pub fn render_text(
         }
 
         let vertices = unsafe { vertices.into_read_only() };
-        update_vbuf(window, &mut vbuf, &vertices, 0);
+        update_vbuf(&mut vbuf, &vertices, 0);
     }
 
     unsafe {
@@ -857,30 +860,18 @@ pub fn new_vbuf_temp(
 }
 
 #[inline(always)]
-pub fn add_vertices(
-    window: &mut Render_Window_Handle,
-    vbuf: &mut Vertex_Buffer,
-    vertices: &[Vertex],
-) {
+pub fn add_vertices(vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
     debug_assert!(
         vbuf.cur_vertices as usize + vertices.len() <= vbuf.max_vertices as usize,
         "vbuf max vertices exceeded! ({})",
         vbuf.max_vertices
     );
-    update_vbuf(window, vbuf, vertices, vbuf.cur_vertices);
+    update_vbuf(vbuf, vertices, vbuf.cur_vertices);
 }
 
 #[inline(always)]
-pub fn update_vbuf(
-    window: &mut Render_Window_Handle,
-    vbuf: &mut Vertex_Buffer,
-    vertices: &[Vertex],
-    offset: u32,
-) {
-    let alloc = window
-        .gl
-        .buffer_allocators
-        .get_alloc_mut(vbuf.buf.allocator_id());
+pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
+    let mut alloc = vbuf.parent_alloc.borrow_mut();
     alloc.update_buffer(
         &vbuf.buf,
         offset as usize * mem::size_of::<Vertex>(),

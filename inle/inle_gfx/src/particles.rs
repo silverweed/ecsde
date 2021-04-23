@@ -207,7 +207,7 @@ pub fn render_particles(
         ));
     }
 
-    vbuf.update(window, &mut vertices, particles.transforms.len() as u32);
+    vbuf.update(&mut vertices, particles.transforms.len() as u32);
 
     if let Some(texture) = texture {
         render::set_uniform(shader, c_str!("tex"), texture);

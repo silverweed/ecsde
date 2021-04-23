@@ -419,7 +419,7 @@ pub fn draw_batches(
                 trace!("batcher::cast_shadows");
 
                 let shadow_vbuffer = shadow_vbuffer.as_mut().unwrap();
-                shadow_vbuffer.update(window, shadow_vertices, n_shadow_vertices);
+                shadow_vbuffer.update(shadow_vertices, n_shadow_vertices);
 
                 render::render_vbuf_ws_with_texture(
                     window,
@@ -430,7 +430,7 @@ pub fn draw_batches(
                 );
             }
 
-            vbuffer.update(window, vertices, n_vertices_without_shadows);
+            vbuffer.update(vertices, n_vertices_without_shadows);
 
             if let Some(shader) = shader.map(|s| s as &_) {
                 render::render_vbuf_with_shader(window, &vbuffer.vbuf, shader);

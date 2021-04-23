@@ -1,8 +1,10 @@
 use super::misc::check_gl_err;
 use gl::types::*;
 use inle_common::units::{self, format_bytes_pretty};
+use std::cell::RefCell;
 use std::ffi::c_void;
 use std::ptr;
+use std::rc::Rc;
 
 #[cfg(debug_assertions)]
 use std::collections::HashSet;
@@ -18,15 +20,21 @@ pub enum Buffer_Allocator_Id {
 }
 
 pub struct Buffer_Allocators {
-    allocs: [Buffer_Allocator; 2],
+    allocs: [Buffer_Allocator_Ptr; 2],
 }
 
 impl Default for Buffer_Allocators {
     fn default() -> Self {
         Self {
             allocs: [
-                Buffer_Allocator::new(gl::ARRAY_BUFFER, Buffer_Allocator_Id::Array_Permanent),
-                Buffer_Allocator::new(gl::ARRAY_BUFFER, Buffer_Allocator_Id::Array_Temporary),
+                Rc::new(RefCell::new(Buffer_Allocator::new(
+                    gl::ARRAY_BUFFER,
+                    Buffer_Allocator_Id::Array_Permanent,
+                ))),
+                Rc::new(RefCell::new(Buffer_Allocator::new(
+                    gl::ARRAY_BUFFER,
+                    Buffer_Allocator_Id::Array_Temporary,
+                ))),
             ],
         }
     }
@@ -35,16 +43,18 @@ impl Default for Buffer_Allocators {
 impl Buffer_Allocators {
     pub fn destroy(&mut self) {
         for buf in &mut self.allocs {
-            buf.destroy();
+            buf.borrow_mut().destroy();
         }
     }
 
     pub fn dealloc_all_temp(&mut self) {
-        self.allocs[Buffer_Allocator_Id::Array_Temporary as usize].dealloc_all();
+        self.allocs[Buffer_Allocator_Id::Array_Temporary as usize]
+            .borrow_mut()
+            .dealloc_all();
     }
 
-    pub fn get_alloc_mut(&mut self, id: Buffer_Allocator_Id) -> &mut Buffer_Allocator {
-        &mut self.allocs[id as usize]
+    pub fn get_alloc_mut(&mut self, id: Buffer_Allocator_Id) -> Buffer_Allocator_Ptr {
+        self.allocs[id as usize].clone()
     }
 }
 
@@ -69,6 +79,14 @@ pub struct Buffer_Allocator {
     #[cfg(debug_assertions)]
     is_destroyed: bool,
 }
+
+// @Speed @Robustness: using Rc allows us to store references to the parent buf allocators
+// inside the vertex buffers, which is convenient since it avoids us passing the window every
+// time we want to update the vbuf.
+// However this is only works single-thread and has a tiny performance penalty, so eventually
+// we may want to have a specialized structure that allows exclusive fast access to a portion
+// of the buffer only to the vbuf that allocated it.
+pub type Buffer_Allocator_Ptr = Rc<RefCell<Buffer_Allocator>>;
 
 #[derive(Debug)]
 pub struct Buffer_Handle {

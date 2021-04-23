@@ -314,45 +314,29 @@ pub fn start_draw_points_temp(
 ///////////////////////////////// UPDATING ///////////////////////////////////
 
 pub fn add_quad(
-    window: &mut Render_Window_Handle,
     vbuf: &mut Vertex_Buffer_Quads,
     v1: &Vertex,
     v2: &Vertex,
     v3: &Vertex,
     v4: &Vertex,
 ) {
-    backend::add_vertices(window, vbuf, &[*v1, *v2, *v3, *v3, *v4, *v1]);
+    backend::add_vertices(vbuf, &[*v1, *v2, *v3, *v3, *v4, *v1]);
 }
 
-pub fn add_triangle(
-    window: &mut Render_Window_Handle,
-    vbuf: &mut Vertex_Buffer_Triangles,
-    v1: &Vertex,
-    v2: &Vertex,
-    v3: &Vertex,
-) {
-    backend::add_vertices(window, vbuf, &[*v1, *v2, *v3]);
+pub fn add_triangle(vbuf: &mut Vertex_Buffer_Triangles, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
+    backend::add_vertices(vbuf, &[*v1, *v2, *v3]);
 }
 
-pub fn add_line(
-    window: &mut Render_Window_Handle,
-    vbuf: &mut Vertex_Buffer_Lines,
-    from: &Vertex,
-    to: &Vertex,
-) {
-    backend::add_vertices(window, vbuf, &[*from, *to]);
+pub fn add_line(vbuf: &mut Vertex_Buffer_Lines, from: &Vertex, to: &Vertex) {
+    backend::add_vertices(vbuf, &[*from, *to]);
 }
 
-pub fn add_vertex(
-    window: &mut Render_Window_Handle,
-    vbuf: &mut Vertex_Buffer_Linestrip,
-    v: &Vertex,
-) {
-    backend::add_vertices(window, vbuf, &[*v]);
+pub fn add_vertex(vbuf: &mut Vertex_Buffer_Linestrip, v: &Vertex) {
+    backend::add_vertices(vbuf, &[*v]);
 }
 
-pub fn add_point(window: &mut Render_Window_Handle, vbuf: &mut Vertex_Buffer_Points, v: &Vertex) {
-    backend::add_vertices(window, vbuf, &[*v]);
+pub fn add_point(vbuf: &mut Vertex_Buffer_Points, v: &Vertex) {
+    backend::add_vertices(vbuf, &[*v]);
 }
 
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
@@ -367,13 +351,8 @@ pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
     backend::swap_vbuf(a, b)
 }
 
-pub fn update_vbuf(
-    window: &mut Render_Window_Handle,
-    vbuf: &mut Vertex_Buffer,
-    vertices: &[Vertex],
-    offset: u32,
-) {
-    backend::update_vbuf(window, vbuf, vertices, offset);
+pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
+    backend::update_vbuf(vbuf, vertices, offset);
 }
 
 pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {

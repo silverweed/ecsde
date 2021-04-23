@@ -186,10 +186,10 @@ fn draw_line(
 ) {
     use inle_common::colors;
     let mut vbuf = render::start_draw_lines_temp(window, 1);
-    
+
     let v1 = render::new_vertex(line.from, colors::WHITE, v2!(0., 0.));
     let v2 = render::new_vertex(line.to, colors::WHITE, v2!(1., 1.));
-    render::add_line(window, &mut vbuf, &v1, &v2); 
+    render::add_line(&mut vbuf, &v1, &v2);
     // @FIXME: the _ws version of render_vbuf is broken! It's like the
     // camera pivot is shifted to the center rather than at the top-left, or viceversa.
     // Investigate and fix! (this probably also explains why draw_grid is broken)
@@ -218,7 +218,7 @@ fn draw_arrow(
 ) {
     let mut vbuf = render::start_draw_quads_temp(window, 2);
     let magnitude = arrow.direction.magnitude();
-    draw_line_internal(window, &mut vbuf, magnitude, arrow.thickness, props);
+    draw_line_internal(&mut vbuf, magnitude, arrow.thickness, props);
 
     // Draw arrow tip
     {
@@ -234,7 +234,7 @@ fn draw_arrow(
         );
         let v7 = render::new_vertex(Vec2f::new(magnitude, 0.), props.color, Vec2f::default());
 
-        render::add_quad(window, &mut vbuf, &v5, &v7, &v7, &v6);
+        render::add_quad(&mut vbuf, &v5, &v7, &v7, &v6);
     }
 
     let rot = rad(arrow.direction.y.atan2(arrow.direction.x));
@@ -244,7 +244,6 @@ fn draw_arrow(
 }
 
 fn draw_line_internal(
-    window: &mut Render_Window_Handle,
     vbuf: &mut Vertex_Buffer_Quads,
     length: f32,
     thickness: f32,
@@ -271,5 +270,5 @@ fn draw_line_internal(
         Vec2f::default(),
     );
 
-    render::add_quad(window, vbuf, &v1, &v2, &v3, &v4);
+    render::add_quad(vbuf, &v1, &v2, &v3, &v4);
 }
