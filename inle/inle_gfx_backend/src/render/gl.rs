@@ -952,6 +952,8 @@ pub fn render_vbuf_ws(
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
+    // @FIXME: there's something wrong going on here...
+
     if vbuf_cur_vertices(vbuf) == 0 {
         return;
     }

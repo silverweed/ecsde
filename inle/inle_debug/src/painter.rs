@@ -184,7 +184,17 @@ fn draw_line(
     props: &Paint_Properties,
     camera: &Transform2D,
 ) {
-    let mut vbuf = render::start_draw_quads_temp(window, 1);
+    use inle_common::colors;
+    let mut vbuf = render::start_draw_lines_temp(window, 1);
+    
+    let v1 = render::new_vertex(line.from, colors::WHITE, v2!(0., 0.));
+    let v2 = render::new_vertex(line.to, colors::WHITE, v2!(1., 1.));
+    render::add_line(window, &mut vbuf, &v1, &v2); 
+    // @FIXME: the _ws version of render_vbuf is broken! It's like the
+    // camera pivot is shifted to the center rather than at the top-left, or viceversa.
+    // Investigate and fix! (this probably also explains why draw_grid is broken)
+    render::render_vbuf_ws(window, &vbuf, &Transform2D::default(), camera);
+    /*
     let direction = line.to - line.from;
     draw_line_internal(
         window,
@@ -197,6 +207,7 @@ fn draw_line(
     let rot = rad(direction.y.atan2(direction.x));
     let transform = Transform2D::from_pos_rot_scale(line.from, rot, Vec2f::new(1., 1.));
     render::render_vbuf_ws(window, &vbuf, &transform, camera);
+    */
 }
 
 fn draw_arrow(
