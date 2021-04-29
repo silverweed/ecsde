@@ -14,4 +14,6 @@ pub mod prelude;
 #[cfg(feature = "tracer")]
 pub mod tracer;
 
+pub mod log;
+
 pub use prelude::*;

@@ -42,14 +42,7 @@ macro_rules! fatal {
 #[macro_export]
 macro_rules! log {
     ($prelude:tt, $($arg:expr),* $(,)*) => {
-        println!("[ {} ] {}", $prelude, $($arg),*);
-    };
-}
-
-#[macro_export]
-macro_rules! elog {
-    ($prelude:tt, $($arg:expr),* $(,)*) => {
-        eprintln!("[ {} ] {}", $prelude, $($arg),*);
+        $crate::log::emit_log_msg($prelude, &format!("{}", $($arg),*));
     };
 }
 
@@ -85,7 +78,7 @@ macro_rules! linfo {
 #[cfg(debug_assertions)]
 macro_rules! ldebug {
     ($fmt:tt $(,$arg:expr)* $(,)?) => {
-        elog!("DEBUG", format_args!($fmt, $($arg),*));
+        log!("DEBUG", format_args!($fmt, $($arg),*));
     };
 }
 
@@ -94,7 +87,7 @@ macro_rules! ldebug {
 macro_rules! lverbose {
     ($fmt:tt $(,$arg:expr)* $(,)?) => {
         if $crate::prelude::is_verbose() {
-            elog!("VERBOSE", format_args!($fmt, $($arg),*));
+            log!("VERBOSE", format_args!($fmt, $($arg),*));
         }
     };
 }
@@ -122,21 +115,7 @@ macro_rules! log_once {
             let mut logs = $crate::prelude::ONCE_LOGS.lock().unwrap();
             if logs.contains($key) {
             } else {
-                println!("[ {} ] {}", $prelude, $($arg),*);
-                logs.insert(String::from($key));
-            }
-        }
-    }
-}
-
-#[macro_export]
-macro_rules! elog_once {
-    ($key: expr, $prelude: tt, $($arg: expr),* $(,)*) => {
-        unsafe {
-            let mut logs = $crate::prelude::ONCE_LOGS.lock().unwrap();
-            if logs.contains($key) {
-            } else {
-                elog!($prelude, $($arg),*);
+                log!($prelude, $($arg),*);
                 logs.insert(String::from($key));
             }
         }
@@ -175,6 +154,6 @@ macro_rules! linfo_once {
 #[cfg(debug_assertions)]
 macro_rules! ldebug_once {
     ($key:expr, $fmt:tt $(,$arg:expr)* $(,)?) => {
-        elog_once!($key, "DEBUG", format_args!($fmt, $($arg),*));
+        log_once!($key, "DEBUG", format_args!($fmt, $($arg),*));
     };
 }

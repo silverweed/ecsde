@@ -75,6 +75,8 @@ pub unsafe extern "C" fn game_init<'a>(
     raw_args: *const *const c_char,
     args_count: usize,
 ) -> Game_Bundle<'a> {
+    inle_diagnostics::log::add_default_logger();
+
     linfo!("Initializing game...");
 
     // Copy all arguments into rust strings
