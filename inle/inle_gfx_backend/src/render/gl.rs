@@ -360,7 +360,7 @@ pub struct Font<'a> {
 
 pub struct Font_Metadata {
     // @Temporary: we want to support more than ASCII
-    pub glyph_data: [Glyph_Data; 256],
+    glyph_data: [Glyph_Data; 256],
     pub atlas_size: (u32, u32),
 }
 
@@ -369,6 +369,15 @@ impl Font_Metadata {
         Self {
             atlas_size: (width, height),
             glyph_data: [Glyph_Data::default(); 256],
+        }
+    }
+
+    pub fn add_glyph_data(&mut self, glyph_id: char, data: Glyph_Data) {
+        if (glyph_id as usize) < 256 {
+            self.glyph_data[glyph_id as usize] = data;
+        } else {
+            lwarn!("We currently don't support non-ASCII characters: discarding glyph data for {} (0x{:X})"
+                , glyph_id, glyph_id as usize);
         }
     }
 
@@ -686,8 +695,9 @@ pub fn render_text(
             if chr > '\u{256}' {
                 lerr_once!(
                     &format!("skip_{}", chr),
-                    "WE ARE NOT SUPPORTING NON-ASCII BUT WE SHOULD! Skipping character {}",
-                    chr
+                    "WE ARE NOT SUPPORTING NON-ASCII BUT WE SHOULD! Skipping character {} (0x{:X})",
+                    chr,
+                    (chr as usize)
                 );
                 continue;
             }
@@ -790,10 +800,9 @@ pub fn get_text_size(text: &Text) -> Vec2f {
         .fold((0_f32, 0_f32), |(acc_w, acc_h), (w, h)| {
             (acc_w + w, acc_h.max(h))
         });
-    //v2!(width, 2. * height) // Why the 2x?
     // @Temporary hack to make the font monospaced
     let tlen = text.string.chars().count();
-    v2!(1.6 * tsize * tlen as f32, 2. * tsize)
+    v2!(1.6 * tsize * tlen as f32, 2. * tsize) // Why the 2x?
 }
 
 pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {

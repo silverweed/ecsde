@@ -34,7 +34,7 @@ fn parse_font_metadata_from_csv(csv: &str, atlas_size: (u32, u32)) -> Font_Metad
         }
 
         if let Some((glyph_id, data)) = parse_font_metadata_csv_line(&toks, atlas_size) {
-            metadata.glyph_data[glyph_id as usize] = data;
+            metadata.add_glyph_data(glyph_id, data);
         }
     }
 
