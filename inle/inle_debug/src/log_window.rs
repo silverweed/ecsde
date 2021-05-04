@@ -10,6 +10,8 @@ use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 
 #[derive(Default)]
 struct Debug_Line {
+    pub file: &'static str,
+    pub line: u32,
     pub tag: &'static str,
     pub msg: String,
     pub required_lines: Cell<u16>, // This is computed lazily once we render the text for the first time
@@ -33,6 +35,7 @@ pub struct Log_Window {
     lines: Vec<Debug_Line>,
     first_line: Option<usize>, // If None, we're scrolling.
     max_lines: Cell<Option<u16>>, // This is computed lazily once we fill the window for the first time
+    hovered_line: Option<usize>,
 
     cfg: Log_Window_Config,
     msg_receiver: Option<Receiver<Debug_Line>>,
@@ -114,8 +117,12 @@ fn create_wrapped_text<'a>(
 }
 
 impl Debug_Element for Log_Window {
-    fn update(&mut self, Update_Args { .. }: Update_Args) {
-        
+    fn update(&mut self, Update_Args { window, input_state, .. }: Update_Args) {
+        let mpos = Vec2f::from(mouse::mouse_pos_in_window(
+            window,
+            &input_state.raw.mouse_state,
+        ));
+
         // @Incomplete: allow scrolling
 
         if self.msg_receiver.is_none() {
@@ -208,9 +215,11 @@ impl Debug_Element for Log_Window {
 }
 
 impl Logger for Log_Window_Logger {
-    fn log(&mut self, tag: &'static str, msg: &str) {
+    fn log(&mut self, file: &'static str, line: u32, tag: &'static str, msg: &str) {
         let _ = self.msg_sender
             .send(Debug_Line {
+                file,
+                line,
                 tag,
                 msg: String::from(msg),
                 required_lines: Cell::new(1),

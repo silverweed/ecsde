@@ -42,7 +42,7 @@ macro_rules! fatal {
 #[macro_export]
 macro_rules! log {
     ($prelude:tt, $($arg:expr),* $(,)*) => {
-        $crate::log::emit_log_msg($prelude, &format!("{}", $($arg),*));
+        $crate::log::emit_log_msg(file!(), line!(), $prelude, &format!("{}", $($arg),*));
     };
 }
 

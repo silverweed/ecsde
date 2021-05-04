@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 pub trait Logger: Send {
-    fn log(&mut self, tag: &'static str, msg: &str);
+    fn log(&mut self, file: &'static str, line: u32, tag: &'static str, msg: &str);
 }
 
 lazy_static! {
@@ -9,17 +9,17 @@ lazy_static! {
 }
 
 #[inline]
-pub fn emit_log_msg(tag: &'static str, msg: &str) {
+pub fn emit_log_msg(file: &'static str, line: u32, tag: &'static str, msg: &str) {
     trace!("emit_log_msg");
 
     let mut loggers = LOGGERS.lock().unwrap();
-    loggers.iter_mut().for_each(|logger| logger.log(tag, msg));
+    loggers.iter_mut().for_each(|logger| logger.log(file, line, tag, msg));
 }
 
 pub struct Println_Logger;
 
 impl Logger for Println_Logger {
-    fn log(&mut self, tag: &'static str, msg: &str) {
+    fn log(&mut self, _file: &'static str, _line: u32, tag: &'static str, msg: &str) {
         if tag == "DEBUG" || tag == "VERBOSE" {
             eprintln!("[ {} ] {}", tag, msg);
         } else {
