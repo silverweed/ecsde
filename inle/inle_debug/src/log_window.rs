@@ -12,7 +12,7 @@ use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 struct Debug_Line {
     pub tag: &'static str,
     pub msg: String,
-    pub required_lines: Cell<u8>, // This is computed lazily once we render the text for the first time
+    pub required_lines: Cell<u16>, // This is computed lazily once we render the text for the first time
 }
 
 struct Log_Window_Logger {
@@ -31,9 +31,8 @@ pub struct Log_Window {
     pub size: Vec2u,
 
     lines: Vec<Debug_Line>,
-    first_line: usize,
+    first_line: Option<usize>, // If None, we're scrolling.
     max_lines: Cell<Option<u16>>, // This is computed lazily once we fill the window for the first time
-    is_at_end: Cell<bool>,
 
     cfg: Log_Window_Config,
     msg_receiver: Option<Receiver<Debug_Line>>,
@@ -67,6 +66,7 @@ fn get_tag_color(tag: &str) -> colors::Color {
     match tag {
         "ERROR" => colors::RED,
         "WARNING" => colors::YELLOW,
+        "DEBUG" => colors::GRAY,
         _ => colors::WHITE,
     }
 }
@@ -115,20 +115,19 @@ fn create_wrapped_text<'a>(
 
 impl Debug_Element for Log_Window {
     fn update(&mut self, Update_Args { .. }: Update_Args) {
+        
+        // @Incomplete: allow scrolling
+
         if self.msg_receiver.is_none() {
             return;
         }
 
-        let is_at_end = self.is_at_end.get();
         let recv = self.msg_receiver.as_mut().unwrap();
         let mut should_disconnect = false;
         loop {
             match recv.try_recv() {
                 Ok(msg) => {
                     self.lines.push(msg);
-                    if is_at_end {
-                        self.first_line += 1;
-                    }
                 }
                 Err(TryRecvError::Disconnected) => {
                     should_disconnect = true;
@@ -139,6 +138,7 @@ impl Debug_Element for Log_Window {
         }
 
         if should_disconnect {
+            lwarn!("Log_Window disconnected from logging system.");
             self.msg_receiver = None;
         }
     }
@@ -152,34 +152,39 @@ impl Debug_Element for Log_Window {
         let base_pos = Vec2f::from(self.pos) + v2!(self.cfg.pad_x, self.cfg.pad_y);
         let mut y = 0.;
 
-        // @FIXME: we should consider the required_lines when we skip!
-        let mut lines_to_skip_in_array = 0;
-        let mut total_lines_skipped = 0;
-        for line in &self.lines {
-            if total_lines_skipped >= self.first_line {
-                break;
+        // Compute starting line
+        let first_line = self.first_line.unwrap_or_else(|| {
+            if let Some(max_lines) = self.max_lines.get() {
+                let mut n_real_lines_required = 0;
+                for (i, line) in self.lines.iter().enumerate().rev() {
+                    n_real_lines_required += line.required_lines.get() as u16;
+                    if n_real_lines_required > max_lines {
+                        return i - 1;
+                    }
+                }
+                0
+            } else {
+                0
             }
-            total_lines_skipped += line.required_lines.get() as usize;
-            lines_to_skip_in_array += 1;
-        }
-        let lines_to_skip_internally = total_lines_skipped - self.first_line;
+        });
 
         'outer: 
-        for (i, line) in self.lines.iter().skip(lines_to_skip_in_array).enumerate() {
+        for (i, line) in self.lines.iter().skip(first_line).enumerate() {
             if let Some(max_lines) = self.max_lines.get() {
                 if i == max_lines as usize {
                     break;
                 }
             }
 
+            // @Speed: we're recomputing the wrapping everytime just to keep the code a bit simpler.
             let texts = create_wrapped_text(
                 &line.msg,
                 font,
                 self.cfg.font_size,
                 self.size.x as f32 - self.cfg.pad_x,
             );
-            debug_assert!(texts.len() < u8::MAX as usize);
-            line.required_lines.set(texts.len() as u8);
+            debug_assert!(texts.len() < u16::MAX as usize);
+            line.required_lines.set(texts.len() as u16);
 
             let color = get_tag_color(line.tag);
 
@@ -189,7 +194,6 @@ impl Debug_Element for Log_Window {
                     debug_assert!(i < u16::MAX as usize);
                     if self.max_lines.get().is_none() {
                         self.max_lines.set(Some(i as u16));
-                        self.is_at_end.set(true);
                     }
                     break 'outer;
                 }
@@ -205,12 +209,11 @@ impl Debug_Element for Log_Window {
 
 impl Logger for Log_Window_Logger {
     fn log(&mut self, tag: &'static str, msg: &str) {
-        self.msg_sender
+        let _ = self.msg_sender
             .send(Debug_Line {
                 tag,
                 msg: String::from(msg),
                 required_lines: Cell::new(1),
-            })
-            .expect("Failed to send logger msg to Log_Window");
+            });
     }
 }
