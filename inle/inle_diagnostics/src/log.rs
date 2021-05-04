@@ -29,7 +29,7 @@ impl Logger for Println_Logger {
 }
 
 pub fn add_default_logger() {
-    add_logger(Box::new(Println_Logger{}));
+    add_logger(Box::new(Println_Logger {}));
 }
 
 pub fn add_logger(logger: Box<dyn Logger>) {

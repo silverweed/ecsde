@@ -188,6 +188,10 @@ pub fn get_text_size(text: &Text<'_>) -> Vec2f {
     backend::get_text_size(text)
 }
 
+pub fn get_text_string<'a>(text: &'a Text) -> &'a str {
+    backend::get_text_string(text)
+}
+
 pub fn shaders_are_available() -> bool {
     backend::shaders_are_available()
 }

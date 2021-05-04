@@ -1,4 +1,4 @@
-use super::element::{Draw_Args, Update_Args, Debug_Element};
+use super::element::{Debug_Element, Draw_Args, Update_Args};
 use inle_common::colors;
 use inle_common::paint_props::Paint_Properties;
 use inle_common::stringid::String_Id;
@@ -112,7 +112,7 @@ impl Debug_Element for Debug_Graph_View {
             gres,
             input_state,
             ..
-        }: Draw_Args
+        }: Draw_Args,
     ) {
         trace!("debug::graph::draw");
 

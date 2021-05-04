@@ -781,6 +781,10 @@ pub fn get_image_size(image: &Image) -> (u32, u32) {
     (image.width, image.height)
 }
 
+pub fn get_text_string<'a>(text: &'a Text) -> &'a str {
+    &text.string
+}
+
 pub fn get_text_size(text: &Text) -> Vec2f {
     let font = &text.font;
     let tsize = text.size as f32;

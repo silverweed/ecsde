@@ -1,4 +1,4 @@
-use super::element::{Update_Args, Draw_Args, Debug_Element};
+use super::element::{Debug_Element, Draw_Args, Update_Args};
 use inle_alloc::temp;
 use inle_common::colors::{self, Color};
 use inle_common::stringid::String_Id;
@@ -100,7 +100,7 @@ impl Debug_Element for Debug_Overlay {
             gres,
             frame_alloc,
             ..
-        }: Draw_Args
+        }: Draw_Args,
     ) {
         trace!("debug::overlay::draw");
 
@@ -194,7 +194,7 @@ impl Debug_Element for Debug_Overlay {
             window,
             input_state,
             ..
-        }: Update_Args
+        }: Update_Args,
     ) {
         use inle_input::mouse;
 

@@ -18,7 +18,7 @@ pub struct Draw_Args<'a, 'r> {
 }
 
 pub trait Debug_Element {
-    fn update(&mut self, _args: Update_Args) { }
+    fn update(&mut self, _args: Update_Args) {}
 
     fn draw(&self, args: Draw_Args);
 }

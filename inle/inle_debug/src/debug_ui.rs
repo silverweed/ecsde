@@ -1,8 +1,9 @@
-use super::element::{Update_Args, Draw_Args, Debug_Element};
+use super::element::{Debug_Element, Draw_Args, Update_Args};
 use super::fadeout_overlay;
 use super::frame_scroller::Debug_Frame_Scroller;
 use super::graph;
 use super::log::Debug_Log;
+use super::log_window;
 use super::overlay;
 use inle_alloc::temp;
 use inle_cfg::Cfg_Var;
@@ -143,6 +144,7 @@ pub struct Debug_Ui_System {
     overlays: Debug_Element_Container<overlay::Debug_Overlay>,
     fadeout_overlays: Debug_Element_Container<fadeout_overlay::Fadeout_Debug_Overlay>,
     graphs: Debug_Element_Container<graph::Debug_Graph_View>,
+    log_windows: Debug_Element_Container<log_window::Log_Window>,
     pub frame_scroller: Debug_Frame_Scroller,
     pub cfg: Debug_Ui_System_Config,
 }
@@ -164,12 +166,31 @@ macro_rules! add_debug_elem {
     };
 }
 
+macro_rules! update_and_draw_elems {
+    ($self: expr, $container: ident, $dt: expr, $window: expr, $input_state: expr, $gres: expr, $frame_alloc: expr) => {
+        for elem in &mut $self.$container.actives {
+            elem.update(Update_Args {
+                dt: $dt,
+                window: $window,
+                input_state: $input_state,
+            });
+            elem.draw(Draw_Args {
+                window: $window,
+                gres: $gres,
+                input_state: $input_state,
+                frame_alloc: $frame_alloc,
+            });
+        }
+    };
+}
+
 impl Debug_Ui_System {
     pub fn new() -> Debug_Ui_System {
         Debug_Ui_System {
             overlays: Debug_Element_Container::new(),
             fadeout_overlays: Debug_Element_Container::new(),
             graphs: Debug_Element_Container::new(),
+            log_windows: Debug_Element_Container::new(),
             frame_scroller: Debug_Frame_Scroller::default(),
             cfg: Debug_Ui_System_Config::default(),
         }
@@ -202,6 +223,15 @@ impl Debug_Ui_System {
         set_graph_enabled
     );
 
+    add_debug_elem!(
+        log_window::Log_Window,
+        log_window::Log_Window_Config,
+        log_windows,
+        create_log_window,
+        get_log_window,
+        set_log_window_enabled
+    );
+
     pub fn update_and_draw(
         &mut self,
         dt: &Duration,
@@ -213,47 +243,26 @@ impl Debug_Ui_System {
     ) {
         trace!("debug_ui::update_and_draw");
 
-        for elem in &mut self.graphs.actives {
-            elem.update(Update_Args {
-                dt,
-                window,
-                input_state
-            });
-            elem.draw(Draw_Args {
-                window,
-                gres,
-                input_state,
-                frame_alloc
-            });
-        }
-
-        for elem in &mut self.overlays.actives {
-            elem.update(Update_Args {
-                dt,
-                window,
-                input_state
-            });
-            elem.draw(Draw_Args {
-                window,
-                gres,
-                input_state,
-                frame_alloc
-            });
-        }
-
-        for elem in &mut self.fadeout_overlays.actives {
-            elem.update(Update_Args {
-                dt,
-                window,
-                input_state
-            });
-            elem.draw(Draw_Args {
-                window,
-                gres,
-                input_state,
-                frame_alloc
-            });
-        }
+        update_and_draw_elems!(
+            self,
+            log_windows,
+            dt,
+            window,
+            input_state,
+            gres,
+            frame_alloc
+        );
+        update_and_draw_elems!(self, graphs, dt, window, input_state, gres, frame_alloc);
+        update_and_draw_elems!(self, overlays, dt, window, input_state, gres, frame_alloc);
+        update_and_draw_elems!(
+            self,
+            fadeout_overlays,
+            dt,
+            window,
+            input_state,
+            gres,
+            frame_alloc
+        );
 
         self.frame_scroller.update(window, log, input_state);
         self.frame_scroller.draw(window, gres, log);

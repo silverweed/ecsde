@@ -18,11 +18,8 @@ use {
     crate::systems::Debug_Systems,
     inle_cfg::Cfg_Var,
     inle_common::colors,
-    inle_debug,
     inle_diagnostics::tracer,
-    inle_fs,
     inle_replay::{replay_data::Replay_Data, replay_input_provider::Replay_Input_Provider},
-    inle_resources,
     std::convert::TryInto,
     std::time::Duration,
 };
@@ -313,9 +310,7 @@ pub fn init_engine_debug(
         };
 
         // FPS
-        let graph = engine_state
-            .debug_systems
-            .debug_ui
+        let graph = debug_ui
             .create_graph(sid!("fps"), graph_config.clone())
             .unwrap();
 
@@ -328,9 +323,7 @@ pub fn init_engine_debug(
         graph_config.title = Some(String::from("PrevFrameTime"));
         graph_config.low_threshold = Some((17., colors::GREEN));
         graph_config.high_threshold = Some((34., colors::RED));
-        let graph = engine_state
-            .debug_systems
-            .debug_ui
+        let graph = debug_ui
             .create_graph(sid!("prev_frame_time"), graph_config.clone())
             .unwrap();
         graph.pos.y = (0.15 * win_h) as u32;
@@ -343,13 +336,34 @@ pub fn init_engine_debug(
         graph_config.high_threshold = Some((10., colors::RED));
         graph_config.title = None;
         graph_config.hoverable = true;
-        let graph = engine_state
-            .debug_systems
-            .debug_ui
+        let graph = debug_ui
             .create_graph(sid!("fn_profile"), graph_config)
             .unwrap();
         graph.pos.y = (0.3 * win_h) as u32;
         graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
+    }
+
+    {
+        let log_window_font_size =
+            Cfg_Var::<f32>::new("engine/debug/log_window/font_size", &engine_state.config)
+                .read(&engine_state.config);
+        let log_window_config = inle_debug::log_window::Log_Window_Config {
+            font,
+            font_size: (log_window_font_size * ui_scale) as _,
+            pad_x: 6.0 * ui_scale,
+            pad_y: 6.0 * ui_scale,
+            linesep: 8.0 * ui_scale,
+        };
+        let log_window = debug_ui
+            .create_log_window(sid!("log_window"), log_window_config)
+            .unwrap();
+        let logger = log_window.create_logger();
+        log_window.size = Vec2u::new((win_w * 0.8) as _, (win_h * 0.8) as _);
+        log_window.pos.y += (win_h as u32 - log_window.size.y) / 2;
+        log_window.pos.x += (win_w as u32 - log_window.size.x) / 2;
+        debug_ui.set_log_window_enabled(sid!("log_window"), true);
+
+        inle_diagnostics::log::add_logger(logger);
     }
 
     {

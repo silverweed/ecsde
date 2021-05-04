@@ -1,4 +1,4 @@
-use super::element::{Update_Args, Draw_Args, Debug_Element};
+use super::element::{Debug_Element, Draw_Args, Update_Args};
 use inle_alloc::temp;
 use inle_common::colors::{self, Color};
 use inle_common::vis_align::Align;
@@ -37,13 +37,7 @@ pub struct Fadeout_Debug_Overlay {
 }
 
 impl Debug_Element for Fadeout_Debug_Overlay {
-    fn update(
-        &mut self,
-        Update_Args {
-            dt,
-            ..
-        }: Update_Args
-    ) {
+    fn update(&mut self, Update_Args { dt, .. }: Update_Args) {
         trace!("debug::fadeout_overlay::update");
 
         let fadeout_time = self.config.fadeout_time;
@@ -69,7 +63,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
             gres,
             frame_alloc,
             ..
-        }: Draw_Args
+        }: Draw_Args,
     ) {
         trace!("debug::fadeout_overlay::draw");
 
