@@ -1,18 +1,15 @@
-use super::element::Debug_Element;
-use inle_alloc::temp;
+use super::element::{Draw_Args, Update_Args, Debug_Element};
 use inle_common::colors;
 use inle_common::paint_props::Paint_Properties;
 use inle_common::stringid::String_Id;
 use inle_common::variant::Variant;
 use inle_gfx::render;
-use inle_gfx::render_window::Render_Window_Handle;
-use inle_input::input_state::Input_State;
 use inle_input::mouse;
 use inle_math::rect::Rect;
 use inle_math::shapes::Circle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2u};
-use inle_resources::gfx::{Font_Handle, Gfx_Resources};
+use inle_resources::gfx::Font_Handle;
 use std::collections::{HashMap, VecDeque};
 use std::convert::TryFrom;
 use std::ops::Range;
@@ -66,9 +63,11 @@ pub struct Debug_Graph {
 impl Debug_Element for Debug_Graph_View {
     fn update(
         &mut self,
-        _dt: &std::time::Duration,
-        window: &Render_Window_Handle,
-        input_state: &Input_State,
+        Update_Args {
+            window,
+            input_state,
+            ..
+        }: Update_Args,
     ) {
         trace!("debug::graph::update");
 
@@ -108,10 +107,12 @@ impl Debug_Element for Debug_Graph_View {
 
     fn draw(
         &self,
-        window: &mut Render_Window_Handle,
-        gres: &mut Gfx_Resources,
-        input_state: &Input_State,
-        _frame_alloc: &mut temp::Temp_Allocator,
+        Draw_Args {
+            window,
+            gres,
+            input_state,
+            ..
+        }: Draw_Args
     ) {
         trace!("debug::graph::draw");
 

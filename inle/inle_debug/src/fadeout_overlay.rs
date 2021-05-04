@@ -1,12 +1,10 @@
-use super::element::Debug_Element;
+use super::element::{Update_Args, Draw_Args, Debug_Element};
 use inle_alloc::temp;
 use inle_common::colors::{self, Color};
 use inle_common::vis_align::Align;
-use inle_gfx::render_window::Render_Window_Handle;
-use inle_input::input_state::Input_State;
 use inle_math::rect::Rect;
 use inle_math::vector::Vec2f;
-use inle_resources::gfx::{Font_Handle, Gfx_Resources};
+use inle_resources::gfx::Font_Handle;
 use std::collections::VecDeque;
 use std::time::Duration;
 
@@ -41,9 +39,10 @@ pub struct Fadeout_Debug_Overlay {
 impl Debug_Element for Fadeout_Debug_Overlay {
     fn update(
         &mut self,
-        dt: &Duration,
-        _window: &Render_Window_Handle,
-        _input_state: &Input_State,
+        Update_Args {
+            dt,
+            ..
+        }: Update_Args
     ) {
         trace!("debug::fadeout_overlay::update");
 
@@ -65,10 +64,12 @@ impl Debug_Element for Fadeout_Debug_Overlay {
     // @Refactor: this is mostly @Cutnpaste from overlay.rs
     fn draw(
         &self,
-        window: &mut Render_Window_Handle,
-        gres: &mut Gfx_Resources,
-        _input_state: &Input_State,
-        frame_alloc: &mut temp::Temp_Allocator,
+        Draw_Args {
+            window,
+            gres,
+            frame_alloc,
+            ..
+        }: Draw_Args
     ) {
         trace!("debug::fadeout_overlay::draw");
 

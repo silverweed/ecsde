@@ -19,5 +19,6 @@ pub mod fps;
 pub mod frame_scroller;
 pub mod graph;
 pub mod log;
+pub mod log_window;
 pub mod overlay;
 pub mod painter;

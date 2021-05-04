@@ -1,4 +1,4 @@
-use super::element::Debug_Element;
+use super::element::{Update_Args, Draw_Args, Debug_Element};
 use super::fadeout_overlay;
 use super::frame_scroller::Debug_Frame_Scroller;
 use super::graph;
@@ -214,18 +214,45 @@ impl Debug_Ui_System {
         trace!("debug_ui::update_and_draw");
 
         for elem in &mut self.graphs.actives {
-            elem.update(dt, window, input_state);
-            elem.draw(window, gres, input_state, frame_alloc);
+            elem.update(Update_Args {
+                dt,
+                window,
+                input_state
+            });
+            elem.draw(Draw_Args {
+                window,
+                gres,
+                input_state,
+                frame_alloc
+            });
         }
 
         for elem in &mut self.overlays.actives {
-            elem.update(dt, window, input_state);
-            elem.draw(window, gres, input_state, frame_alloc);
+            elem.update(Update_Args {
+                dt,
+                window,
+                input_state
+            });
+            elem.draw(Draw_Args {
+                window,
+                gres,
+                input_state,
+                frame_alloc
+            });
         }
 
         for elem in &mut self.fadeout_overlays.actives {
-            elem.update(dt, window, input_state);
-            elem.draw(window, gres, input_state, frame_alloc);
+            elem.update(Update_Args {
+                dt,
+                window,
+                input_state
+            });
+            elem.draw(Draw_Args {
+                window,
+                gres,
+                input_state,
+                frame_alloc
+            });
         }
 
         self.frame_scroller.update(window, log, input_state);
