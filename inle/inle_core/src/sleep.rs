@@ -31,6 +31,7 @@ pub fn sleep(time: Duration) {
 }
 
 #[cfg(target_os = "windows")]
+#[allow(clippy::upper_case_acronyms)]
 mod win32 {
     use std::borrow::Cow;
     use std::os::raw::*;

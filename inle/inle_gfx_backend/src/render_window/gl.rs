@@ -251,7 +251,7 @@ pub fn raw_unproject_screen_pos(
     _window: &Render_Window_Handle,
     camera: &Transform2D,
 ) -> Vec2f {
-    (*camera * Vec2f::from(screen_pos)).into()
+    *camera * Vec2f::from(screen_pos)
 }
 
 pub fn raw_project_world_pos(

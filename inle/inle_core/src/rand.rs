@@ -102,6 +102,7 @@ fn get_entropy_from_os(buf: &mut [u8]) -> std::io::Result<()> {
 }
 
 #[cfg(target_os = "windows")]
+#[allow(clippy::upper_case_acronyms)]
 mod win32 {
     use std::os::raw::*;
     pub(super) type PVOID = *mut c_void;

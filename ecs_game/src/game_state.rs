@@ -289,8 +289,8 @@ fn create_cvars(cfg: &inle_cfg::Config) -> CVars {
 
     CVars {
         gameplay_update_tick_ms,
-        clear_color,
         vsync,
+        clear_color,
         enable_shaders,
         enable_shadows,
         enable_particles,
@@ -324,9 +324,10 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
         draw_lights,
         record_replay,
         trace_overlay_refresh_rate,
+        draw_colliders,
         draw_entities,
         draw_velocities,
-        draw_colliders,
+        draw_entity_prev_frame_ghost,
         draw_component_lists,
         draw_debug_grid,
         debug_grid_square_size,
@@ -336,7 +337,6 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
         draw_mouse_rulers,
         draw_comp_alloc_colliders,
         draw_world_chunks,
-        draw_entity_prev_frame_ghost,
     }
 }
 

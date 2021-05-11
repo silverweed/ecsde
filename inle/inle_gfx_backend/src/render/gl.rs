@@ -827,11 +827,11 @@ pub fn new_image_with_data(
     bytes: Vec<u8>,
 ) -> Image {
     Image {
+        bytes,
         width,
         height,
         color_type,
         bit_depth,
-        bytes,
     }
 }
 
