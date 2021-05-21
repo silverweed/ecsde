@@ -1,8 +1,8 @@
 use super::element::{Debug_Element, Draw_Args, Update_Args};
-use inle_input::mouse;
 use inle_common::colors;
 use inle_diagnostics::log::Logger;
 use inle_gfx::render;
+use inle_input::mouse;
 use inle_math::rect::{Rect, Rectf};
 use inle_math::vector::{Vec2f, Vec2u};
 use inle_resources::gfx::Font_Handle;
@@ -34,7 +34,7 @@ pub struct Log_Window {
     pub size: Vec2u,
 
     lines: Vec<Debug_Line>,
-    first_line: Option<usize>, // If None, we're scrolling.
+    first_line: Option<usize>,    // If None, we're scrolling.
     max_lines: Cell<Option<u16>>, // This is computed lazily once we fill the window for the first time
     mouse_pos: Vec2f,
 
@@ -63,6 +63,21 @@ impl Log_Window {
         let (send, recv) = channel();
         self.msg_receiver = Some(recv);
         Box::new(Log_Window_Logger::new(send))
+    }
+
+    fn compute_starting_line_and_subline(&self) -> (usize, u16) {
+        if let Some(first) = self.first_line {
+            return (first, 0);
+        } else if let Some(max_lines) = self.max_lines.get() {
+            let mut n_real_lines_required = 0;
+            for (i, line) in self.lines.iter().enumerate().rev() {
+                n_real_lines_required += line.required_lines.get() as u16;
+                if n_real_lines_required > max_lines {
+                    return (i, n_real_lines_required - max_lines);
+                }
+            }
+        }
+        (0, 0)
     }
 }
 
@@ -118,7 +133,14 @@ fn create_wrapped_text<'a>(
 }
 
 impl Debug_Element for Log_Window {
-    fn update(&mut self, Update_Args { window, input_state, .. }: Update_Args) {
+    fn update(
+        &mut self,
+        Update_Args {
+            window,
+            input_state,
+            ..
+        }: Update_Args,
+    ) {
         self.mouse_pos = Vec2f::from(mouse::mouse_pos_in_window(
             window,
             &input_state.raw.mouse_state,
@@ -160,24 +182,11 @@ impl Debug_Element for Log_Window {
         let base_pos = Vec2f::from(self.pos) + v2!(self.cfg.pad_x, self.cfg.pad_y);
 
         // Compute starting line
-        let first_line = self.first_line.unwrap_or_else(|| {
-            if let Some(max_lines) = self.max_lines.get() {
-                let mut n_real_lines_required = 0;
-                for (i, line) in self.lines.iter().enumerate().rev() {
-                    n_real_lines_required += line.required_lines.get() as u16;
-                    if n_real_lines_required > max_lines {
-                        return i - 1;
-                    }
-                }
-                0
-            } else {
-                0
-            }
-        });
+        let (first_line, first_subline) = self.compute_starting_line_and_subline();
 
         let mut y = 0.;
-        'outer: 
-        for (i, line) in self.lines.iter().skip(first_line).enumerate() {
+        let mut tot_lines_drawn = 0u16;
+        'outer: for (i, line) in self.lines.iter().skip(first_line).enumerate() {
             if let Some(max_lines) = self.max_lines.get() {
                 if i == max_lines as usize {
                     break;
@@ -198,18 +207,25 @@ impl Debug_Element for Log_Window {
 
             let line_height = render::get_text_size(&texts[0]).y;
             let min_pos = base_pos + v2!(0., y);
-            let max_pos = base_pos + v2!(self.size.x as f32, texts.len() as f32 * (y + line_height + self.cfg.linesep));
-            dbg!(max_pos);
-            let is_hovered = Rectf::from_topleft_botright(min_pos, max_pos).contains(self.mouse_pos);
+            let max_pos = base_pos
+                + v2!(
+                    self.size.x as f32,
+                    y + texts.len() as f32 * (line_height + self.cfg.linesep)
+                );
+            let is_hovered =
+                Rectf::from_topleft_botright(min_pos, max_pos).contains(self.mouse_pos);
+
             if is_hovered {
                 color = colors::darken(color, -0.5);
             }
 
-            for mut text in texts {
+            // Draw every text in the wrapped line
+            let texts_to_skip = if i == 0 { first_subline } else { 0 };
+            for mut text in texts.into_iter().skip(texts_to_skip.into()) {
                 if y + line_height > self.size.y as f32 - self.cfg.pad_y {
                     debug_assert!(i < u16::MAX as usize);
                     if self.max_lines.get().is_none() {
-                        self.max_lines.set(Some(i as u16));
+                        self.max_lines.set(Some(tot_lines_drawn));
                     }
                     break 'outer;
                 }
@@ -218,6 +234,7 @@ impl Debug_Element for Log_Window {
                 render::render_text(window, &mut text, color, pos);
 
                 y += line_height + self.cfg.linesep;
+                tot_lines_drawn += 1;
             }
         }
     }
@@ -225,13 +242,16 @@ impl Debug_Element for Log_Window {
 
 impl Logger for Log_Window_Logger {
     fn log(&mut self, file: &'static str, line: u32, tag: &'static str, msg: &str) {
-        let _ = self.msg_sender
-            .send(Debug_Line {
-                file,
-                line,
-                tag,
-                msg: String::from(msg),
-                required_lines: Cell::new(1),
-            });
+        if tag == "VERBOSE" {
+            return;
+        }
+        // Do not unwrap since this fails when closing the game
+        let _ = self.msg_sender.send(Debug_Line {
+            file,
+            line,
+            tag,
+            msg: String::from(msg),
+            required_lines: Cell::new(1),
+        });
     }
 }

@@ -137,13 +137,24 @@ pub fn from_hsv(Color_Hsv { h, s, v }: Color_Hsv) -> Color {
 }
 
 /// Heuristic "darken" function that multiplies the value of `c` by `1 - amount`.
+/// In cases where that would make no difference (i.e. if the value is already maxed
+/// and we want to brighten) the saturation is touched instead.
 pub fn darken(c: Color, amount: f32) -> Color {
     let Color_Hsv { h, s, v } = to_hsv(c);
-    from_hsv(Color_Hsv {
-        h,
-        s,
-        v: v * (1. - amount),
-    })
+    if v > 0.9999 && amount < 0. {
+        // Brightening a full-valued color
+        from_hsv(Color_Hsv {
+            h,
+            s: s * (1. + amount),
+            v,
+        })
+    } else {
+        from_hsv(Color_Hsv {
+            h,
+            s,
+            v: v * (1. - amount),
+        })
+    }
 }
 
 pub fn to_gray_scale(c: Color) -> Color {
