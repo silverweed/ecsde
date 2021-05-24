@@ -32,7 +32,7 @@ optional = true
 default-features = false
 
 [dependencies.glfw]
-version = "0.39"
+version = "0.41"
 optional = true
 default-features = false
 #features = ["glfw-sys"]
