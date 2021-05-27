@@ -17,8 +17,16 @@ pub struct Draw_Args<'a, 'r> {
     pub frame_alloc: &'a mut temp::Temp_Allocator,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum Update_Res {
+    Stay_Enabled,
+    Disable_Self,
+}
+
 pub trait Debug_Element {
-    fn update(&mut self, _args: Update_Args) {}
+    fn update(&mut self, _args: Update_Args) -> Update_Res {
+        Update_Res::Stay_Enabled
+    }
 
     fn draw(&self, args: Draw_Args);
 }

@@ -1,4 +1,4 @@
-use super::element::{Debug_Element, Draw_Args, Update_Args};
+use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
 use inle_common::colors;
 use inle_diagnostics::log::Logger;
 use inle_gfx::render;
@@ -6,6 +6,7 @@ use inle_input::mouse;
 use inle_math::rect::{Rect, Rectf};
 use inle_math::vector::{Vec2f, Vec2u};
 use inle_resources::gfx::Font_Handle;
+use std::borrow::{Borrow, Cow};
 use std::cell::Cell;
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 
@@ -30,7 +31,9 @@ impl Log_Window_Logger {
 
 #[derive(Default)]
 pub struct Log_Window {
+    // This pos starts from the header
     pub pos: Vec2u,
+    // NOTE: size does not include the header size
     pub size: Vec2u,
 
     lines: Vec<Debug_Line>,
@@ -49,6 +52,10 @@ pub struct Log_Window_Config {
     pub pad_x: f32,
     pub pad_y: f32,
     pub linesep: f32,
+
+    pub header_height: u32,
+    pub title: Cow<'static, str>,
+    pub title_font_size: u16,
 }
 
 impl Log_Window {
@@ -140,16 +147,18 @@ impl Debug_Element for Log_Window {
             input_state,
             ..
         }: Update_Args,
-    ) {
+    ) -> Update_Res {
         self.mouse_pos = Vec2f::from(mouse::mouse_pos_in_window(
             window,
             &input_state.raw.mouse_state,
         ));
 
         // @Incomplete: allow scrolling
+        // @Incomplete: allow dragging
+        // @Incomplete: allow resizing
 
         if self.msg_receiver.is_none() {
-            return;
+            return Update_Res::Stay_Enabled;
         }
 
         let recv = self.msg_receiver.as_mut().unwrap();
@@ -171,19 +180,55 @@ impl Debug_Element for Log_Window {
             lwarn!("Log_Window disconnected from logging system.");
             self.msg_receiver = None;
         }
+
+        Update_Res::Stay_Enabled
     }
 
     fn draw(&self, Draw_Args { window, gres, .. }: Draw_Args) {
+        let font = gres.get_font(self.cfg.font);
+
         let Vec2u { x, y } = self.pos;
         let Vec2u { x: w, y: h } = self.size;
-        render::render_rect(window, Rect::new(x, y, w, h), colors::rgb(20, 20, 20));
 
-        let font = gres.get_font(self.cfg.font);
-        let base_pos = Vec2f::from(self.pos) + v2!(self.cfg.pad_x, self.cfg.pad_y);
+        // Render header
+        render::render_rect(
+            window,
+            Rect::new(x, y, w, self.cfg.header_height),
+            colors::rgb(40, 40, 40),
+        );
+        {
+            let mut text =
+                render::create_text(self.cfg.title.borrow(), font, self.cfg.title_font_size);
+            let text_height = render::get_text_size(&text).y;
+            render::render_text(
+                window,
+                &mut text,
+                colors::WHITE,
+                Vec2f::from(self.pos)
+                    + v2!(
+                        self.cfg.pad_x,
+                        0.5 * (self.cfg.header_height as f32 - text_height)
+                    ),
+            );
+        }
+
+        // Render main content background
+        render::render_rect(
+            window,
+            Rect::new(x, y + self.cfg.header_height, w, h),
+            colors::rgb(20, 20, 20),
+        );
+
+        let base_pos = Vec2f::from(self.pos)
+            + v2!(
+                self.cfg.pad_x,
+                self.cfg.pad_y + self.cfg.header_height as f32
+            );
 
         // Compute starting line
         let (first_line, first_subline) = self.compute_starting_line_and_subline();
 
+        // Render main content
         let mut y = 0.;
         let mut tot_lines_drawn = 0u16;
         'outer: for (i, line) in self.lines.iter().skip(first_line).enumerate() {

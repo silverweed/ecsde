@@ -1,4 +1,4 @@
-use super::element::{Debug_Element, Draw_Args, Update_Args};
+use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
 use super::fadeout_overlay;
 use super::frame_scroller::Debug_Frame_Scroller;
 use super::graph;
@@ -168,18 +168,33 @@ macro_rules! add_debug_elem {
 
 macro_rules! update_and_draw_elems {
     ($self: expr, $container: ident, $dt: expr, $window: expr, $input_state: expr, $gres: expr, $frame_alloc: expr) => {
-        for elem in &mut $self.$container.actives {
-            elem.update(Update_Args {
+        let mut to_disable = vec![];
+        for (i, elem) in $self.$container.actives.iter_mut().enumerate() {
+            let res = elem.update(Update_Args {
                 dt: $dt,
                 window: $window,
                 input_state: $input_state,
             });
-            elem.draw(Draw_Args {
-                window: $window,
-                gres: $gres,
-                input_state: $input_state,
-                frame_alloc: $frame_alloc,
-            });
+
+            if res == Update_Res::Disable_Self {
+                for (id, (_, idx)) in &$self.$container.all {
+                    if *idx == i {
+                        to_disable.push(*id);
+                        break;
+                    }
+                }
+            } else {
+                elem.draw(Draw_Args {
+                    window: $window,
+                    gres: $gres,
+                    input_state: $input_state,
+                    frame_alloc: $frame_alloc,
+                });
+            }
+        }
+
+        for id in to_disable {
+            $self.$container.set_enabled(id, false);
         }
     };
 }

@@ -1,4 +1,4 @@
-use super::element::{Debug_Element, Draw_Args, Update_Args};
+use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
 use inle_common::colors;
 use inle_common::paint_props::Paint_Properties;
 use inle_common::stringid::String_Id;
@@ -68,11 +68,11 @@ impl Debug_Element for Debug_Graph_View {
             input_state,
             ..
         }: Update_Args,
-    ) {
+    ) -> Update_Res {
         trace!("debug::graph::update");
 
         if !self.config.hoverable {
-            return;
+            return Update_Res::Stay_Enabled;
         }
 
         let mpos = Vec2f::from(mouse::mouse_pos_in_window(
@@ -103,6 +103,8 @@ impl Debug_Element for Debug_Graph_View {
         if mouse::mouse_went_down(&input_state.raw.mouse_state, mouse::Mouse_Button::Left) {
             self.selected_point = self.hovered_point;
         }
+
+        Update_Res::Stay_Enabled
     }
 
     fn draw(

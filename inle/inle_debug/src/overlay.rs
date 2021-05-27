@@ -1,4 +1,4 @@
-use super::element::{Debug_Element, Draw_Args, Update_Args};
+use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
 use inle_alloc::temp;
 use inle_common::colors::{self, Color};
 use inle_common::stringid::String_Id;
@@ -195,13 +195,13 @@ impl Debug_Element for Debug_Overlay {
             input_state,
             ..
         }: Update_Args,
-    ) {
+    ) -> Update_Res {
         use inle_input::mouse;
 
         trace!("debug::overlay::update");
 
         if !self.config.hoverable {
-            return;
+            return Update_Res::Stay_Enabled;
         }
 
         let (row_width, row_height) = self.max_row_bounds.get();
@@ -236,6 +236,8 @@ impl Debug_Element for Debug_Overlay {
                 break;
             }
         }
+
+        Update_Res::Stay_Enabled
     }
 }
 

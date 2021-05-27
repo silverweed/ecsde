@@ -13,7 +13,9 @@ pub fn emit_log_msg(file: &'static str, line: u32, tag: &'static str, msg: &str)
     trace!("emit_log_msg");
 
     let mut loggers = LOGGERS.lock().unwrap();
-    loggers.iter_mut().for_each(|logger| logger.log(file, line, tag, msg));
+    loggers
+        .iter_mut()
+        .for_each(|logger| logger.log(file, line, tag, msg));
 }
 
 pub struct Println_Logger;

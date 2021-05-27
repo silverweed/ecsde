@@ -1,4 +1,4 @@
-use super::element::{Debug_Element, Draw_Args, Update_Args};
+use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
 use inle_alloc::temp;
 use inle_common::colors::{self, Color};
 use inle_common::vis_align::Align;
@@ -37,7 +37,7 @@ pub struct Fadeout_Debug_Overlay {
 }
 
 impl Debug_Element for Fadeout_Debug_Overlay {
-    fn update(&mut self, Update_Args { dt, .. }: Update_Args) {
+    fn update(&mut self, Update_Args { dt, .. }: Update_Args) -> Update_Res {
         trace!("debug::fadeout_overlay::update");
 
         let fadeout_time = self.config.fadeout_time;
@@ -53,6 +53,8 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         for _ in 0..n_drained {
             self.fadeout_texts.pop_front();
         }
+
+        Update_Res::Stay_Enabled
     }
 
     // @Refactor: this is mostly @Cutnpaste from overlay.rs

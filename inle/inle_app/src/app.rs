@@ -353,6 +353,9 @@ pub fn init_engine_debug(
             pad_x: 6.0 * ui_scale,
             pad_y: 6.0 * ui_scale,
             linesep: 8.0 * ui_scale,
+            header_height: 32,
+            title: std::borrow::Cow::Borrowed("Log"),
+            title_font_size: (log_window_font_size * ui_scale * 1.5) as _, // TODO: make this configurable
         };
         let log_window = debug_ui
             .create_log_window(sid!("log_window"), log_window_config)
