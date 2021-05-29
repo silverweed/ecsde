@@ -88,6 +88,7 @@ fn parse_action_bindings_lines(
         keys.sort_unstable();
         keys.dedup();
         for key in keys.into_iter() {
+            lverbose!("Parsed input action {} -> {:?}", action_name, key);
             let action_id = String_Id::from(action_name);
             bindings
                 .entry(key)

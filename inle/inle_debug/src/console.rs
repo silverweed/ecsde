@@ -1,3 +1,4 @@
+use inle_cfg::{Cfg_Var, Config};
 use inle_common::colors;
 use inle_core::env::Env_Info;
 use inle_gfx::render;
@@ -10,6 +11,7 @@ use inle_math::rect::Rect;
 use inle_math::vector::{Vec2f, Vec2u};
 use inle_resources::gfx;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fs::File;
 use std::io;
 
@@ -28,15 +30,23 @@ const HIST_SIZE: usize = 50;
 const COLOR_HISTORY: colors::Color = colors::rgba(200, 200, 200, 200);
 const HIST_FILE: &str = ".console_hist.txt";
 
+#[derive(Clone, Default)]
+pub struct Console_Config {
+    pub font: gfx::Font_Handle,
+
+    pub font_size: Cfg_Var<u32>,
+    pub ui_scale: Cfg_Var<f32>,
+    pub pad_x: Cfg_Var<f32>,
+    pub linesep: Cfg_Var<f32>,
+}
+
 pub struct Console {
     pub status: Console_Status,
     pub pos: Vec2u,
     pub size: Vec2u,
-    pub font_size: u16,
     // This should be (externally) set equal to the "toggle_console" action keys.
     pub toggle_console_keys: Vec<keyboard::Key>,
-
-    font: gfx::Font_Handle,
+    pub cfg: Console_Config,
 
     cur_line: String,
     cur_pos: usize,
@@ -97,13 +107,12 @@ pub fn load_console_hist(console: &mut Console, env: &Env_Info) -> io::Result<()
 impl Console {
     pub fn new() -> Self {
         Self {
+            cfg: Console_Config::default(),
             status: Console_Status::Closed,
             pos: Vec2u::default(),
             size: Vec2u::default(),
-            font_size: 12,
             cur_line: String::new(),
             cur_pos: 0,
-            font: None,
             toggle_console_keys: vec![],
             enqueued_cmd: None,
             output: Vec::with_capacity(OUTPUT_SIZE),
@@ -114,8 +123,8 @@ impl Console {
         }
     }
 
-    pub fn init(&mut self, font: gfx::Font_Handle) {
-        self.font = font;
+    pub fn init(&mut self, cfg: Console_Config) {
+        self.cfg = cfg;
     }
 
     pub fn toggle(&mut self) -> Console_Status {
@@ -458,14 +467,22 @@ impl Console {
         }
     }
 
-    pub fn draw(&self, window: &mut Render_Window_Handle, gres: &mut gfx::Gfx_Resources) {
+    pub fn draw(
+        &self,
+        window: &mut Render_Window_Handle,
+        gres: &mut gfx::Gfx_Resources,
+        config: &Config,
+    ) {
         if self.status == Console_Status::Closed {
             return;
         }
 
-        let pad_x = 5.0;
-        // @Cleanup: this * 3.0 is pretty random
-        let linesep = self.font_size as f32 * 3.0;
+        let ui_scale = self.cfg.ui_scale.read(config);
+        let font_size =
+            u16::try_from((self.cfg.font_size.read(config) as f32 * ui_scale) as u32).unwrap();
+
+        let pad_x = self.cfg.pad_x.read(config) * ui_scale;
+        let linesep = self.cfg.linesep.read(config) * ui_scale;
 
         // Draw background
         let Vec2u { x, y } = self.pos;
@@ -482,8 +499,8 @@ impl Console {
         );
 
         // Draw cur line
-        let font = gres.get_font(self.font);
-        let mut text = render::create_text(&self.cur_line, font, self.font_size);
+        let font = gres.get_font(self.cfg.font);
+        let mut text = render::create_text(&self.cur_line, font, font_size);
         let mut pos = Vec2f::from(self.pos) + Vec2f::new(pad_x, self.size.y as f32 - linesep);
         let Vec2f { x: line_w, .. } = render::get_text_size(&text);
         render::render_text(window, &mut text, colors::WHITE, pos);
@@ -492,8 +509,8 @@ impl Console {
         let cursor = Rect::new(
             pad_x + (self.cur_pos as f32 / self.cur_line.len().max(1) as f32) * line_w as f32,
             pos.y + linesep,
-            self.font_size as f32 * 0.6,
-            self.font_size as f32 * 0.1,
+            font_size as f32 * 0.6,
+            font_size as f32 * 0.1,
         );
         render::render_rect(window, cursor, colors::WHITE);
 
@@ -501,7 +518,7 @@ impl Console {
         {
             let mut pos = pos - Vec2f::new(0.0, linesep as f32);
             for (line, color) in self.output.iter().rev() {
-                let mut text = render::create_text(line, font, self.font_size);
+                let mut text = render::create_text(line, font, font_size);
                 render::render_text(window, &mut text, *color, pos);
                 pos.y -= linesep;
                 if pos.y < -linesep {
@@ -516,7 +533,7 @@ impl Console {
             if let Some(hints) = &self.hints.get(cmd) {
                 for (i, idx) in self.hints_displayed.iter().enumerate() {
                     let text =
-                        render::create_text(&hints[*idx], font, (self.font_size as f32 * 0.9) as _);
+                        render::create_text(&hints[*idx], font, (font_size as f32 * 0.9) as _);
                     let color = if i == self.selected_hint {
                         colors::YELLOW
                     } else {

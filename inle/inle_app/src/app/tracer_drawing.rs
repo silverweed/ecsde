@@ -1,4 +1,5 @@
 use crate::app::Engine_State;
+use inle_cfg::Cfg_Var;
 use inle_common::colors;
 use inle_common::units::format_bytes_pretty;
 use inle_core::time;
@@ -86,13 +87,10 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
     let mut trace_trees = tracer::build_trace_trees(traces);
     tracer::sort_trace_trees(&mut trace_trees);
 
-    let font_size =
-        inle_cfg::Cfg_Var::<i32>::new("engine/debug/trace/font_size", &engine_state.config)
-            .read(&engine_state.config);
-    overlay.config.font_size = (font_size as f32 * ui_scale) as _;
+    overlay.cfg.font_size = Cfg_Var::new("engine/debug/trace/font_size", &engine_state.config);
 
     let prune_duration_ms =
-        inle_cfg::Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config)
+        Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config)
             .read(&engine_state.config);
     let prune_duration = Duration::from_secs_f32(prune_duration_ms * 0.001);
 
@@ -136,13 +134,10 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
 
     overlay.clear();
 
-    let font_size =
-        inle_cfg::Cfg_Var::<i32>::new("engine/debug/trace/font_size", &engine_state.config)
-            .read(&engine_state.config);
-    overlay.config.font_size = (font_size as f32 * ui_scale) as _;
+    overlay.cfg.font_size = Cfg_Var::new("engine/debug/trace/font_size", &engine_state.config);
 
     let prune_duration_ms =
-        inle_cfg::Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config)
+        Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config)
             .read(&engine_state.config);
     let prune_duration = Duration::from_secs_f32(prune_duration_ms * 0.001);
 

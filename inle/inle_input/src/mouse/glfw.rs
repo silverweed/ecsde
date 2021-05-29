@@ -8,7 +8,6 @@ const BUTTON_COUNT: usize = glfw::ffi::MOUSE_BUTTON_LAST as usize + 1;
 
 pub(super) fn get_mouse_btn(btn: Button) -> Option<Mouse_Button> {
     match btn {
-        // @Incomplete: verify these!
         Button::Button1 => Some(Mouse_Button::Left),
         Button::Button2 => Some(Mouse_Button::Right),
         Button::Button3 => Some(Mouse_Button::Middle),

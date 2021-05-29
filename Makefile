@@ -18,7 +18,7 @@ rel:
 run_rel: rel
 	cargo run --release
 
-watch:
+w:
 	cargo watch -w inle -w ecs_game/src -x 'build --all'
 
 tags:

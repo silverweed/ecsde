@@ -609,6 +609,7 @@ fn update_debug_graphics<'a, 's, 'r>(
             gres,
             &game_state.engine_state.input_state,
             &game_state.engine_state.debug_systems.log,
+            &game_state.engine_state.config,
             &mut game_state.engine_state.frame_alloc,
         );
 
@@ -634,11 +635,11 @@ fn update_debug_graphics<'a, 's, 'r>(
     // Draw console
     {
         trace!("console::draw");
-        game_state
-            .engine_state
-            .debug_systems
-            .console
-            .draw(&mut game_state.window, gres);
+        game_state.engine_state.debug_systems.console.draw(
+            &mut game_state.window,
+            gres,
+            &game_state.engine_state.config,
+        );
     }
 }
 

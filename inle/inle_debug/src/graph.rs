@@ -1,4 +1,5 @@
 use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
+use inle_cfg::Cfg_Var;
 use inle_common::colors;
 use inle_common::paint_props::Paint_Properties;
 use inle_common::stringid::String_Id;
@@ -24,15 +25,21 @@ pub enum Grid_Step {
 pub struct Debug_Graph_View_Config {
     pub grid_xstep: Option<Grid_Step>,
     pub grid_ystep: Option<Grid_Step>,
+
+    pub ui_scale: Cfg_Var<f32>,
+
     pub font: Font_Handle,
-    pub label_font_size: u16,
+    pub label_font_size: Cfg_Var<u32>,
+
     pub title: Option<String>,
-    pub title_font_size: u16,
+    pub title_font_size: Cfg_Var<u32>,
+
     pub color: colors::Color,
     // If value is > than this, use this other color
     pub low_threshold: Option<(f32, colors::Color)>,
     // If value is < than this, use this other color
     pub high_threshold: Option<(f32, colors::Color)>,
+
     pub fixed_y_range: Option<Range<f32>>,
     pub hoverable: bool,
     pub show_average: bool,
@@ -43,14 +50,14 @@ pub struct Debug_Graph_View {
     pub data: Debug_Graph,
     pub pos: Vec2u,
     pub size: Vec2u,
-    pub config: Debug_Graph_View_Config,
+    pub cfg: Debug_Graph_View_Config,
 
     // goes from 0 to data.points.len() - 1
     pub hovered_point: Option<usize>,
     pub selected_point: Option<usize>,
 }
 
-/// Note: for simplicify, the graph assumes points are added in x-sorted order.
+/// Note: for simplicity, the graph assumes points are added in x-sorted order.
 pub struct Debug_Graph {
     pub points: VecDeque<Vec2f>,
     pub x_range: Range<f32>,
@@ -66,12 +73,13 @@ impl Debug_Element for Debug_Graph_View {
         Update_Args {
             window,
             input_state,
+            config,
             ..
         }: Update_Args,
     ) -> Update_Res {
         trace!("debug::graph::update");
 
-        if !self.config.hoverable {
+        if !self.cfg.hoverable {
             return Update_Res::Stay_Enabled;
         }
 
@@ -113,6 +121,7 @@ impl Debug_Element for Debug_Graph_View {
             window,
             gres,
             input_state,
+            config,
             ..
         }: Draw_Args,
     ) {
@@ -129,10 +138,13 @@ impl Debug_Element for Debug_Graph_View {
         let yr = self.y_range();
 
         // Draw grid
-        let font = gres.get_font(self.config.font);
-        let font_size = self.config.label_font_size;
+        let font = gres.get_font(self.cfg.font);
+        let ui_scale = self.cfg.ui_scale.read(config);
+        let label_font_size =
+            u16::try_from((self.cfg.label_font_size.read(config) as f32 * ui_scale) as u32)
+                .unwrap();
         let pos = Vec2f::from(self.pos);
-        if let Some(xstep) = self.config.grid_xstep {
+        if let Some(xstep) = self.cfg.grid_xstep {
             let xstep = match xstep {
                 Grid_Step::Fixed_Step(step) => step,
                 Grid_Step::Fixed_Subdivs(sub) => (xr.end - xr.start) / sub as f32,
@@ -147,7 +159,7 @@ impl Debug_Element for Debug_Graph_View {
                 let v2 =
                     render::new_vertex(pos2, colors::rgba(180, 180, 180, 200), Vec2f::default());
 
-                let mut text = render::create_text(&format!("{:.1}", x), font, font_size);
+                let mut text = render::create_text(&format!("{:.1}", x), font, label_font_size);
 
                 render::render_line(window, &v1, &v2);
                 // Skip first x label, or it overlaps with first y label
@@ -164,7 +176,7 @@ impl Debug_Element for Debug_Graph_View {
                 iters += 1;
             }
         }
-        if let Some(ystep) = self.config.grid_ystep {
+        if let Some(ystep) = self.cfg.grid_ystep {
             let ystep = match ystep {
                 Grid_Step::Fixed_Step(step) => step,
                 Grid_Step::Fixed_Subdivs(sub) => (yr.end - yr.start) / sub as f32,
@@ -179,7 +191,7 @@ impl Debug_Element for Debug_Graph_View {
                 let v2 =
                     render::new_vertex(pos2, colors::rgba(180, 180, 180, 200), Vec2f::default());
 
-                let mut text = render::create_text(&format!("{:.2}", y), font, font_size);
+                let mut text = render::create_text(&format!("{:.2}", y), font, label_font_size);
 
                 render::render_line(window, &v1, &v2);
                 render::render_text(window, &mut text, colors::WHITE, pos1 + Vec2f::new(0., -2.));
@@ -190,8 +202,13 @@ impl Debug_Element for Debug_Graph_View {
         }
 
         // Draw title
-        if let Some(title) = self.config.title.as_ref() {
-            let mut text = render::create_text(title, font, self.config.title_font_size);
+        if let Some(title) = self.cfg.title.as_ref() {
+            let title_font_size = u16::try_from(
+                (self.cfg.title_font_size.read(config) as f32 * self.cfg.ui_scale.read(config))
+                    as u32,
+            )
+            .unwrap();
+            let mut text = render::create_text(title, font, title_font_size);
             let size = render::get_text_size(&text);
             let pos = Vec2f::from(self.pos) + Vec2f::new(self.size.x as f32 - size.x - 2., 0.0);
             render::render_text(window, &mut text, colors::WHITE, pos);
@@ -266,7 +283,7 @@ impl Debug_Element for Debug_Graph_View {
                     let mut text = render::create_text(
                         &format!("{:.2}", self.data.points[x].y),
                         font,
-                        (1.5 * self.config.label_font_size as f32) as _,
+                        (1.5 * label_font_size as f32) as _,
                     );
                     render::render_text(
                         window,
@@ -279,7 +296,7 @@ impl Debug_Element for Debug_Graph_View {
         }
 
         // Draw average
-        if self.config.show_average {
+        if self.cfg.show_average {
             avg /= drawn_points.len() as f32;
             let avg_line_col = colors::rgb(149, 206, 255);
             let start = render::new_vertex(
@@ -296,7 +313,7 @@ impl Debug_Element for Debug_Graph_View {
             let mut text = render::create_text(
                 &format!("{:.2}", avg),
                 font,
-                (1.5 * self.config.label_font_size as f32) as _,
+                (1.5 * label_font_size as f32) as _,
             );
             render::render_text(
                 window,
@@ -317,9 +334,9 @@ pub struct Debug_Graph_Point {
 }
 
 impl Debug_Graph_View {
-    pub fn new(config: Debug_Graph_View_Config) -> Self {
+    pub fn new(cfg: &Debug_Graph_View_Config) -> Self {
         Self {
-            config,
+            cfg: cfg.clone(),
             ..Default::default()
         }
     }
@@ -332,7 +349,7 @@ impl Debug_Graph_View {
     }
 
     fn y_range(&self) -> Range<f32> {
-        if let Some(y_range) = &self.config.fixed_y_range {
+        if let Some(y_range) = &self.cfg.fixed_y_range {
             y_range.clone()
         } else {
             let min_y = self.data.min_y_value.unwrap_or(0.);
@@ -358,17 +375,17 @@ impl Debug_Graph_View {
     }
 
     fn get_color_for(&self, point: Vec2f) -> colors::Color {
-        if let Some((lt, lc)) = self.config.low_threshold {
+        if let Some((lt, lc)) = self.cfg.low_threshold {
             if point.y < lt {
                 return lc;
             }
         }
-        if let Some((ht, hc)) = self.config.high_threshold {
+        if let Some((ht, hc)) = self.cfg.high_threshold {
             if point.y > ht {
                 return hc;
             }
         }
-        self.config.color
+        self.cfg.color
     }
 }
 

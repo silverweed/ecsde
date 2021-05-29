@@ -54,7 +54,14 @@ impl From<&str> for Variant {
 
         // @Speed: this is easy but inefficient! An actual lexer would be faster, but for now this is ok.
         if raw.starts_with("0x") {
-            if let Ok(v) = u32::from_str_radix(raw.trim_start_matches("0x"), 16) {
+            if let Ok(v) = u32::from_str_radix(&raw[2..], 16) {
+                Self::UInt(v)
+            } else {
+                eprintln!("[ NOTICE ] Variant {} parsed as string.", raw);
+                Self::String(String::from(raw))
+            }
+        } else if raw.starts_with(|c| ('0'..='9').contains(&c)) && raw.ends_with('u') {
+            if let Ok(v) = u32::from_str_radix(&raw[..raw.len() - 1], 10) {
                 Self::UInt(v)
             } else {
                 eprintln!("[ NOTICE ] Variant {} parsed as string.", raw);
@@ -90,6 +97,13 @@ mod tests {
         );
         assert_eq!(Variant::from(2i64), Variant::ILong(2));
         assert_eq!(Variant::from(2u64), Variant::ULong(2));
+        assert_eq!(Variant::from("22"), Variant::Int(22));
+        assert_eq!(Variant::from("0x22"), Variant::UInt(0x22));
+        assert_eq!(Variant::from("0xx22"), Variant::String("0xx22".to_string()));
+        assert_eq!(Variant::from("22u"), Variant::UInt(22));
+        assert_eq!(Variant::from("9u"), Variant::UInt(9));
+        assert_eq!(Variant::from("0x22u"), Variant::String("0x22u".to_string()));
+        assert_eq!(Variant::from("22uu"), Variant::String("22uu".to_string()));
     }
 
     #[test]

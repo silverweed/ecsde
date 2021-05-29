@@ -1,11 +1,13 @@
 use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
 use inle_alloc::temp;
+use inle_cfg::Cfg_Var;
 use inle_common::colors::{self, Color};
 use inle_common::vis_align::Align;
 use inle_math::rect::Rect;
 use inle_math::vector::Vec2f;
 use inle_resources::gfx::Font_Handle;
 use std::collections::VecDeque;
+use std::convert::TryFrom;
 use std::time::Duration;
 
 struct Fadeout_Text {
@@ -14,33 +16,35 @@ struct Fadeout_Text {
     pub time: Duration,
 }
 
-#[derive(Copy, Clone, Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct Fadeout_Debug_Overlay_Config {
-    pub row_spacing: f32,
-    pub font_size: u16,
-    pub pad_x: f32,
-    pub pad_y: f32,
-    pub background: Color,
-    pub max_rows: usize,
-    pub fadeout_time: Duration,
+    pub ui_scale: Cfg_Var<f32>,
+    pub row_spacing: Cfg_Var<f32>,
+    pub font_size: Cfg_Var<u32>,
+    pub pad_x: Cfg_Var<f32>,
+    pub pad_y: Cfg_Var<f32>,
+    pub background: Cfg_Var<u32>,   // Color
+    pub fadeout_time: Cfg_Var<f32>, // seconds
+
+    pub font: Font_Handle,
     pub horiz_align: Align,
     pub vert_align: Align,
-    pub font: Font_Handle,
+    pub max_rows: usize,
 }
 
 #[derive(Default)]
 pub struct Fadeout_Debug_Overlay {
     fadeout_texts: VecDeque<Fadeout_Text>,
 
-    pub config: Fadeout_Debug_Overlay_Config,
+    pub cfg: Fadeout_Debug_Overlay_Config,
     pub position: Vec2f,
 }
 
 impl Debug_Element for Fadeout_Debug_Overlay {
-    fn update(&mut self, Update_Args { dt, .. }: Update_Args) -> Update_Res {
+    fn update(&mut self, Update_Args { dt, config, .. }: Update_Args) -> Update_Res {
         trace!("debug::fadeout_overlay::update");
 
-        let fadeout_time = self.config.fadeout_time;
+        let fadeout_time = Duration::from_secs_f32(self.cfg.fadeout_time.read(config));
         let mut n_drained = 0;
         for (i, text) in self.fadeout_texts.iter_mut().enumerate().rev() {
             text.time += *dt;
@@ -64,6 +68,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
             window,
             gres,
             frame_alloc,
+            config,
             ..
         }: Draw_Args,
     ) {
@@ -82,8 +87,22 @@ impl Debug_Element for Fadeout_Debug_Overlay {
             fadeout_time,
             horiz_align,
             vert_align,
+            background,
+            ui_scale,
             ..
-        } = self.config;
+        } = self.cfg;
+
+        let ui_scale = ui_scale.read(config);
+        let font_size = u16::try_from((font_size.read(config) as f32 * ui_scale) as u32).unwrap();
+        // @FIXME: why are we crashing here when hotloading?
+        for (k, v) in config.get_all_pairs() {
+            println!("{} => {:?}", k, v);
+        }
+        let pad_x = pad_x.read(config) * ui_scale;
+        let pad_y = pad_y.read(config) * ui_scale;
+        let row_spacing = row_spacing.read(config) * ui_scale;
+        let fadeout_time = Duration::from_secs_f32(fadeout_time.read(config));
+        let background = colors::color_from_hex(background.read(config));
 
         let mut texts = temp::excl_temp_array(frame_alloc);
         let mut max_row_height = 0f32;
@@ -118,7 +137,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
                 2.0 * pad_x + max_row_width,
                 2.0 * pad_y + tot_height,
             ),
-            self.config.background,
+            background,
         );
 
         // Draw lines
@@ -134,9 +153,9 @@ impl Debug_Element for Fadeout_Debug_Overlay {
 }
 
 impl Fadeout_Debug_Overlay {
-    pub fn new(config: Fadeout_Debug_Overlay_Config) -> Self {
+    pub fn new(cfg: &Fadeout_Debug_Overlay_Config) -> Self {
         Self {
-            config,
+            cfg: cfg.clone(),
             ..Default::default()
         }
     }
@@ -146,7 +165,7 @@ impl Fadeout_Debug_Overlay {
     }
 
     pub fn add_line_color(&mut self, txt: &str, color: Color) {
-        if self.fadeout_texts.len() == self.config.max_rows {
+        if self.fadeout_texts.len() == self.cfg.max_rows {
             self.fadeout_texts.pop_front();
         }
         self.fadeout_texts.push_back(Fadeout_Text {

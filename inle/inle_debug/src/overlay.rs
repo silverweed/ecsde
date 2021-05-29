@@ -1,5 +1,6 @@
 use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
 use inle_alloc::temp;
+use inle_cfg::Cfg_Var;
 use inle_common::colors::{self, Color};
 use inle_common::stringid::String_Id;
 use inle_common::variant::Variant;
@@ -8,6 +9,7 @@ use inle_math::rect::Rect;
 use inle_math::vector::Vec2f;
 use inle_resources::gfx::Font_Handle;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 pub struct Debug_Line {
     pub text: String,
@@ -34,13 +36,15 @@ impl Debug_Line {
     }
 }
 
-#[derive(Copy, Clone, Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct Debug_Overlay_Config {
-    pub row_spacing: f32,
-    pub font_size: u16,
-    pub pad_x: f32,
-    pub pad_y: f32,
-    pub background: Color,
+    pub ui_scale: Cfg_Var<f32>,
+    pub row_spacing: Cfg_Var<f32>,
+    pub font_size: Cfg_Var<u32>,
+    pub pad_x: Cfg_Var<f32>,
+    pub pad_y: Cfg_Var<f32>,
+    pub background: Cfg_Var<u32>, // Color
+
     pub font: Font_Handle,
     pub horiz_align: Align,
     pub vert_align: Align,
@@ -83,7 +87,7 @@ pub struct Hover_Data {
 pub struct Debug_Overlay {
     pub lines: Vec<Debug_Line>,
 
-    pub config: Debug_Overlay_Config,
+    pub cfg: Debug_Overlay_Config,
     pub position: Vec2f,
 
     // Latest drawn row bounds
@@ -99,6 +103,7 @@ impl Debug_Element for Debug_Overlay {
             window,
             gres,
             frame_alloc,
+            config,
             ..
         }: Draw_Args,
     ) {
@@ -116,8 +121,17 @@ impl Debug_Element for Debug_Overlay {
             row_spacing,
             horiz_align,
             vert_align,
+            background,
+            ui_scale,
             ..
-        } = self.config;
+        } = self.cfg;
+
+        let ui_scale = ui_scale.read(config);
+        let font_size = u16::try_from((font_size.read(config) as f32 * ui_scale) as u32).unwrap();
+        let pad_x = pad_x.read(config) * ui_scale;
+        let pad_y = pad_y.read(config) * ui_scale;
+        let row_spacing = row_spacing.read(config) * ui_scale;
+        let background = colors::color_from_hex(background.read(config));
 
         let mut texts = temp::excl_temp_array(frame_alloc);
         let mut max_row_width = 0f32;
@@ -149,7 +163,7 @@ impl Debug_Element for Debug_Overlay {
                 2.0 * pad_x + max_row_width,
                 2.0 * pad_y + tot_height,
             ),
-            self.config.background,
+            background,
         );
 
         self.max_row_bounds.set((max_row_width, max_row_height));
@@ -193,6 +207,7 @@ impl Debug_Element for Debug_Overlay {
         Update_Args {
             window,
             input_state,
+            config,
             ..
         }: Update_Args,
     ) -> Update_Res {
@@ -200,16 +215,20 @@ impl Debug_Element for Debug_Overlay {
 
         trace!("debug::overlay::update");
 
-        if !self.config.hoverable {
+        if !self.cfg.hoverable {
             return Update_Res::Stay_Enabled;
         }
 
+        let row_spacing = self.cfg.row_spacing.read(config);
+        let pad_x = self.cfg.pad_x.read(config);
+        let pad_y = self.cfg.pad_y.read(config);
+
         let (row_width, row_height) = self.max_row_bounds.get();
         // @Incomplete: this calculation is probably broken for alignments different from Align_Middle
-        let Vec2f { x: sx, y: sy } = self.position + v2!(self.config.pad_x, self.config.pad_y)
+        let Vec2f { x: sx, y: sy } = self.position + v2!(pad_x, pad_y)
             - v2!(
                 row_width * 0.5,
-                (row_height + self.config.row_spacing) * (self.lines.len() as f32) * 0.5
+                (row_height + row_spacing) * (self.lines.len() as f32) * 0.5
             );
         let mpos = Vec2f::from(mouse::mouse_pos_in_window(
             window,
@@ -227,7 +246,7 @@ impl Debug_Element for Debug_Overlay {
         for i in 0..self.lines.len() {
             let line_rect = Rect::new(
                 sx,
-                sy + (i as f32) * (row_height + self.config.row_spacing),
+                sy + (i as f32) * (row_height + row_spacing),
                 row_width,
                 row_height,
             );
@@ -242,9 +261,9 @@ impl Debug_Element for Debug_Overlay {
 }
 
 impl Debug_Overlay {
-    pub fn new(config: Debug_Overlay_Config) -> Self {
+    pub fn new(cfg: &Debug_Overlay_Config) -> Self {
         Self {
-            config,
+            cfg: cfg.clone(),
             ..Default::default()
         }
     }

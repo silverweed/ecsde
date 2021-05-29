@@ -6,7 +6,7 @@ use super::log::Debug_Log;
 use super::log_window;
 use super::overlay;
 use inle_alloc::temp;
-use inle_cfg::Cfg_Var;
+use inle_cfg::{Cfg_Var, Config};
 use inle_common::stringid::String_Id;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input::input_state::Input_State;
@@ -21,14 +21,14 @@ pub struct Debug_Ui_System_Config {
     pub ui_scale: Cfg_Var<f32>,
     pub target_win_size: (u32, u32),
     pub font: Cfg_Var<String>,
-    pub font_size: Cfg_Var<f32>,
+    pub font_size: Cfg_Var<u32>,
 }
 
 impl Default for Debug_Ui_System_Config {
     fn default() -> Self {
         Self {
             ui_scale: Cfg_Var::new_from_val(1.),
-            font_size: Cfg_Var::new_from_val(10.),
+            font_size: Cfg_Var::new_from_val(10),
             target_win_size: (800, 600),
             font: Cfg_Var::default(),
         }
@@ -151,7 +151,7 @@ pub struct Debug_Ui_System {
 
 macro_rules! add_debug_elem {
     ($type: ty, $cfg_type: ty, $container: ident, $create_fn: ident, $get_fn: ident, $enable_fn: ident) => {
-        pub fn $create_fn(&mut self, id: String_Id, config: $cfg_type) -> Option<&mut $type> {
+        pub fn $create_fn(&mut self, id: String_Id, config: &$cfg_type) -> Option<&mut $type> {
             let elem = <$type>::new(config);
             insert_debug_element(id, &mut self.$container, elem)
         }
@@ -167,13 +167,15 @@ macro_rules! add_debug_elem {
 }
 
 macro_rules! update_and_draw_elems {
-    ($self: expr, $container: ident, $dt: expr, $window: expr, $input_state: expr, $gres: expr, $frame_alloc: expr) => {
+    ($self: expr, $container: ident, $dt: expr, $window: expr, $input_state: expr,
+     $gres: expr, $config: expr, $frame_alloc: expr) => {
         let mut to_disable = vec![];
         for (i, elem) in $self.$container.actives.iter_mut().enumerate() {
             let res = elem.update(Update_Args {
                 dt: $dt,
                 window: $window,
                 input_state: $input_state,
+                config: $config,
             });
 
             if res == Update_Res::Disable_Self {
@@ -189,6 +191,7 @@ macro_rules! update_and_draw_elems {
                     gres: $gres,
                     input_state: $input_state,
                     frame_alloc: $frame_alloc,
+                    config: $config,
                 });
             }
         }
@@ -254,6 +257,7 @@ impl Debug_Ui_System {
         gres: &mut Gfx_Resources,
         input_state: &Input_State,
         log: &Debug_Log,
+        config: &Config,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
         trace!("debug_ui::update_and_draw");
@@ -265,10 +269,29 @@ impl Debug_Ui_System {
             window,
             input_state,
             gres,
+            config,
             frame_alloc
         );
-        update_and_draw_elems!(self, graphs, dt, window, input_state, gres, frame_alloc);
-        update_and_draw_elems!(self, overlays, dt, window, input_state, gres, frame_alloc);
+        update_and_draw_elems!(
+            self,
+            graphs,
+            dt,
+            window,
+            input_state,
+            gres,
+            config,
+            frame_alloc
+        );
+        update_and_draw_elems!(
+            self,
+            overlays,
+            dt,
+            window,
+            input_state,
+            gres,
+            config,
+            frame_alloc
+        );
         update_and_draw_elems!(
             self,
             fadeout_overlays,
@@ -276,11 +299,12 @@ impl Debug_Ui_System {
             window,
             input_state,
             gres,
+            config,
             frame_alloc
         );
 
         self.frame_scroller.update(window, log, input_state);
-        self.frame_scroller.draw(window, gres, log);
+        self.frame_scroller.draw(window, gres, log, config);
     }
 }
 

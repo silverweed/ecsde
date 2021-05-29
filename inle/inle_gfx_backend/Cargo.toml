@@ -33,3 +33,4 @@ version = "0.14"
 
 [dev-dependencies]
 inle_test = { path = "../inle_test" }
+serial_test = "0.5"

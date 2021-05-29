@@ -223,12 +223,11 @@ fn create_game_state<'a>(
 
         let ui_scale = Cfg_Var::<f32>::new("engine/debug/ui/ui_scale", &engine_state.config);
         let font = Cfg_Var::<String>::new("engine/debug/ui/font", &engine_state.config);
-        let font_size = Cfg_Var::<f32>::new("engine/debug/ui/font_size", &engine_state.config);
         let cfg = inle_debug::debug_ui::Debug_Ui_System_Config {
             target_win_size: engine_state.app_config.target_win_size,
             ui_scale,
             font,
-            font_size,
+            font_size: Cfg_Var::new("engine/debug/ui/font_size", &engine_state.config),
         };
 
         app::init_engine_debug(&mut engine_state, &mut game_resources.gfx, cfg)?;
@@ -408,10 +407,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
 
     let debug_ui = &mut game_state.engine_state.debug_systems.debug_ui;
     let cfg = &game_state.engine_state.config;
-    // @Convenience: rather than reading the cfg var here, we could pass it to the configs
-    // so it can be updated at any time after creating the widgets.
-    let ui_scale = debug_ui.cfg.ui_scale.read(cfg);
-    let font_size = debug_ui.cfg.font_size.read(cfg);
+
     let font_name = debug_ui.cfg.font.read(cfg);
     let font = game_resources
         .gfx
@@ -437,36 +433,38 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
     }
 
     let overlay_cfg = Debug_Overlay_Config {
-        row_spacing: 20.0 * ui_scale,
-        font_size: (font_size * ui_scale) as u16,
-        pad_x: 5.0 * ui_scale,
-        pad_y: 5.0 * ui_scale,
-        background: colors::rgba(25, 25, 25, 210),
+        row_spacing: Cfg_Var::new("engine/debug/overlay/gameplay/row_spacing", cfg),
+        font_size: debug_ui.cfg.font_size,
+        pad_x: Cfg_Var::new("engine/debug/overlay/gameplay/pad_x", cfg),
+        pad_y: Cfg_Var::new("engine/debug/overlay/gameplay/pad_y", cfg),
+        background: Cfg_Var::new("engine/debug/overlay/gameplay/background", cfg),
+        ui_scale: debug_ui.cfg.ui_scale,
         font,
         ..Default::default()
     };
     // Entities overlay
+    let ui_scale = debug_ui.cfg.ui_scale.read(cfg);
     let overlay = debug_ui
-        .create_overlay(sid!("entities"), overlay_cfg)
+        .create_overlay(sid!("entities"), &overlay_cfg)
         .unwrap();
-    overlay.config.vert_align = Align::End;
-    overlay.config.horiz_align = Align::Begin;
+    overlay.cfg.vert_align = Align::End;
+    overlay.cfg.horiz_align = Align::Begin;
     overlay.position = Vec2f::new(0.0, win_h as f32 - 22. * ui_scale);
 
     // Camera overlay
     let overlay = debug_ui
-        .create_overlay(sid!("camera"), overlay_cfg)
+        .create_overlay(sid!("camera"), &overlay_cfg)
         .unwrap();
-    overlay.config.vert_align = Align::End;
-    overlay.config.horiz_align = Align::End;
+    overlay.cfg.vert_align = Align::End;
+    overlay.cfg.horiz_align = Align::End;
     overlay.position = Vec2f::new(win_w as f32, win_h as f32 - 40. * ui_scale);
 
     // Physics overlay
     let overlay = debug_ui
-        .create_overlay(sid!("physics"), overlay_cfg)
+        .create_overlay(sid!("physics"), &overlay_cfg)
         .unwrap();
-    overlay.config.vert_align = Align::End;
-    overlay.config.horiz_align = Align::Begin;
+    overlay.cfg.vert_align = Align::End;
+    overlay.cfg.horiz_align = Align::Begin;
     overlay.position = Vec2f::new(0.0, win_h as f32 - 40. * ui_scale);
 
     // Console hints

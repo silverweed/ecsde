@@ -1,4 +1,5 @@
 use super::log::Debug_Log;
+use inle_cfg::{Cfg_Var, Config};
 use inle_common::colors;
 use inle_common::paint_props::Paint_Properties;
 use inle_gfx::render;
@@ -10,6 +11,7 @@ use inle_input::mouse::{self, Mouse_Button};
 use inle_math::rect;
 use inle_math::vector::{Vec2f, Vec2i, Vec2u};
 use inle_resources::gfx::{Font_Handle, Gfx_Resources};
+use std::convert::TryFrom;
 use std::time::Duration;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -21,7 +23,8 @@ enum Row {
 #[derive(Default)]
 pub struct Debug_Frame_Scroller_Config {
     pub font: Font_Handle,
-    pub font_size: u16,
+    pub font_size: Cfg_Var<u32>,
+    pub ui_scale: Cfg_Var<f32>,
 }
 
 #[derive(Default)]
@@ -206,13 +209,14 @@ impl Debug_Frame_Scroller {
         window: &mut Render_Window_Handle,
         gres: &mut Gfx_Resources,
         debug_log: &Debug_Log,
+        config: &Config,
     ) {
         trace!("frame_scroller::draw");
 
         let mut vbuf = render::start_draw_quads_temp(window, (self.n_frames + self.n_seconds) as _);
 
-        self.draw_row(window, &mut vbuf, gres, Row::Seconds, debug_log);
-        self.draw_row(window, &mut vbuf, gres, Row::Frames, debug_log);
+        self.draw_row(window, &mut vbuf, gres, Row::Seconds, debug_log, config);
+        self.draw_row(window, &mut vbuf, gres, Row::Frames, debug_log, config);
 
         render::render_vbuf(window, &vbuf, &inle_math::transform::Transform2D::default());
     }
@@ -224,6 +228,7 @@ impl Debug_Frame_Scroller {
         gres: &Gfx_Resources,
         row: Row,
         debug_log: &Debug_Log,
+        config: &Config,
     ) {
         let Row_Props {
             y,
@@ -328,6 +333,10 @@ impl Debug_Frame_Scroller {
             } else {
                 colors::rgba(120, 120, 120, 180)
             };
+            let font_size = u16::try_from(
+                (self.cfg.font_size.read(config) as f32 * self.cfg.ui_scale.read(config)) as u32,
+            )
+            .unwrap();
             for i in 0..filled {
                 let x = self.pos.x as f32 + i as f32 * (1. + subdiv_w);
                 // The very_first_frame is initially 1, but it can change if the game is paused and resumed
@@ -335,11 +344,8 @@ impl Debug_Frame_Scroller {
                 // It can also change simply due to the scroller filling up.
                 let very_first_frame = self.real_cur_frame - self.tot_scroller_filled_frames as u64;
                 let row_first_frame = (self.n_frames as u64 * i as u64) + very_first_frame;
-                let mut text = render::create_text(
-                    &(row_first_frame + 1).to_string(),
-                    font,
-                    self.cfg.font_size,
-                );
+                let mut text =
+                    render::create_text(&(row_first_frame + 1).to_string(), font, font_size);
                 render::render_text(window, &mut text, text_col, Vec2f::new(x, y));
             }
         }

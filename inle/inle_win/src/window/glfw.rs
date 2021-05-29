@@ -102,6 +102,7 @@ pub fn create_window(
 
     window.make_current();
     window.set_key_polling(true);
+    window.set_scroll_polling(true);
     // @Cleanup: needed?
     window.set_framebuffer_size_polling(true);
     window.set_cursor_pos_polling(true);

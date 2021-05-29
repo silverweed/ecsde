@@ -152,8 +152,6 @@ pub fn init_engine_debug(
     use inle_debug::{fadeout_overlay, graph, overlay};
     use inle_math::vector::{Vec2f, Vec2u};
 
-    // @Convenience: rather than reading the font cfg var here, we could pass it to the configs
-    // so it can be updated at any time after creating the widgets.
     let font = gfx_resources.load_font(&inle_resources::gfx::font_path(
         &engine_state.env,
         &cfg.font.read(&engine_state.config),
@@ -168,20 +166,11 @@ pub fn init_engine_debug(
         engine_state.app_config.target_win_size.0 as f32,
         engine_state.app_config.target_win_size.1 as f32,
     );
-    // @Convenience: rather than reading the cfg var here, we could pass it to the configs
-    // so it can be updated at any time after creating the widgets.
-    let ui_scale = cfg.ui_scale.read(&engine_state.config);
-    let font_size = cfg.font_size.read(&engine_state.config);
+
     let debug_ui = &mut engine_state.debug_systems.debug_ui;
-    debug_ui.cfg = cfg;
 
     // Frame scroller
     {
-        let scroller_label_font_size = Cfg_Var::<f32>::new(
-            "engine/debug/frame_scroller/label_font_size",
-            &engine_state.config,
-        )
-        .read(&engine_state.config);
         let scroller = &mut debug_ui.frame_scroller;
         scroller.size.x = (win_w * 0.75) as _;
         scroller.pos.x = (win_w * 0.125) as _;
@@ -189,117 +178,152 @@ pub fn init_engine_debug(
         scroller.pos.y = 15;
         scroller.cfg = inle_debug::frame_scroller::Debug_Frame_Scroller_Config {
             font,
-            font_size: (scroller_label_font_size * ui_scale) as _,
+            font_size: Cfg_Var::new(
+                "engine/debug/frame_scroller/label_font_size",
+                &engine_state.config,
+            ),
+            ui_scale: cfg.ui_scale,
         };
     }
 
+    let ui_scale = cfg.ui_scale.read(&engine_state.config);
     // Debug overlays
     {
         let mut debug_overlay_config = overlay::Debug_Overlay_Config {
-            row_spacing: 2.0 * ui_scale,
-            font_size: (font_size * ui_scale) as _,
-            pad_x: 5.0 * ui_scale,
-            pad_y: 5.0 * ui_scale,
-            background: colors::rgba(25, 25, 25, 210),
+            ui_scale: cfg.ui_scale,
+            row_spacing: Cfg_Var::new("engine/debug/overlay/row_spacing", &engine_state.config),
+            font_size: cfg.font_size,
+            pad_x: Cfg_Var::new("engine/debug/overlay/pad_x", &engine_state.config),
+            pad_y: Cfg_Var::new("engine/debug/overlay/pad_y", &engine_state.config),
+            background: Cfg_Var::new("engine/debug/overlay/background", &engine_state.config),
             font,
             ..Default::default()
         };
 
         let mut joy_overlay = debug_ui
-            .create_overlay(sid!("joysticks"), debug_overlay_config)
+            .create_overlay(sid!("joysticks"), &debug_overlay_config)
             .unwrap();
-        joy_overlay.config.horiz_align = Align::End;
-        joy_overlay.config.vert_align = Align::Middle;
+        joy_overlay.cfg.horiz_align = Align::End;
+        joy_overlay.cfg.vert_align = Align::Middle;
         joy_overlay.position = Vec2f::new(win_w, win_h * 0.5);
 
-        debug_overlay_config.font_size = (font_size * ui_scale) as _;
         let time_overlay = debug_ui
-            .create_overlay(sid!("time"), debug_overlay_config)
+            .create_overlay(sid!("time"), &debug_overlay_config)
             .unwrap();
-        time_overlay.config.horiz_align = Align::End;
-        time_overlay.config.vert_align = Align::End;
+        time_overlay.cfg.horiz_align = Align::End;
+        time_overlay.cfg.vert_align = Align::End;
         time_overlay.position = Vec2f::new(win_w, win_h);
 
         let win_overlay = debug_ui
-            .create_overlay(sid!("window"), debug_overlay_config)
+            .create_overlay(sid!("window"), &debug_overlay_config)
             .unwrap();
-        win_overlay.config.horiz_align = Align::End;
-        win_overlay.config.vert_align = Align::End;
+        win_overlay.cfg.horiz_align = Align::End;
+        win_overlay.cfg.vert_align = Align::End;
         win_overlay.position = Vec2f::new(win_w, win_h - 20. * ui_scale);
 
         let fps_overlay = debug_ui
-            .create_overlay(sid!("fps"), debug_overlay_config)
+            .create_overlay(sid!("fps"), &debug_overlay_config)
             .unwrap();
-        fps_overlay.config.vert_align = Align::End;
+        fps_overlay.cfg.vert_align = Align::End;
         fps_overlay.position = Vec2f::new(0.0, win_h);
 
-        debug_overlay_config.pad_x = 0.;
-        debug_overlay_config.pad_y = 0.;
-        debug_overlay_config.background = colors::TRANSPARENT;
+        debug_overlay_config.pad_x =
+            Cfg_Var::new("engine/debug/overlay/mouse/pad_x", &engine_state.config);
+        debug_overlay_config.pad_y =
+            Cfg_Var::new("engine/debug/overlay/mouse/pad_y", &engine_state.config);
+        debug_overlay_config.background = Cfg_Var::new(
+            "engine/debug/overlay/mouse/background",
+            &engine_state.config,
+        );
         let mouse_overlay = debug_ui
-            .create_overlay(sid!("mouse"), debug_overlay_config)
+            .create_overlay(sid!("mouse"), &debug_overlay_config)
             .unwrap();
-        mouse_overlay.config.horiz_align = Align::Begin;
-        mouse_overlay.config.vert_align = Align::End;
+        mouse_overlay.cfg.horiz_align = Align::Begin;
+        mouse_overlay.cfg.vert_align = Align::End;
 
-        debug_overlay_config.background = colors::rgba(20, 20, 20, 220);
-        debug_overlay_config.pad_y = 8. * ui_scale;
+        debug_overlay_config.background = Cfg_Var::new(
+            "engine/debug/overlay/trace/background",
+            &engine_state.config,
+        );
+        debug_overlay_config.pad_x =
+            Cfg_Var::new("engine/debug/overlay/trace/pad_x", &engine_state.config);
+        debug_overlay_config.pad_y =
+            Cfg_Var::new("engine/debug/overlay/trace/pad_y", &engine_state.config);
         let trace_overlay = debug_ui
-            .create_overlay(sid!("trace"), debug_overlay_config)
+            .create_overlay(sid!("trace"), &debug_overlay_config)
             .unwrap();
-        trace_overlay.config.vert_align = Align::Middle;
-        trace_overlay.config.horiz_align = Align::Middle;
-        trace_overlay.config.hoverable = true;
+        trace_overlay.cfg.vert_align = Align::Middle;
+        trace_overlay.cfg.horiz_align = Align::Middle;
+        trace_overlay.cfg.hoverable = true;
         trace_overlay.position = Vec2f::new(win_w * 0.5, win_h * 0.5);
         // Trace overlay starts disabled
         debug_ui.set_overlay_enabled(sid!("trace"), false);
 
-        debug_overlay_config.background = colors::TRANSPARENT;
-        debug_overlay_config.pad_y = 0.;
-        debug_overlay_config.font_size = (14.0 * ui_scale) as _;
+        debug_overlay_config.background = Cfg_Var::new(
+            "engine/debug/overlay/record/background",
+            &engine_state.config,
+        );
+        debug_overlay_config.pad_x =
+            Cfg_Var::new("engine/debug/overlay/record/pad_x", &engine_state.config);
+        debug_overlay_config.pad_y =
+            Cfg_Var::new("engine/debug/overlay/record/pad_y", &engine_state.config);
+        debug_overlay_config.font_size = Cfg_Var::new(
+            "engine/debug/overlay/record/font_size",
+            &engine_state.config,
+        );
         let record_overlay = debug_ui
-            .create_overlay(sid!("record"), debug_overlay_config)
+            .create_overlay(sid!("record"), &debug_overlay_config)
             .unwrap();
-        record_overlay.config.vert_align = Align::Begin;
-        record_overlay.config.horiz_align = Align::Begin;
+        record_overlay.cfg.vert_align = Align::Begin;
+        record_overlay.cfg.horiz_align = Align::Begin;
         record_overlay.position = Vec2f::new(2.0, 2.0);
     }
 
     // Debug fadeout overlays
     {
         let fadeout_overlay_config = fadeout_overlay::Fadeout_Debug_Overlay_Config {
-            row_spacing: 2.0 * ui_scale,
-            font_size: (font_size * ui_scale) as _,
-            pad_x: 5.0 * ui_scale,
-            pad_y: 5.0 * ui_scale,
-            background: colors::rgba(25, 25, 25, 210),
-            fadeout_time: Duration::from_secs(3),
+            row_spacing: Cfg_Var::new(
+                "engine/debug/fadeout_overlay/row_spacing",
+                &engine_state.config,
+            ),
+            font_size: cfg.font_size,
+            pad_x: Cfg_Var::new("engine/debug/fadeout_overlay/pad_x", &engine_state.config),
+            pad_y: Cfg_Var::new("engine/debug/fadeout_overlay/pad_y", &engine_state.config),
+            background: Cfg_Var::new(
+                "engine/debug/fadeout_overlay/background",
+                &engine_state.config,
+            ),
+            fadeout_time: Cfg_Var::new(
+                "engine/debug/fadeout_overlay/fadeout_time",
+                &engine_state.config,
+            ),
             max_rows: (30.0 / ui_scale.max(0.1)) as _,
             font,
             ..Default::default()
         };
 
         let fadeout_overlay = debug_ui
-            .create_fadeout_overlay(sid!("msg"), fadeout_overlay_config)
+            .create_fadeout_overlay(sid!("msg"), &fadeout_overlay_config)
             .unwrap();
-        fadeout_overlay.config.horiz_align = Align::Begin;
+        fadeout_overlay.cfg.horiz_align = Align::Begin;
         fadeout_overlay.position = Vec2f::new(0.0, 0.0);
     }
 
     // Graphs
     {
-        let graph_label_font_size =
-            Cfg_Var::<f32>::new("engine/debug/graphs/label_font_size", &engine_state.config)
-                .read(&engine_state.config);
-        let graph_title_font_size =
-            Cfg_Var::<f32>::new("engine/debug/graphs/title_font_size", &engine_state.config)
-                .read(&engine_state.config);
         let mut graph_config = graph::Debug_Graph_View_Config {
             grid_xstep: Some(graph::Grid_Step::Fixed_Step(5.)),
             grid_ystep: Some(graph::Grid_Step::Fixed_Step(30.)),
-            label_font_size: (graph_label_font_size * ui_scale) as _,
+            ui_scale: cfg.ui_scale,
+            label_font_size: Cfg_Var::new(
+                "engine/debug/graphs/label_font_size",
+                &engine_state.config,
+            ),
             title: Some(String::from("FPS")),
-            title_font_size: (graph_title_font_size * ui_scale) as _,
+            title_font_size: Cfg_Var::new(
+                "engine/debug/graphs/title_font_size",
+                &engine_state.config,
+            ),
             color: colors::YELLOW,
             low_threshold: Some((25.0, colors::RED)),
             high_threshold: Some((55.0, colors::GREEN)),
@@ -310,9 +334,7 @@ pub fn init_engine_debug(
         };
 
         // FPS
-        let graph = debug_ui
-            .create_graph(sid!("fps"), graph_config.clone())
-            .unwrap();
+        let graph = debug_ui.create_graph(sid!("fps"), &graph_config).unwrap();
 
         graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
 
@@ -324,7 +346,7 @@ pub fn init_engine_debug(
         graph_config.low_threshold = Some((17., colors::GREEN));
         graph_config.high_threshold = Some((34., colors::RED));
         let graph = debug_ui
-            .create_graph(sid!("prev_frame_time"), graph_config.clone())
+            .create_graph(sid!("prev_frame_time"), &graph_config)
             .unwrap();
         graph.pos.y = (0.15 * win_h) as u32;
         graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
@@ -337,28 +359,37 @@ pub fn init_engine_debug(
         graph_config.title = None;
         graph_config.hoverable = true;
         let graph = debug_ui
-            .create_graph(sid!("fn_profile"), graph_config)
+            .create_graph(sid!("fn_profile"), &graph_config)
             .unwrap();
         graph.pos.y = (0.3 * win_h) as u32;
         graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
     }
 
     {
-        let log_window_font_size =
-            Cfg_Var::<f32>::new("engine/debug/log_window/font_size", &engine_state.config)
-                .read(&engine_state.config);
         let log_window_config = inle_debug::log_window::Log_Window_Config {
             font,
-            font_size: (log_window_font_size * ui_scale) as _,
-            pad_x: 6.0 * ui_scale,
-            pad_y: 6.0 * ui_scale,
-            linesep: 8.0 * ui_scale,
-            header_height: 32,
+            font_size: Cfg_Var::new("engine/debug/log_window/font_size", &engine_state.config),
             title: std::borrow::Cow::Borrowed("Log"),
-            title_font_size: (log_window_font_size * ui_scale * 1.5) as _, // TODO: make this configurable
+            title_font_size: Cfg_Var::new(
+                "engine/debug/log_window/title_font_size",
+                &engine_state.config,
+            ),
+            header_height: Cfg_Var::new(
+                "engine/debug/log_window/header_height",
+                &engine_state.config,
+            ),
+            ui_scale: cfg.ui_scale,
+            pad_x: Cfg_Var::new("engine/debug/log_window/pad_x", &engine_state.config),
+            pad_y: Cfg_Var::new("engine/debug/log_window/pad_y", &engine_state.config),
+            linesep: Cfg_Var::new("engine/debug/log_window/linesep", &engine_state.config),
+            scrolled_lines: Cfg_Var::new(
+                "engine/debug/log_window/scrolled_lines",
+                &engine_state.config,
+            ),
+            max_lines: 100,
         };
         let log_window = debug_ui
-            .create_log_window(sid!("log_window"), log_window_config)
+            .create_log_window(sid!("log_window"), &log_window_config)
             .unwrap();
         let logger = log_window.create_logger();
         log_window.size = Vec2u::new((win_w * 0.8) as _, (win_h * 0.8) as _);
@@ -369,17 +400,13 @@ pub fn init_engine_debug(
         inle_diagnostics::log::add_logger(logger);
     }
 
+    debug_ui.cfg = cfg;
+
     {
         use inle_input::bindings::{Input_Action, Input_Action_Simple};
 
-        // @Convenience: rather than reading the cfg var here, we could pass it to the configs
-        // so it can be updated at any time after creating the widgets.
-        let console_font_size =
-            Cfg_Var::<f32>::new("engine/debug/console/font_size", &engine_state.config)
-                .read(&engine_state.config);
         let console = &mut engine_state.debug_systems.console;
         console.size = Vec2u::new(win_w as _, win_h as u32 / 2);
-        console.font_size = (console_font_size * ui_scale) as _;
         console.toggle_console_keys = engine_state
             .input_state
             .bindings
@@ -397,7 +424,13 @@ pub fn init_engine_debug(
                 }
             })
             .collect();
-        console.init(font);
+        console.init(inle_debug::console::Console_Config {
+            font,
+            font_size: Cfg_Var::new("engine/debug/console/font_size", &engine_state.config),
+            pad_x: Cfg_Var::new("engine/debug/console/pad_x", &engine_state.config),
+            linesep: Cfg_Var::new("engine/debug/console/linesep", &engine_state.config),
+            ui_scale: debug_ui.cfg.ui_scale,
+        });
     }
 
     Ok(())
@@ -544,7 +577,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
 pub fn set_traced_fn(debug_systems: &mut Debug_Systems, fn_name: String) {
     debug_systems.traced_fn = fn_name.clone();
     let graph = debug_systems.debug_ui.get_graph(sid!("fn_profile"));
-    graph.config.title = Some(fn_name);
+    graph.cfg.title = Some(fn_name);
     graph.data.points.clear();
     graph.selected_point = None;
 }

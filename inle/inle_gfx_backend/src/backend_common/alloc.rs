@@ -499,8 +499,10 @@ fn reset_bucket(bucket: &mut Buffer_Allocator_Bucket) {
 mod tests {
     use super::*;
     use inle_test::test_common::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_allocate_from_bucket() {
         let (_win, _glfw) = load_gl_pointers();
         assert!(gl::GenVertexArrays::is_loaded());
@@ -521,6 +523,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_allocate_from_bucket_fragmented() {
         let (_win, _glfw) = load_gl_pointers();
 
@@ -540,6 +543,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_reset_bucket() {
         let (_win, _glfw) = load_gl_pointers();
         let mut bucket = allocate_bucket(gl::ARRAY_BUFFER, 100);
@@ -566,10 +570,12 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn allocate_from_buffer_allocators() {
         let (_win, _glfw) = load_gl_pointers();
         let mut allocators = Buffer_Allocators::default();
         let alloc = allocators.get_alloc_mut(Buffer_Allocator_Id::Array_Permanent);
+        let mut alloc = alloc.borrow_mut();
 
         let buf = alloc.allocate(200);
         assert!(matches!(buf.inner, Buffer_Handle_Inner::Non_Empty(_)));
