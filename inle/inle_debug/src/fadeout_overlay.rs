@@ -94,10 +94,6 @@ impl Debug_Element for Fadeout_Debug_Overlay {
 
         let ui_scale = ui_scale.read(config);
         let font_size = u16::try_from((font_size.read(config) as f32 * ui_scale) as u32).unwrap();
-        // @FIXME: why are we crashing here when hotloading?
-        for (k, v) in config.get_all_pairs() {
-            println!("{} => {:?}", k, v);
-        }
         let pad_x = pad_x.read(config) * ui_scale;
         let pad_y = pad_y.read(config) * ui_scale;
         let row_spacing = row_spacing.read(config) * ui_scale;
