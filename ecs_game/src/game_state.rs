@@ -10,13 +10,6 @@ use inle_gfx::{self, render_window::Render_Window_Handle};
 use std::collections::HashMap;
 use std::time::Duration;
 
-#[cfg(debug_assertions)]
-#[rustfmt::skip]
-use {
-    inle_common::colors,
-    inle_debug
-};
-
 pub type Level_Batches = HashMap<String_Id, inle_gfx::render::batcher::Batches>;
 
 #[repr(C)]

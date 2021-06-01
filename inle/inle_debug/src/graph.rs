@@ -73,7 +73,6 @@ impl Debug_Element for Debug_Graph_View {
         Update_Args {
             window,
             input_state,
-            config,
             ..
         }: Update_Args,
     ) -> Update_Res {

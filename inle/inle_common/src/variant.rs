@@ -61,7 +61,7 @@ impl From<&str> for Variant {
                 Self::String(String::from(raw))
             }
         } else if raw.starts_with(|c| ('0'..='9').contains(&c)) && raw.ends_with('u') {
-            if let Ok(v) = u32::from_str_radix(&raw[..raw.len() - 1], 10) {
+            if let Ok(v) = (&raw[..raw.len() - 1]).parse::<u32>() {
                 Self::UInt(v)
             } else {
                 eprintln!("[ NOTICE ] Variant {} parsed as string.", raw);

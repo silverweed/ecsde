@@ -155,7 +155,7 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info> {
     }
 }
 
-#[allow(clippy::collapsible_if)]
+#[allow(clippy::collapsible_if, clippy::collapsible_else_if)]
 fn detect_circle_rect(circle: &Collider, rect: &Collider) -> Option<Collision_Info> {
     trace!("physics::detect_circle_rect");
 

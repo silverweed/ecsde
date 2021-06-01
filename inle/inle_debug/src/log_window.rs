@@ -1,5 +1,5 @@
 use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
-use inle_cfg::{Cfg_Var, Config};
+use inle_cfg::Cfg_Var;
 use inle_common::colors;
 use inle_diagnostics::log::Logger;
 use inle_gfx::render;

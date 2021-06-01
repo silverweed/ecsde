@@ -14,7 +14,6 @@ use std::time::Duration;
 use {
     inle_common::paint_props::Paint_Properties,
     inle_common::stringid::String_Id,
-    inle_debug,
     inle_debug::painter::Debug_Painter,
     inle_ecs::components::base::C_Spatial2D,
     inle_ecs::ecs_world::{self, Ecs_World},
