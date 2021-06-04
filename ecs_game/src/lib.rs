@@ -75,7 +75,8 @@ pub unsafe extern "C" fn game_init<'a>(
     raw_args: *const *const c_char,
     args_count: usize,
 ) -> Game_Bundle<'a> {
-    inle_diagnostics::log::add_default_logger();
+    let mut loggers = inle_diagnostics::log::create_loggers();
+    inle_diagnostics::log::add_default_logger(&mut loggers);
 
     linfo!("Initializing game...");
 
@@ -87,7 +88,7 @@ pub unsafe extern "C" fn game_init<'a>(
         args.push(new_string_from_c_char_ptr(*arg));
     }
 
-    match internal_game_init(&args) {
+    match internal_game_init(&args, loggers) {
         Ok((game_state, game_resources)) => Game_Bundle {
             game_state: Box::into_raw(game_state),
             game_resources: Box::into_raw(game_resources),
@@ -271,6 +272,7 @@ pub unsafe extern "C" fn game_shutdown(
 #[no_mangle]
 #[cfg(debug_assertions)]
 pub unsafe extern "C" fn game_unload(_game_state: *mut Game_State, _game_res: *mut Game_Resources) {
+    inle_diagnostics::log::unregister_loggers();
 }
 
 /// # Safety
@@ -283,6 +285,9 @@ pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mu
     }
 
     let game_state = &mut *game_state;
+
+    inle_diagnostics::log::register_loggers(&game_state.engine_state.loggers);
+
     game_state
         .engine_state
         .debug_systems

@@ -33,6 +33,8 @@ pub struct Engine_State<'r> {
     pub config: inle_cfg::Config,
     pub app_config: App_Config,
 
+    pub loggers: inle_diagnostics::log::Loggers,
+
     pub time: time::Time,
 
     pub rng: rand::Default_Rng,
@@ -58,6 +60,7 @@ pub fn create_engine_state<'r>(
     env: Env_Info,
     config: inle_cfg::Config,
     app_config: App_Config,
+    loggers: inle_diagnostics::log::Loggers,
 ) -> Result<Engine_State<'r>, Box<dyn std::error::Error>> {
     let systems = Core_Systems::new();
     let input_state = inle_input::input_state::create_input_state(&env);
@@ -85,6 +88,7 @@ pub fn create_engine_state<'r>(
         env,
         config,
         app_config,
+        loggers,
         time,
         rng,
         input_state,
@@ -397,7 +401,7 @@ pub fn init_engine_debug(
         log_window.pos.x += (win_w as u32 - log_window.size.x) / 2;
         debug_ui.set_log_window_enabled(sid!("log_window"), true);
 
-        inle_diagnostics::log::add_logger(logger);
+        inle_diagnostics::log::add_logger(&mut engine_state.loggers, logger);
     }
 
     debug_ui.cfg = cfg;

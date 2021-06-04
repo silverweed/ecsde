@@ -89,10 +89,12 @@ pub struct Game_Bundle<'a> {
 
 pub(super) fn internal_game_init<'a>(
     args: &[String],
+    loggers: inle_diagnostics::log::Loggers,
 ) -> Result<(Box<Game_State<'a>>, Box<Game_Resources<'a>>), Box<dyn std::error::Error>> {
     let mut game_resources = create_game_resources();
-    let (mut game_state, parsed_cmdline_args) = create_game_state(&mut game_resources, args)
-        .unwrap_or_else(|err| fatal!("create_game_state() failed with err {}", err));
+    let (mut game_state, parsed_cmdline_args) =
+        create_game_state(&mut game_resources, args, loggers)
+            .unwrap_or_else(|err| fatal!("create_game_state() failed with err {}", err));
 
     {
         let gres = &mut game_resources.gfx;
@@ -146,6 +148,7 @@ pub(super) fn internal_game_init<'a>(
 fn create_game_state<'a>(
     game_resources: &mut Game_Resources<'_>,
     cmdline_args: &[String],
+    loggers: inle_diagnostics::log::Loggers,
 ) -> Result<(Box<Game_State<'a>>, cmdline::Cmdline_Args), Box<dyn std::error::Error>> {
     let mut_in_debug!(parsed_cmdline_args) = cmdline::parse_cmdline_args(cmdline_args.iter());
     if parsed_cmdline_args.verbose {
@@ -177,7 +180,7 @@ fn create_game_state<'a>(
         }
     }
 
-    let mut engine_state = app::create_engine_state(env, config, app_config)?;
+    let mut engine_state = app::create_engine_state(env, config, app_config, loggers)?;
 
     let appcfg = &engine_state.app_config;
     let cfg = &engine_state.config;

@@ -175,6 +175,12 @@ impl Debug_Element for Log_Window {
         } else if actions.contains(&(sid!("scroll_down"), Action_Kind::Pressed)) {
             if let Some(max_lines) = self.max_lines.get() {
                 let first_line = self.first_line.get_or_insert(0);
+                println!(
+                    "max lines = {}, first_line = {:?}, lines tot = {}",
+                    max_lines,
+                    *first_line,
+                    self.lines.len()
+                );
                 *first_line = (*first_line + scrolled_lines as usize)
                     .min(self.lines.len().saturating_sub(max_lines as usize));
             }
@@ -191,9 +197,23 @@ impl Debug_Element for Log_Window {
                 Ok(msg) => {
                     self.lines.push_back(msg);
                     if self.lines.len() > self.cfg.max_lines {
-                        self.lines.pop_back();
+                        self.lines.pop_front();
                     }
                     debug_assert!(self.lines.len() <= self.cfg.max_lines);
+
+                    // If we were at the end, scroll one line
+                    let first_line = self.first_line.unwrap_or(0);
+                    if let Some(max_lines) = self.max_lines.get() {
+                        println!(
+                            "max lines = {}, first_line = {:?}, lines tot = {}",
+                            max_lines,
+                            first_line,
+                            self.lines.len()
+                        );
+                        if first_line == self.lines.len().saturating_sub(max_lines as usize) {
+                            self.first_line.replace(first_line + 1);
+                        }
+                    }
                 }
                 Err(TryRecvError::Disconnected) => {
                     should_disconnect = true;
