@@ -41,7 +41,11 @@ pub struct Log_Window {
     pub size: Vec2u,
 
     lines: VecDeque<Debug_Line>,
-    first_line: Option<usize>,    // If None, we're scrolling.
+    first_line: usize,
+    // We're saving this so we can easily scroll to the end the frame after we receive new messages.
+    // Since we don't know how many lines will every msg take, we don't scroll right after we receive them
+    // but the frame after, if we're at the end.
+    is_at_end: bool,
     max_lines: Cell<Option<u16>>, // This is computed lazily once we fill the window for the first time
     mouse_pos: Vec2f,
 
@@ -59,7 +63,8 @@ pub struct Log_Window_Config {
     pub pad_x: Cfg_Var<f32>,
     pub pad_y: Cfg_Var<f32>,
     pub linesep: Cfg_Var<f32>,
-    pub scrolled_lines: Cfg_Var<u32>,
+    pub scrolled_lines: Cfg_Var<u32>, // How much we scroll with wheel
+    pub page_scrolled_lines: Cfg_Var<u32>, // How much we scroll with page_up/down
     pub header_height: Cfg_Var<u32>,
     pub title_font_size: Cfg_Var<u32>,
     pub title: Cow<'static, str>,
@@ -69,6 +74,7 @@ impl Log_Window {
     pub fn new(cfg: &Log_Window_Config) -> Self {
         Self {
             cfg: cfg.clone(),
+            is_at_end: true,
             ..Default::default()
         }
     }
@@ -80,18 +86,40 @@ impl Log_Window {
     }
 
     fn compute_starting_line_and_subline(&self) -> (usize, u16) {
-        if let Some(first) = self.first_line {
-            return (first, 0);
-        } else if let Some(max_lines) = self.max_lines.get() {
-            let mut n_real_lines_required = 0;
-            for (i, line) in self.lines.iter().enumerate().rev() {
-                n_real_lines_required += line.required_lines.get() as u16;
-                if n_real_lines_required > max_lines {
-                    return (i, n_real_lines_required - max_lines);
-                }
+        let first = self.first_line as u16;
+        let mut n_real_lines_skipped = 0;
+        for (i, line) in self.lines.iter().enumerate() {
+            n_real_lines_skipped += line.required_lines.get() as u16;
+            if n_real_lines_skipped >= first {
+                //println!(
+                //"n_required {}, n_real {}, first {}",
+                //line.required_lines.get(),
+                //n_real_lines_skipped,
+                //first
+                //);
+                return (
+                    i,
+                    (line.required_lines.get() as u16) - (n_real_lines_skipped - first),
+                );
             }
         }
         (0, 0)
+    }
+
+    fn scroll_up(&mut self, n_lines: usize) {
+        self.first_line = self.first_line.saturating_sub(n_lines);
+    }
+
+    fn scroll_down(&mut self, n_lines: usize) {
+        if let Some(max_lines) = self.max_lines.get() {
+            let total_lines_stored: usize = self
+                .lines
+                .iter()
+                .map(|line| line.required_lines.get() as usize)
+                .sum();
+            self.first_line = (self.first_line + n_lines)
+                .min(total_lines_stored.saturating_sub(max_lines as usize - 1));
+        }
     }
 }
 
@@ -113,6 +141,8 @@ fn create_wrapped_text<'a>(
     font_size: u16,
     line_width: f32,
 ) -> Vec<render::Text<'a>> {
+    trace!("create_wrapped_text");
+
     // @Speed: this algorithm could probably be improved
     let mut texts = Vec::default();
 
@@ -146,6 +176,9 @@ fn create_wrapped_text<'a>(
     texts
 }
 
+// Used to scroll down to the end. Represents the number of lines we want to scroll down.
+const A_LOT: usize = 999999;
+
 impl Debug_Element for Log_Window {
     fn update(
         &mut self,
@@ -156,6 +189,8 @@ impl Debug_Element for Log_Window {
             ..
         }: Update_Args,
     ) -> Update_Res {
+        trace!("log_window::update");
+
         self.mouse_pos = Vec2f::from(mouse::mouse_pos_in_window(
             window,
             &input_state.raw.mouse_state,
@@ -164,27 +199,39 @@ impl Debug_Element for Log_Window {
         // @Incomplete: allow dragging
         // @Incomplete: allow resizing
 
+        if self.is_at_end {
+            self.scroll_down(A_LOT);
+        }
+
         let actions = &input_state.processed.game_actions;
 
-        // @FIXME: this is not working correctly
-        // @Incomplete: resume auto scrolling when scrolled to the end
-        let scrolled_lines = self.cfg.scrolled_lines.read(config);
+        let scrolled_lines = self.cfg.scrolled_lines.read(config) as usize;
+        let page_scrolled_lines = self.cfg.page_scrolled_lines.read(config) as usize;
+
         if actions.contains(&(sid!("scroll_up"), Action_Kind::Pressed)) {
-            let first_line = self.first_line.get_or_insert(0);
-            *first_line = first_line.saturating_sub(scrolled_lines as _);
+            self.scroll_up(scrolled_lines);
         } else if actions.contains(&(sid!("scroll_down"), Action_Kind::Pressed)) {
-            if let Some(max_lines) = self.max_lines.get() {
-                let first_line = self.first_line.get_or_insert(0);
-                println!(
-                    "max lines = {}, first_line = {:?}, lines tot = {}",
-                    max_lines,
-                    *first_line,
-                    self.lines.len()
-                );
-                *first_line = (*first_line + scrolled_lines as usize)
-                    .min(self.lines.len().saturating_sub(max_lines as usize));
-            }
+            self.scroll_down(scrolled_lines);
+        } else if actions.contains(&(sid!("page_up"), Action_Kind::Pressed)) {
+            self.scroll_up(page_scrolled_lines);
+        } else if actions.contains(&(sid!("page_down"), Action_Kind::Pressed)) {
+            self.scroll_down(page_scrolled_lines);
+        } else if actions.contains(&(sid!("page_home"), Action_Kind::Pressed)) {
+            self.first_line = 0;
+        } else if actions.contains(&(sid!("page_end"), Action_Kind::Pressed)) {
+            self.scroll_down(A_LOT);
         }
+
+        self.is_at_end = if let Some(max_lines) = self.max_lines.get() {
+            let total_lines_stored: usize = self
+                .lines
+                .iter()
+                .map(|line| line.required_lines.get() as usize)
+                .sum();
+            self.first_line == total_lines_stored.saturating_sub(max_lines as usize)
+        } else {
+            true
+        };
 
         if self.msg_receiver.is_none() {
             return Update_Res::Stay_Enabled;
@@ -200,20 +247,6 @@ impl Debug_Element for Log_Window {
                         self.lines.pop_front();
                     }
                     debug_assert!(self.lines.len() <= self.cfg.max_lines);
-
-                    // If we were at the end, scroll one line
-                    let first_line = self.first_line.unwrap_or(0);
-                    if let Some(max_lines) = self.max_lines.get() {
-                        println!(
-                            "max lines = {}, first_line = {:?}, lines tot = {}",
-                            max_lines,
-                            first_line,
-                            self.lines.len()
-                        );
-                        if first_line == self.lines.len().saturating_sub(max_lines as usize) {
-                            self.first_line.replace(first_line + 1);
-                        }
-                    }
                 }
                 Err(TryRecvError::Disconnected) => {
                     should_disconnect = true;
@@ -240,6 +273,8 @@ impl Debug_Element for Log_Window {
             ..
         }: Draw_Args,
     ) {
+        trace!("log_window::draw");
+
         let Vec2u { x, y } = self.pos;
         let Vec2u { x: w, y: h } = self.size;
 

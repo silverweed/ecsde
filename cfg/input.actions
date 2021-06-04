@@ -7,6 +7,10 @@ step_sim: Slash
 open_pause_menu: Escape
 scroll_up: Wheel_Up
 scroll_down: Wheel_Down
+page_up: PageUp
+page_down: PageDown
+page_home: Home
+page_end: End
 
 # Movement
 move_up: W, Joy_Dpad_Top

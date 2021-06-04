@@ -390,7 +390,11 @@ pub fn init_engine_debug(
                 "engine/debug/log_window/scrolled_lines",
                 &engine_state.config,
             ),
-            max_lines: 100,
+            page_scrolled_lines: Cfg_Var::new(
+                "engine/debug/log_window/page_scrolled_lines",
+                &engine_state.config,
+            ),
+            max_lines: 2000,
         };
         let log_window = debug_ui
             .create_log_window(sid!("log_window"), &log_window_config)
