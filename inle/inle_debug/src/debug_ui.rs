@@ -68,6 +68,17 @@ impl<T> Debug_Element_Container<T> {
         }
     }
 
+    fn is_enabled(&self, id: String_Id) -> bool {
+        match self
+            .all
+            .get(&id)
+            .unwrap_or_else(|| fatal!("Tried to get inexisting {} {}", type_name::<T>(), id))
+        {
+            (Active_State::Active, _) => true,
+            (Active_State::Inactive, _) => false,
+        }
+    }
+
     fn set_enabled(&mut self, id: String_Id, enabled: bool) {
         let (old_idx, new_idx, old_state, new_state, idx_to_patch) =
             match self.all.get(&id).unwrap_or_else(|| {
@@ -150,7 +161,7 @@ pub struct Debug_Ui_System {
 }
 
 macro_rules! add_debug_elem {
-    ($type: ty, $cfg_type: ty, $container: ident, $create_fn: ident, $get_fn: ident, $enable_fn: ident) => {
+    ($type: ty, $cfg_type: ty, $container: ident, $create_fn: ident, $get_fn: ident, $enable_fn: ident, $is_enabled_fn: ident) => {
         pub fn $create_fn(&mut self, id: String_Id, config: &$cfg_type) -> Option<&mut $type> {
             let elem = <$type>::new(config);
             insert_debug_element(id, &mut self.$container, elem)
@@ -162,6 +173,10 @@ macro_rules! add_debug_elem {
 
         pub fn $enable_fn(&mut self, id: String_Id, enabled: bool) {
             self.$container.set_enabled(id, enabled);
+        }
+
+        pub fn $is_enabled_fn(&self, id: String_Id) -> bool {
+            self.$container.is_enabled(id)
         }
     };
 }
@@ -220,7 +235,8 @@ impl Debug_Ui_System {
         overlays,
         create_overlay,
         get_overlay,
-        set_overlay_enabled
+        set_overlay_enabled,
+        is_overlay_enabled
     );
 
     add_debug_elem!(
@@ -229,7 +245,8 @@ impl Debug_Ui_System {
         fadeout_overlays,
         create_fadeout_overlay,
         get_fadeout_overlay,
-        set_fadeout_overlay_enabled
+        set_fadeout_overlay_enabled,
+        is_fadeout_overlay_enabled
     );
 
     add_debug_elem!(
@@ -238,7 +255,8 @@ impl Debug_Ui_System {
         graphs,
         create_graph,
         get_graph,
-        set_graph_enabled
+        set_graph_enabled,
+        is_graph_enabled
     );
 
     add_debug_elem!(
@@ -247,7 +265,8 @@ impl Debug_Ui_System {
         log_windows,
         create_log_window,
         get_log_window,
-        set_log_window_enabled
+        set_log_window_enabled,
+        is_log_window_enabled
     );
 
     pub fn update_and_draw(

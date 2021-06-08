@@ -15,13 +15,14 @@ pub enum Console_Cmd {
     Set_Cfg_Var { name: String, value: Cfg_Value },
     Toggle_Cfg_Var { name: String },
     Trace_Fn { fn_name: String },
+    Toggle_Log_Window,
 }
 
 // @Improve @Convenience: this is ugly! We must manually synch this list with
 // the parse_cmd below *and* the enum declaration above!
 // We can @WaitForStable until we can do a const match on the enum, but maybe
 // there is a better way.
-pub const ALL_CMD_STRINGS: [&str; 6] = ["quit", "cam", "var", "toggle", "fps", "trace"];
+pub const ALL_CMD_STRINGS: [&str; 7] = ["quit", "cam", "var", "toggle", "fps", "trace", "log"];
 
 // Parses and executes 'cmdline'. May return a string to output to the console.
 pub fn execute(
@@ -73,6 +74,7 @@ fn parse_cmd(cmdline: &str) -> Result<Console_Cmd, Console_Error> {
             ["trace"] => Ok(Console_Cmd::Trace_Fn {
                 fn_name: String::default(),
             }),
+            ["log"] => Ok(Console_Cmd::Toggle_Log_Window {}),
             _ => Err(Console_Error::new(format!("Unknown command: {}", cmdline))),
         }
     }
@@ -126,6 +128,17 @@ fn execute_command(
         }
         Console_Cmd::Trace_Fn { fn_name } => {
             inle_app::app::set_traced_fn(&mut engine_state.debug_systems, fn_name);
+            None
+        }
+        Console_Cmd::Toggle_Log_Window => {
+            let state = engine_state
+                .debug_systems
+                .debug_ui
+                .is_log_window_enabled(sid!("log_window"));
+            engine_state
+                .debug_systems
+                .debug_ui
+                .set_log_window_enabled(sid!("log_window"), !state);
             None
         }
     }
