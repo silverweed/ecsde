@@ -146,8 +146,8 @@ fn create_wrapped_text<'a>(
     // @Speed: this algorithm could probably be improved
     let mut texts = Vec::default();
 
-    let ellipsis_text = Some(render::create_text(ELLIPSIS, font, font_size));
-    let ellipsis_text_width = render::get_text_size(ellipsis_text.as_ref().unwrap()).x;
+    let ellipsis_text = render::create_text(ELLIPSIS, font, font_size);
+    let ellipsis_text_width = render::get_text_size(&ellipsis_text).x;
 
     let text = render::create_text(txt, font, font_size);
     let mut candidate_texts = vec![text];
