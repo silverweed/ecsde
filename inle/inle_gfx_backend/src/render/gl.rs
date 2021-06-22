@@ -424,6 +424,7 @@ pub struct Text<'font> {
     string: String,
     font: &'font Font<'font>,
     size: u16,
+    force_monospace: bool,
 }
 
 pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) -> GLuint {
@@ -788,25 +789,28 @@ pub fn get_text_string<'a>(text: &'a Text) -> &'a str {
 pub fn get_text_size(text: &Text) -> Vec2f {
     let font = &text.font;
     let tsize = text.size as f32;
-    let (width, height) = text
-        .string
-        .chars()
-        .map(|chr| {
-            if let Some(data) = font.metadata.get_glyph_data(chr) {
-                (
-                    tsize * data.plane_bounds.width() + data.advance,
-                    tsize * data.plane_bounds.height(),
-                )
-            } else {
-                (0., 0.)
-            }
-        })
-        .fold((0_f32, 0_f32), |(acc_w, acc_h), (w, h)| {
-            (acc_w + w, acc_h.max(h))
-        });
-    // @Temporary hack to make the font monospaced
-    let tlen = text.string.chars().count();
-    v2!(1.6 * tsize * tlen as f32, 2. * tsize) // Why the 2x?
+    if !text.force_monospace {
+        let (width, height) = text
+            .string
+            .chars()
+            .map(|chr| {
+                if let Some(data) = font.metadata.get_glyph_data(chr) {
+                    (
+                        tsize * data.plane_bounds.width() + data.advance,
+                        tsize * data.plane_bounds.height(),
+                    )
+                } else {
+                    (0., 0.)
+                }
+            })
+            .fold((0_f32, 0_f32), |(acc_w, acc_h), (w, h)| {
+                (acc_w + w, acc_h.max(h))
+            });
+        v2!(width, height) // Why the 2x?
+    } else {
+        let tlen = text.string.chars().count();
+        v2!(1.6 * tsize * tlen as f32, 2. * tsize) // Why the 2x?
+    }
 }
 
 pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {
@@ -1043,6 +1047,7 @@ pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
         string: String::from(string),
         font,
         size,
+        force_monospace: false, // Probably @Temporary
     }
 }
 

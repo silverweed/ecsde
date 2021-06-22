@@ -207,6 +207,7 @@ impl Buffer_Allocator {
             };
         }
 
+        // @FIXME: this is probably wrong, investigate!
         let capacity_to_allocate = min_capacity.max(MIN_BUCKET_SIZE);
         lverbose!(
             "Requesting {} from {:?} Buffer Allocator",
@@ -298,6 +299,11 @@ impl Buffer_Allocator {
     fn find_first_bucket_with_capacity(&self, capacity: usize) -> Option<(usize, usize)> {
         for (bucket_idx, bucket) in self.buckets.iter().enumerate() {
             if let Some(free_slot_idx) = bucket_has_contiguous_capacity(&bucket, capacity) {
+                lverbose!(
+                    "For capacity {}, found bucket with free list: {:?}",
+                    capacity,
+                    bucket.free_list
+                );
                 return Some((bucket_idx, free_slot_idx));
             }
         }
@@ -333,6 +339,7 @@ impl std::cmp::PartialOrd for Bucket_Slot {
     }
 }
 
+#[derive(Debug)]
 struct Buffer_Allocator_Bucket {
     vao: GLuint,
     vbo: GLuint,
@@ -392,16 +399,44 @@ fn is_bucket_slot_free(bucket: &Buffer_Allocator_Bucket, slot: &Bucket_Slot) -> 
     bucket.free_list.iter().any(|s| s.contains(slot))
 }
 
+fn is_bucket_valid(bucket: &Buffer_Allocator_Bucket) -> bool {
+    if bucket.free_list.is_empty() {
+        return true;
+    }
+
+    if !free_list_is_sorted(&bucket.free_list) {
+        return false;
+    }
+
+    if bucket.free_list[bucket.free_list.len() - 1].end() > bucket.capacity {
+        return false;
+    }
+
+    for i in 0..bucket.free_list.len() - 1 {
+        if bucket.free_list[i].end() != bucket.free_list[i + 1].start {
+            return false;
+        }
+    }
+
+    true
+}
+
 #[must_use]
 fn allocate_from_bucket(
     bucket: &mut Buffer_Allocator_Bucket,
     free_slot_idx: usize,
     len: usize,
 ) -> Bucket_Slot {
+    lverbose!("allocating from bucket {:?}", bucket);
     let modified_bucket = &bucket.free_list[free_slot_idx];
     let slot = Bucket_Slot::new(modified_bucket.start, len);
 
-    debug_assert!(len <= modified_bucket.len);
+    debug_assert!(
+        len <= modified_bucket.len,
+        "allocate_from_bucket: len is {} / {}",
+        len,
+        modified_bucket.len
+    );
     debug_assert!(is_bucket_slot_free(bucket, &slot));
 
     let modified_bucket = &mut bucket.free_list[free_slot_idx];
@@ -413,13 +448,7 @@ fn allocate_from_bucket(
         modified_bucket.start += len;
     }
 
-    debug_assert!(free_list_is_sorted(&bucket.free_list));
-    debug_assert!(
-        bucket.free_list.is_empty()
-            || (bucket.free_list[bucket.free_list.len() - 1].start
-                + bucket.free_list[bucket.free_list.len() - 1].len
-                <= bucket.capacity)
-    );
+    debug_assert!(is_bucket_valid(bucket));
 
     slot
 }
@@ -468,6 +497,8 @@ fn deallocate_in_bucket(bucket: &mut Buffer_Allocator_Bucket, slot: Bucket_Slot)
             }
         }
     }
+
+    debug_assert!(is_bucket_valid(bucket));
 }
 
 fn write_to_bucket(
@@ -493,6 +524,7 @@ fn write_to_bucket(
 
 fn reset_bucket(bucket: &mut Buffer_Allocator_Bucket) {
     bucket.free_list = vec![Bucket_Slot::new(0, bucket.capacity)];
+    debug_assert!(is_bucket_valid(bucket));
 }
 
 #[cfg(test)]
