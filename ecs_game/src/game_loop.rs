@@ -689,6 +689,19 @@ fn update_debug(
         );
     }
 
+    let display_log_window = game_state
+        .debug_cvars
+        .display_log_window
+        .read(&engine_state.config);
+    let log_window_enabled = debug_systems
+        .debug_ui
+        .is_log_window_enabled(sid!("log_window"));
+    if display_log_window != log_window_enabled {
+        debug_systems
+            .debug_ui
+            .set_log_window_enabled(sid!("log_window"), display_log_window);
+    }
+
     update_win_debug_overlay(
         debug_systems.debug_ui.get_overlay(sid!("window")),
         &game_state.window,
@@ -811,6 +824,11 @@ fn update_debug(
                 inle_ecs::ecs_world::draw_comp_alloc::<C_Collider>(&level.world, global_painter);
             }
         });
+
+    // @Cleanup
+    if cvars.draw_buf_alloc.read(&engine_state.config) {
+        inle_debug::backend_specific_debugs::draw_backend_specific_debug(&window, global_painter);
+    }
 }
 
 #[cfg(debug_assertions)]

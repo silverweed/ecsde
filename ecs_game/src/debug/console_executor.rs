@@ -74,7 +74,9 @@ fn parse_cmd(cmdline: &str) -> Result<Console_Cmd, Console_Error> {
             ["trace"] => Ok(Console_Cmd::Trace_Fn {
                 fn_name: String::default(),
             }),
-            ["log"] => Ok(Console_Cmd::Toggle_Log_Window {}),
+            ["log"] => Ok(Console_Cmd::Toggle_Cfg_Var {
+                name: String::from("engine/debug/log_window/display"),
+            }),
             _ => Err(Console_Error::new(format!("Unknown command: {}", cmdline))),
         }
     }

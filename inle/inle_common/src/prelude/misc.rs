@@ -14,6 +14,22 @@ macro_rules! mut_in_debug {
     };
 }
 
+#[cfg(debug_assertions)]
+#[macro_export]
+macro_rules! pub_in_debug {
+    ($($x: tt)*) => {
+       pub $($x)*
+    };
+}
+
+#[cfg(not(debug_assertions))]
+#[macro_export]
+macro_rules! pub_in_debug {
+    ($($x: tt)*) => {
+        $($x)*
+    };
+}
+
 // Taken from `static_assertions` crate
 #[macro_export]
 macro_rules! const_assert {

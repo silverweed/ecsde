@@ -71,6 +71,10 @@ pub struct Debug_CVars {
     pub draw_comp_alloc_colliders: Cfg_Var<bool>,
 
     pub draw_world_chunks: Cfg_Var<bool>,
+
+    pub draw_buf_alloc: Cfg_Var<bool>,
+
+    pub display_log_window: Cfg_Var<bool>,
 }
 
 #[repr(C)]
@@ -313,6 +317,8 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     let draw_mouse_rulers = Cfg_Var::new("engine/debug/window/draw_mouse_rulers", cfg);
     let draw_comp_alloc_colliders = Cfg_Var::new("engine/debug/ecs/comp_alloc/colliders", cfg);
     let draw_world_chunks = Cfg_Var::new("engine/debug/world/draw_chunks", cfg);
+    let draw_buf_alloc = Cfg_Var::new("engine/debug/rendering/draw_buf_alloc", cfg);
+    let display_log_window = Cfg_Var::new("engine/debug/log_window/display", cfg);
 
     Debug_CVars {
         render_debug_visualization,
@@ -332,6 +338,8 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
         draw_mouse_rulers,
         draw_comp_alloc_colliders,
         draw_world_chunks,
+        draw_buf_alloc,
+        display_log_window,
     }
 }
 

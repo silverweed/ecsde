@@ -261,13 +261,15 @@ fn init_demo_entities(
             i == 0,
         );
 
-        level.world.add_component(
-            camera,
-            C_Camera_Follow {
-                target: Camera_Follow_Target::Entity(player),
-                lerp_factor: Cfg_Var::new("game/camera/lerp_factor", cfg),
-            },
-        );
+        if i == 0 {
+            level.world.add_component(
+                camera,
+                C_Camera_Follow {
+                    target: Camera_Follow_Target::Entity(player),
+                    lerp_factor: Cfg_Var::new("game/camera/lerp_factor", cfg),
+                },
+            );
+        }
     }
 
     //entities::create_drill(

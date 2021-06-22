@@ -91,12 +91,6 @@ impl Log_Window {
         for (i, line) in self.lines.iter().enumerate() {
             n_real_lines_skipped += line.required_lines.get() as u16;
             if n_real_lines_skipped >= first {
-                //println!(
-                //"n_required {}, n_real {}, first {}",
-                //line.required_lines.get(),
-                //n_real_lines_skipped,
-                //first
-                //);
                 return (
                     i,
                     (line.required_lines.get() as u16) - (n_real_lines_skipped - first),
