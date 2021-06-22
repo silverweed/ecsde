@@ -9,7 +9,7 @@ use std::rc::Rc;
 #[cfg(debug_assertions)]
 use std::collections::HashSet;
 
-const MIN_BUCKET_SIZE: usize = units::kilobytes(64);
+const MIN_BUCKET_SIZE: usize = units::kilobytes(32);
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -53,7 +53,7 @@ impl Buffer_Allocators {
             .dealloc_all();
     }
 
-    pub fn get_alloc_mut(&mut self, id: Buffer_Allocator_Id) -> Buffer_Allocator_Ptr {
+    pub fn get_alloc_mut(&self, id: Buffer_Allocator_Id) -> Buffer_Allocator_Ptr {
         self.allocs[id as usize].clone()
     }
 }
@@ -78,6 +78,14 @@ pub struct Buffer_Allocator {
 
     #[cfg(debug_assertions)]
     is_destroyed: bool,
+}
+
+// Needed for the buf_alloc_debug
+#[cfg(debug_assertions)]
+impl Buffer_Allocator {
+    pub fn get_buckets(&self) -> &[Buffer_Allocator_Bucket] {
+        &self.buckets
+    }
 }
 
 // @Speed @Robustness: using Rc allows us to store references to the parent buf allocators
@@ -207,27 +215,23 @@ impl Buffer_Allocator {
             };
         }
 
-        // @FIXME: this is probably wrong, investigate!
-        let capacity_to_allocate = min_capacity.max(MIN_BUCKET_SIZE);
         lverbose!(
             "Requesting {} from {:?} Buffer Allocator",
-            format_bytes_pretty(capacity_to_allocate),
+            format_bytes_pretty(min_capacity),
             self.id
         );
 
         let (bucket_idx, slot) = if let Some((bucket_idx, free_slot_idx)) =
             self.find_first_bucket_with_capacity(min_capacity)
         {
-            let slot = allocate_from_bucket(
-                &mut self.buckets[bucket_idx],
-                free_slot_idx,
-                capacity_to_allocate,
-            );
+            let slot =
+                allocate_from_bucket(&mut self.buckets[bucket_idx], free_slot_idx, min_capacity);
 
             (bucket_idx, slot)
         } else {
-            let mut bucket = allocate_bucket(self.buf_type, capacity_to_allocate);
-            let slot = allocate_from_bucket(&mut bucket, 0, capacity_to_allocate);
+            let new_bucket_cap = min_capacity.max(MIN_BUCKET_SIZE);
+            let mut bucket = allocate_bucket(self.buf_type, new_bucket_cap);
+            let slot = allocate_from_bucket(&mut bucket, 0, min_capacity);
             self.buckets.push(bucket);
 
             (self.buckets.len() - 1, slot)
@@ -246,7 +250,7 @@ impl Buffer_Allocator {
         #[cfg(debug_assertions)]
         {
             self.cur_allocated.insert(h.clone());
-            self.cur_allocated_bytes += capacity_to_allocate;
+            self.cur_allocated_bytes += min_capacity;
             self.high_water_mark = self.high_water_mark.max(self.cur_allocated_bytes);
         }
 
@@ -314,7 +318,7 @@ impl Buffer_Allocator {
 // Note: intentionally not Copy and Clone (in release) so we can use it sort of like a handle
 #[derive(PartialEq, Eq, Debug)]
 #[cfg_attr(debug_assertions, derive(Hash, Clone))]
-struct Bucket_Slot {
+pub struct Bucket_Slot {
     pub start: usize,
     pub len: usize,
 }
@@ -340,13 +344,13 @@ impl std::cmp::PartialOrd for Bucket_Slot {
 }
 
 #[derive(Debug)]
-struct Buffer_Allocator_Bucket {
+pub struct Buffer_Allocator_Bucket {
     vao: GLuint,
     vbo: GLuint,
     buf_type: GLenum,
 
-    free_list: Vec<Bucket_Slot>,
-    capacity: usize,
+    pub free_list: Vec<Bucket_Slot>,
+    pub capacity: usize,
 }
 
 fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket {
@@ -405,17 +409,13 @@ fn is_bucket_valid(bucket: &Buffer_Allocator_Bucket) -> bool {
     }
 
     if !free_list_is_sorted(&bucket.free_list) {
+        debug_assert!(false, "bucket not sorted");
         return false;
     }
 
     if bucket.free_list[bucket.free_list.len() - 1].end() > bucket.capacity {
+        debug_assert!(false, "bucket exceeding capacity");
         return false;
-    }
-
-    for i in 0..bucket.free_list.len() - 1 {
-        if bucket.free_list[i].end() != bucket.free_list[i + 1].start {
-            return false;
-        }
     }
 
     true
@@ -427,7 +427,12 @@ fn allocate_from_bucket(
     free_slot_idx: usize,
     len: usize,
 ) -> Bucket_Slot {
-    lverbose!("allocating from bucket {:?}", bucket);
+    lverbose!(
+        "allocating {} from bucket {:?}, slot {}",
+        len,
+        bucket,
+        free_slot_idx
+    );
     let modified_bucket = &bucket.free_list[free_slot_idx];
     let slot = Bucket_Slot::new(modified_bucket.start, len);
 
@@ -520,6 +525,8 @@ fn write_to_bucket(
             data,
         );
     }
+
+    check_gl_err();
 }
 
 fn reset_bucket(bucket: &mut Buffer_Allocator_Bucket) {

@@ -13,6 +13,7 @@ extern crate inle_diagnostics;
 #[macro_use]
 extern crate inle_math;
 
+pub mod backend_specific_debugs;
 pub mod calipers;
 pub mod console;
 pub mod debug_ui;

@@ -97,6 +97,8 @@ impl Vertex_Buffer {
             lwarn!("Creating a Vertex_Buffer with max_vertices = 0");
         }
 
+        check_gl_err();
+
         Self {
             buf,
             cur_vertices: 0,
@@ -766,12 +768,14 @@ pub fn render_text(
 }
 
 pub fn render_text_ws(
-    _window: &mut Render_Window_Handle,
-    _text: &mut Text,
-    _paint_props: &Paint_Properties,
-    _transform: &Transform2D,
+    window: &mut Render_Window_Handle,
+    text: &mut Text,
+    paint_props: &Paint_Properties,
+    transform: &Transform2D,
     _camera: &Transform2D,
 ) {
+    // @Incomplete!
+    render_text(window, text, paint_props, transform.position());
 }
 
 pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
