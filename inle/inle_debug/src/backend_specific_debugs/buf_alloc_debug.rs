@@ -2,7 +2,6 @@ use crate::painter::Debug_Painter;
 use inle_common::colors;
 use inle_common::paint_props::Paint_Properties;
 use inle_gfx_backend::backend_common::alloc::*;
-use inle_math::rect::Rectf;
 use inle_math::transform::Transform2D;
 
 pub fn debug_draw_buffer_allocator(alloc: &Buffer_Allocator, painter: &mut Debug_Painter) {

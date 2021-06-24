@@ -144,6 +144,14 @@ impl Buffer_Handle {
             Buffer_Allocator_Id::Array_Temporary
         }
     }
+
+    pub fn offset_bytes(&self) -> usize {
+        if let Buffer_Handle_Inner::Non_Empty(h) = &self.inner {
+            h.slot.start
+        } else {
+            0
+        }
+    }
 }
 
 impl Buffer_Allocator {

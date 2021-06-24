@@ -761,7 +761,7 @@ pub fn render_text(
         gl::BindVertexArray(vbuf.buf.vao());
         window.gl.draw_arrays(
             to_gl_primitive_type(vbuf.primitive_type),
-            0,
+            (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
             vbuf.cur_vertices as _,
         );
     }
@@ -810,7 +810,7 @@ pub fn get_text_size(text: &Text) -> Vec2f {
             .fold((0_f32, 0_f32), |(acc_w, acc_h), (w, h)| {
                 (acc_w + w, acc_h.max(h))
             });
-        v2!(width, height) // Why the 2x?
+        v2!(width, 2. * height) // Why the 2x?
     } else {
         let tlen = text.string.chars().count();
         v2!(1.6 * tsize * tlen as f32, 2. * tsize) // Why the 2x?
@@ -939,7 +939,7 @@ pub fn render_vbuf(
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
 ) {
-    if vbuf_cur_vertices(vbuf) == 0 {
+    if vbuf.cur_vertices == 0 {
         return;
     }
 
@@ -951,7 +951,7 @@ pub fn render_vbuf(
 
         window.gl.draw_arrays(
             to_gl_primitive_type(vbuf.primitive_type),
-            0,
+            (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
             vbuf.cur_vertices as _,
         );
         check_gl_err();
@@ -966,7 +966,7 @@ pub fn render_vbuf_ws(
 ) {
     // @FIXME: there's something wrong going on here...
 
-    if vbuf_cur_vertices(vbuf) == 0 {
+    if vbuf.cur_vertices == 0 {
         return;
     }
 
@@ -978,7 +978,7 @@ pub fn render_vbuf_ws(
 
         window.gl.draw_arrays(
             to_gl_primitive_type(vbuf.primitive_type),
-            0,
+            (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
             vbuf.cur_vertices as _,
         );
         check_gl_err();
@@ -992,7 +992,7 @@ pub fn render_vbuf_ws_with_texture(
     camera: &Transform2D,
     texture: &Texture,
 ) {
-    if vbuf_cur_vertices(vbuf) == 0 {
+    if vbuf.cur_vertices == 0 {
         return;
     }
 
@@ -1007,7 +1007,7 @@ pub fn render_vbuf_ws_with_texture(
 
         window.gl.draw_arrays(
             to_gl_primitive_type(vbuf.primitive_type),
-            0,
+            (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
             vbuf.cur_vertices as _,
         );
         check_gl_err();
@@ -1019,7 +1019,7 @@ pub fn render_vbuf_with_shader(
     vbuf: &Vertex_Buffer,
     shader: &Shader,
 ) {
-    if vbuf_cur_vertices(vbuf) == 0 {
+    if vbuf.cur_vertices == 0 {
         return;
     }
 
@@ -1039,7 +1039,7 @@ pub fn render_vbuf_with_shader(
 
         window.gl.draw_arrays(
             to_gl_primitive_type(vbuf.primitive_type),
-            0,
+            (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
             vbuf.cur_vertices as _,
         );
         check_gl_err();
@@ -1051,7 +1051,7 @@ pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
         string: String::from(string),
         font,
         size,
-        force_monospace: false, // Probably @Temporary
+        force_monospace: true, // Probably @Temporary
     }
 }
 
