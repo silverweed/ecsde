@@ -934,17 +934,7 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     }
 }
 
-pub fn render_vbuf(
-    window: &mut Render_Window_Handle,
-    vbuf: &Vertex_Buffer,
-    transform: &Transform2D,
-) {
-    if vbuf.cur_vertices == 0 {
-        return;
-    }
-
-    use_vbuf_shader(window, transform);
-
+fn render_vbuf_internal(window: &mut Render_Window_Handle, vbuf: &Vertex_Buffer) {
     unsafe {
         gl::BindVertexArray(vbuf.buf.vao());
         check_gl_err();
@@ -956,6 +946,19 @@ pub fn render_vbuf(
         );
         check_gl_err();
     }
+}
+
+pub fn render_vbuf(
+    window: &mut Render_Window_Handle,
+    vbuf: &Vertex_Buffer,
+    transform: &Transform2D,
+) {
+    if vbuf.cur_vertices == 0 {
+        return;
+    }
+
+    use_vbuf_shader(window, transform);
+    render_vbuf_internal(window, vbuf);
 }
 
 pub fn render_vbuf_ws(
@@ -971,18 +974,7 @@ pub fn render_vbuf_ws(
     }
 
     use_vbuf_ws_shader(window, transform, camera, window.gl.vbuf_shader);
-
-    unsafe {
-        gl::BindVertexArray(vbuf.buf.vao());
-        check_gl_err();
-
-        window.gl.draw_arrays(
-            to_gl_primitive_type(vbuf.primitive_type),
-            (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
-            vbuf.cur_vertices as _,
-        );
-        check_gl_err();
-    }
+    render_vbuf_internal(window, vbuf);
 }
 
 pub fn render_vbuf_ws_with_texture(
@@ -1001,17 +993,9 @@ pub fn render_vbuf_ws_with_texture(
     unsafe {
         gl::ActiveTexture(gl::TEXTURE0);
         gl::BindTexture(gl::TEXTURE_2D, texture.id);
-
-        gl::BindVertexArray(vbuf.buf.vao());
-        check_gl_err();
-
-        window.gl.draw_arrays(
-            to_gl_primitive_type(vbuf.primitive_type),
-            (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
-            vbuf.cur_vertices as _,
-        );
-        check_gl_err();
     }
+
+    render_vbuf_internal(window, vbuf);
 }
 
 pub fn render_vbuf_with_shader(
@@ -1025,6 +1009,7 @@ pub fn render_vbuf_with_shader(
 
     unsafe {
         gl::UseProgram(shader.id);
+        check_gl_err();
 
         for (i, (loc, tex)) in shader.textures.iter().enumerate() {
             gl::Uniform1i(*loc, i as i32);
@@ -1032,18 +1017,9 @@ pub fn render_vbuf_with_shader(
             gl::BindTexture(gl::TEXTURE_2D, *tex);
             check_gl_err();
         }
-        check_gl_err();
-
-        gl::BindVertexArray(vbuf.buf.vao());
-        check_gl_err();
-
-        window.gl.draw_arrays(
-            to_gl_primitive_type(vbuf.primitive_type),
-            (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
-            vbuf.cur_vertices as _,
-        );
-        check_gl_err();
     }
+
+    render_vbuf_internal(window, vbuf);
 }
 
 pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {

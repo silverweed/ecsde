@@ -35,7 +35,7 @@ pub fn debug_draw_buffer_allocators(allocators: &Buffer_Allocators, painter: &mu
     occupied_paint_props.color = colors::rgb(150, 80, 0);
 
     debug_draw_buffer_allocator(
-        &allocatorsWIDTH
+        &allocators
             .get_alloc_mut(
                 inle_gfx_backend::backend_common::alloc::Buffer_Allocator_Id::Array_Permanent,
             )
