@@ -35,7 +35,7 @@ pub fn debug_draw_buffer_allocators(allocators: &Buffer_Allocators, painter: &mu
     occupied_paint_props.color = colors::rgb(150, 80, 0);
 
     debug_draw_buffer_allocator(
-        &allocators
+        &allocatorsWIDTH
             .get_alloc_mut(
                 inle_gfx_backend::backend_common::alloc::Buffer_Allocator_Id::Array_Permanent,
             )
@@ -54,9 +54,20 @@ fn debug_draw_buffer_allocator(
     free_paint_props: Paint_Properties,
     occupied_paint_props: Paint_Properties,
 ) {
+    let max_cap = alloc
+        .get_buckets()
+        .iter()
+        .map(|buck| buck.capacity)
+        .max()
+        .unwrap_or(0);
+    let allocated = alloc.get_cur_allocated();
     for (i, bucket) in alloc.get_buckets().iter().enumerate() {
         debug_draw_bucket(
             bucket,
+            allocated
+                .iter()
+                .filter(|alloc| alloc.bucket_idx == i as u16),
+            max_cap,
             painter,
             i,
             height_offset,
@@ -66,8 +77,10 @@ fn debug_draw_buffer_allocator(
     }
 }
 
-fn debug_draw_bucket(
+fn debug_draw_bucket<'a>(
     bucket: &Buffer_Allocator_Bucket,
+    allocations: impl Iterator<Item = &'a Non_Empty_Buffer_Handle>,
+    highest_buckets_capacity: usize,
     painter: &mut Debug_Painter,
     idx: usize,
     base_height_offset: f32,
@@ -79,30 +92,44 @@ fn debug_draw_bucket(
         (idx % 45) as f32 * HEIGHT + base_height_offset
     ) - v2!(700., 400.); // @Temporary!
 
+    let this_bucket_width = WIDTH * (bucket.capacity as f32 / highest_buckets_capacity as f32);
     painter.add_rect(
-        v2!(WIDTH, HEIGHT),
+        v2!(this_bucket_width, HEIGHT),
         &Transform2D::from_pos(pos),
-        occupied_paint_props,
+        Paint_Properties {
+            color: colors::TRANSPARENT,
+            ..occupied_paint_props
+        },
     );
 
-    for (i, slot) in bucket.free_list.iter().enumerate() {
-        let slot_size = WIDTH * slot.len as f32 / bucket.capacity as f32;
-        let slot_start = WIDTH * slot.start as f32 / bucket.capacity as f32;
+    let draw_slot = |slot: &Bucket_Slot,
+                     bucket: &Buffer_Allocator_Bucket,
+                     painter: &mut Debug_Painter,
+                     props: Paint_Properties,
+                     text_color: colors::Color| {
+        let slot_size = this_bucket_width * slot.len as f32 / bucket.capacity as f32;
+        let slot_start = this_bucket_width * slot.start as f32 / bucket.capacity as f32;
         let mpos = pos + v2!(slot_start, 0.);
-        painter.add_rect(
-            v2!(slot_size, HEIGHT),
-            &Transform2D::from_pos(mpos),
-            free_paint_props,
-        );
+        painter.add_rect(v2!(slot_size, HEIGHT), &Transform2D::from_pos(mpos), props);
         painter.add_text(
-            &format!(
-                "{}: {}",
-                i,
-                inle_common::units::format_bytes_pretty(slot.len)
-            ),
+            &format!("{}", inle_common::units::format_bytes_pretty(slot.len)),
             mpos,
             10,
-            colors::BLUE,
+            text_color,
+        );
+    };
+
+    for slot in bucket.free_list.iter() {
+        draw_slot(slot, bucket, painter, free_paint_props, colors::BLUE);
+    }
+
+    for alloc in allocations {
+        draw_slot(
+            &alloc.slot,
+            bucket,
+            painter,
+            occupied_paint_props,
+            colors::RED,
         );
     }
 }

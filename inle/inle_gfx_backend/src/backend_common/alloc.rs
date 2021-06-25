@@ -86,6 +86,10 @@ impl Buffer_Allocator {
     pub fn get_buckets(&self) -> &[Buffer_Allocator_Bucket] {
         &self.buckets
     }
+
+    pub fn get_cur_allocated(&self) -> &HashSet<Non_Empty_Buffer_Handle> {
+        &self.cur_allocated
+    }
 }
 
 // @Speed @Robustness: using Rc allows us to store references to the parent buf allocators
@@ -109,12 +113,12 @@ enum Buffer_Handle_Inner {
 
 #[derive(Debug)]
 #[cfg_attr(debug_assertions, derive(PartialEq, Eq, Hash, Clone))]
-struct Non_Empty_Buffer_Handle {
+pub struct Non_Empty_Buffer_Handle {
     vao: GLuint,
     vbo: GLuint,
 
-    bucket_idx: u16,
-    slot: Bucket_Slot,
+    pub bucket_idx: u16,
+    pub slot: Bucket_Slot,
     allocator_id: Buffer_Allocator_Id,
 }
 
