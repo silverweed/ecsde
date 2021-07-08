@@ -213,6 +213,8 @@ fn set_shader_uniforms(
 ) {
     use super::set_uniform;
 
+    super::use_shader(shader);
+
     set_uniform(shader, c_str!("tex"), texture);
     set_uniform(shader, c_str!("vp"), view_projection);
 
@@ -301,7 +303,7 @@ pub fn draw_batches(
 
     // for each Z-index...
     for sprite_map in batches.textures_ws.values_mut() {
-        // for each texture/shader...
+        // for each material...
         for (material, batch) in sprite_map {
             let vbuffer = &mut batch.vbuffer;
             let shadow_vbuffer = &mut batch.shadow_vbuffer;

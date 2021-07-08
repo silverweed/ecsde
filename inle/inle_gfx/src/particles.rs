@@ -313,6 +313,8 @@ impl Particle_Manager {
 
         let shader = shader_cache.get_shader_mut(self.particle_shader);
         let (ww, wh) = inle_win::window::get_window_real_size(window);
+
+        render::use_shader(shader);
         render::set_uniform(shader, c_str!("camera_scale"), 1.0 / camera.scale().x);
 
         for (particles, vbuf) in self

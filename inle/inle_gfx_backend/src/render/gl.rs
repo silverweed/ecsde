@@ -33,6 +33,18 @@ fn max_texture_units() -> usize {
     }
 }
 
+#[inline(always)]
+fn assert_shader_in_use(shader: &Shader) {
+    #[cfg(debug_assertions)]
+    {
+        let mut id: GLint = 0;
+        unsafe { 
+            gl::GetIntegerv(gl::CURRENT_PROGRAM, &mut id);
+        }
+        assert!(id as GLuint == shader.id, "Expected shader {} to be in use, but current one is {}!", shader.id, id);
+    }
+}
+
 /// A Vertex_Buffer is an unresizable vertex buffer that accepts vertices in this format:
 /// (location = 0) vec4 color;
 /// (location = 1) vec2 pos;
@@ -281,7 +293,7 @@ pub struct Shader<'texture> {
 impl Uniform_Value for f32 {
     fn apply_to(self, shader: &mut Shader, name: &CStr) {
         unsafe {
-            gl::UseProgram(shader.id); // @Speed: don't do this every time!
+            assert_shader_in_use(shader);
             gl::Uniform1f(get_uniform_loc(shader.id, name), self);
         }
     }
@@ -290,7 +302,7 @@ impl Uniform_Value for f32 {
 impl Uniform_Value for Vec2f {
     fn apply_to(self, shader: &mut Shader, name: &CStr) {
         unsafe {
-            gl::UseProgram(shader.id); // @Speed: don't do this every time!
+            assert_shader_in_use(shader);
             gl::Uniform2f(get_uniform_loc(shader.id, name), self.x, self.y);
         }
     }
@@ -299,7 +311,7 @@ impl Uniform_Value for Vec2f {
 impl Uniform_Value for &Matrix3<f32> {
     fn apply_to(self, shader: &mut Shader, name: &CStr) {
         unsafe {
-            gl::UseProgram(shader.id); // @Speed: don't do this every time!
+            assert_shader_in_use(shader);
             gl::UniformMatrix3fv(
                 get_uniform_loc(shader.id, name),
                 1,
@@ -314,7 +326,7 @@ impl Uniform_Value for Color {
     fn apply_to(self, shader: &mut Shader, name: &CStr) {
         let v: Glsl_Vec4 = self.into();
         unsafe {
-            gl::UseProgram(shader.id); // @Speed: don't do this every time!
+            assert_shader_in_use(shader);
             gl::Uniform4f(get_uniform_loc(shader.id, name), v.x, v.y, v.z, v.w);
         }
     }
@@ -324,7 +336,7 @@ impl Uniform_Value for Color3 {
     fn apply_to(self, shader: &mut Shader, name: &CStr) {
         let v: Glsl_Vec3 = self.into();
         unsafe {
-            gl::UseProgram(shader.id); // @Speed: don't do this every time!
+            assert_shader_in_use(shader);
             gl::Uniform3f(get_uniform_loc(shader.id, name), v.x, v.y, v.z);
         }
     }
@@ -352,6 +364,13 @@ impl Uniform_Value for &Texture<'_> {
                 }
             }
         }
+    }
+}
+
+pub fn use_shader(shader: &mut Shader) {
+    unsafe {
+        gl::UseProgram(shader.id);
+        check_gl_err();
     }
 }
 
@@ -1344,6 +1363,7 @@ fn use_vbuf_shader(window: &mut Render_Window_Handle, transform: &Transform2D) {
     let mvp = get_mvp_screen_matrix(window, transform);
     unsafe {
         gl::UseProgram(window.gl.vbuf_shader);
+        check_gl_err();
 
         gl::UniformMatrix3fv(
             get_uniform_loc(window.gl.vbuf_shader, c_str!("mvp")),
@@ -1363,6 +1383,7 @@ fn use_vbuf_ws_shader(
     let mvp = get_mvp_matrix(window, transform, camera);
     unsafe {
         gl::UseProgram(shader);
+        check_gl_err();
 
         gl::UniformMatrix3fv(
             get_uniform_loc(shader, c_str!("mvp")),
@@ -1380,6 +1401,7 @@ fn use_line_shader(window: &mut Render_Window_Handle, start: &Vertex, end: &Vert
     let wh = wh as f32 * 0.5;
     unsafe {
         gl::UseProgram(window.gl.line_shader);
+        check_gl_err();
 
         gl::Uniform2fv(
             get_uniform_loc(window.gl.line_shader, c_str!("pos")),
@@ -1425,6 +1447,7 @@ fn use_circle_shader(window: &mut Render_Window_Handle, color: Color, circle: sh
 
     unsafe {
         gl::UseProgram(shader);
+        check_gl_err();
 
         gl::UniformMatrix3fv(
             get_uniform_loc(shader, c_str!("mvp")),
@@ -1490,6 +1513,7 @@ fn use_text_shader(
 
     unsafe {
         gl::UseProgram(shader);
+        check_gl_err();
 
         gl::UniformMatrix3fv(
             get_uniform_loc(shader, c_str!("mvp")),
