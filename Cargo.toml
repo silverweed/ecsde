@@ -1,5 +1,5 @@
 [workspace]
-members = ["ecs_runner", "ecs_game", "inle"]
+members = ["ecs_runner", "ecs_game"]
 
 #[profile.dev]
 #opt-level = 3

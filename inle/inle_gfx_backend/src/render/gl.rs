@@ -38,10 +38,15 @@ fn assert_shader_in_use(shader: &Shader) {
     #[cfg(debug_assertions)]
     {
         let mut id: GLint = 0;
-        unsafe { 
+        unsafe {
             gl::GetIntegerv(gl::CURRENT_PROGRAM, &mut id);
         }
-        assert!(id as GLuint == shader.id, "Expected shader {} to be in use, but current one is {}!", shader.id, id);
+        assert!(
+            id as GLuint == shader.id,
+            "Expected shader {} to be in use, but current one is {}!",
+            shader.id,
+            id
+        );
     }
 }
 

@@ -1,5 +1,4 @@
 #![cfg(debug_assertions)]
-
 #![warn(clippy::all)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::too_many_arguments)]

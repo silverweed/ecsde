@@ -1,7 +1,7 @@
+use inle_common::units::format_bytes_pretty;
 use std::alloc::{alloc, dealloc, Layout};
 use std::mem::{align_of, size_of};
 use std::ops::{Deref, DerefMut};
-use inle_common::units::format_bytes_pretty;
 
 #[cfg(debug_assertions)]
 pub(super) type Gen_Type = u32;
@@ -76,9 +76,12 @@ impl Temp_Allocator {
         let offset = ptr.align_offset(align);
 
         // @Robustness: maybe reallocate rather than crashing
-        assert!(self.used + offset + n_bytes <= self.cap, "Out of memory trying to allocate {} (cap = {})",
+        assert!(
+            self.used + offset + n_bytes <= self.cap,
+            "Out of memory trying to allocate {} (cap = {})",
             format_bytes_pretty(n_bytes),
-            format_bytes_pretty(self.cap));
+            format_bytes_pretty(self.cap)
+        );
 
         self.used += offset + n_bytes;
         #[cfg(debug_assertions)]
