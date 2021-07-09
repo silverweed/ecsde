@@ -602,6 +602,7 @@ fn update_debug_graphics<'a, 's, 'r>(
     {
         let debug_ui = &mut game_state.engine_state.debug_systems.debug_ui;
         let prev_selected = debug_ui.get_graph(sid!("fn_profile")).get_selected_point();
+
         debug_ui.update_and_draw(
             &real_dt,
             &mut game_state.window,

@@ -388,6 +388,7 @@ pub struct Font_Metadata {
     // @Temporary: we want to support more than ASCII
     glyph_data: [Glyph_Data; 256],
     pub atlas_size: (u32, u32),
+    pub max_glyph_height: f32,
 }
 
 impl Font_Metadata {
@@ -395,12 +396,16 @@ impl Font_Metadata {
         Self {
             atlas_size: (width, height),
             glyph_data: [Glyph_Data::default(); 256],
+            max_glyph_height: 0.,
         }
     }
 
     pub fn add_glyph_data(&mut self, glyph_id: char, data: Glyph_Data) {
         if (glyph_id as usize) < 256 {
             self.glyph_data[glyph_id as usize] = data;
+            if data.plane_bounds.height() > self.max_glyph_height {
+                self.max_glyph_height = data.plane_bounds.height();
+            }
         } else {
             lwarn!("We currently don't support non-ASCII characters: discarding glyph data for {} (0x{:X})"
                 , glyph_id, glyph_id as usize);
@@ -718,6 +723,11 @@ pub fn render_text(
         let mut vertices = inle_alloc::temp::excl_temp_array(&mut window.temp_allocator);
         let mut pos_x = 0.;
         let tsize = text.size as f32;
+        let base_line_height = text.font.metadata.max_glyph_height;
+        debug_assert_ne!(base_line_height, 0.);
+        // NOTE: this scale factor is chosen so the maximum text height is equal to font_size px.
+        // We may want to change this and use font_size as the "main corpus" size.
+        let scale_factor = tsize / base_line_height;
         for chr in text.string.chars() {
             if chr > '\u{256}' {
                 lerr_once!(
@@ -731,17 +741,14 @@ pub fn render_text(
             if let Some(glyph_data) = text.font.metadata.get_glyph_data(chr) {
                 let atlas_bounds = &glyph_data.normalized_atlas_bounds;
                 let pb = &glyph_data.plane_bounds;
-                // NOTE: currently we are basically drawing *below* the baseline, rather than on it.
-                // We may want to change this later, but that'd require also changing the caller sites' code,
-                // so it's fine for now.
                 let rect = Rect::new(
-                    pos_x + pb.left,
-                    (1.0 - pb.top) * tsize,
-                    (1.0 + pb.right - pb.left) * tsize,
-                    (1.0 + pb.top - pb.bot) * tsize,
+                    pos_x + pb.left * scale_factor,
+                    -pb.top * scale_factor,
+                    (pb.right - pb.left) * scale_factor,
+                    (pb.top - pb.bot) * scale_factor,
                 );
 
-                pos_x += tsize * (glyph_data.advance + 1.);
+                pos_x += scale_factor * glyph_data.advance;
 
                 let v1 = new_vertex(
                     v2!(rect.x, rect.y),

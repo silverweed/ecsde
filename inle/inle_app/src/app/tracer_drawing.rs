@@ -69,7 +69,12 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
     let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
     let debug_log = &mut engine_state.debug_systems.log;
     let frame = scroller.get_real_selected_frame();
-    let traces = &debug_log.get_frame(frame).unwrap().traces;
+    let debug_frame = debug_log.get_frame(frame);
+    if debug_frame.is_none() {
+        // This can happen if the frame scroller is never updated.
+        return;
+    }
+    let traces = &debug_frame.unwrap().traces;
     let overlay = engine_state
         .debug_systems
         .debug_ui
