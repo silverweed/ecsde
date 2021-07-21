@@ -66,6 +66,7 @@ pub struct Debug_CVars {
     pub draw_debug_grid: Cfg_Var<bool>,
     pub debug_grid_square_size: Cfg_Var<f32>,
     pub debug_grid_opacity: Cfg_Var<i32>,
+    pub debug_grid_font_size: Cfg_Var<u32>,
 
     pub draw_fps_graph: Cfg_Var<bool>,
     pub draw_prev_frame_t_graph: Cfg_Var<bool>,
@@ -318,6 +319,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     let draw_debug_grid = Cfg_Var::new("engine/debug/rendering/grid/draw_grid", cfg);
     let debug_grid_square_size = Cfg_Var::new("engine/debug/rendering/grid/square_size", cfg);
     let debug_grid_opacity = Cfg_Var::new("engine/debug/rendering/grid/opacity", cfg);
+    let debug_grid_font_size = Cfg_Var::new("engine/debug/rendering/grid/font_size", cfg);
     let draw_fps_graph = Cfg_Var::new("engine/debug/graphs/fps", cfg);
     let draw_prev_frame_t_graph = Cfg_Var::new("engine/debug/graphs/prev_frame_t", cfg);
     let draw_mouse_rulers = Cfg_Var::new("engine/debug/window/draw_mouse_rulers", cfg);
@@ -339,6 +341,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
         draw_debug_grid,
         debug_grid_square_size,
         debug_grid_opacity,
+        debug_grid_font_size,
         draw_fps_graph,
         draw_prev_frame_t_graph,
         draw_mouse_rulers,

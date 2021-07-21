@@ -111,21 +111,6 @@ fn init_gl() -> Gl {
     fill_rect_buffers(&mut gl);
     fill_circle_buffers(&mut gl);
 
-    //let handle = gl
-    //.buffer_allocators
-    //.get_alloc_mut(crate::backend_common::alloc::Buffer_Allocator_Id::Array_Permanent)
-    //.borrow_mut()
-    //.allocate(50000);
-    //let handle2 = gl
-    //.buffer_allocators
-    //.get_alloc_mut(crate::backend_common::alloc::Buffer_Allocator_Id::Array_Permanent)
-    //.borrow_mut()
-    //.allocate(5000);
-    //gl.buffer_allocators
-    //.get_alloc_mut(crate::backend_common::alloc::Buffer_Allocator_Id::Array_Permanent)
-    //.borrow_mut()
-    //.deallocate(handle);
-
     gl.rect_shader = create_shader_from!("rect", "basic_color");
     gl.line_shader = create_shader_from!("line", "vbuf");
     gl.vbuf_shader = create_shader_from!("vbuf", "vbuf");

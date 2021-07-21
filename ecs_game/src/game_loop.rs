@@ -754,8 +754,9 @@ fn update_debug(
     let draw_colliders = cvars.draw_colliders.read(&engine_state.config);
     let draw_debug_grid = cvars.draw_debug_grid.read(&engine_state.config);
     let draw_comp_alloc_colliders = cvars.draw_comp_alloc_colliders.read(&engine_state.config);
-    let square_size = cvars.debug_grid_square_size.read(&engine_state.config);
-    let opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
+    let grid_square_size = cvars.debug_grid_square_size.read(&engine_state.config);
+    let grid_font_size = cvars.debug_grid_font_size.read(&engine_state.config);
+    let grid_opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
     let draw_world_chunks = cvars.draw_world_chunks.read(&engine_state.config);
     let draw_lights = cvars.draw_lights.read(&engine_state.config);
     let lv_batches = &mut game_state.level_batches;
@@ -811,8 +812,9 @@ fn update_debug(
                     debug_painter,
                     &level.get_camera().transform,
                     target_win_size,
-                    square_size,
-                    opacity,
+                    grid_square_size,
+                    grid_opacity,
+                    grid_font_size as _,
                 );
             }
 
@@ -1340,14 +1342,17 @@ fn debug_draw_grid(
     (screen_width, screen_height): (u32, u32),
     square_size: f32,
     grid_opacity: u8,
+    font_size: u16,
 ) {
     let Vec2f { x: cx, y: cy } = camera_transform.position();
     let Vec2f {
         x: cam_sx,
         y: cam_sy,
     } = camera_transform.scale();
-    let n_horiz = (screen_width as f32 * cam_sx / square_size).floor() as usize + 2;
-    let n_vert = (screen_height as f32 * cam_sy / square_size).floor() as usize + 2;
+    let sw = screen_width as f32 * cam_sx;
+    let sh = screen_height as f32 * cam_sy;
+    let n_horiz = (sw / square_size).floor() as usize + 2;
+    let n_vert = (sh / square_size).floor() as usize + 2;
     if n_vert * n_horiz > 14_000 {
         return; // let's not kill the machine if we can help
     }
@@ -1355,8 +1360,8 @@ fn debug_draw_grid(
     let col_gray = colors::rgba(200, 200, 200, grid_opacity);
     let col_white = colors::rgba(255, 255, 255, grid_opacity);
     let sq_coord = Vec2f::new(
-        (cx / square_size).floor() * square_size,
-        (cy / square_size).floor() * square_size,
+        ((cx * cam_sx - sw * 0.5) / square_size).floor() * square_size,
+        ((cy * cam_sy - sh * 0.5) / square_size).floor() * square_size,
     );
 
     let draw_text = n_vert * n_horiz < 1000;
@@ -1380,7 +1385,7 @@ fn debug_draw_grid(
                 debug_painter.add_text(
                     &format!("{},{}", pos.x, pos.y),
                     pos + Vec2f::new(5., 5.),
-                    (square_size as i32 / 6).max(8) as u16,
+                    font_size,
                     color,
                 );
             }
