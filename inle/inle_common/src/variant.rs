@@ -53,8 +53,8 @@ impl From<&str> for Variant {
         }
 
         // @Speed: this is easy but inefficient! An actual lexer would be faster, but for now this is ok.
-        if raw.starts_with("0x") {
-            if let Ok(v) = u32::from_str_radix(&raw[2..], 16) {
+        if let Some(stripped) = raw.strip_prefix("0x") {
+            if let Ok(v) = u32::from_str_radix(stripped, 16) {
                 Self::UInt(v)
             } else {
                 eprintln!("[ NOTICE ] Variant {} parsed as string.", raw);

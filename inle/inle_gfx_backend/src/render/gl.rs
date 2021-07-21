@@ -431,7 +431,7 @@ impl Font_Metadata {
     /// plane_bounds * scale_factor = size_of_glyph_in_pixel
     fn scale_factor(&self, font_size: f32) -> f32 {
         let base_line_height = self.max_glyph_height;
-        debug_assert_ne!(base_line_height, 0.);
+        debug_assert!(base_line_height > 0.);
 
         // NOTE: this scale factor is chosen so the maximum possible text height is equal to font_size px.
         // We may want to change this and use font_size as the "main corpus" size,

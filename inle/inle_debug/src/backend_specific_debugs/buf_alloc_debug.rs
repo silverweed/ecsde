@@ -112,7 +112,7 @@ fn debug_draw_bucket<'a>(
         let mpos = pos + v2!(slot_start, 0.);
         painter.add_rect(v2!(slot_size, HEIGHT), &Transform2D::from_pos(mpos), props);
         painter.add_text(
-            &format!("{}", inle_common::units::format_bytes_pretty(slot.len)),
+            &inle_common::units::format_bytes_pretty(slot.len),
             mpos,
             10,
             text_color,
