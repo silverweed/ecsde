@@ -32,6 +32,10 @@ pub struct Game_State<'a> {
 
     #[cfg(debug_assertions)]
     pub fps_debug: inle_debug::fps::Fps_Counter,
+
+    #[cfg(debug_assertions)]
+    // needed to prevent hotload from duplicating fn name hints
+    pub already_added_fn_hints: bool,
 }
 
 pub struct CVars {
@@ -273,6 +277,8 @@ fn create_game_state<'a>(
             debug_cvars,
             #[cfg(debug_assertions)]
             fps_debug: inle_debug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(2)),
+            #[cfg(debug_assertions)]
+            already_added_fn_hints: false,
         }),
         parsed_cmdline_args,
     ))

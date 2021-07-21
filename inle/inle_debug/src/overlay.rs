@@ -154,7 +154,6 @@ impl Debug_Element for Debug_Overlay {
         let tot_height = max_row_height * n_texts_f + row_spacing * (n_texts_f - 1.0);
 
         // Draw background
-
         inle_gfx::render::render_rect(
             window,
             Rect::new(

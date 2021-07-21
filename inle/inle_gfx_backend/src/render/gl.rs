@@ -189,26 +189,32 @@ pub struct Vertex {
 }
 
 impl Vertex {
+    #[inline]
     pub fn color(&self) -> Color {
         self.color.into()
     }
 
+    #[inline]
     pub fn set_color(&mut self, c: Color) {
         self.color = c.into();
     }
 
+    #[inline]
     pub fn position(&self) -> Vec2f {
         self.position
     }
 
+    #[inline]
     pub fn set_position(&mut self, v: Vec2f) {
         self.position = v;
     }
 
+    #[inline]
     pub fn tex_coords(&self) -> Vec2f {
         self.tex_coords
     }
 
+    #[inline]
     pub fn set_tex_coords(&mut self, tc: Vec2f) {
         self.tex_coords = tc;
     }
@@ -372,6 +378,7 @@ impl Uniform_Value for &Texture<'_> {
     }
 }
 
+#[inline]
 pub fn use_shader(shader: &mut Shader) {
     unsafe {
         gl::UseProgram(shader.id);
@@ -420,6 +427,17 @@ impl Font_Metadata {
             None
         }
     }
+
+    /// plane_bounds * scale_factor = size_of_glyph_in_pixel
+    fn scale_factor(&self, font_size: f32) -> f32 {
+        let base_line_height = self.max_glyph_height;
+        debug_assert_ne!(base_line_height, 0.);
+
+        // NOTE: this scale factor is chosen so the maximum possible text height is equal to font_size px.
+        // We may want to change this and use font_size as the "main corpus" size,
+        // but for now it seems like a reasonable choice.
+        font_size / base_line_height
+    }
 }
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -455,9 +473,9 @@ pub struct Text<'font> {
     string: String,
     font: &'font Font<'font>,
     size: u16,
-    force_monospace: bool,
 }
 
+#[inline]
 pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) -> GLuint {
     unsafe {
         let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
@@ -544,6 +562,7 @@ pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) 
     }
 }
 
+#[inline]
 pub fn new_shader<'a>(vert_src: &[u8], frag_src: &[u8], shader_name: Option<&str>) -> Shader<'a> {
     Shader {
         id: new_shader_internal(vert_src, frag_src, shader_name.unwrap_or("(unnamed)")),
@@ -552,6 +571,7 @@ pub fn new_shader<'a>(vert_src: &[u8], frag_src: &[u8], shader_name: Option<&str
     }
 }
 
+#[inline]
 pub fn fill_color_rect<R>(
     window: &mut Render_Window_Handle,
     paint_props: &Paint_Properties,
@@ -588,6 +608,7 @@ pub fn fill_color_rect<R>(
     }
 }
 
+#[inline]
 pub fn fill_color_rect_ws<T>(
     window: &mut Render_Window_Handle,
     paint_props: &Paint_Properties,
@@ -632,6 +653,7 @@ pub fn fill_color_rect_ws<T>(
     }
 }
 
+#[inline]
 pub fn fill_color_circle(
     window: &mut Render_Window_Handle,
     paint_props: &Paint_Properties,
@@ -664,6 +686,7 @@ pub fn fill_color_circle(
     }
 }
 
+#[inline]
 pub fn fill_color_circle_ws(
     window: &mut Render_Window_Handle,
     paint_props: &Paint_Properties,
@@ -697,6 +720,7 @@ pub fn fill_color_circle_ws(
     }
 }
 
+#[inline]
 pub fn render_text(
     window: &mut Render_Window_Handle,
     text: &mut Text,
@@ -722,12 +746,7 @@ pub fn render_text(
 
         let mut vertices = inle_alloc::temp::excl_temp_array(&mut window.temp_allocator);
         let mut pos_x = 0.;
-        let tsize = text.size as f32;
-        let base_line_height = text.font.metadata.max_glyph_height;
-        debug_assert_ne!(base_line_height, 0.);
-        // NOTE: this scale factor is chosen so the maximum text height is equal to font_size px.
-        // We may want to change this and use font_size as the "main corpus" size.
-        let scale_factor = tsize / base_line_height;
+        let scale_factor = text.font.metadata.scale_factor(text.size as f32);
         for chr in text.string.chars() {
             if chr > '\u{256}' {
                 lerr_once!(
@@ -743,7 +762,8 @@ pub fn render_text(
                 let pb = &glyph_data.plane_bounds;
                 let rect = Rect::new(
                     pos_x + pb.left * scale_factor,
-                    -pb.top * scale_factor,
+                    // Offsetting the y so the text pivot is top-left rather than bottom-left
+                    (1.0 - pb.top) * scale_factor,
                     (pb.right - pb.left) * scale_factor,
                     (pb.top - pb.bot) * scale_factor,
                 );
@@ -788,6 +808,7 @@ pub fn render_text(
 
         gl::ActiveTexture(gl::TEXTURE0);
         gl::BindTexture(gl::TEXTURE_2D, text.font.atlas.id);
+        check_gl_err();
 
         gl::BindVertexArray(vbuf.buf.vao());
         window.gl.draw_arrays(
@@ -795,9 +816,11 @@ pub fn render_text(
             (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
             vbuf.cur_vertices as _,
         );
+        check_gl_err();
     }
 }
 
+#[inline]
 pub fn render_text_ws(
     window: &mut Render_Window_Handle,
     text: &mut Text,
@@ -809,45 +832,44 @@ pub fn render_text_ws(
     render_text(window, text, paint_props, transform.position());
 }
 
+#[inline]
 pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
     (texture.width, texture.height)
 }
 
+#[inline]
 pub fn get_image_size(image: &Image) -> (u32, u32) {
     (image.width, image.height)
 }
 
+#[inline]
 pub fn get_text_string<'a>(text: &'a Text) -> &'a str {
     &text.string
 }
 
 pub fn get_text_size(text: &Text) -> Vec2f {
     let font = &text.font;
-    let tsize = text.size as f32;
-    if !text.force_monospace {
-        let (width, height) = text
-            .string
-            .chars()
-            .map(|chr| {
-                if let Some(data) = font.metadata.get_glyph_data(chr) {
-                    (
-                        tsize * data.plane_bounds.width() + data.advance,
-                        tsize * data.plane_bounds.height(),
-                    )
-                } else {
-                    (0., 0.)
-                }
-            })
-            .fold((0_f32, 0_f32), |(acc_w, acc_h), (w, h)| {
-                (acc_w + w, acc_h.max(h))
-            });
-        v2!(width, 2. * height) // Why the 2x?
-    } else {
-        let tlen = text.string.chars().count();
-        v2!(1.6 * tsize * tlen as f32, 2. * tsize) // Why the 2x?
-    }
+    let scale_factor = text.font.metadata.scale_factor(text.size as f32);
+    let (width, height) = text
+        .string
+        .chars()
+        .map(|chr| {
+            if let Some(data) = font.metadata.get_glyph_data(chr) {
+                (
+                    scale_factor * data.advance,
+                    scale_factor * data.plane_bounds.height(),
+                )
+            } else {
+                (0., 0.)
+            }
+        })
+        .fold((0_f32, 0_f32), |(acc_w, acc_h), (w, h)| {
+            (acc_w + w, acc_h.max(h))
+        });
+    v2!(width, height)
 }
 
+#[inline]
 pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {
     Image {
         width,
@@ -858,6 +880,7 @@ pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {
     }
 }
 
+#[inline]
 pub fn new_image_with_data(
     width: u32,
     height: u32,
@@ -895,7 +918,7 @@ pub fn new_vbuf(
     )
 }
 
-#[inline(always)]
+#[inline]
 pub fn new_vbuf_temp(
     window: &mut Render_Window_Handle,
     primitive: Primitive_Type,
@@ -911,7 +934,7 @@ pub fn new_vbuf_temp(
     )
 }
 
-#[inline(always)]
+#[inline]
 pub fn add_vertices(vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
     debug_assert!(
         vbuf.cur_vertices as usize + vertices.len() <= vbuf.max_vertices as usize,
@@ -921,7 +944,7 @@ pub fn add_vertices(vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
     update_vbuf(vbuf, vertices, vbuf.cur_vertices);
 }
 
-#[inline(always)]
+#[inline]
 pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
     let mut alloc = vbuf.parent_alloc.borrow_mut();
     alloc.update_buffer(
@@ -957,6 +980,7 @@ pub fn set_vbuf_cur_vertices(vbuf: &mut Vertex_Buffer, cur_vertices: u32) {
     vbuf.cur_vertices = cur_vertices;
 }
 
+#[inline]
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     Vertex {
         position: pos,
@@ -979,6 +1003,7 @@ fn render_vbuf_internal(window: &mut Render_Window_Handle, vbuf: &Vertex_Buffer)
     }
 }
 
+#[inline]
 pub fn render_vbuf(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
@@ -992,6 +1017,7 @@ pub fn render_vbuf(
     render_vbuf_internal(window, vbuf);
 }
 
+#[inline]
 pub fn render_vbuf_ws(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
@@ -1008,6 +1034,7 @@ pub fn render_vbuf_ws(
     render_vbuf_internal(window, vbuf);
 }
 
+#[inline]
 pub fn render_vbuf_ws_with_texture(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
@@ -1029,6 +1056,7 @@ pub fn render_vbuf_ws_with_texture(
     render_vbuf_internal(window, vbuf);
 }
 
+#[inline]
 pub fn render_vbuf_with_shader(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
@@ -1053,15 +1081,16 @@ pub fn render_vbuf_with_shader(
     render_vbuf_internal(window, vbuf);
 }
 
+#[inline]
 pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
     Text {
         string: String::from(string),
         font,
         size,
-        force_monospace: true, // Probably @Temporary
     }
 }
 
+#[inline]
 pub fn render_line(window: &mut Render_Window_Handle, start: &Vertex, end: &Vertex) {
     use_line_shader(window, start, end);
 
@@ -1073,6 +1102,7 @@ pub fn render_line(window: &mut Render_Window_Handle, start: &Vertex, end: &Vert
     }
 }
 
+#[inline]
 pub fn copy_texture_to_image(texture: &Texture) -> Image {
     // NOTE: currently we always get pixels as unsigned bytes.
     let bit_depth = 1u8;
@@ -1097,6 +1127,7 @@ pub fn copy_texture_to_image(texture: &Texture) -> Image {
     }
 }
 
+#[inline]
 pub fn new_texture_from_image<'img, 'tex>(
     image: &'img Image,
     _rect: Option<Rect<i32>>,
@@ -1158,6 +1189,7 @@ pub fn new_texture_from_image<'img, 'tex>(
     }
 }
 
+#[inline]
 pub fn get_image_pixel(image: &Image, x: u32, y: u32) -> Color {
     debug_assert_eq!(image.bit_depth, 8);
 
@@ -1171,6 +1203,7 @@ pub fn get_image_pixel(image: &Image, x: u32, y: u32) -> Color {
     }
 }
 
+#[inline]
 pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {
     debug_assert_eq!(image.bit_depth, 8);
 
@@ -1194,6 +1227,7 @@ pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {
     }
 }
 
+#[inline]
 pub fn get_image_pixels(image: &Image) -> &[Color] {
     const_assert!(mem::size_of::<Color>() == 4);
     debug_assert_eq!(image.bytes.len() % 4, 0);
@@ -1201,11 +1235,13 @@ pub fn get_image_pixels(image: &Image) -> &[Color] {
     unsafe { std::slice::from_raw_parts(image.bytes.as_ptr() as *const _, image.bytes.len() / 4) }
 }
 
+#[inline]
 pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
     mem::swap(a, b);
     true
 }
 
+#[inline]
 pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[Color]) {
     unsafe {
         gl::BindTexture(gl::TEXTURE_2D, texture.id);
@@ -1224,14 +1260,17 @@ pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[
     }
 }
 
+#[inline]
 pub fn shaders_are_available() -> bool {
     true
 }
 
+#[inline]
 pub fn geom_shaders_are_available() -> bool {
     false
 }
 
+#[inline]
 pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
     unsafe {
         gl::BindTexture(gl::TEXTURE_2D, texture.id);
@@ -1256,6 +1295,7 @@ pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
     }
 }
 
+#[inline]
 pub fn set_texture_smooth(texture: &mut Texture, smooth: bool) {
     // @TODO: make this work
     unsafe {

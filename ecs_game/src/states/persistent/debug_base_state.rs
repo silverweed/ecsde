@@ -167,7 +167,12 @@ impl Persistent_Game_State for Debug_Base_State {
         }
     }
 
-    fn update(&mut self, args: &mut Game_State_Args, _dt: &Duration, _real_dt: &Duration) {
+    fn update(&mut self, args: &mut Game_State_Args, _dt: &Duration, _real_dt: &Duration) {}
+}
+
+/*
+impl Debug_Base_State {
+    fn update_digging(&mut self, args: &mut Game_State_Args) {
         if !self.digging {
             return;
         }
@@ -249,3 +254,4 @@ impl Persistent_Game_State for Debug_Base_State {
         }
     }
 }
+*/

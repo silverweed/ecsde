@@ -437,6 +437,11 @@ pub fn init_engine_debug(
             font_size: Cfg_Var::new("engine/debug/console/font_size", &engine_state.config),
             pad_x: Cfg_Var::new("engine/debug/console/pad_x", &engine_state.config),
             linesep: Cfg_Var::new("engine/debug/console/linesep", &engine_state.config),
+            opacity: Cfg_Var::new("engine/debug/console/opacity", &engine_state.config),
+            cur_line_opacity: Cfg_Var::new(
+                "engine/debug/console/cur_line_opacity",
+                &engine_state.config,
+            ),
             ui_scale: debug_ui.cfg.ui_scale,
         });
     }

@@ -38,6 +38,8 @@ pub struct Console_Config {
     pub ui_scale: Cfg_Var<f32>,
     pub pad_x: Cfg_Var<f32>,
     pub linesep: Cfg_Var<f32>,
+    pub opacity: Cfg_Var<f32>,          // [0, 1]
+    pub cur_line_opacity: Cfg_Var<f32>, // [0, 1]
 }
 
 pub struct Console {
@@ -483,6 +485,10 @@ impl Console {
 
         let pad_x = self.cfg.pad_x.read(config) * ui_scale;
         let linesep = self.cfg.linesep.read(config) * ui_scale;
+        let linesep = linesep + font_size as f32;
+
+        let opacity = (self.cfg.opacity.read(config) * 255.0) as u8;
+        let cur_line_opacity = (self.cfg.cur_line_opacity.read(config) * 255.0) as u8;
 
         // Draw background
         let Vec2u { x, y } = self.pos;
@@ -490,18 +496,18 @@ impl Console {
         render::render_rect(
             window,
             Rect::new(x, y, w, h - linesep as u32),
-            colors::rgba(0, 0, 0, 150),
+            colors::rgba(0, 0, 0, opacity),
         );
         render::render_rect(
             window,
             Rect::new(x, h - linesep as u32, w, linesep as u32),
-            colors::rgba(30, 30, 30, 200),
+            colors::rgba(30, 30, 30, cur_line_opacity),
         );
 
         // Draw cur line
         let font = gres.get_font(self.cfg.font);
         let mut text = render::create_text(&self.cur_line, font, font_size);
-        let mut pos = Vec2f::from(self.pos) + Vec2f::new(pad_x, self.size.y as f32 - linesep);
+        let mut pos = v2!(x as f32 + pad_x, (y + h) as f32 - linesep);
         let Vec2f { x: line_w, .. } = render::get_text_size(&text);
         render::render_text(window, &mut text, colors::WHITE, pos);
 
