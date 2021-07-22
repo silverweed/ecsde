@@ -1,8 +1,10 @@
 #![allow(clippy::op_ref)]
 
+use crate::vector::Vector2;
 use std::fmt::{Debug, Formatter};
 use std::ops::*;
 
+#[repr(C)]
 pub struct Matrix3<T> {
     columns: [[T; 3]; 3],
 }
@@ -360,6 +362,13 @@ where
 
     fn sub(self, other: Matrix3<T>) -> Self::Output {
         &self - &other
+    }
+}
+
+#[cfg(test)]
+impl inle_test::approx_eq_testable::Approx_Eq_Testable for Matrix3<f32> {
+    fn cmp_list(&self) -> Vec<f32> {
+        self.as_slice().to_vec()
     }
 }
 

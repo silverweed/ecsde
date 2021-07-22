@@ -3,7 +3,7 @@ use crate::backend_common::misc::check_gl_err;
 use gl::types::*;
 use inle_alloc::temp;
 use inle_common::colors::Color;
-use inle_math::rect::{Rect, Rectf};
+use inle_math::rect::{Rect, Rectf, Recti};
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::Window_Handle;
@@ -11,6 +11,7 @@ use std::{mem, ptr, str};
 
 pub struct Render_Window_Handle {
     window: Window_Handle,
+    viewport: Recti,
     pub gl: Gl,
     pub temp_allocator: temp::Temp_Allocator,
 }
@@ -195,8 +196,10 @@ fn fill_circle_buffers(gl: &mut Gl) {
 
 pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
     gl::load_with(|symbol| inle_win::window::get_gl_handle(&mut window, symbol));
+    let win_size = inle_win::window::get_window_target_size(&window);
     Render_Window_Handle {
         window,
+        viewport: Recti::new(0, 0, win_size.0 as _, win_size.1 as _),
         gl: init_gl(),
         temp_allocator: temp::Temp_Allocator::with_capacity(inle_common::units::megabytes(10)),
     }
@@ -241,17 +244,45 @@ pub fn set_viewport(window: &mut Render_Window_Handle, viewport: &Rectf, _view_r
         (0.5 + height * viewport.height) as i32,
     );
 
+    window.viewport = viewport;
+
     unsafe {
         gl::Viewport(viewport.x, viewport.y, viewport.width, viewport.height);
     }
 }
 
+//      <*viewp  <proj  <cam-1
+// screen -> ndc -> view -> world
 pub fn raw_unproject_screen_pos(
     screen_pos: Vec2i,
-    _window: &Render_Window_Handle,
+    window: &Render_Window_Handle,
     camera: &Transform2D,
 ) -> Vec2f {
-    *camera * Vec2f::from(screen_pos)
+    // Convert from screen coords to NDC
+    let ndc_x =
+        -1. + 2. * (screen_pos.x as f32 - window.viewport.x as f32) / window.viewport.width as f32;
+    let ndc_y =
+        -1. + 2. * (screen_pos.y as f32 - window.viewport.y as f32) / window.viewport.height as f32;
+
+    let proj_inverse = inle_math::matrix::Matrix3::new(
+        0.5 * window.viewport.width as f32,
+        0.,
+        0.,
+        0.,
+        -0.5 * window.viewport.height as f32,
+        0.,
+        0.,
+        0.,
+        1.,
+    );
+    let proj_view_inverse = proj_inverse * camera.get_matrix();
+
+    // Convert from NDC to world
+    proj_view_inverse
+        * v2!(
+            ndc_x * window.viewport.width as f32,
+            ndc_y * window.viewport.height as f32
+        )
 }
 
 pub fn raw_project_world_pos(

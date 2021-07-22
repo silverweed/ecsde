@@ -1625,6 +1625,7 @@ fn get_mvp_matrix(
     projection * view.get_matrix() * model.get_matrix()
 }
 
+// this is get_mvp_matrix with camera == identity
 fn get_mvp_screen_matrix(window: &Render_Window_Handle, transform: &Transform2D) -> Matrix3<f32> {
     let (width, height) = inle_win::window::get_window_target_size(window);
     let model = transform;
@@ -1650,5 +1651,51 @@ fn to_gl_primitive_type(prim: Primitive_Type) -> GLenum {
         Primitive_Type::Triangles => gl::TRIANGLES,
         Primitive_Type::Triangle_Strip => gl::TRIANGLE_STRIP,
         Primitive_Type::Triangle_Fan => gl::TRIANGLE_FAN,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use inle_math::angle::rad;
+    use inle_test::*;
+
+    #[test]
+    fn mvp_screen_matrix() {
+        let transform = Transform2D::from_pos_rot_scale(v2!(234., 33.), rad(1.2), v2!(1.2, 2.3));
+        let camera = Transform2D::from_pos_rot_scale(v2!(-333., -64.), rad(-0.5), v2!(3., 3.));
+        let width = 1920.;
+        let height = 1080.;
+        let model = transform;
+        let view = camera.inverse();
+        let projection = Matrix3::new(
+            2. / width as f32,
+            0.,
+            0.,
+            0.,
+            -2. / height as f32,
+            0.,
+            0.,
+            0.,
+            1.,
+        );
+        let mvp = projection * view.get_matrix() * model.get_matrix();
+
+        let view_projection = Matrix3::new(
+            2. / width as f32,
+            0.,
+            -1.,
+            0.,
+            -2. / height as f32,
+            1.,
+            0.,
+            0.,
+            1.,
+        );
+        let screen_mvp = view_projection * model.get_matrix();
+
+        // @Fixme: for unknown reasons, this doesn't see the trait implementation
+        // for approx eq testable
+        assert_approx_eq!(mvp, screen_mvp);
     }
 }

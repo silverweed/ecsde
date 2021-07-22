@@ -931,10 +931,10 @@ fn update_mouse_debug_overlay(
 
     let color = colors::rgba(255, 255, 255, 150);
     let (win_w, win_h) = window::get_window_real_size(window);
-    let from_x = Vec2f::new(0., pos.y as _);
-    let to_x = Vec2f::new(win_w as _, pos.y as _);
-    let from_y = Vec2f::new(pos.x as _, 0.);
-    let to_y = Vec2f::new(pos.x as _, win_h as _);
+    let from_x = Vec2f::new(-((win_w / 2) as f32), pos.y as _);
+    let to_x = Vec2f::new((win_w / 2) as f32, pos.y as _);
+    let from_y = Vec2f::new(pos.x as _, -((win_h / 2) as f32));
+    let to_y = Vec2f::new(pos.x as _, (win_h / 2) as f32);
     painter.add_line(
         Line {
             from: from_x,
