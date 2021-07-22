@@ -205,7 +205,7 @@ pub fn key_to_char(key: Key, maiusc: bool) -> Option<char> {
         Key::SemiColon => Some(if maiusc { ':' } else { ';' }),
         Key::Comma => Some(if maiusc { '<' } else { ',' }),
         Key::Period => Some(if maiusc { '>' } else { '.' }),
-        Key::Quote => Some(if maiusc { '\'' } else { '"' }),
+        Key::Quote => Some(if maiusc { '"' } else { '\'' }),
         Key::Slash => Some(if maiusc { '?' } else { '/' }),
         Key::BackSlash => Some(if maiusc { '|' } else { '\\' }),
         Key::Tilde => Some(if maiusc { '~' } else { '`' }),
