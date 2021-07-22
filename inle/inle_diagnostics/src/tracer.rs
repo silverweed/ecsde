@@ -194,16 +194,17 @@ impl Tracer {
 
 #[inline(always)]
 pub fn total_traced_time(traces: &[Tracer_Node_Final]) -> Duration {
+    // NOTE: this takes so little time (~1us) that's not worth parallelizing at all (it's also called rarely)
     traces
-        .par_iter()
-        .filter_map(|node| {
+        .iter()
+        .map(|node| {
             if node.parent_idx.is_none() {
-                Some(node.info.tot_duration())
+                node.info.tot_duration()
             } else {
-                None
+                Duration::default()
             }
         })
-        .reduce(Duration::default, |acc, x| acc + x)
+        .sum();
 }
 
 #[inline(always)]
@@ -263,6 +264,10 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
 
     // Accumulate n_calls of all nodes with the same tag.
     // @Speed: this could use the frame_allocator.
+    // NOTE: quick measuring showed:
+    // - doing this in parallel:  ~0.5ms, std=0.19
+    // - doing this sequentially: ~1.2ms, std=0.26
+    // -- 22 Jul 2021
     let hashes = saved_traces
         .par_iter()
         .map(|node| hash_node(saved_traces, node))
@@ -291,8 +296,12 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
         }
     }
 
+    // NOTE: quick measuring showed:
+    // - doing this in parallel:  ~0.2ms,  std=0.29
+    // - doing this sequentially: ~0.05ms, std=0.016
+    // -- 22 Jul 2021
     tags_ordered
-        .par_iter()
+        .iter()
         .map(|hash| {
             let info = &tag_map[&hash];
             Tracer_Node_Final {
