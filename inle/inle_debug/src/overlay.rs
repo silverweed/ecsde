@@ -1,11 +1,11 @@
 use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
 use inle_alloc::temp;
-use inle_gfx::render;
 use inle_cfg::Cfg_Var;
 use inle_common::colors::{self, Color};
 use inle_common::stringid::String_Id;
 use inle_common::variant::Variant;
 use inle_common::vis_align::Align;
+use inle_gfx::render;
 use inle_math::rect::{Rect, Rectf};
 use inle_math::vector::Vec2f;
 use inle_resources::gfx::Font_Handle;
@@ -156,18 +156,13 @@ impl Debug_Element for Debug_Overlay {
         let tot_height = 2.0 * pad_y + max_row_height * n_texts_f + row_spacing * (n_texts_f - 1.0);
 
         // Draw background
-        let bg_rect =
-            Rect::new(
-                position.x + horiz_align.aligned_pos(0.0, 2.0 * pad_x + max_row_width),
-                position.y + vert_align.aligned_pos(0.0, 2.0 * pad_y + tot_height),
-                2.0 * pad_x + max_row_width,
-                2.0 * pad_y + tot_height,
-            );
-        render::render_rect(
-            window,
-            bg_rect,
-            background,
+        let bg_rect = Rect::new(
+            position.x + horiz_align.aligned_pos(0.0, 2.0 * pad_x + max_row_width),
+            position.y + vert_align.aligned_pos(0.0, 2.0 * pad_y + tot_height),
+            2.0 * pad_x + max_row_width,
+            2.0 * pad_y + tot_height,
         );
+        render::render_rect(window, bg_rect, background);
 
         self.max_row_bounds.set((max_row_width, max_row_height));
         self.latest_bounds.set(bg_rect);

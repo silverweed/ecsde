@@ -29,6 +29,7 @@ pub struct Debug_Frame_Scroller_Config {
 
 #[derive(Default)]
 pub struct Debug_Frame_Scroller {
+    pub hidden: bool, // @Cleanup: we may want to treat the scroller more like the other debug elements
     pub cfg: Debug_Frame_Scroller_Config,
     pub pos: Vec2u,
     pub size: Vec2u,

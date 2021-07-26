@@ -323,7 +323,9 @@ impl Debug_Ui_System {
         );
 
         self.frame_scroller.update(window, log, input_state);
-        self.frame_scroller.draw(window, gres, log, config);
+        if !self.frame_scroller.hidden {
+            self.frame_scroller.draw(window, gres, log, config);
+        }
     }
 }
 

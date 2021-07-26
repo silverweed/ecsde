@@ -264,12 +264,13 @@ pub fn raw_unproject_screen_pos(
     let ndc_y =
         -1. + 2. * (screen_pos.y as f32 - window.viewport.y as f32) / window.viewport.height as f32;
 
+    let (win_w, win_h) = inle_win::window::get_window_target_size(window);
     let proj_inverse = inle_math::matrix::Matrix3::new(
-        0.5 * window.viewport.width as f32,
+        0.5 * win_w as f32,
         0.,
         0.,
         0.,
-        -0.5 * window.viewport.height as f32,
+        -0.5 * win_h as f32,
         0.,
         0.,
         0.,
@@ -277,7 +278,13 @@ pub fn raw_unproject_screen_pos(
     );
     let proj_view_inverse = camera.get_matrix() * proj_inverse;
 
-    v2!(ndc_x * window.viewport.width as f32, ndc_y * window.viewport.height as f32)
+    //dbg!(proj_view_inverse);
+    //dbg!(v3!(ndc_x, ndc_y, 1.0));
+    (&proj_view_inverse * v3!(
+        ndc_x,
+        ndc_y,
+        1.0,
+    )).into()
     // Convert from NDC to world
     //((&proj_view_inverse) * v3!(
     //    ndc_x * window.viewport.width as f32,

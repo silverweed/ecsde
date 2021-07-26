@@ -80,6 +80,8 @@ pub struct Debug_CVars {
     pub draw_buf_alloc: Cfg_Var<bool>,
 
     pub display_log_window: Cfg_Var<bool>,
+
+    pub display_overlays: Cfg_Var<bool>,
 }
 
 #[repr(C)]
@@ -327,6 +329,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     let draw_world_chunks = Cfg_Var::new("engine/debug/world/draw_chunks", cfg);
     let draw_buf_alloc = Cfg_Var::new("engine/debug/rendering/draw_buf_alloc", cfg);
     let display_log_window = Cfg_Var::new("engine/debug/log_window/display", cfg);
+    let display_overlays = Cfg_Var::new("engine/debug/overlay/display", cfg);
 
     Debug_CVars {
         render_debug_visualization,
@@ -349,6 +352,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
         draw_world_chunks,
         draw_buf_alloc,
         display_log_window,
+        display_overlays,
     }
 }
 

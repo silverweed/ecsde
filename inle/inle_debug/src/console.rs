@@ -407,7 +407,8 @@ impl Console {
                         self.cur_pos += 1;
                         break;
                     } else {
-                        prev_was_ws = self.cur_pos > 0 && self.cur_line.chars().nth(self.cur_pos - 1) == Some(' ');
+                        prev_was_ws = self.cur_pos > 0
+                            && self.cur_line.chars().nth(self.cur_pos - 1) == Some(' ');
                     }
                 }
                 _ => {}

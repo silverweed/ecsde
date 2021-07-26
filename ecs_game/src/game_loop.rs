@@ -652,21 +652,39 @@ fn update_debug(
     let debug_systems = &mut engine_state.debug_systems;
 
     // Overlays
-    update_time_debug_overlay(
-        debug_systems.debug_ui.get_overlay(sid!("time")),
-        &engine_state.time,
-    );
+    let display_overlays = game_state
+        .debug_cvars
+        .display_overlays
+        .read(&engine_state.config);
+    let overlays_were_visible = debug_systems.debug_ui.is_overlay_enabled(sid!("time"));
+    if display_overlays {
+        if !overlays_were_visible {
+            set_debug_hud_enabled(&mut debug_systems.debug_ui, true);
+        }
 
-    update_fps_debug_overlay(
-        debug_systems.debug_ui.get_overlay(sid!("fps")),
-        &game_state.fps_debug,
-        (1000.
-            / game_state
-                .cvars
-                .gameplay_update_tick_ms
-                .read(&engine_state.config)) as u64,
-        game_state.cvars.vsync.read(&engine_state.config),
-    );
+        update_time_debug_overlay(
+            debug_systems.debug_ui.get_overlay(sid!("time")),
+            &engine_state.time,
+        );
+
+        update_fps_debug_overlay(
+            debug_systems.debug_ui.get_overlay(sid!("fps")),
+            &game_state.fps_debug,
+            (1000.
+                / game_state
+                    .cvars
+                    .gameplay_update_tick_ms
+                    .read(&engine_state.config)) as u64,
+            game_state.cvars.vsync.read(&engine_state.config),
+        );
+
+        update_win_debug_overlay(
+            debug_systems.debug_ui.get_overlay(sid!("window")),
+            &game_state.window,
+        );
+    } else if overlays_were_visible {
+        set_debug_hud_enabled(&mut debug_systems.debug_ui, false);
+    }
 
     let input_state = &engine_state.input_state;
     let draw_mouse_rulers = game_state
@@ -702,11 +720,6 @@ fn update_debug(
             .debug_ui
             .set_log_window_enabled(sid!("log_window"), display_log_window);
     }
-
-    update_win_debug_overlay(
-        debug_systems.debug_ui.get_overlay(sid!("window")),
-        &game_state.window,
-    );
 
     let draw_fps_graph = game_state
         .debug_cvars
@@ -771,15 +784,18 @@ fn update_debug(
                 .get_mut(&level.id)
                 .unwrap_or_else(|| fatal!("Debug painter not found for level {:?}", level.id));
 
-            update_entities_debug_overlay(debug_ui.get_overlay(sid!("entities")), &level.world);
+            if display_overlays {
+                update_entities_debug_overlay(debug_ui.get_overlay(sid!("entities")), &level.world);
+                update_camera_debug_overlay(debug_ui.get_overlay(sid!("camera")), &level.get_camera());
+                update_physics_debug_overlay(
+                    debug_ui.get_overlay(sid!("physics")),
+                    &collision_debug_data[&level.id],
+                    &level.chunks,
+                );
+            }
 
-            update_camera_debug_overlay(debug_ui.get_overlay(sid!("camera")), &level.get_camera());
-
-            update_physics_debug_overlay(
-                debug_ui.get_overlay(sid!("physics")),
-                &collision_debug_data[&level.id],
-                &level.chunks,
-            );
+            // DEBUG
+            debug_painter.add_rect(v2!(10., 10.), &Transform2D::default(), inle_common::colors::WHITE);
 
             if draw_entities {
                 debug_draw_transforms(debug_painter, &level.world);
@@ -922,10 +938,10 @@ fn update_mouse_debug_overlay(
     let pos = mouse::mouse_pos_in_window(window, &input_state.raw.mouse_state);
     debug_overlay.position = Vec2f::from(pos) + v2!(0., -15.);
     let overlay_size = debug_overlay.bounds().size();
-    debug_overlay.position.x = inle_math::math::clamp(
-        debug_overlay.position.x, 0., win_w as f32 - overlay_size.x);
-    debug_overlay.position.y = inle_math::math::clamp(
-        debug_overlay.position.y, overlay_size.y, win_h as f32);
+    debug_overlay.position.x =
+        inle_math::math::clamp(debug_overlay.position.x, 0., win_w as f32 - overlay_size.x);
+    debug_overlay.position.y =
+        inle_math::math::clamp(debug_overlay.position.y, overlay_size.y, win_h as f32);
     debug_overlay
         .add_line(&format!("s {},{}", pos.x, pos.y))
         .with_color(colors::rgba(220, 220, 220, 220));
@@ -1438,4 +1454,16 @@ fn get_render_system_debug_visualization(
         "3" | "m" | "materials" => render_system::Debug_Visualization::Materials,
         _ => render_system::Debug_Visualization::None,
     }
+}
+
+#[cfg(debug_assertions)]
+fn set_debug_hud_enabled(debug_ui: &mut inle_debug::debug_ui::Debug_Ui_System, enabled: bool) {
+        debug_ui.set_overlay_enabled(sid!("time"), enabled);
+        debug_ui.set_overlay_enabled(sid!("fps"), enabled);
+        debug_ui.set_overlay_enabled(sid!("window"), enabled);
+        debug_ui.set_overlay_enabled(sid!("entities"), enabled);
+        debug_ui.set_overlay_enabled(sid!("camera"), enabled);
+        debug_ui.set_overlay_enabled(sid!("physics"), enabled);
+        debug_ui.set_overlay_enabled(sid!("joysticks"), enabled);
+        debug_ui.frame_scroller.hidden = !enabled;
 }

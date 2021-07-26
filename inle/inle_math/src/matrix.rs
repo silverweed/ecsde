@@ -513,4 +513,20 @@ mod tests {
         let a = Matrix3::new(1, 2, 3, 4, 5, 6, 7, 8, 9);
         assert_eq!(a.as_slice(), &[1, 4, 7, 2, 5, 8, 3, 6, 9]);
     }
+
+    #[test]
+    #[rustfmt::skip]
+    fn product_with_vec3() {
+        let m = Matrix3::new(
+            1, 2, 3,
+            4, 5, 6,
+            7, 8, 9);
+        let v = v3!(2, 3, 4);
+        let p = &m * v;
+
+        assert_eq!(p, v3!(
+            2 + 6 + 12,
+            8 + 15 + 24,
+            14 + 24 + 36));
+    }
 }
