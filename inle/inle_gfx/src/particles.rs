@@ -200,14 +200,41 @@ pub fn render_particles(
     let mut vertices = temp::excl_temp_array(frame_alloc);
     for &transf in &particles.transforms {
         // @Incomplete or @Redundant: passing the vertex color is useless right now
+        let pos = transf.position();
         vertices.push(render::new_vertex(
-            transf.position(),
+            pos + v2!(-1.0, -1.0),
             particles.props.color,
-            Vec2f::default(),
+            v2!(0., 0.),
+        ));
+        vertices.push(render::new_vertex(
+            pos + v2!(1.0, -1.0),
+            particles.props.color,
+            v2!(1., 0.),
+        ));
+        vertices.push(render::new_vertex(
+            pos + v2!(-1.0, 1.0),
+            particles.props.color,
+            v2!(0., 1.),
+        ));
+        vertices.push(render::new_vertex(
+            pos + v2!(-1.0, 1.0),
+            particles.props.color,
+            v2!(0., 1.),
+        ));
+        vertices.push(render::new_vertex(
+            pos + v2!(1.0, -1.0),
+            particles.props.color,
+            v2!(1., 0.),
+        ));
+        vertices.push(render::new_vertex(
+            pos + v2!(1.0, 1.0),
+            particles.props.color,
+            v2!(1., 1.),
         ));
     }
 
-    vbuf.update(&mut vertices, particles.transforms.len() as u32);
+    let vert_count = vertices.len() as u32;
+    vbuf.update(&mut vertices, vert_count);
 
     if let Some(texture) = texture {
         render::set_uniform(shader, c_str!("tex"), texture);
@@ -247,7 +274,7 @@ pub struct Particle_Manager {
 
 impl Particle_Manager {
     pub fn new(shader_cache: &mut Shader_Cache, env: &Env_Info, cfg: &inle_cfg::Config) -> Self {
-        let particle_shader = shader_cache.load_shader_with_geom(&shader_path(env, "particles"));
+        let particle_shader = shader_cache.load_shader(&shader_path(env, "particles"));
         Self {
             particle_shader,
             active_particles: vec![],
@@ -268,7 +295,7 @@ impl Particle_Manager {
         self.active_particles_vbufs
             .push(Vertex_Buffer_Holder::with_initial_vertex_count(
                 window,
-                props.n_particles as u32,
+                props.n_particles as u32 * 6,
                 Primitive_Type::Points,
                 #[cfg(debug_assertions)]
                 format!("{:?}", props),

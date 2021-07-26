@@ -90,6 +90,7 @@ impl<'l> Shader_Cache<'l> {
     }
 
     pub fn must_get_mut<'a>(&'a mut self, handle: Shader_Handle) -> &'a mut Shader<'l> {
-        self.cache.get_mut(&handle.unwrap()).unwrap()
+        let handle = handle.unwrap_or_else(|| fatal!("must_get_mut() called with an invalid Shader_Handle"));
+        self.cache.get_mut(&handle).unwrap_or_else(|| fatal!("Failed to get shader {:?}", handle))
     }
 }

@@ -204,7 +204,7 @@ pub fn total_traced_time(traces: &[Tracer_Node_Final]) -> Duration {
                 Duration::default()
             }
         })
-        .sum();
+        .sum()
 }
 
 #[inline(always)]

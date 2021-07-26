@@ -101,6 +101,7 @@ impl Gameplay_System {
     // @Temporary
     pub fn load_test_level(
         &mut self,
+        window: &mut Render_Window_Handle,
         engine_state: &mut Engine_State,
         game_res: &mut Game_Resources,
         level_batches: &mut HashMap<String_Id, Batches>,
@@ -135,7 +136,6 @@ impl Gameplay_System {
         }
 
         // @Temporary
-        /*
         {
             use inle_gfx::particles;
             use inle_math::angle;
@@ -161,7 +161,7 @@ impl Gameplay_System {
                     .particle_mgrs
                     .get_mut(&level_id)
                     .unwrap();
-                let handle = particle_mgr.add_particles(&props, rng);
+                let handle = particle_mgr.add_particles(window, &props, rng);
                 particle_mgr
                     .get_particles_mut(handle)
                     .transform
@@ -171,7 +171,7 @@ impl Gameplay_System {
                     .transform
                     .set_rotation(inle_math::angle::rad(i as f32 * 0.2));
             }
-        }*/
+        }
     }
 
     // @Temporary
