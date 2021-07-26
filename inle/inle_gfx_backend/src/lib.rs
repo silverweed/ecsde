@@ -4,6 +4,10 @@
 #![allow(non_camel_case_types)]
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
+#[cfg(test)]
+#[macro_use]
+extern crate inle_test;
+
 #[macro_use]
 extern crate inle_common;
 

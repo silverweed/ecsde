@@ -80,6 +80,12 @@ impl From<Vec2f> for Vec2i {
     }
 }
 
+impl<T> From<Vector3<T>> for Vector2<T> {
+    fn from(v: Vector3<T>) -> Self {
+        Self { x: v.x, y: v.y }
+    }
+}
+
 impl<T> Vector2<T> {
     pub const fn new(x: T, y: T) -> Self {
         Self { x, y }
@@ -379,19 +385,106 @@ impl Vec2u {
     }
 }
 
+#[repr(C)]
+pub struct Vector3<T> {
+    pub x: T,
+    pub y: T,
+    pub z: T,
+}
+
+pub type Vec3i = Vector3<i32>;
+pub type Vec3u = Vector3<u32>;
+pub type Vec3f = Vector3<f32>;
+
+impl<T: Default> Default for Vector3<T> {
+    fn default() -> Self {
+        Self {
+            x: T::default(),
+            y: T::default(),
+            z: T::default(),
+        }
+    }
+}
+
+impl<T: Copy> Copy for Vector3<T> {}
+impl<T: Clone> Clone for Vector3<T> {
+    fn clone(&self) -> Self {
+        Self {
+            x: self.x.clone(),
+            y: self.y.clone(),
+            z: self.z.clone(),
+        }
+    }
+}
+
+impl<T> Vector3<T> {
+    pub const fn new(x: T, y: T, z: T) -> Self {
+        Self { x, y, z }
+    }
+}
+
+impl<T: ToString> std::string::ToString for Vector3<T> {
+    fn to_string(&self) -> String {
+        format!(
+            "{}, {}, {}",
+            self.x.to_string(),
+            self.y.to_string(),
+            self.z.to_string()
+        )
+    }
+}
+
+impl<T: Debug> Debug for Vector3<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "{{ x: {:?}, y: {:?}, z: {:?}  }}",
+            self.x, self.y, self.z
+        )
+    }
+}
+
+impl<T: PartialEq> PartialEq for Vector3<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y && self.z == other.z
+    }
+}
+
+impl<T: Eq> Eq for Vector3<T> {}
+
+impl<T: Copy> std::ops::Index<usize> for Vector3<T> {
+    type Output = T;
+
+    fn index(&self, idx: usize) -> &Self::Output {
+        match idx {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => fatal!("Tried to index Vector3 with invalid index {}", idx),
+        }
+    }
+}
+
+#[cfg(test)]
+impl inle_test::approx_eq_testable::Approx_Eq_Testable for Vec3f {
+    fn cmp_list(&self) -> Vec<f32> {
+        vec![self.x, self.y, self.z]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn vector_default() {
+    fn vec2_default() {
         assert_eq!(Vec2u::default(), Vec2u::new(0, 0));
         assert_eq!(Vec2i::default(), Vec2i::new(0, 0));
         assert_eq!(Vec2f::default(), Vec2f::new(0., 0.));
     }
 
     #[test]
-    fn vector_copy() {
+    fn vec2_copy() {
         let a = Vec2i::new(2, 3);
         let b = a;
         assert_eq!(a, b);
@@ -406,7 +499,7 @@ mod tests {
     }
 
     #[test]
-    fn vector_add() {
+    fn vec2_add() {
         assert_eq!(Vec2i::new(0, 1) + Vec2i::new(3, 1), Vec2i::new(3, 2));
         assert_eq!(
             Vec2u::new(2, 10) + Vec2u::new(103, 100),
@@ -416,7 +509,7 @@ mod tests {
     }
 
     #[test]
-    fn vector_sub() {
+    fn vec2_sub() {
         assert_eq!(Vec2i::new(0, 1) - Vec2i::new(3, 1), Vec2i::new(-3, 0));
         assert_eq!(Vec2u::new(200, 10) - Vec2u::new(103, 10), Vec2u::new(97, 0));
         assert_eq!(
@@ -426,14 +519,14 @@ mod tests {
     }
 
     #[test]
-    fn vector_mul_scalar() {
+    fn vec2_mul_scalar() {
         assert_eq!(Vec2i::new(0, 3) * 3, Vec2i::new(0, 9));
         assert_eq!(Vec2u::new(200, 10) * 2, Vec2u::new(400, 20));
         assert_eq!(Vec2f::new(5., 0.) * 0.5, Vec2f::new(2.5, 0.));
     }
 
     #[test]
-    fn vector_mul_compwise() {
+    fn vec2_mul_compwise() {
         assert_eq!(Vec2i::new(0, 3) * Vec2i::new(2, 3), Vec2i::new(0, 9));
         assert_eq!(
             Vec2u::new(200, 10) * Vec2u::new(2, 10),
@@ -446,7 +539,7 @@ mod tests {
     }
 
     #[test]
-    fn vector_div_compwise() {
+    fn vec2_div_compwise() {
         assert_eq!(Vec2i::new(0, 3) / Vec2i::new(2, 3), Vec2i::new(0, 1));
         assert_eq!(Vec2u::new(200, 10) / Vec2u::new(2, 5), Vec2u::new(100, 2));
         assert_eq!(
@@ -456,20 +549,20 @@ mod tests {
     }
 
     #[test]
-    fn vector_div() {
+    fn vec2_div() {
         assert_eq!(Vec2i::new(0, 3) / 3, Vec2i::new(0, 1));
         assert_eq!(Vec2u::new(200, 10) / 2, Vec2u::new(100, 5));
         assert_eq!(Vec2f::new(5., 0.) / 0.5, Vec2f::new(10., 0.));
     }
 
     #[test]
-    fn vector_neg() {
+    fn vec2_neg() {
         assert_eq!(-Vec2i::new(10, 3), Vec2i::new(-10, -3));
         assert_eq!(-Vec2f::new(5., 0.5), Vec2f::new(-5., -0.5));
     }
 
     #[test]
-    fn vector_add_assign() {
+    fn vec2_add_assign() {
         let mut a = Vec2i::new(1, 2);
         a += Vec2i::new(3, 0);
         assert_eq!(a, Vec2i::new(4, 2));
@@ -484,7 +577,7 @@ mod tests {
     }
 
     #[test]
-    fn vector_sub_assign() {
+    fn vec2_sub_assign() {
         let mut a = Vec2i::new(1, 2);
         a -= Vec2i::new(3, 0);
         assert_eq!(a, Vec2i::new(-2, 2));
@@ -499,7 +592,7 @@ mod tests {
     }
 
     #[test]
-    fn vector_mul_assign() {
+    fn vec2_mul_assign() {
         let mut a = Vec2i::new(1, 2);
         a *= 3;
         assert_eq!(a, Vec2i::new(3, 6));
@@ -514,7 +607,7 @@ mod tests {
     }
 
     #[test]
-    fn vector_div_assign() {
+    fn vec2_div_assign() {
         let mut a = Vec2i::new(4, 8);
         a /= 3;
         assert_eq!(a, Vec2i::new(1, 2));
@@ -529,7 +622,7 @@ mod tests {
     }
 
     #[test]
-    fn vector_normalize() {
+    fn vec2_normalize() {
         let v = Vec2f::new(1., 1.).normalized_or_zero();
         assert_approx_eq!(v.x, 0.707_106_7);
         assert_eq!(v.x, v.y);
@@ -543,12 +636,12 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn vector_normalize_zero_length() {
+    fn vec2_normalize_zero_length() {
         let _ = Vec2f::new(0., 0.).normalized();
     }
 
     #[test]
-    fn vector_distance_f32() {
+    fn vec2_distance_f32() {
         let a = Vec2f::new(0., 0.);
         let b = Vec2f::new(3., 4.);
 
@@ -560,7 +653,7 @@ mod tests {
     }
 
     #[test]
-    fn vector_distance_i32() {
+    fn vec2_distance_i32() {
         const A: Vec2i = Vec2i::new(0, 0);
         const B: Vec2i = Vec2i::new(3, 4);
 
@@ -572,7 +665,7 @@ mod tests {
     }
 
     #[test]
-    fn vector_distance_u32() {
+    fn vec2_distance_u32() {
         let a = Vec2u::new(0, 0);
         const B: Vec2u = Vec2u::new(3, 4);
 
@@ -581,5 +674,27 @@ mod tests {
 
         assert_approx_eq!(a.distance2(B), 25.);
         assert_approx_eq!(B.distance2(a), 25.);
+    }
+
+    #[test]
+    fn vec3_default() {
+        assert_eq!(Vec3u::default(), Vec3u::new(0, 0, 0));
+        assert_eq!(Vec3i::default(), Vec3i::new(0, 0, 0));
+        assert_eq!(Vec3f::default(), Vec3f::new(0., 0., 0.));
+    }
+
+    #[test]
+    fn vec3_copy() {
+        let a = Vec3i::new(2, 3, 4);
+        let b = a;
+        assert_eq!(a, b);
+
+        let a = Vec3u::new(2, 3, 4);
+        let b = a;
+        assert_eq!(a, b);
+
+        let a = Vec3f::new(2., 3., 4.);
+        let b = a;
+        assert_eq!(a, b);
     }
 }

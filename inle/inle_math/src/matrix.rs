@@ -1,6 +1,6 @@
 #![allow(clippy::op_ref)]
 
-use crate::vector::Vector2;
+use crate::vector::Vector3;
 use std::fmt::{Debug, Formatter};
 use std::ops::*;
 
@@ -362,6 +362,22 @@ where
 
     fn sub(self, other: Matrix3<T>) -> Self::Output {
         &self - &other
+    }
+}
+
+impl<T> Mul<Vector3<T>> for &Matrix3<T>
+where
+    T: Copy + Add<T, Output = T> + Mul<T, Output = T>,
+{
+    type Output = Vector3<T>;
+
+    fn mul(self, v: Vector3<T>) -> Self::Output {
+        let m = self;
+        Self::Output {
+            x: m[0][0] * v[0] + m[1][0] * v[1] + m[2][0] * v[2],
+            y: m[0][1] * v[0] + m[1][1] * v[1] + m[2][1] * v[2],
+            z: m[0][2] * v[0] + m[1][2] * v[1] + m[2][2] * v[2],
+        }
     }
 }
 

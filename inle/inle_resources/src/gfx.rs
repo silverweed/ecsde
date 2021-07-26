@@ -99,7 +99,10 @@ impl<'l> Shader_Cache<'l> {
         if render::geom_shaders_are_available() {
             self.0.load(shader_name, true)
         } else {
-            lerr!("Cannot load shader {}: geometry shaders are unavailable.", shader_name);
+            lerr!(
+                "Cannot load shader {}: geometry shaders are unavailable.",
+                shader_name
+            );
             None
         }
     }

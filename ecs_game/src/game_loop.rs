@@ -917,8 +917,15 @@ fn update_mouse_debug_overlay(
 ) {
     use inle_math::shapes::Line;
 
+    let (win_w, win_h) = window::get_window_target_size(window);
+    let (win_w, win_h) = (win_w as i32, win_h as i32);
     let pos = mouse::mouse_pos_in_window(window, &input_state.raw.mouse_state);
     debug_overlay.position = Vec2f::from(pos) + v2!(0., -15.);
+    let overlay_size = debug_overlay.bounds().size();
+    debug_overlay.position.x = inle_math::math::clamp(
+        debug_overlay.position.x, 0., win_w as f32 - overlay_size.x);
+    debug_overlay.position.y = inle_math::math::clamp(
+        debug_overlay.position.y, overlay_size.y, win_h as f32);
     debug_overlay
         .add_line(&format!("s {},{}", pos.x, pos.y))
         .with_color(colors::rgba(220, 220, 220, 220));
@@ -930,23 +937,22 @@ fn update_mouse_debug_overlay(
     }
 
     let color = colors::rgba(255, 255, 255, 150);
-    let (win_w, win_h) = window::get_window_real_size(window);
-    let from_x = Vec2f::new(-((win_w / 2) as f32), pos.y as _);
-    let to_x = Vec2f::new((win_w / 2) as f32, pos.y as _);
-    let from_y = Vec2f::new(pos.x as _, -((win_h / 2) as f32));
-    let to_y = Vec2f::new(pos.x as _, (win_h / 2) as f32);
+    let from_horiz = Vec2f::from(v2!(-win_w / 2, pos.y - win_h / 2));
+    let to_horiz = Vec2f::from(v2!(win_w / 2, pos.y - win_h / 2));
+    let from_vert = Vec2f::from(v2!(pos.x - win_w / 2, -win_h / 2));
+    let to_vert = Vec2f::from(v2!(pos.x - win_w / 2, win_h / 2));
     painter.add_line(
         Line {
-            from: from_x,
-            to: to_x,
+            from: from_horiz,
+            to: to_horiz,
             thickness: 1.0,
         },
         color,
     );
     painter.add_line(
         Line {
-            from: from_y,
-            to: to_y,
+            from: from_vert,
+            to: to_vert,
             thickness: 1.0,
         },
         color,

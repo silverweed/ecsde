@@ -1,11 +1,12 @@
 use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
 use inle_alloc::temp;
+use inle_gfx::render;
 use inle_cfg::Cfg_Var;
 use inle_common::colors::{self, Color};
 use inle_common::stringid::String_Id;
 use inle_common::variant::Variant;
 use inle_common::vis_align::Align;
-use inle_math::rect::Rect;
+use inle_math::rect::{Rect, Rectf};
 use inle_math::vector::Vec2f;
 use inle_resources::gfx::Font_Handle;
 use std::collections::HashMap;
@@ -92,6 +93,7 @@ pub struct Debug_Overlay {
 
     // Latest drawn row bounds
     max_row_bounds: std::cell::Cell<(f32, f32)>,
+    latest_bounds: std::cell::Cell<Rectf>,
 
     pub hover_data: Hover_Data,
 }
@@ -140,9 +142,9 @@ impl Debug_Element for Debug_Overlay {
         let font = gres.get_font(font);
         for line in self.lines.iter() {
             let Debug_Line { text, color, .. } = line;
-            let text = inle_gfx::render::create_text(text, font, font_size);
+            let text = render::create_text(text, font, font_size);
 
-            let txt_size = inle_gfx::render::get_text_size(&text);
+            let txt_size = render::get_text_size(&text);
             max_row_width = max_row_width.max(txt_size.x);
             max_row_height = max_row_height.max(txt_size.y);
 
@@ -151,21 +153,24 @@ impl Debug_Element for Debug_Overlay {
 
         let position = self.position;
         let n_texts_f = texts.len() as f32;
-        let tot_height = max_row_height * n_texts_f + row_spacing * (n_texts_f - 1.0);
+        let tot_height = 2.0 * pad_y + max_row_height * n_texts_f + row_spacing * (n_texts_f - 1.0);
 
         // Draw background
-        inle_gfx::render::render_rect(
-            window,
+        let bg_rect =
             Rect::new(
                 position.x + horiz_align.aligned_pos(0.0, 2.0 * pad_x + max_row_width),
                 position.y + vert_align.aligned_pos(0.0, 2.0 * pad_y + tot_height),
                 2.0 * pad_x + max_row_width,
                 2.0 * pad_y + tot_height,
-            ),
+            );
+        render::render_rect(
+            window,
+            bg_rect,
             background,
         );
 
         self.max_row_bounds.set((max_row_width, max_row_height));
+        self.latest_bounds.set(bg_rect);
 
         // Draw bg rects
         for (i, (bg_col, bg_fill_ratio)) in self
@@ -181,7 +186,7 @@ impl Debug_Element for Debug_Overlay {
                         + (i as f32) * (max_row_height + row_spacing),
                 );
             let rect = Rect::new(pos.x, pos.y, bg_fill_ratio * max_row_width, max_row_height);
-            inle_gfx::render::render_rect(window, rect, bg_col);
+            render::render_rect(window, rect, bg_col);
         }
 
         // Draw texts
@@ -197,7 +202,7 @@ impl Debug_Element for Debug_Overlay {
                     *color = colors::WHITE;
                 }
             }
-            inle_gfx::render::render_text(window, text, *color, position + pos);
+            render::render_text(window, text, *color, position + pos);
         }
     }
 
@@ -280,5 +285,9 @@ impl Debug_Overlay {
         });
         let len = self.lines.len();
         &mut self.lines[len - 1]
+    }
+
+    pub fn bounds(&self) -> Rectf {
+        self.latest_bounds.get()
     }
 }

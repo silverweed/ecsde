@@ -397,9 +397,19 @@ impl Console {
     }
 
     fn del_prev_word(&mut self) {
+        let mut prev_was_ws = self.cur_line.chars().nth(self.cur_pos - 1) == Some(' ');
         while self.cur_pos > 0 {
             match self.del_prev_char() {
-                Some(' ') | Some('/') => break,
+                Some('/') => break,
+                Some(' ') => {
+                    if !prev_was_ws {
+                        self.cur_line.push(' ');
+                        self.cur_pos += 1;
+                        break;
+                    } else {
+                        prev_was_ws = self.cur_pos > 0 && self.cur_line.chars().nth(self.cur_pos - 1) == Some(' ');
+                    }
+                }
                 _ => {}
             }
         }
@@ -565,5 +575,58 @@ impl Console {
             pos.y -= linesep;
             render::render_text(window, &mut text, color, pos);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn console_del_prev_word() {
+        let mut console = Console::new();
+        console.init(Console_Config::default());
+
+        console.cur_line = String::from("foooo");
+        console.cur_pos = console.cur_line.len();
+        console.del_prev_word();
+        assert_eq!(console.cur_line.as_str(), "");
+        assert_eq!(console.cur_pos, console.cur_line.len());
+
+        console.cur_line = String::from("foo bar bazzz");
+        console.cur_pos = console.cur_line.len();
+        console.del_prev_word();
+        assert_eq!(console.cur_line.as_str(), "foo bar ");
+        assert_eq!(console.cur_pos, console.cur_line.len());
+
+        console.del_prev_word();
+        assert_eq!(console.cur_line.as_str(), "foo ");
+        assert_eq!(console.cur_pos, console.cur_line.len());
+
+        console.cur_line = String::from("foo      ");
+        console.cur_pos = console.cur_line.len();
+        console.del_prev_word();
+        assert_eq!(console.cur_line.as_str(), "");
+        assert_eq!(console.cur_pos, console.cur_line.len());
+
+        console.cur_line = String::from(" ");
+        console.cur_pos = console.cur_line.len();
+        console.del_prev_word();
+        assert_eq!(console.cur_line.as_str(), "");
+        assert_eq!(console.cur_pos, console.cur_line.len());
+
+        console.cur_line = String::from("   foo  bar");
+        console.cur_pos = console.cur_line.len();
+        console.del_prev_word();
+        assert_eq!(console.cur_line.as_str(), "   foo  ");
+        assert_eq!(console.cur_pos, console.cur_line.len());
+
+        console.del_prev_word();
+        assert_eq!(console.cur_line.as_str(), "   ");
+        assert_eq!(console.cur_pos, console.cur_line.len());
+
+        console.del_prev_word();
+        assert_eq!(console.cur_line.as_str(), "");
+        assert_eq!(console.cur_pos, console.cur_line.len());
     }
 }

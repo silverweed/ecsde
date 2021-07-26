@@ -275,15 +275,15 @@ pub fn raw_unproject_screen_pos(
         0.,
         1.,
     );
-    let proj_view_inverse = proj_inverse * camera.get_matrix();
+    let proj_view_inverse = camera.get_matrix() * proj_inverse;
 
+    v2!(ndc_x * window.viewport.width as f32, ndc_y * window.viewport.height as f32)
     // Convert from NDC to world
-    //proj_view_inverse
-        //*
-            v2!(
-            ndc_x * window.viewport.width as f32,
-            ndc_y * window.viewport.height as f32
-        )
+    //((&proj_view_inverse) * v3!(
+    //    ndc_x * window.viewport.width as f32,
+    //    ndc_y * window.viewport.height as f32,
+    //    1.0,
+    //)).into()
 }
 
 pub fn raw_project_world_pos(
