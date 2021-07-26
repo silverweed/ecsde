@@ -691,17 +691,17 @@ fn fill_vertices(
 
 fn get_vp_matrix(window: &Render_Window_Handle, camera: &Transform2D) -> Matrix3<f32> {
     let (width, height) = inle_win::window::get_window_target_size(window);
-    let view = camera.inverse();
+    let view = crate::render_window::get_view_matrix(camera);
     let projection = Matrix3::new(
-        2. / width as f32,
+        2. / (width as f32 * camera.scale().x),
         0.,
         0.,
         0.,
-        -2. / height as f32,
+        -2. / (height as f32 * camera.scale().y),
         0.,
         0.,
         0.,
         1.,
     );
-    projection * view.get_matrix()
+    projection * view
 }

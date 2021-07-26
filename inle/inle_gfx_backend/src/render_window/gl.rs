@@ -28,6 +28,17 @@ impl AsMut<Window_Handle> for Render_Window_Handle {
     }
 }
 
+pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
+    gl::load_with(|symbol| inle_win::window::get_gl_handle(&mut window, symbol));
+    let win_size = inle_win::window::get_window_target_size(&window);
+    Render_Window_Handle {
+        window,
+        viewport: Recti::new(0, 0, win_size.0 as _, win_size.1 as _),
+        gl: init_gl(),
+        temp_allocator: temp::Temp_Allocator::with_capacity(inle_common::units::megabytes(10)),
+    }
+}
+
 const RECT_INDICES: [GLuint; 6] = [0, 1, 2, 2, 3, 0];
 
 #[derive(Default)]
@@ -194,17 +205,6 @@ fn fill_circle_buffers(gl: &mut Gl) {
     gl.circle_vbo = vbo;
 }
 
-pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
-    gl::load_with(|symbol| inle_win::window::get_gl_handle(&mut window, symbol));
-    let win_size = inle_win::window::get_window_target_size(&window);
-    Render_Window_Handle {
-        window,
-        viewport: Recti::new(0, 0, win_size.0 as _, win_size.1 as _),
-        gl: init_gl(),
-        temp_allocator: temp::Temp_Allocator::with_capacity(inle_common::units::megabytes(10)),
-    }
-}
-
 #[inline(always)]
 pub fn shutdown(window: &mut Render_Window_Handle) {
     window.gl.buffer_allocators.destroy();
@@ -262,10 +262,12 @@ pub fn raw_unproject_screen_pos(
     );
 
     let (win_w, win_h) = inle_win::window::get_window_target_size(window);
-    let frustum = v2!((win_w / 2) as f32, (win_h / 2) as f32);
+    let frustum = v2!((win_w / 2) as f32, (win_h / 2) as f32) * camera.scale();
     let view_pos = ndc * frustum;
 
-    camera.scale() * (view_pos + camera.position())
+    let view_inverse = crate::render_window::get_inverse_view_matrix(camera);
+
+    (&view_inverse * v3!(view_pos.x, view_pos.y, 1.0)).into()
 }
 
 pub fn raw_project_world_pos(

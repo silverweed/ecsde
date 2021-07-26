@@ -37,7 +37,7 @@ pub fn update(dt: &Duration, world: &mut Ecs_World, cfg: &Config) {
             Camera_Follow_Target::Position(pos) => pos,
             Camera_Follow_Target::Entity(entity) => {
                 let spatial = world.get_component::<C_Spatial2D>(entity).expect("Followed entity has no C_Spatial2D!");
-                spatial.transform.position() / camera.transform.scale()
+                spatial.transform.position()
             },
         };
 

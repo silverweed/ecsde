@@ -2,6 +2,7 @@ use inle_common::colors::Color;
 use inle_gfx_backend::render_window::backend;
 use inle_input::mouse::{self, Mouse_State};
 use inle_math::rect::Rect;
+use inle_math::matrix::Matrix3;
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::{self, Window_Handle};
@@ -90,4 +91,16 @@ pub fn start_new_frame(window: &mut Render_Window_Handle) {
 #[inline(always)]
 pub fn shutdown(window: &mut Render_Window_Handle) {
     backend::shutdown(window);
+}
+
+// These technically aren't backend-dependant, but they're useful in the backend crate too,
+// so we define them there.
+#[inline]
+pub fn get_view_matrix(camera: &Transform2D) -> Matrix3<f32> {
+    inle_gfx_backend::render_window::get_view_matrix(camera)
+}
+
+#[inline]
+pub fn get_inverse_view_matrix(camera: &Transform2D) -> Matrix3<f32> {
+    inle_gfx_backend::render_window::get_inverse_view_matrix(camera)
 }

@@ -1610,7 +1610,7 @@ fn get_mvp_matrix(
 ) -> Matrix3<f32> {
     let (width, height) = inle_win::window::get_window_target_size(window);
     let model = transform;
-    let view = camera.inverse();
+    let view = crate::render_window::get_view_matrix(camera);
     let projection = Matrix3::new(
         2. / width as f32,
         0.,
@@ -1622,7 +1622,7 @@ fn get_mvp_matrix(
         0.,
         1.,
     );
-    projection * view.get_matrix() * model.get_matrix()
+    projection * view * model.get_matrix()
 }
 
 // this is get_mvp_matrix with camera == identity
