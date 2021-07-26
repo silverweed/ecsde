@@ -251,8 +251,6 @@ pub fn set_viewport(window: &mut Render_Window_Handle, viewport: &Rectf, _view_r
     }
 }
 
-//      <*viewp  <proj  <cam-1
-// screen -> ndc -> view -> world
 pub fn raw_unproject_screen_pos(
     screen_pos: Vec2i,
     window: &Render_Window_Handle,
@@ -260,37 +258,17 @@ pub fn raw_unproject_screen_pos(
 ) -> Vec2f {
     // Convert from screen coords to NDC
     let ndc_x =
-        -1. + 2. * (screen_pos.x as f32 - window.viewport.x as f32) / window.viewport.width as f32;
+        2. * (screen_pos.x as f32 - window.viewport.x as f32) / window.viewport.width as f32 - 1.;
     let ndc_y =
-        -1. + 2. * (screen_pos.y as f32 - window.viewport.y as f32) / window.viewport.height as f32;
+        2. * (screen_pos.y as f32 - window.viewport.y as f32) / window.viewport.height as f32 - 1.;
 
     let (win_w, win_h) = inle_win::window::get_window_target_size(window);
-    let proj_inverse = inle_math::matrix::Matrix3::new(
-        0.5 * win_w as f32,
-        0.,
-        0.,
-        0.,
-        -0.5 * win_h as f32,
-        0.,
-        0.,
-        0.,
-        1.,
-    );
-    let proj_view_inverse = camera.get_matrix() * proj_inverse;
+    let frustum_halfwidth = (win_w / 2) as f32 ;
+    let frustum_halfheight = (win_h / 2) as f32;
 
-    //dbg!(proj_view_inverse);
-    //dbg!(v3!(ndc_x, ndc_y, 1.0));
-    (&proj_view_inverse * v3!(
-        ndc_x,
-        ndc_y,
-        1.0,
-    )).into()
-    // Convert from NDC to world
-    //((&proj_view_inverse) * v3!(
-    //    ndc_x * window.viewport.width as f32,
-    //    ndc_y * window.viewport.height as f32,
-    //    1.0,
-    //)).into()
+    let view_pos = v2!(ndc_x * frustum_halfwidth, ndc_y * frustum_halfheight);
+
+    camera.scale() * (view_pos + camera.position())
 }
 
 pub fn raw_project_world_pos(

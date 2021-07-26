@@ -794,9 +794,6 @@ fn update_debug(
                 );
             }
 
-            // DEBUG
-            debug_painter.add_rect(v2!(10., 10.), &Transform2D::default(), inle_common::colors::WHITE);
-
             if draw_entities {
                 debug_draw_transforms(debug_painter, &level.world);
             }
