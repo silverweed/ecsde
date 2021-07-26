@@ -21,7 +21,8 @@ pub enum Console_Cmd {
 // the parse_cmd below *and* the enum declaration above!
 // We can @WaitForStable until we can do a const match on the enum, but maybe
 // there is a better way.
-pub const ALL_CMD_STRINGS: [&str; 8] = ["quit", "cam", "var", "toggle", "fps", "trace", "log", "hud"];
+pub const ALL_CMD_STRINGS: [&str; 8] =
+    ["quit", "cam", "var", "toggle", "fps", "trace", "log", "hud"];
 
 // Parses and executes 'cmdline'. May return a string to output to the console.
 pub fn execute(

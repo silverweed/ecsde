@@ -256,17 +256,14 @@ pub fn raw_unproject_screen_pos(
     window: &Render_Window_Handle,
     camera: &Transform2D,
 ) -> Vec2f {
-    // Convert from screen coords to NDC
-    let ndc_x =
-        2. * (screen_pos.x as f32 - window.viewport.x as f32) / window.viewport.width as f32 - 1.;
-    let ndc_y =
-        2. * (screen_pos.y as f32 - window.viewport.y as f32) / window.viewport.height as f32 - 1.;
+    let ndc = v2!(
+        2. * (screen_pos.x as f32 - window.viewport.x as f32) / window.viewport.width as f32 - 1.,
+        2. * (screen_pos.y as f32 - window.viewport.y as f32) / window.viewport.height as f32 - 1.
+    );
 
     let (win_w, win_h) = inle_win::window::get_window_target_size(window);
-    let frustum_halfwidth = (win_w / 2) as f32 ;
-    let frustum_halfheight = (win_h / 2) as f32;
-
-    let view_pos = v2!(ndc_x * frustum_halfwidth, ndc_y * frustum_halfheight);
+    let frustum = v2!((win_w / 2) as f32, (win_h / 2) as f32);
+    let view_pos = ndc * frustum;
 
     camera.scale() * (view_pos + camera.position())
 }

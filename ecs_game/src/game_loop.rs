@@ -786,7 +786,10 @@ fn update_debug(
 
             if display_overlays {
                 update_entities_debug_overlay(debug_ui.get_overlay(sid!("entities")), &level.world);
-                update_camera_debug_overlay(debug_ui.get_overlay(sid!("camera")), &level.get_camera());
+                update_camera_debug_overlay(
+                    debug_ui.get_overlay(sid!("camera")),
+                    &level.get_camera(),
+                );
                 update_physics_debug_overlay(
                     debug_ui.get_overlay(sid!("physics")),
                     &collision_debug_data[&level.id],
@@ -1455,12 +1458,12 @@ fn get_render_system_debug_visualization(
 
 #[cfg(debug_assertions)]
 fn set_debug_hud_enabled(debug_ui: &mut inle_debug::debug_ui::Debug_Ui_System, enabled: bool) {
-        debug_ui.set_overlay_enabled(sid!("time"), enabled);
-        debug_ui.set_overlay_enabled(sid!("fps"), enabled);
-        debug_ui.set_overlay_enabled(sid!("window"), enabled);
-        debug_ui.set_overlay_enabled(sid!("entities"), enabled);
-        debug_ui.set_overlay_enabled(sid!("camera"), enabled);
-        debug_ui.set_overlay_enabled(sid!("physics"), enabled);
-        debug_ui.set_overlay_enabled(sid!("joysticks"), enabled);
-        debug_ui.frame_scroller.hidden = !enabled;
+    debug_ui.set_overlay_enabled(sid!("time"), enabled);
+    debug_ui.set_overlay_enabled(sid!("fps"), enabled);
+    debug_ui.set_overlay_enabled(sid!("window"), enabled);
+    debug_ui.set_overlay_enabled(sid!("entities"), enabled);
+    debug_ui.set_overlay_enabled(sid!("camera"), enabled);
+    debug_ui.set_overlay_enabled(sid!("physics"), enabled);
+    debug_ui.set_overlay_enabled(sid!("joysticks"), enabled);
+    debug_ui.frame_scroller.hidden = !enabled;
 }
