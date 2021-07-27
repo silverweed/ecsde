@@ -1,9 +1,13 @@
-uniform sampler2D texture;
+#version 330 core
 
-varying vec2 world_pos;
-varying vec2 tex_coords;
+in vec2 tex_coords;
+in vec4 color;
+
+out vec4 frag_color;
+
+uniform sampler2D tex;
 
 void main() {
-    vec4 pixel = texture2D(texture, tex_coords.xy);
-    gl_FragColor = pixel;
+	vec4 pixel = texture(tex, tex_coords);
+	frag_color = color * pixel;
 }

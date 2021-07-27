@@ -17,12 +17,16 @@ use rayon::prelude::*;
 use std::ops::Range;
 use std::time::Duration;
 
-pub struct Particles {
+pub struct Particle_Emitter {
     pub transform: Transform2D,
+    pub props: Particle_Props,
+    pub particles: Particles,
+}
+
+pub struct Particles {
     pub transforms: Vec<Transform2D>,
     pub velocities: Vec<Vec2f>,
     pub remaining_life: Vec<Duration>,
-    pub props: Particle_Props,
 
     precomp_rng: Precomputed_Rand_Pool,
 }
@@ -62,7 +66,6 @@ pub struct Particle_Props {
     pub spread: Angle,
     pub acceleration: f32,
     pub texture: Texture_Handle,
-    // @Incomplete: this is unused in the shader!
     pub color: colors::Color,
 }
 
@@ -83,11 +86,17 @@ impl Default for Particle_Props {
     }
 }
 
-pub fn create_particles(props: &Particle_Props, rng: &mut Default_Rng) -> Particles {
-    let n_particles = props.n_particles;
-    let mut particles = Particles {
+pub fn create_particle_emitter(props: &Particle_Props, rng: &mut Default_Rng) -> Particle_Emitter {
+    Particle_Emitter {
         transform: Transform2D::default(),
         props: props.clone(),
+        particles: create_particles(props, rng),
+    }
+}
+
+fn create_particles(props: &Particle_Props, rng: &mut Default_Rng) -> Particles {
+    let n_particles = props.n_particles;
+    let mut particles = Particles {
         transforms: Vec::with_capacity(n_particles),
         velocities: Vec::with_capacity(n_particles),
         remaining_life: Vec::with_capacity(n_particles),
@@ -144,15 +153,16 @@ fn init_particle(
     )
 }
 
-pub fn update_particles(particles: &mut Particles, dt: &Duration, chunk_size: usize) {
+pub fn update_particles(emitter: &mut Particle_Emitter, dt: &Duration, chunk_size: usize) {
     trace!("update_particles");
 
     // @Speed: find out the best chunk size.
     // It looks like if the particles are few, updating them in singlethread is much faster than
     // multithread. However, if they are a lot, multithread wins.
 
+    let props = &emitter.props;
+    let particles = &mut emitter.particles;
     let precomp_rng = &particles.precomp_rng;
-    let props = &particles.props;
     let iter = particles
         .transforms
         .par_chunks_mut(chunk_size)
@@ -182,55 +192,31 @@ pub fn update_particles(particles: &mut Particles, dt: &Duration, chunk_size: us
 }
 
 pub fn render_particles(
-    particles: &Particles,
+    emitter: &Particle_Emitter,
     window: &mut Render_Window_Handle,
     gres: &Gfx_Resources,
     shader: &mut Shader,
-    _camera: &Transform2D,
+    camera: &Transform2D,
     vbuf: &mut Vertex_Buffer_Holder,
     frame_alloc: &mut temp::Temp_Allocator,
 ) {
+    use render::new_vertex;
+
     trace!("render_particles");
 
-    let texture = particles
-        .props
-        .texture
-        .map(|tex| gres.get_texture(Some(tex)));
+    let texture = emitter.props.texture.map(|tex| gres.get_texture(Some(tex)));
+    let color = emitter.props.color;
 
     let mut vertices = temp::excl_temp_array(frame_alloc);
-    for &transf in &particles.transforms {
-        // @Incomplete or @Redundant: passing the vertex color is useless right now
+    for &transf in &emitter.particles.transforms {
         let pos = transf.position();
-        vertices.push(render::new_vertex(
-            pos + v2!(-1.0, -1.0),
-            particles.props.color,
-            v2!(0., 0.),
-        ));
-        vertices.push(render::new_vertex(
-            pos + v2!(1.0, -1.0),
-            particles.props.color,
-            v2!(1., 0.),
-        ));
-        vertices.push(render::new_vertex(
-            pos + v2!(-1.0, 1.0),
-            particles.props.color,
-            v2!(0., 1.),
-        ));
-        vertices.push(render::new_vertex(
-            pos + v2!(-1.0, 1.0),
-            particles.props.color,
-            v2!(0., 1.),
-        ));
-        vertices.push(render::new_vertex(
-            pos + v2!(1.0, -1.0),
-            particles.props.color,
-            v2!(1., 0.),
-        ));
-        vertices.push(render::new_vertex(
-            pos + v2!(1.0, 1.0),
-            particles.props.color,
-            v2!(1., 1.),
-        ));
+        let s = transf.scale();
+        vertices.push(new_vertex(pos + s * v2!(-1.0, -1.0), color, v2!(0., 0.)));
+        vertices.push(new_vertex(pos + s * v2!(1.0, -1.0), color, v2!(1., 0.)));
+        vertices.push(new_vertex(pos + s * v2!(-1.0, 1.0), color, v2!(0., 1.)));
+        vertices.push(new_vertex(pos + s * v2!(-1.0, 1.0), color, v2!(0., 1.)));
+        vertices.push(new_vertex(pos + s * v2!(1.0, -1.0), color, v2!(1., 0.)));
+        vertices.push(new_vertex(pos + s * v2!(1.0, 1.0), color, v2!(1., 1.)));
     }
 
     let vert_count = vertices.len() as u32;
@@ -239,7 +225,8 @@ pub fn render_particles(
     if let Some(texture) = texture {
         render::set_uniform(shader, c_str!("tex"), texture);
     }
-    // @Incomplete: set mvp uniform
+    let mvp = inle_gfx_backend::render::get_mvp_matrix(window, &emitter.transform, camera);
+    render::set_uniform(shader, c_str!("mvp"), &mvp);
     render::render_vbuf_with_shader(window, &vbuf.vbuf, shader);
 }
 
@@ -255,9 +242,10 @@ fn random_pos_in(shape: &Emission_Shape, rng: &Precomputed_Rand_Pool) -> Vec2f {
 }
 
 #[derive(Copy, Clone, Default)]
-pub struct Particles_Handle(isize);
+pub struct Particle_Emitter_Handle(isize);
 
-impl Particles_Handle {
+impl Particle_Emitter_Handle {
+    #[inline]
     pub fn is_valid(self) -> bool {
         self.0 >= 0
     }
@@ -265,9 +253,9 @@ impl Particles_Handle {
 
 pub struct Particle_Manager {
     particle_shader: Shader_Handle,
-    active_particles: Vec<Particles>,
-    // This is in a separate array because we want Particles to be processable in parallel
-    active_particles_vbufs: Vec<Vertex_Buffer_Holder>,
+    active_emitters: Vec<Particle_Emitter>,
+    // This is in a separate array because we want active_emitters to be processable in parallel
+    active_emitters_vbufs: Vec<Vertex_Buffer_Holder>,
     coarse_chunk_size: Cfg_Var<i32>,
     narrow_chunk_size: Cfg_Var<i32>,
 }
@@ -277,47 +265,45 @@ impl Particle_Manager {
         let particle_shader = shader_cache.load_shader(&shader_path(env, "particles"));
         Self {
             particle_shader,
-            active_particles: vec![],
-            active_particles_vbufs: vec![],
+            active_emitters: vec![],
+            active_emitters_vbufs: vec![],
             coarse_chunk_size: Cfg_Var::new("engine/particles/update_coarse_chunk_size", cfg),
             narrow_chunk_size: Cfg_Var::new("engine/particles/update_narrow_chunk_size", cfg),
         }
     }
 
-    pub fn add_particles(
+    pub fn add_emitter(
         &mut self,
         window: &mut Render_Window_Handle,
         props: &Particle_Props,
         rng: &mut Default_Rng,
-    ) -> Particles_Handle {
+    ) -> Particle_Emitter_Handle {
         debug_assert!(props.n_particles < std::u32::MAX as usize);
-        self.active_particles.push(create_particles(props, rng));
-        self.active_particles_vbufs
+        self.active_emitters
+            .push(create_particle_emitter(props, rng));
+        self.active_emitters_vbufs
             .push(Vertex_Buffer_Holder::with_initial_vertex_count(
                 window,
                 props.n_particles as u32 * 6,
-                Primitive_Type::Points,
+                Primitive_Type::Triangles,
                 #[cfg(debug_assertions)]
                 format!("{:?}", props),
             ));
-        debug_assert_eq!(
-            self.active_particles.len(),
-            self.active_particles_vbufs.len()
-        );
+        debug_assert_eq!(self.active_emitters.len(), self.active_emitters_vbufs.len());
 
-        debug_assert!(self.active_particles.len() < std::isize::MAX as usize);
-        Particles_Handle(self.active_particles.len() as isize - 1)
+        debug_assert!(self.active_emitters.len() < std::isize::MAX as usize);
+        Particle_Emitter_Handle(self.active_emitters.len() as isize - 1)
     }
 
-    pub fn get_particles_mut(&mut self, handle: Particles_Handle) -> &mut Particles {
+    pub fn get_emitter_mut(&mut self, handle: Particle_Emitter_Handle) -> &mut Particle_Emitter {
         debug_assert!(handle.is_valid());
-        &mut self.active_particles[handle.0 as usize]
+        &mut self.active_emitters[handle.0 as usize]
     }
 
     pub fn update(&mut self, dt: &Duration, cfg: &inle_cfg::Config) {
         let coarse_chunk_size = self.coarse_chunk_size.read(cfg) as usize;
         let narrow_chunk_size = self.narrow_chunk_size.read(cfg) as usize;
-        self.active_particles
+        self.active_emitters
             .par_chunks_mut(coarse_chunk_size)
             .for_each(|chunk| {
                 for particles in chunk {
@@ -345,9 +331,9 @@ impl Particle_Manager {
         render::set_uniform(shader, c_str!("camera_scale"), 1.0 / camera.scale().x);
 
         for (particles, vbuf) in self
-            .active_particles
+            .active_emitters
             .iter()
-            .zip(self.active_particles_vbufs.iter_mut())
+            .zip(self.active_emitters_vbufs.iter_mut())
         {
             // @Incomplete: we must handle the case where the texture is unset.
             if let Some(tex) = particles

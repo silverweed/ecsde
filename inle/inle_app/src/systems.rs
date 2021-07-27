@@ -56,7 +56,7 @@ impl Core_Systems<'_> {
 impl Debug_Systems {
     pub fn new(cfg: &inle_cfg::Config, rng_seed: Default_Rng_Seed) -> Debug_Systems {
         let ms_per_frame =
-            inle_cfg::Cfg_Var::<f32>::new("engine/gameplay/gameplay_update_tick_ms", cfg).read(cfg);
+            inle_cfg::Cfg_Var::<f32>::new("engine/gameplay/update_tick_ms", cfg).read(cfg);
         let debug_log_size =
             inle_cfg::Cfg_Var::<i32>::new("engine/debug/log/hist_size_seconds", cfg).read(cfg);
         let fps = (1000. / ms_per_frame + 0.5) as i32;
