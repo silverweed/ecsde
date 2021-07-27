@@ -63,32 +63,32 @@ where
             - c[2][0] * c[1][1] * c[0][2]
             - c[1][0] * c[0][1] * c[2][2]
     }
-
-    //pub fn cofactor_matrix(&self) -> Matrix3<T> {
-    //Matrix3::new(
-    //}
-
-    //pub fn cofactor_at(&self, row: usize, column: usize) -> T {
-    //// Note: if matrix is
-    ////
-    //// |A  B  C|
-    //// |D  E  F|
-    //// |G  H  I|
-    ////                             |E  F|
-    //// then cofactor at 0,0 is det(|H  I|)
-    ////                         |B  C|
-    //// cofactor at 1,0 is -det(|H  I|) and so on.
-    //let c = &self.columns;
-
-    //todo!();
-    //}
 }
 
-//impl Matrix3<f32> {
-//pub fn inverse(&self) -> Matrix3<f32> {
-//self.cofactor_matrix().transposed() / self.determinant()
-//}
-//}
+impl Matrix3<f32> {
+    pub fn inverse(&self) -> Self {
+        let a = Vector3::from(&self.columns[0]);
+        let b = Vector3::from(&self.columns[1]);
+        let c = Vector3::from(&self.columns[2]);
+        let inv_det = 1.0 / self.determinant();
+
+        let r1 = b.cross(&c);
+        let r2 = c.cross(&a);
+        let r3 = a.cross(&b);
+
+        Self::new(
+            r1.x * inv_det,
+            r1.y * inv_det,
+            r1.z * inv_det,
+            r2.x * inv_det,
+            r2.y * inv_det,
+            r2.z * inv_det,
+            r3.x * inv_det,
+            r3.y * inv_det,
+            r3.z * inv_det,
+        )
+    }
+}
 
 impl<T> Copy for Matrix3<T> where T: Copy {}
 
@@ -528,5 +528,20 @@ mod tests {
             2 + 6 + 12,
             8 + 15 + 24,
             14 + 24 + 36));
+    }
+
+    #[test]
+    fn inverse() {
+        let a = Matrix3::new(10., 0., 0., 0., 20., 0., 0., 0., 40.);
+        assert_approx_eq!(
+            a.inverse(),
+            Matrix3::new(0.1, 0., 0., 0., 0.05, 0., 0., 0., 0.025)
+        );
+
+        let b = Matrix3::new(12., 2., 3., 4., 5., 6., 7., 8., 9.);
+        assert_approx_eq!(
+            b.inverse(),
+            Matrix3::new(3., -6., 3., -6., -87., 60., 3., 82., -52.) * (1. / 33_f32)
+        );
     }
 }

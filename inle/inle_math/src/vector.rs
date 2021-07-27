@@ -423,6 +423,29 @@ impl<T> Vector3<T> {
     }
 }
 
+impl<T: Copy> From<&[T; 3]> for Vector3<T> {
+    fn from(vals: &[T; 3]) -> Self {
+        Self {
+            x: vals[0],
+            y: vals[1],
+            z: vals[2],
+        }
+    }
+}
+
+impl<T> Vector3<T>
+where
+    T: Copy + Add<Output = T> + Mul<Output = T> + Sub<Output = T>,
+{
+    pub fn cross(&self, v: &Vector3<T>) -> Self {
+        Self {
+            x: self.y * v.z - self.z * v.y,
+            y: self.z * v.x - self.x * v.z,
+            z: self.x * v.y - self.y * v.x,
+        }
+    }
+}
+
 impl<T: ToString> std::string::ToString for Vector3<T> {
     fn to_string(&self) -> String {
         format!(
@@ -696,5 +719,16 @@ mod tests {
         let a = Vec3f::new(2., 3., 4.);
         let b = a;
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn vec3_cross() {
+        let a = Vec3i::new(1, 2, 3);
+        let b = Vec3i::new(4, 5, 6);
+
+        assert_eq!(
+            a.cross(&b),
+            Vec3i::new(2 * 6 - 3 * 5, 3 * 4 - 1 * 6, 1 * 5 - 2 * 4)
+        );
     }
 }
