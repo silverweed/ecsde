@@ -1,3 +1,7 @@
+use crate::render_window::Render_Window_Handle;
+use inle_math::matrix::Matrix3;
+use inle_math::transform::Transform2D;
+
 #[cfg(feature = "gfx-sfml")]
 pub mod sfml;
 
@@ -72,4 +76,31 @@ pub(crate) use backend::new_shader_internal;
 
 pub fn set_uniform<T: Uniform_Value>(shader: &mut Shader, name: &std::ffi::CStr, val: T) {
     val.apply_to(shader, name);
+}
+
+#[inline]
+pub fn get_mvp_matrix(
+    window: &Render_Window_Handle,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) -> Matrix3<f32> {
+    get_vp_matrix(window, camera) * transform.get_matrix()
+}
+
+#[inline]
+pub fn get_vp_matrix(window: &Render_Window_Handle, camera: &Transform2D) -> Matrix3<f32> {
+    let (width, height) = inle_win::window::get_window_target_size(window);
+    let view = crate::render_window::get_view_matrix(camera);
+    let projection = Matrix3::new(
+        2. / (width as f32 * camera.scale().x),
+        0.,
+        0.,
+        0.,
+        -2. / (height as f32 * camera.scale().y),
+        0.,
+        0.,
+        0.,
+        1.,
+    );
+    projection * view
 }

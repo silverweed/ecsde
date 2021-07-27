@@ -1,5 +1,6 @@
 use crate::backend_common::alloc::Buffer_Allocators;
 use crate::backend_common::misc::check_gl_err;
+use crate::render::get_vp_matrix;
 use gl::types::*;
 use inle_alloc::temp;
 use inle_common::colors::Color;
@@ -275,12 +276,15 @@ pub fn raw_project_world_pos(
     window: &Render_Window_Handle,
     camera: &Transform2D,
 ) -> Vec2i {
-    let pos_cam_space = camera.inverse() * world_pos;
-    //let screen_pos = window
-    //.raw_handle()
-    //.map_coords_to_pixel_current_view(pos_cam_space);
-    //screen_pos.into()
-    pos_cam_space.into()
+    // @Fixme: this is giving the "raw" screen coords, not the ones corrected for the real viewport
+    let vp = get_vp_matrix(window, camera);
+    let clip = &vp * v3!(world_pos.x, world_pos.y, 1.0);
+    let ndc = v2!(clip.x / clip.z, -clip.y / clip.z);
+    v2!(
+        (ndc.x + 1.) * 0.5 * window.viewport.width as f32 + window.viewport.x as f32,
+        (ndc.y + 1.) * 0.5 * window.viewport.height as f32 + window.viewport.y as f32,
+    )
+    .into()
 }
 
 #[inline(always)]

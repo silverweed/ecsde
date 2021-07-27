@@ -4,6 +4,7 @@ use crate::render::{self, Primitive_Type};
 use crate::vbuf_holder::Vertex_Buffer_Holder;
 use inle_alloc::temp;
 use inle_common::colors::{self, Color, Color3};
+use inle_gfx_backend::render::get_vp_matrix;
 use inle_gfx_backend::render::{Shader, Texture, Vertex};
 use inle_gfx_backend::render_window::Render_Window_Handle;
 use inle_math::angle::Angle;
@@ -687,21 +688,4 @@ fn fill_vertices(
                 vert_chunk[i * 6 + 5] = v1;
             }
         });
-}
-
-fn get_vp_matrix(window: &Render_Window_Handle, camera: &Transform2D) -> Matrix3<f32> {
-    let (width, height) = inle_win::window::get_window_target_size(window);
-    let view = crate::render_window::get_view_matrix(camera);
-    let projection = Matrix3::new(
-        2. / (width as f32 * camera.scale().x),
-        0.,
-        0.,
-        0.,
-        -2. / (height as f32 * camera.scale().y),
-        0.,
-        0.,
-        0.,
-        1.,
-    );
-    projection * view
 }

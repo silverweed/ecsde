@@ -1,8 +1,8 @@
 use inle_common::colors::Color;
 use inle_gfx_backend::render_window::backend;
 use inle_input::mouse::{self, Mouse_State};
-use inle_math::rect::Rect;
 use inle_math::matrix::Matrix3;
+use inle_math::rect::Rect;
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::{self, Window_Handle};
