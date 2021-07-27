@@ -220,7 +220,7 @@ where
                 t_elapsed_for_work = t_before_work.elapsed();
             }
         } else {
-            lerr!(
+            lverbose!(
                 "Frame budget exceeded! At frame {}: {} / {} ms",
                 game_state.engine_state.cur_frame,
                 time::to_ms_frac(&t_elapsed_for_work),

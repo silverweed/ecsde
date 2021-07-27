@@ -142,17 +142,50 @@ impl Gameplay_System {
 
             let texture = game_res
                 .gfx
+                .load_texture(&tex_path(&engine_state.env, "white_circle.png"));
+            let props = particles::Particle_Props {
+                n_particles: 12,
+                spread: angle::deg(70.0),
+                initial_speed: 15.0..50.0,
+                initial_scale: 2.0..12.0,
+                initial_rotation: angle::deg(0.0)..angle::deg(180.0),
+                lifetime: Duration::from_millis(100)..Duration::from_millis(800),
+                acceleration: -50.0,
+                texture,
+                color: colors::DARK_ORANGE,
+                ..Default::default()
+            };
+            let rng = &mut engine_state.rng;
+            let particle_mgr = engine_state
+                .systems
+                .particle_mgrs
+                .get_mut(&level_id)
+                .unwrap();
+            let handle = particle_mgr.add_emitter(window, &props, rng);
+            particle_mgr
+                .get_emitter_mut(handle)
+                .transform
+                .set_position(-250., 180.0);
+            particle_mgr
+                .get_emitter_mut(handle)
+                .transform
+                .set_rotation(angle::deg(-90.0));
+
+            /*
+            let texture = game_res
+                .gfx
                 .load_texture(&tex_path(&engine_state.env, "yv.png"));
-            for i in 0..100 {
+            for i in 0..20 {
                 let props = particles::Particle_Props {
                     n_particles: 100,
                     spread: angle::deg(50.0),
                     initial_speed: 50.0..200.0,
+                    initial_scale: 1.0..20.0,
                     initial_rotation: angle::deg(0.0)..angle::deg(180.0),
                     lifetime: Duration::from_millis(100)..Duration::from_secs(3),
                     acceleration: -50.0,
                     texture,
-                    color: colors::BLUE,
+                    color: colors::PINK,
                     ..Default::default()
                 };
                 let rng = &mut engine_state.rng;
@@ -161,16 +194,17 @@ impl Gameplay_System {
                     .particle_mgrs
                     .get_mut(&level_id)
                     .unwrap();
-                let handle = particle_mgr.add_particles(window, &props, rng);
+                let handle = particle_mgr.add_emitter(window, &props, rng);
                 particle_mgr
-                    .get_particles_mut(handle)
+                    .get_emitter_mut(handle)
                     .transform
                     .set_position(i as f32 * 20.0, 0.0);
                 particle_mgr
-                    .get_particles_mut(handle)
+                    .get_emitter_mut(handle)
                     .transform
                     .set_rotation(inle_math::angle::rad(i as f32 * 0.2));
             }
+            */
         }
     }
 

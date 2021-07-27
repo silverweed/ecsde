@@ -21,6 +21,8 @@ pub struct Game_State<'a> {
     pub state_mgr: states::state_manager::State_Manager,
     pub execution_time: Duration,
 
+    pub accumulated_update_time: Duration,
+
     pub sleep_granularity: Option<Duration>,
 
     pub level_batches: Level_Batches,
@@ -40,6 +42,7 @@ pub struct Game_State<'a> {
 
 pub struct CVars {
     pub gameplay_update_tick_ms: Cfg_Var<f32>,
+    pub gameplay_max_time_budget_ms: Cfg_Var<f32>,
     pub vsync: Cfg_Var<bool>,
     pub clear_color: Cfg_Var<u32>,
     pub enable_shaders: Cfg_Var<bool>,
@@ -269,6 +272,7 @@ fn create_game_state<'a>(
         Box::new(Game_State {
             window,
             engine_state,
+            accumulated_update_time: Duration::default(),
             sleep_granularity: None,
             level_batches: HashMap::new(),
             execution_time: Duration::default(),
@@ -288,7 +292,8 @@ fn create_game_state<'a>(
 }
 
 fn create_cvars(cfg: &inle_cfg::Config) -> CVars {
-    let gameplay_update_tick_ms = Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg);
+    let gameplay_update_tick_ms = Cfg_Var::new("engine/gameplay/update_tick_ms", cfg);
+    let gameplay_max_time_budget_ms = Cfg_Var::new("engine/gameplay/max_time_budget_ms", cfg);
     let clear_color = Cfg_Var::new("engine/rendering/clear_color", cfg);
     let vsync = Cfg_Var::new("engine/window/vsync", cfg);
     let enable_shaders = Cfg_Var::new("engine/rendering/enable_shaders", cfg);
@@ -297,6 +302,7 @@ fn create_cvars(cfg: &inle_cfg::Config) -> CVars {
 
     CVars {
         gameplay_update_tick_ms,
+        gameplay_max_time_budget_ms,
         vsync,
         clear_color,
         enable_shaders,
