@@ -266,7 +266,7 @@ pub fn raw_unproject_screen_pos(
     let frustum = v2!((win_w / 2) as f32, (win_h / 2) as f32) * camera.scale();
     let view_pos = ndc * frustum;
 
-    let view_inverse = crate::render_window::get_inverse_view_matrix(camera);
+    let view_inverse = crate::render::get_inverse_view_matrix(camera);
 
     (&view_inverse * v3!(view_pos.x, view_pos.y, 1.0)).into()
 }

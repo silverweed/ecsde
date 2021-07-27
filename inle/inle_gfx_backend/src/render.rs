@@ -90,7 +90,7 @@ pub fn get_mvp_matrix(
 #[inline]
 pub fn get_vp_matrix(window: &Render_Window_Handle, camera: &Transform2D) -> Matrix3<f32> {
     let (width, height) = inle_win::window::get_window_target_size(window);
-    let view = crate::render_window::get_view_matrix(camera);
+    let view = get_view_matrix(camera);
     let projection = Matrix3::new(
         2. / (width as f32 * camera.scale().x),
         0.,
@@ -103,4 +103,21 @@ pub fn get_vp_matrix(window: &Render_Window_Handle, camera: &Transform2D) -> Mat
         1.,
     );
     projection * view
+}
+
+/// Note: we use the camera scale as the zoom factor.
+/// Since the view matrix doesn't want to be scaled, this function just transforms a camera transform
+/// into a view matrix by setting its scale to 1, 1
+#[inline]
+pub fn get_view_matrix(camera: &Transform2D) -> Matrix3<f32> {
+    let mut view = *camera;
+    view.set_scale(1., 1.);
+    view.inverse().get_matrix()
+}
+
+#[inline]
+pub fn get_inverse_view_matrix(camera: &Transform2D) -> Matrix3<f32> {
+    let mut view = *camera;
+    view.set_scale(1., 1.);
+    view.get_matrix()
 }
