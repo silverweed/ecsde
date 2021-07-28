@@ -212,26 +212,25 @@ pub fn set_viewport(window: &mut Render_Window_Handle, viewport: &Rectf, _view_r
     }
 }
 
-pub fn raw_unproject_screen_pos(
+/// Converts screen coordinates (where (0,0) is top-left of the _viewport_) to world coordinates
+/// as seen from `camera`.
+pub fn unproject_screen_pos(
     screen_pos: Vec2i,
     window: &Render_Window_Handle,
     camera: &Transform2D,
 ) -> Vec2f {
+    let vp = get_vp_matrix(window, camera);
     let ndc = v2!(
         2. * (screen_pos.x as f32 - window.viewport.x as f32) / window.viewport.width as f32 - 1.,
-        2. * (screen_pos.y as f32 - window.viewport.y as f32) / window.viewport.height as f32 - 1.
+        1. - 2. * (screen_pos.y as f32 - window.viewport.y as f32) / window.viewport.height as f32,
     );
 
-    let (win_w, win_h) = inle_win::window::get_window_target_size(window);
-    let frustum = v2!((win_w / 2) as f32, (win_h / 2) as f32) * camera.scale();
-    let view_pos = ndc * frustum;
-
-    let view_inverse = crate::render::get_inverse_view_matrix(camera);
-
-    (&view_inverse * v3!(view_pos.x, view_pos.y, 1.0)).into()
+    (&vp.inverse() * v3!(ndc.x, ndc.y, 1.0)).into()
 }
 
-pub fn raw_project_world_pos(
+/// Converts world coordinates to viewport coordinates (i.e. screen coordinates where (0,0) is the
+/// top-left of the viewport).
+pub fn project_world_pos(
     world_pos: Vec2f,
     window: &Render_Window_Handle,
     camera: &Transform2D,
@@ -240,9 +239,10 @@ pub fn raw_project_world_pos(
     let vp = get_vp_matrix(window, camera);
     let clip = &vp * v3!(world_pos.x, world_pos.y, 1.0);
     let ndc = v2!(clip.x / clip.z, -clip.y / clip.z);
+    let (win_w, win_h) = inle_win::window::get_window_target_size(window);
     v2!(
-        (ndc.x + 1.) * 0.5 * window.viewport.width as f32 + window.viewport.x as f32,
-        (ndc.y + 1.) * 0.5 * window.viewport.height as f32 + window.viewport.y as f32,
+        (ndc.x + 1.) * 0.5 * win_w as f32,
+        (ndc.y + 1.) * 0.5 * win_h as f32,
     )
     .into()
 }

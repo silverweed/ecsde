@@ -55,20 +55,24 @@ pub fn resize_keep_ratio(window: &mut Render_Window_Handle, new_width: u32, new_
     backend::set_viewport(window, &viewport, &view);
 }
 
+/// Converts screen coordinates (where (0,0) is top-left of the _viewport_) to world coordinates
+/// as seen from `camera`.
 pub fn unproject_screen_pos(
     screen_pos: Vec2i,
     window: &Render_Window_Handle,
     camera: &Transform2D,
 ) -> Vec2f {
-    backend::raw_unproject_screen_pos(screen_pos, window, camera)
+    backend::unproject_screen_pos(screen_pos, window, camera)
 }
 
+/// Converts world coordinates to viewport coordinates (i.e. screen coordinates where (0,0) is the
+/// top-left of the viewport).
 pub fn project_world_pos(
     world_pos: Vec2f,
     window: &Render_Window_Handle,
     camera: &Transform2D,
 ) -> Vec2i {
-    backend::raw_project_world_pos(world_pos, window, camera)
+    backend::project_world_pos(world_pos, window, camera)
 }
 
 pub fn mouse_pos_in_world(

@@ -992,10 +992,9 @@ fn update_mouse_debug_overlay(
         let wpos = render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, &camera);
         debug_overlay
             .add_line(&format!(
-                "w {:.2},{:.2} {:?}",
+                "w {:.2},{:.2}",
                 wpos.x,
                 wpos.y,
-                render_window::project_world_pos(wpos, window, &camera)
             ))
             .with_color(colors::rgba(200, 200, 200, 220));
     }
