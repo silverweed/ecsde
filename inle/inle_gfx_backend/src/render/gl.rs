@@ -655,36 +655,41 @@ pub fn fill_color_rect_ws<T>(
 }
 
 #[inline]
+fn fill_color_circle_internal(
+    window: &mut Render_Window_Handle,
+    paint_props: &Paint_Properties,
+    circle: shapes::Circle,
+    mvp: &Matrix3<f32>,
+) {
+    // @Incomplete
+    //if paint_props.border_thick > 0. {
+    //}
+
+    let rect = Rect::new(
+        circle.center.x - circle.radius,
+        circle.center.y - circle.radius,
+        2. * circle.radius,
+        2. * circle.radius,
+    );
+
+    use_circle_shader(window, paint_props.color, &rect, mvp);
+
+    unsafe {
+        gl::BindVertexArray(window.gl.rect_vao);
+        window
+            .gl
+            .draw_indexed(window.gl.n_rect_indices(), window.gl.rect_indices_type());
+    }
+}
+
+#[inline]
 pub fn fill_color_circle(
     window: &mut Render_Window_Handle,
     paint_props: &Paint_Properties,
     circle: shapes::Circle,
 ) {
-    // @FIXME: this outline also fills the shape, and it shouldn't!
-    if paint_props.border_thick > 0. {
-        let outline = shapes::Circle {
-            center: circle.center,
-            radius: circle.radius + 2. * paint_props.border_thick,
-        };
-
-        use_circle_shader(window, paint_props.border_color, outline);
-
-        unsafe {
-            gl::BindVertexArray(window.gl.circle_vao);
-            window
-                .gl
-                .draw_arrays(gl::TRIANGLE_FAN, 0, window.gl.n_circle_vertices());
-        }
-    }
-
-    use_circle_shader(window, paint_props.color, circle);
-
-    unsafe {
-        gl::BindVertexArray(window.gl.circle_vao);
-        window
-            .gl
-            .draw_arrays(gl::TRIANGLE_FAN, 0, window.gl.n_circle_vertices());
-    }
+    let mvp = get_mvp_screen_matrix(window, &Transform2D::default());
+    fill_color_circle_internal(window, paint_props, circle, &mvp);
 }
 
 #[inline]
@@ -694,31 +699,8 @@ pub fn fill_color_circle_ws(
     circle: shapes::Circle,
     camera: &Transform2D,
 ) {
-    // @FIXME: this outline also fills the shape, and it shouldn't!
-    if paint_props.border_thick > 0. {
-        let outline = shapes::Circle {
-            center: circle.center,
-            radius: circle.radius + 2. * paint_props.border_thick,
-        };
-
-        use_circle_ws_shader(window, paint_props.border_color, outline, camera);
-
-        unsafe {
-            gl::BindVertexArray(window.gl.circle_vao);
-            window
-                .gl
-                .draw_arrays(gl::TRIANGLE_FAN, 0, window.gl.n_circle_vertices());
-        }
-    }
-
-    use_circle_ws_shader(window, paint_props.color, circle, camera);
-
-    unsafe {
-        gl::BindVertexArray(window.gl.circle_vao);
-        window
-            .gl
-            .draw_arrays(gl::TRIANGLE_FAN, 0, window.gl.n_circle_vertices());
-    }
+    let mvp = get_mvp_matrix(window, &Transform2D::default(), camera);
+    fill_color_circle_internal(window, paint_props, circle, &mvp);
 }
 
 #[inline]
@@ -1316,7 +1298,13 @@ pub fn set_texture_smooth(texture: &mut Texture, smooth: bool) {
 
 // -----------------------------------------------------------------------
 
-fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<f32>) {
+fn use_rect_shader_internal(
+    window: &mut Render_Window_Handle,
+    color: Color,
+    rect: &Rect<f32>,
+    mvp: &Matrix3<f32>,
+    shader: GLuint,
+) {
     // @Volatile: order must be consistent with render_window::backend::RECT_INDICES
     let rect_vertices = [
         rect.x,
@@ -1328,12 +1316,10 @@ fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<
         rect.x,
         rect.y + rect.height,
     ];
-    let mvp = get_mvp_screen_matrix(window, &Transform2D::default());
-    let shader = window.gl.rect_shader;
 
     // @TODO: consider using UBOs
     unsafe {
-        gl::UseProgram(window.gl.rect_shader);
+        gl::UseProgram(shader);
         check_gl_err();
 
         gl::UniformMatrix3fv(
@@ -1361,6 +1347,11 @@ fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<
     }
 }
 
+fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<f32>) {
+    let mvp = get_mvp_screen_matrix(window, &Transform2D::default());
+    use_rect_shader_internal(window, color, rect, &mvp, window.gl.rect_shader);
+}
+
 fn use_rect_ws_shader(
     window: &mut Render_Window_Handle,
     color: Color,
@@ -1368,47 +1359,29 @@ fn use_rect_ws_shader(
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
-    // @Volatile: order must be consistent with render_window::backend::RECT_INDICES
-    let rect_vertices = [
-        rect.x,
-        rect.y,
-        rect.x + rect.width,
-        rect.y,
-        rect.x + rect.width,
-        rect.y + rect.height,
-        rect.x,
-        rect.y + rect.height,
-    ];
     let mvp = get_mvp_matrix(window, transform, camera);
-    let shader = window.gl.rect_shader;
+    use_rect_shader_internal(window, color, rect, &mvp, window.gl.rect_shader);
+}
 
-    // @TODO: consider using UBOs
+fn use_circle_shader(
+    window: &mut Render_Window_Handle,
+    color: Color,
+    rect: &Rect<f32>,
+    mvp: &Matrix3<f32>,
+) {
+    let shader = window.gl.circle_shader;
+    use_rect_shader_internal(window, color, rect, &mvp, shader);
+
     unsafe {
-        gl::UseProgram(window.gl.rect_shader);
-        check_gl_err();
-
-        gl::UniformMatrix3fv(
-            get_uniform_loc(shader, c_str!("mvp")),
-            1,
-            gl::FALSE,
-            mvp.as_slice().as_ptr(),
+        gl::Uniform2f(
+            get_uniform_loc(shader, c_str!("center")),
+            rect.x + rect.width * 0.5,
+            rect.y + rect.height * 0.5,
         );
-        check_gl_err();
-
-        gl::Uniform2fv(
-            get_uniform_loc(shader, c_str!("rect")),
-            (rect_vertices.len() / 2) as _,
-            rect_vertices.as_ptr(),
+        gl::Uniform1f(
+            get_uniform_loc(shader, c_str!("radius_squared")),
+            rect.width * rect.width * 0.25,
         );
-
-        gl::Uniform4f(
-            get_uniform_loc(shader, c_str!("color")),
-            color.r as f32 / 255.0,
-            color.g as f32 / 255.0,
-            color.b as f32 / 255.0,
-            color.a as f32 / 255.0,
-        );
-        check_gl_err();
     }
 }
 
@@ -1483,74 +1456,6 @@ fn use_line_shader(window: &mut Render_Window_Handle, start: &Vertex, end: &Vert
                 end.color.w,
             ]
             .as_ptr(),
-        );
-        check_gl_err();
-    }
-}
-
-fn use_circle_shader(window: &mut Render_Window_Handle, color: Color, circle: shapes::Circle) {
-    let transform = Transform2D::from_pos_rot_scale(
-        circle.center,
-        inle_math::angle::Angle::default(),
-        v2!(circle.radius, circle.radius) * 2.0,
-    );
-
-    let mvp = get_mvp_screen_matrix(window, &transform);
-    let shader = window.gl.circle_shader;
-
-    unsafe {
-        gl::UseProgram(shader);
-        check_gl_err();
-
-        gl::UniformMatrix3fv(
-            get_uniform_loc(shader, c_str!("mvp")),
-            1,
-            gl::FALSE,
-            mvp.as_slice().as_ptr(),
-        );
-
-        gl::Uniform4f(
-            get_uniform_loc(shader, c_str!("color")),
-            color.r as f32 / 255.0,
-            color.g as f32 / 255.0,
-            color.b as f32 / 255.0,
-            color.a as f32 / 255.0,
-        );
-        check_gl_err();
-    }
-}
-
-fn use_circle_ws_shader(
-    window: &mut Render_Window_Handle,
-    color: Color,
-    circle: shapes::Circle,
-    camera: &Transform2D,
-) {
-    let transform = Transform2D::from_pos_rot_scale(
-        circle.center,
-        inle_math::angle::Angle::default(),
-        v2!(circle.radius, circle.radius) * 2.0,
-    );
-
-    let mvp = get_mvp_matrix(window, &transform, camera);
-
-    unsafe {
-        gl::UseProgram(window.gl.circle_shader);
-        check_gl_err();
-
-        gl::UniformMatrix3fv(
-            get_uniform_loc(window.gl.circle_shader, c_str!("mvp")),
-            1,
-            gl::FALSE,
-            mvp.as_slice().as_ptr(),
-        );
-
-        gl::Uniform4f(
-            get_uniform_loc(window.gl.circle_shader, c_str!("color")),
-            color.r as f32 / 255.0,
-            color.g as f32 / 255.0,
-            color.b as f32 / 255.0,
-            color.a as f32 / 255.0,
         );
         check_gl_err();
     }

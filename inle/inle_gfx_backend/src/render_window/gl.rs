@@ -55,8 +55,6 @@ pub struct Gl {
     pub vbuf_shader: GLuint,
     pub vbuf_texture_shader: GLuint,
 
-    pub circle_vao: GLuint,
-    pub circle_vbo: GLuint,
     pub circle_shader: GLuint,
 
     pub text_shader: GLuint,
@@ -72,10 +70,6 @@ impl Gl {
 
     pub const fn rect_indices_type(&self) -> GLenum {
         gl::UNSIGNED_INT
-    }
-
-    pub const fn n_circle_vertices(&self) -> GLsizei {
-        CIRCLE_VERTICES.len() as _
     }
 
     pub fn draw_arrays(&mut self, primitive: GLenum, first: GLint, count: GLsizei) {
@@ -122,13 +116,12 @@ fn init_gl() -> Gl {
     let mut gl = Gl::default();
 
     fill_rect_buffers(&mut gl);
-    fill_circle_buffers(&mut gl);
 
     gl.rect_shader = create_shader_from!("rect", "basic_color");
     gl.line_shader = create_shader_from!("line", "vbuf");
     gl.vbuf_shader = create_shader_from!("vbuf", "vbuf");
     gl.vbuf_texture_shader = create_shader_from!("vbuf", "vbuf_texture");
-    gl.circle_shader = create_shader_from!("circle", "basic_color");
+    gl.circle_shader = create_shader_from!("rect", "circle");
     gl.text_shader = create_shader_from!("vbuf", "msdf");
 
     unsafe {
@@ -171,42 +164,6 @@ fn fill_rect_buffers(gl: &mut Gl) {
 
     gl.rect_vao = vao;
     gl.rect_ebo = ebo;
-}
-
-fn fill_circle_buffers(gl: &mut Gl) {
-    const LOC_IN_POS: GLuint = 0;
-
-    let (mut vao, mut vbo) = (0, 0);
-    unsafe {
-        gl::GenVertexArrays(1, &mut vao);
-        gl::GenBuffers(1, &mut vbo);
-
-        debug_assert!(vao != 0);
-        debug_assert!(vbo != 0);
-
-        gl::BindVertexArray(vao);
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::BufferStorage(
-            gl::ARRAY_BUFFER,
-            (CIRCLE_VERTICES.len() * mem::size_of::<GLfloat>()) as _,
-            CIRCLE_VERTICES.as_ptr() as *const _,
-            0,
-        );
-
-        gl::VertexAttribPointer(
-            LOC_IN_POS,
-            2,
-            gl::FLOAT,
-            gl::FALSE,
-            2 * mem::size_of::<GLfloat>() as GLsizei,
-            ptr::null(),
-        );
-        gl::EnableVertexAttribArray(LOC_IN_POS);
-    }
-
-    gl.circle_vao = vao;
-    gl.circle_vbo = vbo;
 }
 
 #[inline(always)]
@@ -321,15 +278,3 @@ extern "system" fn gl_msg_callback(
         lverbose!("[GL MSG] {}\n", str::from_utf8(message).unwrap());
     }
 }
-
-const N_CIRCLE_POINTS: usize = 32;
-const CIRCLE_VERTICES: [GLfloat; 2 * (N_CIRCLE_POINTS + 2)] = [
-    0., 0., 0.500000, 0.000000, 0.490393, 0.097545, 0.461940, 0.191342, 0.415735, 0.277785,
-    0.353553, 0.353553, 0.277785, 0.415735, 0.191342, 0.461940, 0.097545, 0.490393, -0.000000,
-    0.500000, -0.097545, 0.490393, -0.191342, 0.461940, -0.277785, 0.415735, -0.353553, 0.353553,
-    -0.415735, 0.277785, -0.461940, 0.191342, -0.490393, 0.097545, -0.500000, -0.000000, -0.490393,
-    -0.097545, -0.461940, -0.191342, -0.415735, -0.277785, -0.353553, -0.353553, -0.277785,
-    -0.415735, -0.191342, -0.461940, -0.097545, -0.490393, 0.000000, -0.500000, 0.097545,
-    -0.490393, 0.191342, -0.461940, 0.277785, -0.415735, 0.353553, -0.353553, 0.415735, -0.277785,
-    0.461940, -0.191342, 0.490393, -0.097545, 0.5, 0.,
-];
