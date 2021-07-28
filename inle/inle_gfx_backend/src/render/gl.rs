@@ -710,13 +710,37 @@ pub fn render_text(
     paint_props: &Paint_Properties,
     screen_pos: Vec2f,
 ) {
-    use inle_common::colors;
-
     if text.string.is_empty() {
         return;
     }
 
-    use_text_shader(window, paint_props, &Transform2D::from_pos(screen_pos));
+    let mvp = get_mvp_screen_matrix(window, &Transform2D::from_pos(screen_pos));
+    use_text_shader(window, paint_props, &mvp);
+
+    render_text_internal(window, text);
+}
+
+#[inline]
+pub fn render_text_ws(
+    window: &mut Render_Window_Handle,
+    text: &mut Text,
+    paint_props: &Paint_Properties,
+    transform: &Transform2D,
+    camera: &Transform2D,
+) {
+    if text.string.is_empty() {
+        return;
+    }
+
+    let mvp = get_mvp_matrix(window, transform, camera);
+    use_text_shader(window, paint_props, &mvp);
+
+    render_text_internal(window, text);
+}
+
+#[inline]
+fn render_text_internal(window: &mut Render_Window_Handle, text: &mut Text) {
+    use inle_common::colors;
 
     let mut vbuf = new_vbuf_temp(
         window,
@@ -801,18 +825,6 @@ pub fn render_text(
         );
         check_gl_err();
     }
-}
-
-#[inline]
-pub fn render_text_ws(
-    window: &mut Render_Window_Handle,
-    text: &mut Text,
-    paint_props: &Paint_Properties,
-    transform: &Transform2D,
-    _camera: &Transform2D,
-) {
-    // @Incomplete!
-    render_text(window, text, paint_props, transform.position());
 }
 
 #[inline]
@@ -1463,9 +1475,8 @@ fn use_line_shader(window: &mut Render_Window_Handle, start: &Vertex, end: &Vert
 fn use_text_shader(
     window: &mut Render_Window_Handle,
     paint_props: &Paint_Properties,
-    transform: &Transform2D,
+    mvp: &Matrix3<f32>,
 ) {
-    let mvp = get_mvp_screen_matrix(window, &transform);
     let shader = window.gl.text_shader;
 
     unsafe {
