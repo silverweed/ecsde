@@ -235,7 +235,6 @@ pub fn project_world_pos(
     window: &Render_Window_Handle,
     camera: &Transform2D,
 ) -> Vec2i {
-    // @Fixme: this is giving the "raw" screen coords, not the ones corrected for the real viewport
     let vp = get_vp_matrix(window, camera);
     let clip = &vp * v3!(world_pos.x, world_pos.y, 1.0);
     let ndc = v2!(clip.x / clip.z, -clip.y / clip.z);
