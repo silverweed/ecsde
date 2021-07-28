@@ -134,6 +134,9 @@ fn init_gl() -> Gl {
     unsafe {
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         gl::Enable(gl::BLEND);
+
+        gl::FrontFace(gl::CW);
+        gl::Enable(gl::CULL_FACE);
     }
 
     #[cfg(debug_assertions)]
