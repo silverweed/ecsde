@@ -1299,7 +1299,6 @@ pub fn set_texture_smooth(texture: &mut Texture, smooth: bool) {
 // -----------------------------------------------------------------------
 
 fn use_rect_shader_internal(
-    window: &mut Render_Window_Handle,
     color: Color,
     rect: &Rect<f32>,
     mvp: &Matrix3<f32>,
@@ -1349,7 +1348,7 @@ fn use_rect_shader_internal(
 
 fn use_rect_shader(window: &mut Render_Window_Handle, color: Color, rect: &Rect<f32>) {
     let mvp = get_mvp_screen_matrix(window, &Transform2D::default());
-    use_rect_shader_internal(window, color, rect, &mvp, window.gl.rect_shader);
+    use_rect_shader_internal(color, rect, &mvp, window.gl.rect_shader);
 }
 
 fn use_rect_ws_shader(
@@ -1360,7 +1359,7 @@ fn use_rect_ws_shader(
     camera: &Transform2D,
 ) {
     let mvp = get_mvp_matrix(window, transform, camera);
-    use_rect_shader_internal(window, color, rect, &mvp, window.gl.rect_shader);
+    use_rect_shader_internal(color, rect, &mvp, window.gl.rect_shader);
 }
 
 fn use_circle_shader(
@@ -1370,7 +1369,7 @@ fn use_circle_shader(
     mvp: &Matrix3<f32>,
 ) {
     let shader = window.gl.circle_shader;
-    use_rect_shader_internal(window, color, rect, &mvp, shader);
+    use_rect_shader_internal(color, rect, &mvp, shader);
 
     unsafe {
         gl::Uniform2f(
@@ -1509,9 +1508,9 @@ fn get_uniform_loc(shader: GLuint, name: &CStr) -> GLint {
     }
 }
 
-// this is get_mvp_matrix with camera == identity
+/// This is the equivalent of get_mvp_matrix() with a camera with scale 1, no rotation
+/// and positioned in (win_target_size.x / 2, win_target_size.y / 2).
 fn get_mvp_screen_matrix(window: &Render_Window_Handle, transform: &Transform2D) -> Matrix3<f32> {
-    //get_mvp_matrix(window, transform, &Transform2D::default())
     let (width, height) = inle_win::window::get_window_target_size(window);
     let view_projection = Matrix3::new(
         2. / width as f32,

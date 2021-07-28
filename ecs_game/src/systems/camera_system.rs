@@ -30,8 +30,6 @@ pub fn update(dt: &Duration, world: &mut Ecs_World, cfg: &Config) {
         let target = cam_follow.target;
         let lerp_factor = cam_follow.lerp_factor.read(cfg);
 
-        let camera = world.get_component::<C_Camera2D>(entity).unwrap();
-
         let target_pos = match target {
             Camera_Follow_Target::None => { return; },
             Camera_Follow_Target::Position(pos) => pos,

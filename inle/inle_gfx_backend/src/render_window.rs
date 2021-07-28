@@ -1,6 +1,3 @@
-use inle_math::matrix::Matrix3;
-use inle_math::transform::Transform2D;
-
 #[cfg(feature = "gfx-sfml")]
 pub mod sfml;
 

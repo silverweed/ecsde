@@ -190,9 +190,6 @@ fn draw_line(
     let v1 = render::new_vertex(line.from, colors::WHITE, v2!(0., 0.));
     let v2 = render::new_vertex(line.to, colors::WHITE, v2!(1., 1.));
     render::add_line(&mut vbuf, &v1, &v2);
-    // @FIXME: the _ws version of render_vbuf is broken! It's like the
-    // camera pivot is shifted to the center rather than at the top-left, or viceversa.
-    // Investigate and fix! (this probably also explains why draw_grid is broken)
     render::render_vbuf_ws(window, &vbuf, &Transform2D::default(), camera);
     /*
     let direction = line.to - line.from;
