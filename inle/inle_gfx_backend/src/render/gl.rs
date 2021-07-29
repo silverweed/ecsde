@@ -1,5 +1,6 @@
 use super::{Primitive_Type, Uniform_Value};
 use crate::backend_common::alloc::{Buffer_Allocator_Id, Buffer_Allocator_Ptr, Buffer_Handle};
+use std::cell::Cell;
 use crate::backend_common::misc::check_gl_err;
 use crate::render::get_mvp_matrix;
 use crate::render_window::Render_Window_Handle;
@@ -56,11 +57,12 @@ fn assert_shader_in_use(shader: &Shader) {
 /// (location = 1) vec2 pos;
 /// (location = 2) vec2 tex_coords;
 pub struct Vertex_Buffer {
-    cur_vertices: u32,
     max_vertices: u32,
     primitive_type: Primitive_Type,
     buf: Buffer_Handle,
     parent_alloc: Buffer_Allocator_Ptr,
+    vertices: Vec<Vertex>,
+    needs_transfer_to_gpu: Cell<bool>,
 }
 
 impl Vertex_Buffer {
@@ -119,10 +121,11 @@ impl Vertex_Buffer {
 
         Self {
             buf,
-            cur_vertices: 0,
             max_vertices,
             primitive_type,
             parent_alloc: buf_allocator_ptr.clone(),
+            vertices: Vec::with_capacity(max_vertices as usize),
+            needs_transfer_to_gpu: Cell::new(false),
         }
     }
 }
@@ -821,7 +824,7 @@ fn render_text_internal(window: &mut Render_Window_Handle, text: &mut Text) {
         window.gl.draw_arrays(
             to_gl_primitive_type(vbuf.primitive_type),
             (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
-            vbuf.cur_vertices as _,
+            vbuf_cur_vertices(&vbuf) as _,
         );
         check_gl_err();
     }
@@ -933,39 +936,61 @@ pub fn new_vbuf_temp(
 pub fn add_vertices(vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
     trace!("add_vertices");
     debug_assert!(
-        vbuf.cur_vertices as usize + vertices.len() <= vbuf.max_vertices as usize,
+        vbuf_cur_vertices(vbuf) as usize + vertices.len() <= vbuf.max_vertices as usize,
         "vbuf max vertices exceeded! ({})",
         vbuf.max_vertices
     );
-    update_vbuf(vbuf, vertices, vbuf.cur_vertices);
+    update_vbuf(vbuf, vertices, vbuf_cur_vertices(vbuf));
 }
 
 #[inline]
 pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
     trace!("update_vbuf");
 
+    #[cfg(debug_assertions)]
+    let prev_vertices = vbuf.vertices.len();
+
+    vbuf.vertices.truncate(offset as usize);
+
+    let space_remaining = vbuf.max_vertices as usize - vbuf.vertices.len();
+    let vertices_to_copy = vertices.len().min(space_remaining);
+
+    #[cfg(debug_assertions)]
+    {
+        if vertices_to_copy != vertices.len() {
+            lwarn!("Trying to copy too many vertices ({}) into vbuf (remaining space: {}).",
+            vertices.len(), space_remaining);
+        }
+    }
+    vbuf.vertices.extend(&vertices[..vertices_to_copy]);
+    vbuf.needs_transfer_to_gpu.set(true);
+
+   // vbuf_transfer_to_gpu(vbuf);
+
+    #[cfg(debug_assertions)]
+    {
+        debug_assert_eq!(vbuf.vertices.len() - prev_vertices, vertices.len() - (prev_vertices - offset as usize));
+    }
+}
+
+#[inline]
+fn vbuf_transfer_to_gpu(vbuf: &Vertex_Buffer) {
+    trace!("vbuf_transfer_to_gpu");
+
     let mut alloc = vbuf.parent_alloc.borrow_mut();
     alloc.update_buffer(
         &vbuf.buf,
-        offset as usize * mem::size_of::<Vertex>(),
-        vertices.len() * mem::size_of::<Vertex>(),
-        vertices.as_ptr() as _,
+        0,
+        vbuf_cur_vertices(vbuf) as usize * mem::size_of::<Vertex>(),
+        vbuf.vertices.as_ptr() as _,
     );
 
-    let written_len = offset as usize + vertices.len();
-
-    debug_assert!(
-        written_len <= vbuf.max_vertices as usize,
-        "Written past max vertices! {}/{}",
-        written_len,
-        vbuf.max_vertices
-    );
-    vbuf.cur_vertices = vbuf.cur_vertices.max(written_len as u32);
+    vbuf.needs_transfer_to_gpu.set(false);
 }
 
 #[inline(always)]
 pub fn vbuf_cur_vertices(vbuf: &Vertex_Buffer) -> u32 {
-    vbuf.cur_vertices
+    vbuf.vertices.len() as _
 }
 
 #[inline(always)]
@@ -975,7 +1000,8 @@ pub fn vbuf_max_vertices(vbuf: &Vertex_Buffer) -> u32 {
 
 #[inline(always)]
 pub fn set_vbuf_cur_vertices(vbuf: &mut Vertex_Buffer, cur_vertices: u32) {
-    vbuf.cur_vertices = cur_vertices;
+    vbuf.vertices.resize(cur_vertices as usize, Vertex::default());
+    vbuf.needs_transfer_to_gpu.set(true);
 }
 
 #[inline]
@@ -988,6 +1014,9 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
 }
 
 fn render_vbuf_internal(window: &mut Render_Window_Handle, vbuf: &Vertex_Buffer) {
+  //  if vbuf.needs_transfer_to_gpu.get() {
+        vbuf_transfer_to_gpu(vbuf);
+ //   }
     unsafe {
         gl::BindVertexArray(vbuf.buf.vao());
         check_gl_err();
@@ -995,7 +1024,7 @@ fn render_vbuf_internal(window: &mut Render_Window_Handle, vbuf: &Vertex_Buffer)
         window.gl.draw_arrays(
             to_gl_primitive_type(vbuf.primitive_type),
             (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
-            vbuf.cur_vertices as _,
+            vbuf_cur_vertices(vbuf) as _,
         );
         check_gl_err();
     }
@@ -1007,7 +1036,7 @@ pub fn render_vbuf(
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
 ) {
-    if vbuf.cur_vertices == 0 {
+    if vbuf_cur_vertices(vbuf) == 0 {
         return;
     }
 
@@ -1024,7 +1053,7 @@ pub fn render_vbuf_ws(
 ) {
     // @FIXME: there's something wrong going on here...
 
-    if vbuf.cur_vertices == 0 {
+    if vbuf_cur_vertices(vbuf) == 0 {
         return;
     }
 
@@ -1040,7 +1069,7 @@ pub fn render_vbuf_ws_with_texture(
     camera: &Transform2D,
     texture: &Texture,
 ) {
-    if vbuf.cur_vertices == 0 {
+    if vbuf_cur_vertices(vbuf) == 0 {
         return;
     }
 
@@ -1060,7 +1089,7 @@ pub fn render_vbuf_with_shader(
     vbuf: &Vertex_Buffer,
     shader: &Shader,
 ) {
-    if vbuf.cur_vertices == 0 {
+    if vbuf_cur_vertices(vbuf) == 0 {
         return;
     }
 
