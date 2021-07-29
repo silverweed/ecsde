@@ -316,63 +316,67 @@ where
                 game_state.state_mgr.update(&mut args, &dt, &real_dt);
             }
 
-            game_state.accumulated_update_time += dt;
+            if !game_state.engine_state.time.paused {
+                game_state.accumulated_update_time += dt;
 
-            let max_time_budget = Duration::from_micros(
-                (game_state
-                    .cvars
-                    .gameplay_max_time_budget_ms
-                    .read(&game_state.engine_state.config)
-                    * 1000.0) as u64,
-            );
-            let mut n_updates = 0;
-            let mut time_spent_in_update = Duration::default();
-
-            while game_state.accumulated_update_time >= update_dt {
-                let update_start = std::time::Instant::now();
-
-                game_state.gameplay_system.update(
-                    &update_dt,
-                    &mut game_state.engine_state,
-                    game_resources,
-                    &game_state.window,
+                let max_time_budget = Duration::from_micros(
+                    (game_state
+                        .cvars
+                        .gameplay_max_time_budget_ms
+                        .read(&game_state.engine_state.config)
+                        * 1000.0) as u64,
                 );
+                let mut n_updates = 0;
+                let mut time_spent_in_update = Duration::default();
 
-                update_physics(
-                    game_state,
-                    update_dt,
-                    #[cfg(debug_assertions)]
-                    &mut collision_debug_data,
-                );
+                while game_state.accumulated_update_time >= update_dt {
+                    let update_start = std::time::Instant::now();
 
-                game_state
-                    .gameplay_system
-                    .late_update(&mut game_state.engine_state.systems.evt_register);
-
-                game_state.accumulated_update_time -= update_dt;
-                n_updates += 1;
-
-                time_spent_in_update += update_start.elapsed();
-                if time_spent_in_update > max_time_budget {
-                    lerr!(
-                        "Time budget for simulation exhausted ({} ms): losing time!",
-                        1000.0 * max_time_budget.as_secs_f32()
+                    game_state.gameplay_system.update(
+                        &update_dt,
+                        &mut game_state.engine_state,
+                        game_resources,
+                        &game_state.window,
                     );
-                    break;
-                }
-            }
 
-            let cfg = &game_state.engine_state.config;
-            if game_state.cvars.enable_particles.read(cfg) {
-                for _ in 0..n_updates {
+                    update_physics(
+                        game_state,
+                        update_dt,
+                        #[cfg(debug_assertions)]
+                        &mut collision_debug_data,
+                    );
+
                     game_state
-                        .engine_state
-                        .systems
-                        .particle_mgrs
-                        .iter_mut()
-                        .for_each(|(_, particle_mgr)| {
-                            particle_mgr.update(&update_dt, cfg);
-                        });
+                        .gameplay_system
+                        .late_update(&mut game_state.engine_state.systems.evt_register);
+
+                    game_state.accumulated_update_time -= update_dt;
+                    n_updates += 1;
+
+                    time_spent_in_update += update_start.elapsed();
+                    if time_spent_in_update > max_time_budget {
+                        lerr!(
+                            "Time budget for simulation exhausted ({} ms): losing time!",
+                            1000.0 * max_time_budget.as_secs_f32()
+                        );
+                        break;
+                    }
+
+                    game_state.engine_state.input_state.clear();
+                }
+
+                let cfg = &game_state.engine_state.config;
+                if game_state.cvars.enable_particles.read(cfg) {
+                    for _ in 0..n_updates {
+                        game_state
+                            .engine_state
+                            .systems
+                            .particle_mgrs
+                            .iter_mut()
+                            .for_each(|(_, particle_mgr)| {
+                                particle_mgr.update(&update_dt, cfg);
+                            });
+                    }
                 }
             }
         }
@@ -991,11 +995,7 @@ fn update_mouse_debug_overlay(
     if let Some(camera) = camera {
         let wpos = render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, &camera);
         debug_overlay
-            .add_line(&format!(
-                "w {:.2},{:.2}",
-                wpos.x,
-                wpos.y,
-            ))
+            .add_line(&format!("w {:.2},{:.2}", wpos.x, wpos.y,))
             .with_color(colors::rgba(200, 200, 200, 220));
     }
 

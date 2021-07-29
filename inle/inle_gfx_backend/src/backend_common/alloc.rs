@@ -290,6 +290,7 @@ impl Buffer_Allocator {
         }
     }
 
+    #[inline]
     pub fn update_buffer(
         &mut self,
         handle: &Buffer_Handle,
@@ -297,6 +298,8 @@ impl Buffer_Allocator {
         len: usize,
         data: *const c_void,
     ) {
+        trace!("buf_alloc::update_buffer");
+
         if let Buffer_Handle_Inner::Non_Empty(h) = &handle.inner {
             #[cfg(debug_assertions)]
             {
@@ -366,6 +369,8 @@ pub struct Buffer_Allocator_Bucket {
 }
 
 fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket {
+    trace!("buf_alloc::allocate_bucket");
+
     let (mut vao, mut vbo) = (0, 0);
     unsafe {
         gl::GenVertexArrays(1, &mut vao);
@@ -439,6 +444,8 @@ fn allocate_from_bucket(
     free_slot_idx: usize,
     len: usize,
 ) -> Bucket_Slot {
+    trace!("buf_alloc::allocate_from_bucket");
+
     lverbose!(
         "allocating {} from bucket {:?}, slot {}",
         len,
@@ -480,6 +487,8 @@ fn free_list_is_sorted(list: &[Bucket_Slot]) -> bool {
 }
 
 fn deallocate_in_bucket(bucket: &mut Buffer_Allocator_Bucket, slot: Bucket_Slot) {
+    trace!("buf_alloc::deallocate_in_bucket");
+
     debug_assert!(!is_bucket_slot_free(bucket, &slot));
 
     let slot_end = slot.end();
@@ -518,6 +527,7 @@ fn deallocate_in_bucket(bucket: &mut Buffer_Allocator_Bucket, slot: Bucket_Slot)
     debug_assert!(is_bucket_valid(bucket));
 }
 
+#[inline]
 fn write_to_bucket(
     bucket: &mut Buffer_Allocator_Bucket,
     handle: &Non_Empty_Buffer_Handle,
@@ -525,6 +535,8 @@ fn write_to_bucket(
     len: usize,
     data: *const c_void,
 ) {
+    trace!("buf_alloc::write_to_bucket");
+
     debug_assert!(!is_bucket_slot_free(bucket, &handle.slot));
     debug_assert!(len <= handle.slot.len);
 

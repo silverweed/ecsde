@@ -61,6 +61,15 @@ pub fn create_input_state(env: &Env_Info) -> Input_State {
     }
 }
 
+impl Input_State {
+    pub fn clear(&mut self) {
+        self.raw.core_events.clear();
+        self.raw.events.clear();
+        self.processed.core_actions.clear();
+        self.processed.game_actions.clear();
+    }
+}
+
 fn is_core_event(evt: &Input_Raw_Event) -> bool {
     matches!(
         evt,

@@ -931,6 +931,7 @@ pub fn new_vbuf_temp(
 
 #[inline]
 pub fn add_vertices(vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
+    trace!("add_vertices");
     debug_assert!(
         vbuf.cur_vertices as usize + vertices.len() <= vbuf.max_vertices as usize,
         "vbuf max vertices exceeded! ({})",
@@ -941,6 +942,8 @@ pub fn add_vertices(vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
 
 #[inline]
 pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
+    trace!("update_vbuf");
+
     let mut alloc = vbuf.parent_alloc.borrow_mut();
     alloc.update_buffer(
         &vbuf.buf,
@@ -1310,12 +1313,7 @@ pub fn set_texture_smooth(texture: &mut Texture, smooth: bool) {
 
 // -----------------------------------------------------------------------
 
-fn use_rect_shader_internal(
-    color: Color,
-    rect: &Rect<f32>,
-    mvp: &Matrix3<f32>,
-    shader: GLuint,
-) {
+fn use_rect_shader_internal(color: Color, rect: &Rect<f32>, mvp: &Matrix3<f32>, shader: GLuint) {
     // @Volatile: order must be consistent with render_window::backend::RECT_INDICES
     let rect_vertices = [
         rect.x,

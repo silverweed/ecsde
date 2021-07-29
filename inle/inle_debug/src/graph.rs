@@ -214,15 +214,12 @@ impl Debug_Element for Debug_Graph_View {
         }
 
         // Draw line
-        let drawn_points = self
-            .data
-            .points
-            .iter()
-            .filter(|Vec2f { x, y }| xr.contains(x) && yr.contains(y))
-            .collect::<Vec<_>>();
+        let drawn_points = &self.data.points;
         let mut vbuf = render::start_draw_linestrip_temp(window, drawn_points.len() as _);
         let mut avg = 0.0;
-        for (i, &&point) in drawn_points.iter().enumerate() {
+        for (i, &point) in drawn_points.iter().enumerate() {
+            trace!("debug::graph::draw_single_point");
+
             let vpos = self.get_coords_for(point);
             let col = self.get_color_for(point);
             let vertex = render::new_vertex(vpos, col, Vec2f::default());
