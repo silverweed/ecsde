@@ -136,7 +136,7 @@ pub fn duration_ratio(a: &Duration, b: &Duration) -> f32 {
     a.as_secs_f32() / b.as_secs_f32()
 }
 
-    #[inline]
+#[inline]
 pub fn mul_duration(d: &Duration, s: f32) -> Duration {
     Duration::from_secs_f32(d.as_secs_f32() * s)
 }

@@ -1,6 +1,5 @@
 use super::{Primitive_Type, Uniform_Value};
 use crate::backend_common::alloc::{Buffer_Allocator_Id, Buffer_Allocator_Ptr, Buffer_Handle};
-use std::cell::Cell;
 use crate::backend_common::misc::check_gl_err;
 use crate::render::get_mvp_matrix;
 use crate::render_window::Render_Window_Handle;
@@ -12,6 +11,7 @@ use inle_math::rect::Rect;
 use inle_math::shapes;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::ffi::{c_void, CStr, CString};
 use std::marker::PhantomData;
@@ -79,7 +79,10 @@ impl Vertex_Buffer {
         let buf = buffer_allocator.allocate(max_vertices as usize * mem::size_of::<Vertex>());
 
         if max_vertices > 0 {
+            // @Speed: can't we do this just when we allocate the bucket, rather than for every new vbuf?
             unsafe {
+                gl::BindVertexArray(buf.vao());
+
                 gl::VertexAttribPointer(
                     Self::LOC_IN_COLOR,
                     4,
@@ -90,6 +93,7 @@ impl Vertex_Buffer {
                     ptr::null(),
                 );
                 gl::EnableVertexAttribArray(Self::LOC_IN_COLOR);
+                check_gl_err();
 
                 gl::VertexAttribPointer(
                     Self::LOC_IN_POS,
@@ -101,6 +105,7 @@ impl Vertex_Buffer {
                     mem::size_of::<Glsl_Vec4>() as *const c_void,
                 );
                 gl::EnableVertexAttribArray(Self::LOC_IN_POS);
+                check_gl_err();
 
                 gl::VertexAttribPointer(
                     Self::LOC_IN_TEXCOORD,
@@ -112,6 +117,9 @@ impl Vertex_Buffer {
                     (mem::size_of::<Glsl_Vec4>() + mem::size_of::<Vec2f>()) as *const c_void,
                 );
                 gl::EnableVertexAttribArray(Self::LOC_IN_TEXCOORD);
+                check_gl_err();
+
+                gl::BindVertexArray(0);
             }
         } else {
             lwarn!("Creating a Vertex_Buffer with max_vertices = 0");
@@ -958,18 +966,24 @@ pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
     #[cfg(debug_assertions)]
     {
         if vertices_to_copy != vertices.len() {
-            lwarn!("Trying to copy too many vertices ({}) into vbuf (remaining space: {}).",
-            vertices.len(), space_remaining);
+            lwarn!(
+                "Trying to copy too many vertices ({}) into vbuf (remaining space: {}).",
+                vertices.len(),
+                space_remaining
+            );
         }
     }
     vbuf.vertices.extend(&vertices[..vertices_to_copy]);
     vbuf.needs_transfer_to_gpu.set(true);
 
-   // vbuf_transfer_to_gpu(vbuf);
+    //   vbuf_transfer_to_gpu(vbuf);
 
     #[cfg(debug_assertions)]
     {
-        debug_assert_eq!(vbuf.vertices.len() - prev_vertices, vertices.len() - (prev_vertices - offset as usize));
+        debug_assert_eq!(
+            vbuf.vertices.len() - prev_vertices,
+            vertices.len() - (prev_vertices - offset as usize)
+        );
     }
 }
 
@@ -1000,7 +1014,8 @@ pub fn vbuf_max_vertices(vbuf: &Vertex_Buffer) -> u32 {
 
 #[inline(always)]
 pub fn set_vbuf_cur_vertices(vbuf: &mut Vertex_Buffer, cur_vertices: u32) {
-    vbuf.vertices.resize(cur_vertices as usize, Vertex::default());
+    vbuf.vertices
+        .resize(cur_vertices as usize, Vertex::default());
     vbuf.needs_transfer_to_gpu.set(true);
 }
 
@@ -1014,9 +1029,9 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
 }
 
 fn render_vbuf_internal(window: &mut Render_Window_Handle, vbuf: &Vertex_Buffer) {
-  //  if vbuf.needs_transfer_to_gpu.get() {
+    if vbuf.needs_transfer_to_gpu.get() {
         vbuf_transfer_to_gpu(vbuf);
- //   }
+    }
     unsafe {
         gl::BindVertexArray(vbuf.buf.vao());
         check_gl_err();
