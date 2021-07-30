@@ -77,40 +77,49 @@ impl Time {
         self.game_time += self.dt;
     }
 
+    #[inline]
     pub fn step(&mut self, dt: &Duration) {
         self.prev_game_time = self.game_time;
         self.game_time += *dt;
         self.stepping = true;
     }
 
+    #[inline(always)]
     pub fn is_stepping(&self) -> bool {
         self.stepping
     }
 
+    #[inline(always)]
     pub fn dt(&self) -> Duration {
         self.dt
     }
 
+    #[inline(always)]
     pub fn real_dt(&self) -> Duration {
         self.real_dt
     }
 
+    #[inline(always)]
     pub fn dt_secs(&self) -> f32 {
         self.dt().as_secs_f32()
     }
 
+    #[inline(always)]
     pub fn pause_toggle(&mut self) {
         self.paused = !self.paused;
     }
 
+    #[inline(always)]
     pub fn was_paused(&self) -> bool {
         self.was_paused
     }
 
+    #[inline(always)]
     pub fn real_time(&self) -> Duration {
         self.real_time
     }
 
+    #[inline(always)]
     pub fn game_time(&self) -> Duration {
         self.game_time
     }
@@ -122,10 +131,12 @@ pub fn to_ms_frac(d: &Duration) -> f32 {
 }
 
 // @WaitForStable: replace with div_duration() when API is stable
+#[inline]
 pub fn duration_ratio(a: &Duration, b: &Duration) -> f32 {
     a.as_secs_f32() / b.as_secs_f32()
 }
 
+    #[inline]
 pub fn mul_duration(d: &Duration, s: f32) -> Duration {
     Duration::from_secs_f32(d.as_secs_f32() * s)
 }
