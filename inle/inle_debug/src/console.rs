@@ -397,6 +397,9 @@ impl Console {
     }
 
     fn del_prev_word(&mut self) {
+        if self.cur_pos == 0 {
+            return;
+        }
         let mut prev_was_ws = self.cur_line.chars().nth(self.cur_pos - 1) == Some(' ');
         while self.cur_pos > 0 {
             match self.del_prev_char() {
@@ -590,6 +593,10 @@ mod tests {
 
         console.cur_line = String::from("foooo");
         console.cur_pos = console.cur_line.len();
+        console.del_prev_word();
+        assert_eq!(console.cur_line.as_str(), "");
+        assert_eq!(console.cur_pos, console.cur_line.len());
+
         console.del_prev_word();
         assert_eq!(console.cur_line.as_str(), "");
         assert_eq!(console.cur_pos, console.cur_line.len());
