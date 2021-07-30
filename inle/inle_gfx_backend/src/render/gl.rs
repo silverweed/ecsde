@@ -976,7 +976,7 @@ pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
     vbuf.vertices.extend(&vertices[..vertices_to_copy]);
     vbuf.needs_transfer_to_gpu.set(true);
 
-    //   vbuf_transfer_to_gpu(vbuf);
+       vbuf_transfer_to_gpu(vbuf);
 
     #[cfg(debug_assertions)]
     {
@@ -1029,9 +1029,9 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
 }
 
 fn render_vbuf_internal(window: &mut Render_Window_Handle, vbuf: &Vertex_Buffer) {
-    if vbuf.needs_transfer_to_gpu.get() {
-        vbuf_transfer_to_gpu(vbuf);
-    }
+   // if vbuf.needs_transfer_to_gpu.get() {
+   //     vbuf_transfer_to_gpu(vbuf);
+   // }
     unsafe {
         gl::BindVertexArray(vbuf.buf.vao());
         check_gl_err();

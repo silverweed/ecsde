@@ -112,7 +112,7 @@ enum Buffer_Handle_Inner {
 }
 
 #[derive(Debug)]
-#[cfg_attr(debug_assertions, derive(PartialEq, Eq, Clone))]
+#[cfg_attr(debug_assertions, derive(PartialEq, Eq, Hash, Clone))]
 pub struct Non_Empty_Buffer_Handle {
     vao: GLuint,
     vbo: GLuint,
@@ -120,19 +120,6 @@ pub struct Non_Empty_Buffer_Handle {
     pub bucket_idx: u16,
     pub slot: Bucket_Slot,
     allocator_id: Buffer_Allocator_Id,
-
-    #[cfg(debug_assertions)]
-    writes: RefCell<Vec<Bucket_Slot>>,
-}
-
-#[cfg(debug_assertions)]
-impl std::hash::Hash for Non_Empty_Buffer_Handle {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.vao.hash(state);
-        self.vbo.hash(state);
-        self.bucket_idx.hash(state);
-        self.slot.hash(state);
-    }
 }
 
 impl Buffer_Handle {
@@ -270,8 +257,6 @@ impl Buffer_Allocator {
             vao: bucket.vao,
             vbo: bucket.vbo,
             allocator_id: self.id,
-            #[cfg(debug_assertions)]
-            writes: RefCell::new(vec![]),
         };
 
         #[cfg(debug_assertions)]
@@ -555,19 +540,6 @@ fn write_to_bucket(
     data: *const c_void,
 ) {
     trace!("buf_alloc::write_to_bucket");
-
-    #[cfg(debug_assertions)]
-    {
-        if handle.allocator_id == Buffer_Allocator_Id::Array_Temporary {
-            let write = Bucket_Slot { start: (handle.slot.start + offset), len };
-            for w in handle.writes.borrow().iter() {
-                if w.contains(&write) {
-                    panic!("vao {}: overlapping writes! existing: {:?}, new: {:?}", handle.vao, w, write);
-                }
-            }
-            handle.writes.borrow_mut().push(write);
-        }
-    }
 
     debug_assert!(!is_bucket_slot_free(bucket, &handle.slot));
     debug_assert!(len <= handle.slot.len);
