@@ -1,12 +1,6 @@
 use crate::render::{self, Vertex};
 use crate::render::{Primitive_Type, Vertex_Buffer};
 use crate::render_window::Render_Window_Handle;
-use inle_common::colors;
-
-// @Cutnpaste from batcher.rs
-fn null_vertex() -> Vertex {
-    render::new_vertex(v2!(0., 0.), colors::TRANSPARENT, v2!(0., 0.))
-}
 
 pub struct Vertex_Buffer_Holder {
     pub vbuf: Vertex_Buffer,
