@@ -1,6 +1,7 @@
 use super::{Primitive_Type, Uniform_Value};
 use crate::backend_common::alloc::{Buffer_Allocator_Id, Buffer_Allocator_Ptr, Buffer_Handle};
 use crate::backend_common::misc::check_gl_err;
+use crate::backend_common::types::*;
 use crate::render::get_mvp_matrix;
 use crate::render_window::Render_Window_Handle;
 use gl::types::*;
@@ -13,10 +14,12 @@ use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
 use std::cell::Cell;
 use std::collections::HashMap;
-use std::ffi::{c_void, CStr, CString};
+use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
 use std::sync::Once;
 use std::{mem, ptr, str};
+
+pub type Vertex = crate::backend_common::types::Vertex;
 
 fn max_texture_units() -> usize {
     static mut MAX_TEXTURE_UNITS: usize = 0;
@@ -66,10 +69,6 @@ pub struct Vertex_Buffer {
 }
 
 impl Vertex_Buffer {
-    const LOC_IN_COLOR: GLuint = 0;
-    const LOC_IN_POS: GLuint = 1;
-    const LOC_IN_TEXCOORD: GLuint = 2;
-
     fn new(
         buf_allocator_ptr: Buffer_Allocator_Ptr,
         primitive_type: Primitive_Type,
@@ -78,50 +77,7 @@ impl Vertex_Buffer {
         let mut buffer_allocator = buf_allocator_ptr.borrow_mut();
         let buf = buffer_allocator.allocate(max_vertices as usize * mem::size_of::<Vertex>());
 
-        if max_vertices > 0 {
-            // @Speed: can't we do this just when we allocate the bucket, rather than for every new vbuf?
-            unsafe {
-                gl::BindVertexArray(buf.vao());
-
-                gl::VertexAttribPointer(
-                    Self::LOC_IN_COLOR,
-                    4,
-                    gl::FLOAT,
-                    gl::FALSE,
-                    mem::size_of::<Vertex>() as _,
-                    // @Robustness: use offsetof or similar
-                    ptr::null(),
-                );
-                gl::EnableVertexAttribArray(Self::LOC_IN_COLOR);
-                check_gl_err();
-
-                gl::VertexAttribPointer(
-                    Self::LOC_IN_POS,
-                    2,
-                    gl::FLOAT,
-                    gl::FALSE,
-                    mem::size_of::<Vertex>() as _,
-                    // @Robustness: use offsetof or similar
-                    mem::size_of::<Glsl_Vec4>() as *const c_void,
-                );
-                gl::EnableVertexAttribArray(Self::LOC_IN_POS);
-                check_gl_err();
-
-                gl::VertexAttribPointer(
-                    Self::LOC_IN_TEXCOORD,
-                    2,
-                    gl::FLOAT,
-                    gl::FALSE,
-                    mem::size_of::<Vertex>() as _,
-                    // @Robustness: use offsetof or similar
-                    (mem::size_of::<Glsl_Vec4>() + mem::size_of::<Vec2f>()) as *const c_void,
-                );
-                gl::EnableVertexAttribArray(Self::LOC_IN_TEXCOORD);
-                check_gl_err();
-
-                gl::BindVertexArray(0);
-            }
-        } else {
+        if max_vertices == 0 {
             lwarn!("Creating a Vertex_Buffer with max_vertices = 0");
         }
 
@@ -135,100 +91,6 @@ impl Vertex_Buffer {
             vertices: Vec::with_capacity(max_vertices as usize),
             needs_transfer_to_gpu: Cell::new(false),
         }
-    }
-}
-
-#[repr(C)]
-#[derive(Default, Copy, Clone, Debug)]
-struct Glsl_Vec4 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub w: f32,
-}
-
-const_assert!(mem::size_of::<Glsl_Vec4>() == mem::size_of::<GLfloat>() * 4);
-const_assert!(mem::size_of::<Vec2f>() == mem::size_of::<GLfloat>() * 2);
-
-impl From<Color> for Glsl_Vec4 {
-    fn from(c: Color) -> Self {
-        Self {
-            x: c.r as f32 / 255.0,
-            y: c.g as f32 / 255.0,
-            z: c.b as f32 / 255.0,
-            w: c.a as f32 / 255.0,
-        }
-    }
-}
-
-impl From<Glsl_Vec4> for Color {
-    fn from(c: Glsl_Vec4) -> Self {
-        Self {
-            r: (c.x * 255.0) as u8,
-            g: (c.y * 255.0) as u8,
-            b: (c.z * 255.0) as u8,
-            a: (c.w * 255.0) as u8,
-        }
-    }
-}
-
-#[repr(C)]
-#[derive(Default, Copy, Clone, Debug)]
-struct Glsl_Vec3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
-
-const_assert!(mem::size_of::<Glsl_Vec3>() == mem::size_of::<GLfloat>() * 3);
-
-impl From<Color3> for Glsl_Vec3 {
-    fn from(c: Color3) -> Self {
-        Self {
-            x: c.r as f32 / 255.0,
-            y: c.g as f32 / 255.0,
-            z: c.b as f32 / 255.0,
-        }
-    }
-}
-
-#[repr(C)]
-#[derive(Default, Copy, Clone, Debug)]
-pub struct Vertex {
-    color: Glsl_Vec4,  // 16 B
-    position: Vec2f,   // 8 B
-    tex_coords: Vec2f, // 8 B
-}
-
-impl Vertex {
-    #[inline]
-    pub fn color(&self) -> Color {
-        self.color.into()
-    }
-
-    #[inline]
-    pub fn set_color(&mut self, c: Color) {
-        self.color = c.into();
-    }
-
-    #[inline]
-    pub fn position(&self) -> Vec2f {
-        self.position
-    }
-
-    #[inline]
-    pub fn set_position(&mut self, v: Vec2f) {
-        self.position = v;
-    }
-
-    #[inline]
-    pub fn tex_coords(&self) -> Vec2f {
-        self.tex_coords
-    }
-
-    #[inline]
-    pub fn set_tex_coords(&mut self, tc: Vec2f) {
-        self.tex_coords = tc;
     }
 }
 
@@ -828,13 +690,7 @@ fn render_text_internal(window: &mut Render_Window_Handle, text: &mut Text) {
         gl::BindTexture(gl::TEXTURE_2D, text.font.atlas.id);
         check_gl_err();
 
-        gl::BindVertexArray(vbuf.buf.vao());
-        window.gl.draw_arrays(
-            to_gl_primitive_type(vbuf.primitive_type),
-            (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
-            vbuf_cur_vertices(&vbuf) as _,
-        );
-        check_gl_err();
+        render_vbuf_internal(window, &vbuf);
     }
 }
 
@@ -976,8 +832,6 @@ pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
     vbuf.vertices.extend(&vertices[..vertices_to_copy]);
     vbuf.needs_transfer_to_gpu.set(true);
 
-       vbuf_transfer_to_gpu(vbuf);
-
     #[cfg(debug_assertions)]
     {
         debug_assert_eq!(
@@ -1029,9 +883,9 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
 }
 
 fn render_vbuf_internal(window: &mut Render_Window_Handle, vbuf: &Vertex_Buffer) {
-   // if vbuf.needs_transfer_to_gpu.get() {
-   //     vbuf_transfer_to_gpu(vbuf);
-   // }
+    if vbuf.needs_transfer_to_gpu.get() {
+        vbuf_transfer_to_gpu(vbuf);
+    }
     unsafe {
         gl::BindVertexArray(vbuf.buf.vao());
         check_gl_err();
@@ -1066,8 +920,6 @@ pub fn render_vbuf_ws(
     transform: &Transform2D,
     camera: &Transform2D,
 ) {
-    // @FIXME: there's something wrong going on here...
-
     if vbuf_cur_vertices(vbuf) == 0 {
         return;
     }

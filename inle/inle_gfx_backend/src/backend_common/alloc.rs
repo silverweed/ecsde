@@ -1,8 +1,11 @@
 use super::misc::check_gl_err;
+use crate::backend_common::types::*;
 use gl::types::*;
 use inle_common::units::{self, format_bytes_pretty};
+use inle_math::vector::Vec2f;
 use std::cell::RefCell;
 use std::ffi::c_void;
+use std::mem;
 use std::ptr;
 use std::rc::Rc;
 
@@ -371,6 +374,10 @@ pub struct Buffer_Allocator_Bucket {
 fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket {
     trace!("buf_alloc::allocate_bucket");
 
+    const LOC_IN_COLOR: GLuint = 0;
+    const LOC_IN_POS: GLuint = 1;
+    const LOC_IN_TEXCOORD: GLuint = 2;
+
     let (mut vao, mut vbo) = (0, 0);
     unsafe {
         gl::GenVertexArrays(1, &mut vao);
@@ -392,6 +399,42 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
             ptr::null(),
             gl::DYNAMIC_STORAGE_BIT,
         );
+        check_gl_err();
+
+        gl::VertexAttribPointer(
+            LOC_IN_COLOR,
+            4,
+            gl::FLOAT,
+            gl::FALSE,
+            mem::size_of::<Vertex>() as _,
+            // @Robustness: use offsetof or similar
+            ptr::null(),
+        );
+        gl::EnableVertexAttribArray(LOC_IN_COLOR);
+        check_gl_err();
+
+        gl::VertexAttribPointer(
+            LOC_IN_POS,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            mem::size_of::<Vertex>() as _,
+            // @Robustness: use offsetof or similar
+            mem::size_of::<Glsl_Vec4>() as *const c_void,
+        );
+        gl::EnableVertexAttribArray(LOC_IN_POS);
+        check_gl_err();
+
+        gl::VertexAttribPointer(
+            LOC_IN_TEXCOORD,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            mem::size_of::<Vertex>() as _,
+            // @Robustness: use offsetof or similar
+            (mem::size_of::<Glsl_Vec4>() + mem::size_of::<Vec2f>()) as *const c_void,
+        );
+        gl::EnableVertexAttribArray(LOC_IN_TEXCOORD);
         check_gl_err();
 
         gl::BindVertexArray(0);
@@ -545,9 +588,6 @@ fn write_to_bucket(
     debug_assert!(len <= handle.slot.len);
 
     unsafe {
-        gl::BindVertexArray(bucket.vao);
-        check_gl_err();
-
         gl::BindBuffer(bucket.buf_type, bucket.vbo);
         check_gl_err();
 
