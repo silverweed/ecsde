@@ -286,10 +286,12 @@ impl Debug_Frame_Scroller {
             } else {
                 self.calc_slot_color_frame(debug_log, i)
             };
-            let color = if i as u16 != cur {
-                let alpha = if hovered {
-                    220
-                } else if i < filled {
+            let color = if hovered {
+                colors::WHITE
+            } else if i as u16 == cur {
+                colors::rgba(40, 100, 200, 240)
+            } else {
+                let alpha = if i < filled {
                     if self.manually_selected {
                         180
                     } else if row_hovered {
@@ -301,8 +303,6 @@ impl Debug_Frame_Scroller {
                     20
                 };
                 colors::rgba(rgb.r, rgb.g, rgb.b, alpha)
-            } else {
-                colors::rgba(40, 100, 200, 240)
             };
             let paint_props = Paint_Properties {
                 color,

@@ -39,6 +39,8 @@ impl Vertex_Buffer_Holder {
     }
 
     pub fn grow(&mut self, window: &mut Render_Window_Handle, vertices_to_hold_at_least: u32) {
+        trace!("vbuf_holder::grow");
+
         let new_cap = vertices_to_hold_at_least.next_power_of_two();
         ldebug!(
             "Growing Vertex_Buffer_Holder {} to hold {} vertices ({} requested).",

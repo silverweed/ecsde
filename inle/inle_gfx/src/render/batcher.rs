@@ -407,31 +407,27 @@ pub fn draw_batches(
             }
             debug_assert!(n_vertices_without_shadows <= super::vbuf_max_vertices(&vbuffer.vbuf));
 
-            {
-                trace!("sprite_batch_ws");
-
-                if cast_shadows {
-                    fill_vertices_with_shadows(
-                        window,
-                        texture,
-                        sprites,
-                        vert_chunks,
-                        n_sprites_per_chunk,
-                        has_shader,
-                        shadow_vbuffer.as_mut().unwrap(),
-                        shadow_vertices,
-                        n_shadow_vertices,
-                        &shadow_data,
-                    );
-                } else {
-                    fill_vertices(
-                        texture,
-                        sprites,
-                        vert_chunks,
-                        n_sprites_per_chunk,
-                        has_shader,
-                    );
-                }
+            if cast_shadows {
+                fill_vertices_with_shadows(
+                    window,
+                    texture,
+                    sprites,
+                    vert_chunks,
+                    n_sprites_per_chunk,
+                    has_shader,
+                    shadow_vbuffer.as_mut().unwrap(),
+                    shadow_vertices,
+                    n_shadow_vertices,
+                    &shadow_data,
+                );
+            } else {
+                fill_vertices(
+                    texture,
+                    sprites,
+                    vert_chunks,
+                    n_sprites_per_chunk,
+                    has_shader,
+                );
             }
 
             #[cfg(debug_assertions)]
