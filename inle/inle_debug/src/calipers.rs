@@ -60,13 +60,13 @@ impl Debug_Calipers {
         let font_size = (15. * scale).max(8.) as u16;
         let shadow = v2!(1., 1.) * scale;
         painter.add_text(
-            &format!("{}", delta.magnitude()),
+            &format!("{:.2}", delta.magnitude()),
             text_pos + shadow,
             font_size,
             colors::WHITE,
         );
         painter.add_text(
-            &format!("{}", delta.magnitude()),
+            &format!("{:.2}", delta.magnitude()),
             text_pos,
             font_size,
             colors::rgb(143, 0, 50),

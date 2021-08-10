@@ -55,6 +55,10 @@ pub fn update(args: Render_System_Update_Args) {
 
     trace!("render_system::update");
 
+    ////
+    //// Renderables
+    ////
+
     let renderables = ecs_world.get_component_storage::<C_Renderable>();
     let spatials = ecs_world.get_component_storage::<C_Spatial2D>();
 
@@ -110,7 +114,7 @@ pub fn update(args: Render_System_Update_Args) {
                         } else {
                             gres.get_white_texture_handle()
                         });
-                        mat.shader = args.shader_cache.get_basic_shader_handle();
+                        mat.shader = args.shader_cache.get_basic_batcher_shader_handle();
                         mat.cast_shadows = false;
                         material = mat;
                     }
@@ -129,6 +133,10 @@ pub fn update(args: Render_System_Update_Args) {
             );
         }
     }
+
+    ////
+    //// Multi_Renderables
+    ////
 
     let mut entities = temp::excl_temp_array(frame_alloc);
     new_entity_stream(ecs_world)
@@ -193,7 +201,7 @@ pub fn update(args: Render_System_Update_Args) {
                         } else {
                             gres.get_white_texture_handle()
                         });
-                        mat.shader = args.shader_cache.get_basic_shader_handle();
+                        mat.shader = args.shader_cache.get_basic_batcher_shader_handle();
                         mat.cast_shadows = false;
                         material = mat;
                     }

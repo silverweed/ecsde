@@ -84,7 +84,9 @@ impl<'l> Shader_Cache<'l> {
         self.0.cache.insert(ERROR_SHADER_KEY, load_error_shader());
 
         #[cfg(debug_assertions)]
-        self.0.cache.insert(BASIC_SHADER_KEY, load_basic_shader());
+        self.0
+            .cache
+            .insert(BASIC_BATCHER_SHADER_KEY, load_basic_batcher_shader());
     }
 
     pub fn load_shader(&mut self, shader_name: &str) -> Shader_Handle {
@@ -124,8 +126,9 @@ impl<'l> Shader_Cache<'l> {
         Some(ERROR_SHADER_KEY)
     }
 
-    pub fn get_basic_shader_handle(&self) -> Shader_Handle {
-        Some(BASIC_SHADER_KEY)
+    #[cfg(debug_assertions)]
+    pub fn get_basic_batcher_shader_handle(&self) -> Shader_Handle {
+        Some(BASIC_BATCHER_SHADER_KEY)
     }
 }
 
@@ -168,7 +171,9 @@ unsafe fn create_white_texture(tex_cache: &mut cache::Texture_Cache) {
 }
 
 const ERROR_SHADER_KEY: String_Id = cache::ERROR_SHADER_KEY;
-const BASIC_SHADER_KEY: String_Id = const_sid_from_str("__basic__");
+
+#[cfg(debug_assertions)]
+const BASIC_BATCHER_SHADER_KEY: String_Id = const_sid_from_str("__basic_batcher__");
 
 fn load_error_shader<'a>() -> Shader<'a> {
     const ERROR_SHADER_VERT: &str = "
@@ -176,10 +181,10 @@ fn load_error_shader<'a>() -> Shader<'a> {
 
 		layout (location = 1) in vec2 in_pos;
 
-		uniform mat3 mvp;
+		uniform mat3 vp;
 
 		void main() {
-			vec3 pos = mvp * vec3(in_pos, 1.0);
+			vec3 pos = vp * vec3(in_pos, 1.0);
 			gl_Position = vec4(pos.xy, 0.0, 1.0);
 		}
 	";
@@ -201,24 +206,24 @@ fn load_error_shader<'a>() -> Shader<'a> {
 }
 
 #[cfg(debug_assertions)]
-fn load_basic_shader<'a>() -> Shader<'a> {
-    const BASIC_SHADER_VERT: &str = "
+fn load_basic_batcher_shader<'a>() -> Shader<'a> {
+    const BASIC_BATCHER_SHADER_VERT: &str = "
 		#version 330 core
 
 		layout (location = 1) in vec2 in_pos;
 		layout (location = 2) in vec2 in_tex_coord;
 
-		uniform mat3 mvp;
+		uniform mat3 vp;
 
 		out vec2 tex_coord;
 
 		void main() {
-			vec3 pos = mvp * vec3(in_pos, 1.0);
+			vec3 pos = vp * vec3(in_pos, 1.0);
 			gl_Position = vec4(pos.xy, 0.0, 1.0);
 			tex_coord = in_tex_coord;
 		}
 	";
-    const BASIC_SHADER_FRAG: &str = "
+    const BASIC_BATCHER_SHADER_FRAG: &str = "
 		#version 330 core
 
 		in vec2 tex_coord;
@@ -233,8 +238,8 @@ fn load_basic_shader<'a>() -> Shader<'a> {
 		}
    	";
     render::new_shader(
-        BASIC_SHADER_VERT.as_bytes(),
-        BASIC_SHADER_FRAG.as_bytes(),
-        Some("builtin_basic_shader"),
+        BASIC_BATCHER_SHADER_VERT.as_bytes(),
+        BASIC_BATCHER_SHADER_FRAG.as_bytes(),
+        Some("builtin_basic_batcher_shader"),
     )
 }

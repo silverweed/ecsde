@@ -983,7 +983,7 @@ fn update_mouse_debug_overlay(
     let (win_w, win_h) = window::get_window_target_size(window);
     let (win_w, win_h) = (win_w as i32, win_h as i32);
     let pos = mouse::mouse_pos_in_window(window, &input_state.raw.mouse_state);
-    debug_overlay.position = Vec2f::from(pos) + v2!(0., -15.);
+    debug_overlay.position = Vec2f::from(pos) + v2!(5., -15.);
     let overlay_size = debug_overlay.bounds().size();
     debug_overlay.position.x =
         inle_math::math::clamp(debug_overlay.position.x, 0., win_w as f32 - overlay_size.x);
