@@ -55,7 +55,7 @@ pub fn level_load_sync(
         &mut level,
         gs_cfg,
     );
-    init_demo_lights(&mut level.lights);
+    init_demo_lights(&mut level.lights, &engine_state.config);
     fill_world_chunks(&mut level.chunks, &mut level.world, &level.phys_world);
     lok!(
         "Loaded level {}. N. entities = {}, n. cameras = {}",
@@ -89,9 +89,10 @@ fn register_all_components(world: &mut Ecs_World) {
 }
 
 // @Temporary
-fn init_demo_lights(lights: &mut Lights) {
+fn init_demo_lights(lights: &mut Lights, cfg: &inle_cfg::Config) {
+    let amb_intensity = Cfg_Var::<f32>::new("game/world/lighting/ambient_intensity", cfg).read(cfg);
     lights.ambient_light.color = colors::rgb(200, 140, 180);
-    lights.ambient_light.intensity = 0.2;
+    lights.ambient_light.intensity = amb_intensity;
 
     //let light = Rect_Light {
     //    rect: Rect::new(-37., -140., 90., 30.),
@@ -101,92 +102,6 @@ fn init_demo_lights(lights: &mut Lights) {
     //    intensity: 2.5,
     //};
     //lights.add_rect_light(light);
-
-    // -------------------------------------------
-    // Corner lights
-    // -------------------------------------------
-    lights.add_point_light(Point_Light {
-        position: v2!(-280., -180.),
-        radius: 250.,
-        attenuation: 1.0,
-        color: colors::YELLOW,
-        intensity: 1.0,
-    });
-
-    lights.add_point_light(Point_Light {
-        position: v2!(280., -180.),
-        radius: 250.,
-        attenuation: 1.0,
-        color: colors::YELLOW,
-        intensity: 1.0,
-    });
-
-    lights.add_point_light(Point_Light {
-        position: v2!(-280., 180.),
-        radius: 250.,
-        attenuation: 1.0,
-        color: colors::YELLOW,
-        intensity: 1.0,
-    });
-
-    lights.add_point_light(Point_Light {
-        position: v2!(280., 180.),
-        radius: 250.,
-        attenuation: 1.0,
-        color: colors::YELLOW,
-        intensity: 1.0,
-    });
-
-    // -------------------------------------------
-
-    lights.add_point_light(Point_Light {
-        position: v2!(0., 0.),
-        radius: 350.,
-        attenuation: 0.5,
-        color: colors::DARK_ORANGE,
-        intensity: 0.5,
-    });
-
-    lights.add_rect_light(Rect_Light {
-        rect: Rect::new(-300., -199., 600., 1.),
-        radius: 50.,
-        attenuation: 1.0,
-        color: colors::DARK_ORANGE,
-        intensity: 0.5,
-    });
-
-    lights.add_rect_light(Rect_Light {
-        rect: Rect::new(-300., 199., 600., 1.),
-        radius: 50.,
-        attenuation: 1.0,
-        color: colors::DARK_ORANGE,
-        intensity: 0.5,
-    });
-
-    lights.add_rect_light(Rect_Light {
-        rect: Rect::new(-299., -200., 1., 400.),
-        radius: 50.,
-        attenuation: 1.0,
-        color: colors::DARK_ORANGE,
-        intensity: 0.5,
-    });
-
-    lights.add_rect_light(Rect_Light {
-        rect: Rect::new(299., -200., 1., 400.),
-        radius: 50.,
-        attenuation: 1.0,
-        color: colors::DARK_ORANGE,
-        intensity: 0.5,
-    });
-
-    //let light = Point_Light {
-    //position: v2!(0., 0.),
-    //radius: 150.,
-    //attenuation: 0.0,
-    //color: colors::GREEN,
-    //intensity: 1.0,
-    //};
-    //lights.add_point_light(light);
 }
 
 // @Temporary
@@ -199,90 +114,93 @@ fn init_demo_entities(
     level: &mut Level,
     gs_cfg: Gameplay_System_Config,
 ) {
-    #![allow(warnings)]
-    use inle_math::angle;
-    use inle_resources::gfx::shader_path;
+    super::proc_gen::generate_random_level(gres, shader_cache, env, rng, cfg, level, gs_cfg);
+    /*
+        #![allow(warnings)]
+        use inle_math::angle;
+        use inle_resources::gfx::shader_path;
 
-    let camera = level.world.new_entity();
-    {
-        let cam = level.world.add_component(camera, C_Camera2D::default());
-        let scale = Cfg_Var::<f32>::new("game/camera/initial_scale", cfg).read(cfg);
-        cam.transform.set_scale(scale, scale);
-        cam.transform.set_position(-120., -75.);
-    }
-    level.cameras.push(camera);
+        let camera = level.world.new_entity();
+        {
+            let cam = level.world.add_component(camera, C_Camera2D::default());
+            let scale = Cfg_Var::<f32>::new("game/camera/initial_scale", cfg).read(cfg);
+            cam.transform.set_scale(scale, scale);
+            cam.transform.set_position(-120., -75.);
+        }
+        level.cameras.push(camera);
 
-    {
-        let mut ctrl = level.world.add_component(
-            camera,
-            C_Controllable {
-                speed: Cfg_Var::new("game/camera/speed", cfg),
-                ..Default::default()
-            },
-        );
-    }
+        {
+            let mut ctrl = level.world.add_component(
+                camera,
+                C_Controllable {
+                    speed: Cfg_Var::new("game/camera/speed", cfg),
+                    ..Default::default()
+                },
+            );
+        }
 
-    entities::create_background(&mut level.world, gres, shader_cache, env, cfg);
+        entities::create_background(&mut level.world, gres, shader_cache, env, cfg);
 
-    //entities::create_terrain(&mut level.world, gres, shader_cache, env, cfg);
-    entities::create_room(
-        &mut level.world,
-        &mut level.phys_world,
-        gres,
-        shader_cache,
-        env,
-        cfg,
-    );
-
-    //entities::create_sky(
-    //    &mut level.world,
-    //    &mut level.phys_world,
-    //    gres,
-    //    shader_cache,
-    //    env,
-    //    cfg,
-    //);
-
-    for i in 0..gs_cfg.n_entities_to_spawn {
-        let x = rand::rand_01(rng);
-        let y = rand::rand_01(rng);
-        let pos = if i > 0 {
-            v2!(x * 50., 1. * y * 50.)
-        } else {
-            v2!(20., 20.)
-        };
-
-        let player = entities::create_jelly(
+        //entities::create_terrain(&mut level.world, gres, shader_cache, env, cfg);
+        entities::create_room(
             &mut level.world,
             &mut level.phys_world,
             gres,
             shader_cache,
             env,
             cfg,
-            &Transform2D::from_pos(pos),
-            i == 0,
         );
 
-        if i == 0 {
-            level.world.add_component(
-                camera,
-                C_Camera_Follow {
-                    target: Camera_Follow_Target::Entity(player),
-                    lerp_factor: Cfg_Var::new("game/camera/lerp_factor", cfg),
-                },
-            );
-        }
-    }
+        //entities::create_sky(
+        //    &mut level.world,
+        //    &mut level.phys_world,
+        //    gres,
+        //    shader_cache,
+        //    env,
+        //    cfg,
+        //);
 
-    //entities::create_drill(
-    //    &mut level.world,
-    //    &mut level.phys_world,
-    //    gres,
-    //    shader_cache,
-    //    env,
-    //    cfg,
-    //    &Transform2D::from_pos_rot_scale(v2!(10., 10.), rad(0.), v2!(0.2, 0.2)),
-    //);
+        for i in 0..gs_cfg.n_entities_to_spawn {
+            let x = rand::rand_01(rng);
+            let y = rand::rand_01(rng);
+            let pos = if i > 0 {
+                v2!(x * 50., 1. * y * 50.)
+            } else {
+                v2!(20., 20.)
+            };
+
+            let player = entities::create_jelly(
+                &mut level.world,
+                &mut level.phys_world,
+                gres,
+                shader_cache,
+                env,
+                cfg,
+                &Transform2D::from_pos(pos),
+                i == 0,
+            );
+
+            if i == 0 {
+                level.world.add_component(
+                    camera,
+                    C_Camera_Follow {
+                        target: Camera_Follow_Target::Entity(player),
+                        lerp_factor: Cfg_Var::new("game/camera/lerp_factor", cfg),
+                    },
+                );
+            }
+        }
+
+        //entities::create_drill(
+        //    &mut level.world,
+        //    &mut level.phys_world,
+        //    gres,
+        //    shader_cache,
+        //    env,
+        //    cfg,
+        //    &Transform2D::from_pos_rot_scale(v2!(10., 10.), rad(0.), v2!(0.2, 0.2)),
+        //);
+    */
 }
 
 fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World, phys_world: &Physics_World) {
