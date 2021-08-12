@@ -25,6 +25,8 @@ pub struct Game_State<'a> {
 
     pub sleep_granularity: Option<Duration>,
 
+    pub n_updates_last_frame: u32,
+
     pub level_batches: Level_Batches,
 
     pub cvars: CVars,
@@ -279,6 +281,7 @@ fn create_game_state<'a>(
             gameplay_system: gameplay_system::Gameplay_System::new(),
             state_mgr: states::state_manager::State_Manager::new(),
             cvars,
+            n_updates_last_frame: 0,
 
             #[cfg(debug_assertions)]
             debug_cvars,

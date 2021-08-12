@@ -365,6 +365,8 @@ where
                     game_state.engine_state.input_state.clear();
                 }
 
+                game_state.n_updates_last_frame = n_updates;
+
                 let cfg = &game_state.engine_state.config;
                 if game_state.cvars.enable_particles.read(cfg) {
                     for _ in 0..n_updates {
@@ -710,6 +712,7 @@ fn update_debug(
         update_time_debug_overlay(
             debug_systems.debug_ui.get_overlay(sid!("time")),
             &engine_state.time,
+            game_state.n_updates_last_frame,
         );
 
         update_fps_debug_overlay(
@@ -938,16 +941,18 @@ fn update_joystick_debug_overlay(
 fn update_time_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     time: &time::Time,
+    n_updates: u32,
 ) {
     debug_overlay.clear();
 
     debug_overlay
         .add_line(&format!(
-            "[time] game: {:.2}, real: {:.2}, scale: {:.2}, paused: {}",
+            "[time] game: {:.2}, real: {:.2}, scale: {:.2}, paused: {}, n.upd: {}",
             time.game_time().as_secs_f32(),
             time.real_time().as_secs_f32(),
             time.time_scale,
-            if time.paused { "yes" } else { "no" }
+            if time.paused { "yes" } else { "no" },
+            n_updates,
         ))
         .with_color(colors::rgb(100, 200, 200));
 }

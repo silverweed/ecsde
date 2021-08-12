@@ -5,6 +5,7 @@ use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::Ecs_World;
 use inle_input::axes::Virtual_Axes;
 use inle_input::input_state::{Action_Kind, Game_Action};
+use inle_math::math::clamp;
 use inle_math::vector::Vec2f;
 use std::time::Duration;
 
@@ -16,6 +17,7 @@ pub struct C_Controllable {
     pub jump_impulse: Cfg_Var<f32>,
     pub dampening: Cfg_Var<f32>,
     pub horiz_max_speed: Cfg_Var<f32>,
+    pub vert_max_speed: Cfg_Var<f32>,
     pub max_jumps: Cfg_Var<i32>,
 
     pub n_jumps_done: u32,
@@ -40,6 +42,7 @@ pub fn update(
         let jump_impulse = ctrl.jump_impulse.read(cfg);
         let dampening = ctrl.dampening.read(cfg);
         let horiz_max_speed = ctrl.horiz_max_speed.read(cfg);
+        let vert_max_speed = ctrl.vert_max_speed.read(cfg);
 
         let ground_detect = ecs_world.get_component::<C_Ground_Detection>(entity).unwrap();
         let reset_jumps = ground_detect.just_touched_ground;
@@ -60,7 +63,8 @@ pub fn update(
         let velocity_norm = velocity.normalized_or_zero();
         let speed = velocity.magnitude();
         *velocity -=  velocity_norm * dampening * speed * dt_secs;
-        velocity.x = velocity.x.min(horiz_max_speed);
+        velocity.x = clamp(velocity.x, -horiz_max_speed, horiz_max_speed);
+        velocity.y = clamp(velocity.y, -vert_max_speed, vert_max_speed);
 
         let v = *velocity * dt_secs;
         let ctrl = ecs_world

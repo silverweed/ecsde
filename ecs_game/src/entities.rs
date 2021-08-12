@@ -80,6 +80,7 @@ pub fn create_jelly(
                 jump_impulse: Cfg_Var::new("game/gameplay/player/jump_impulse", cfg),
                 dampening: Cfg_Var::new("game/gameplay/player/dampening", cfg),
                 horiz_max_speed: Cfg_Var::new("game/gameplay/player/horiz_max_speed", cfg),
+                vert_max_speed: Cfg_Var::new("game/gameplay/player/vert_max_speed", cfg),
                 max_jumps: Cfg_Var::new("game/gameplay/player/max_jumps", cfg),
                 ..Default::default()
             },
