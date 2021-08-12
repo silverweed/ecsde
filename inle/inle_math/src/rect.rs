@@ -116,8 +116,40 @@ impl From<Rect<u32>> for Rect<f32> {
 impl Mul<f32> for Rect<f32> {
     type Output = Self;
 
-    fn mul(self, x: f32) -> Self {
+    fn mul(self, x: f32) -> Self::Output {
         Rect::new(self.x * x, self.y * x, self.width * x, self.height * x)
+    }
+}
+
+impl<T> Add<Vector2<T>> for Rect<T>
+where
+    T: Add<Output = T>,
+{
+    type Output = Self;
+
+    fn add(self, offset: Vector2<T>) -> Self::Output {
+        Rect::new(
+            self.x + offset.x,
+            self.y + offset.y,
+            self.width,
+            self.height,
+        )
+    }
+}
+
+impl<T> Sub<Vector2<T>> for Rect<T>
+where
+    T: Sub<Output = T>,
+{
+    type Output = Self;
+
+    fn sub(self, offset: Vector2<T>) -> Self::Output {
+        Rect::new(
+            self.x - offset.x,
+            self.y - offset.y,
+            self.width,
+            self.height,
+        )
     }
 }
 
@@ -191,5 +223,52 @@ where
 
     pub fn pos_max(&self) -> Vector2<T> {
         v2!(self.x + self.width, self.y + self.height)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rect_contains() {
+        let rect = Rect::new(0., 0., 10., 10.);
+        assert!(rect.contains(v2!(5., 5.)));
+        assert!(rect.contains(v2!(0., 0.)));
+        assert!(!rect.contains(v2!(15., 5.)));
+        assert!(!rect.contains(v2!(5., -5.)));
+
+        let rect = Rect::new(-2, -4, 10, 20);
+        assert!(rect.contains(v2!(-1, -4)));
+        assert!(rect.contains(v2!(0, 0)));
+        assert!(rect.contains(v2!(1, 3)));
+        assert!(rect.contains(v2!(8, 16)));
+        assert!(!rect.contains(v2!(8, 17)));
+        assert!(!rect.contains(v2!(-4, -5)));
+    }
+
+    #[test]
+    fn rect_add_vec() {
+        let rect = Rect::new(1, 2, 3, 4);
+        assert_eq!(rect + v2!(2, 3), Rect::new(3, 5, 3, 4));
+        assert_eq!(rect + v2!(0, 0), rect);
+    }
+
+    #[test]
+    fn rect_sub_vec() {
+        let rect = Rect::new(1, 2, 3, 4);
+        assert_eq!(rect - v2!(2, 3), Rect::new(-1, -1, 3, 4));
+        assert_eq!(rect - v2!(0, 0), rect);
+    }
+
+    #[test]
+    fn rect_intersect() {
+        let a = Rect::new(3, 4, 10, 20);
+        let b = Rect::new(4, 1, 300, 5);
+        let inter = rects_intersection(&a, &b);
+        assert_eq!(inter, Some(Rect::new(4, 4, 9, 2)));
+
+        let c = Rect::new(-30, -40, 8, 19);
+        assert_eq!(rects_intersection(&a, &c), None);
     }
 }
