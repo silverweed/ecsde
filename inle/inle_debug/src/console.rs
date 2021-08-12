@@ -351,13 +351,16 @@ impl Console {
             cmd = cmd_and_rest.0.to_string();
             rest = cmd_and_rest.1.to_string();
         }
-        // @Improve: sort by relevance
+
         if let Some(hints) = self.hints.get(&cmd) {
             for (i, hint) in hints.iter().enumerate() {
                 if hint.contains(&rest) {
                     self.hints_displayed.push(i);
                 }
             }
+            // Sort alphabetically (note that hints_displayed contains indices into hints)
+            self.hints_displayed
+                .sort_by(|&a, &b| hints[a].cmp(&hints[b]));
         }
 
         if !self.hints_displayed.is_empty() {
