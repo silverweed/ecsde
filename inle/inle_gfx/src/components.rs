@@ -30,7 +30,7 @@ impl Default for C_Renderable {
 
 impl C_Renderable {
     pub fn new_with_diffuse(gres: &mut Gfx_Resources, env: &Env_Info, diffuse: &str) -> Self {
-        let texture = gres.load_texture(&tex_path(&env, diffuse));
+        let texture = gres.load_texture(&tex_path(env, diffuse));
         let (sw, sh) = render::get_texture_size(gres.get_texture(texture));
         C_Renderable {
             material: Material {
@@ -48,7 +48,7 @@ impl C_Renderable {
     }
 
     pub fn with_normals(mut self, gres: &mut Gfx_Resources, env: &Env_Info, normals: &str) -> Self {
-        let texture = gres.load_texture(&tex_path(&env, normals));
+        let texture = gres.load_texture(&tex_path(env, normals));
         self.material.normals = texture;
         self
     }
@@ -59,7 +59,7 @@ impl C_Renderable {
         env: &Env_Info,
         shader: &str,
     ) -> Self {
-        let shader = shader_cache.load_shader(&shader_path(&env, shader));
+        let shader = shader_cache.load_shader(&shader_path(env, shader));
         self.material.shader = shader;
         self
     }

@@ -6,7 +6,8 @@ use crate::spatial::World_Chunks;
 use crate::systems::camera_system::{C_Camera_Follow, Camera_Follow_Target};
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::gravity_system::C_Gravity;
-use crate::systems::ground_collision_calculation_system::C_Ground;
+//use crate::systems::ground_collision_calculation_system::C_Ground;
+use crate::systems::ground_detection_system::C_Ground_Detection;
 use crate::Game_Resources;
 use inle_app::app::Engine_State;
 use inle_cfg::{self, Cfg_Var};
@@ -74,11 +75,12 @@ fn register_all_components(world: &mut Ecs_World) {
     world.register_component::<C_Animated_Sprite>();
     world.register_component::<C_Controllable>();
     world.register_component::<C_Collider>();
-    world.register_component::<C_Ground>();
+    //world.register_component::<C_Ground>();
     world.register_component::<C_Multi_Renderable>();
     world.register_component::<C_Multi_Renderable_Animation>();
     world.register_component::<C_Gravity>();
     world.register_component::<C_Camera_Follow>();
+    world.register_component::<C_Ground_Detection>();
 
     #[cfg(debug_assertions)]
     {

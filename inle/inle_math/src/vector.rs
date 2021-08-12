@@ -138,6 +138,11 @@ where
         }
     }
 
+    #[inline]
+    pub fn is_normalized(self) -> bool {
+        (self.magnitude2().into() - 1.0).abs() < f32::EPSILON
+    }
+
     pub fn rotated(self, angle: Angle) -> Self {
         let rads = angle.as_rad();
         let x = self.x.into();

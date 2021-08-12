@@ -1275,7 +1275,7 @@ fn use_circle_shader(
     mvp: &Matrix3<f32>,
 ) {
     let shader = window.gl.circle_shader;
-    use_rect_shader_internal(color, rect, &mvp, shader);
+    use_rect_shader_internal(color, rect, mvp, shader);
 
     unsafe {
         gl::Uniform2f(

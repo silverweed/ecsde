@@ -29,7 +29,7 @@ impl<'l> loaders::Resource_Loader<'l, Shader<'l>> for Shader_Loader {
 
     fn load(&'l self, args: &Self::Args) -> Result<Shader<'l>, String> {
         let (vertex, fragment, geometry) = args;
-        super::shader::load_shader_from_file(&vertex, &fragment).map_err(|err| {
+        super::shader::load_shader_from_file(vertex, fragment).map_err(|err| {
             format!(
                 concat!("[ WARNING ] Failed to load Shader from {} / {} / {:?}: {}"),
                 vertex, fragment, geometry, err

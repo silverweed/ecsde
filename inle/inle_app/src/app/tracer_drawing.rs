@@ -60,7 +60,7 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
             return;
         }
 
-        add_tracer_node_line(&tree.node, total_traced_time, indent, overlay);
+        add_tracer_node_line(tree.node, total_traced_time, indent, overlay);
         for t in &tree.children {
             add_tree_lines(t, total_traced_time, indent + 1, overlay, prune_duration);
         }
@@ -154,7 +154,7 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
         .with_color(colors::rgba(60, 60, 60, 180));
 
     let traces = &debug_log.get_frame(frame).unwrap().traces;
-    let total_traced_time = tracer::total_traced_time(&traces);
+    let total_traced_time = tracer::total_traced_time(traces);
     let mut traces = tracer::flatten_traces(traces).collect::<Vec<_>>();
     traces.sort_by(|a, b| b.info.tot_duration().cmp(&a.info.tot_duration()));
 

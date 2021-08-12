@@ -36,12 +36,23 @@ struct Rigidbody {
 }
 
 #[derive(Debug, Clone)]
-struct Collision_Info {
+struct Collision_Info_Internal {
     // Note: cld1 and cld2 contain pointers to colliders. We're saving them as usize
     // so this struct remains thread-safe (we're not doing pointery stuff from other
     // threads: just using them as hashmap keys, so it's safe).
-    pub cld1: usize,
-    pub cld2: usize,
+    cld1: usize,
+    cld2: usize,
+    info: Collision_Info,
+}
+
+#[derive(Debug, Clone)]
+pub struct Collision_With_Entity_Data {
+    pub entity: Entity,
+    pub info: Collision_Info,
+}
+
+#[derive(Debug, Clone)]
+pub struct Collision_Info {
     pub penetration: f32,
     pub normal: Vec2f,
 }
@@ -53,7 +64,7 @@ pub struct Collision_System_Debug_Data {
     pub n_intersection_tests: usize,
 }
 
-fn detect_circle_circle(a: &Collider, b: &Collider) -> Option<Collision_Info> {
+fn detect_circle_circle(a: &Collider, b: &Collider) -> Option<Collision_Info_Internal> {
     trace!("physics::detect_circle_circle");
 
     let a_radius = if let Collision_Shape::Circle { radius } = a.shape {
@@ -77,24 +88,28 @@ fn detect_circle_circle(a: &Collider, b: &Collider) -> Option<Collision_Info> {
 
     let dist = diff.magnitude();
     if dist > std::f32::EPSILON {
-        Some(Collision_Info {
+        Some(Collision_Info_Internal {
             cld1: a as *const _ as usize,
             cld2: b as *const _ as usize,
-            normal: diff / dist,
-            penetration: r - dist,
+            info: Collision_Info {
+                normal: diff / dist,
+                penetration: r - dist,
+            },
         })
     } else {
         // circles are in the same position
-        Some(Collision_Info {
+        Some(Collision_Info_Internal {
             cld1: a as *const _ as usize,
             cld2: b as *const _ as usize,
-            normal: v2!(1., 0.),   // Arbitrary
-            penetration: a_radius, // Arbitrary
+            info: Collision_Info {
+                normal: v2!(1., 0.),   // Arbitrary
+                penetration: a_radius, // Arbitrary
+            },
         })
     }
 }
 
-fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info> {
+fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Internal> {
     trace!("physics::detect_rect_rect");
 
     let (a_width, a_height) = if let Collision_Shape::Rect { width, height } = a.shape {
@@ -134,11 +149,13 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info> {
         } else {
             v2!(1., 0.)
         };
-        Some(Collision_Info {
+        Some(Collision_Info_Internal {
             cld1: a as *const _ as usize,
             cld2: b as *const _ as usize,
-            normal,
-            penetration: x_overlap,
+            info: Collision_Info {
+                normal,
+                penetration: x_overlap,
+            },
         })
     } else {
         let normal = if diff.y < 0. {
@@ -146,17 +163,19 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info> {
         } else {
             v2!(0., 1.)
         };
-        Some(Collision_Info {
+        Some(Collision_Info_Internal {
             cld1: a as *const _ as usize,
             cld2: b as *const _ as usize,
-            normal,
-            penetration: y_overlap,
+            info: Collision_Info {
+                normal,
+                penetration: y_overlap,
+            },
         })
     }
 }
 
 #[allow(clippy::collapsible_if, clippy::collapsible_else_if)]
-fn detect_circle_rect(circle: &Collider, rect: &Collider) -> Option<Collision_Info> {
+fn detect_circle_rect(circle: &Collider, rect: &Collider) -> Option<Collision_Info_Internal> {
     trace!("physics::detect_circle_rect");
 
     let (r_width, r_height) = if let Collision_Shape::Rect { width, height } = rect.shape {
@@ -209,15 +228,17 @@ fn detect_circle_rect(circle: &Collider, rect: &Collider) -> Option<Collision_In
 
     let d = d.sqrt();
 
-    Some(Collision_Info {
+    Some(Collision_Info_Internal {
         cld1: circle as *const _ as usize,
         cld2: rect as *const _ as usize,
-        normal: if inside { -normal } else { normal },
-        penetration: r - d,
+        info: Collision_Info {
+            normal: if inside { -normal } else { normal },
+            penetration: r - d,
+        },
     })
 }
 
-fn detect_rect_circle(rect: &Collider, circle: &Collider) -> Option<Collision_Info> {
+fn detect_rect_circle(rect: &Collider, circle: &Collider) -> Option<Collision_Info_Internal> {
     detect_circle_rect(circle, rect)
 }
 
@@ -228,7 +249,7 @@ fn collision_shape_type_index(shape: &Collision_Shape) -> usize {
     }
 }
 
-type Collision_Cb = fn(&Collider, &Collider) -> Option<Collision_Info>;
+type Collision_Cb = fn(&Collider, &Collider) -> Option<Collision_Info_Internal>;
 
 const COLLISION_CB_TABLE: [[Collision_Cb; 2]; 2] = [
     [detect_circle_circle, detect_circle_rect],
@@ -240,7 +261,7 @@ fn detect_collisions<T_Spatial_Accelerator>(
     accelerator: &T_Spatial_Accelerator,
     collision_matrix: &Collision_Matrix,
     #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
-) -> Vec<Collision_Info>
+) -> Vec<Collision_Info_Internal>
 where
     T_Spatial_Accelerator: Spatial_Accelerator<Collider_Handle>,
 {
@@ -384,15 +405,19 @@ fn positional_correction(
     objects.get_mut(&b_idx).unwrap().position += b_inv_mass * correction;
 }
 
-fn solve_collisions(objects: &mut Rigidbodies, infos: &[&Collision_Info]) {
+fn solve_collisions(objects: &mut Rigidbodies, infos: &[&Collision_Info_Internal]) {
     trace!("physics::solve_collisions");
 
     for info in infos {
-        let Collision_Info {
+        let Collision_Info_Internal {
             cld1,
             cld2,
-            normal,
-            penetration,
+            info:
+                Collision_Info {
+                    normal,
+                    penetration,
+                    ..
+                },
         } = **info;
 
         solve_collision_roughly(objects, cld1, cld2, normal);
@@ -423,16 +448,26 @@ pub fn update_collisions<T_Spatial_Accelerator>(
     // @Audit: this is super unsafe! Transmuting `usizes` back to pointers.
     // This should work fine, because Colliders should not be moved during the
     // collision update, so the addresses should stay valid. The scariest point
-    // is whether it is UB or not converting to mut ptrs, but, I mean, why should it, right??
+    // is whether it is UB or not converting to mut ptrs, but, I mean, why should it, right?
     //
     // !!! BY THE WAY !!!
     // Probably we don't want to parallelize this ever. That would just throw more
     // potential UB to us.
     infos.iter().for_each(|info| unsafe {
         let body2 = (*(info.cld2 as *const Collider)).entity;
-        (*(info.cld1 as *mut Collider)).colliding_with.push(body2);
+        (*(info.cld1 as *mut Collider))
+            .colliding_with
+            .push(Collision_With_Entity_Data {
+                entity: body2,
+                info: info.info.clone(),
+            });
         let body1 = (*(info.cld1 as *const Collider)).entity;
-        (*(info.cld2 as *mut Collider)).colliding_with.push(body1);
+        (*(info.cld2 as *mut Collider))
+            .colliding_with
+            .push(Collision_With_Entity_Data {
+                entity: body1,
+                info: info.info.clone(),
+            });
 
         evt_register.raise::<Evt_Collision_Happened>((
             (*(info.cld1 as *const Collider)).clone(),
@@ -452,7 +487,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
     // Copy back positions and velocities
     let mut processed = std::collections::HashSet::new();
     for info in &rb_infos {
-        let Collision_Info { cld1, cld2, .. } = info;
+        let Collision_Info_Internal { cld1, cld2, .. } = info;
 
         for cld in &[*cld1, *cld2] {
             if !processed.contains(cld) {

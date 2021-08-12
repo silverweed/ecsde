@@ -3,10 +3,11 @@
 use super::levels::{Level, Levels};
 use super::systems::camera_system;
 use super::systems::controllable_system::{self, C_Controllable};
-use super::systems::dumb_movement_system;
+use crate::systems::ground_detection_system;
+//use super::systems::dumb_movement_system;
 use super::systems::gravity_system;
-use super::systems::ground_collision_calculation_system::Ground_Collision_Calculation_System;
-use super::systems::pixel_collision_system::Pixel_Collision_System;
+//use super::systems::ground_collision_calculation_system::Ground_Collision_Calculation_System;
+//use super::systems::pixel_collision_system::Pixel_Collision_System;
 use crate::gfx;
 use crate::input_utils::{get_movement_from_input, Input_Config};
 use crate::load::load_system;
@@ -50,9 +51,8 @@ pub struct Gameplay_System {
     pub input_cfg: Input_Config,
     cfg: Gameplay_System_Config,
 
-    ground_collision_calc_system: Ground_Collision_Calculation_System,
-    pub pixel_collision_system: Pixel_Collision_System,
-
+    //ground_collision_calc_system: Ground_Collision_Calculation_System,
+    //pub pixel_collision_system: Pixel_Collision_System,
     pub cursor_entity: Option<Entity>,
 
     #[cfg(debug_assertions)]
@@ -75,8 +75,8 @@ impl Gameplay_System {
             levels: Levels::default(),
             input_cfg: Input_Config::default(),
             cfg: Gameplay_System_Config::default(),
-            ground_collision_calc_system: Ground_Collision_Calculation_System::new(),
-            pixel_collision_system: Pixel_Collision_System::default(),
+            //ground_collision_calc_system: Ground_Collision_Calculation_System::new(),
+            //pixel_collision_system: Pixel_Collision_System::default(),
             cursor_entity: None,
             #[cfg(debug_assertions)]
             debug_data: Debug_Data::default(),
@@ -92,7 +92,7 @@ impl Gameplay_System {
     ) -> inle_common::Maybe_Error {
         self.input_cfg = read_input_cfg(&engine_state.config);
         self.cfg = gs_cfg;
-        self.ground_collision_calc_system.init(engine_state);
+        //self.ground_collision_calc_system.init(engine_state);
         self.camera_on_player = Cfg_Var::new("game/camera/on_player", &engine_state.config);
 
         Ok(())
@@ -261,7 +261,7 @@ impl Gameplay_System {
         // Note: inlining foreach_active_levels because we don't want to borrow self.
         let levels = &self.levels;
         let input_cfg = self.input_cfg;
-        let ground_collision_calc_system = &mut self.ground_collision_calc_system;
+        //let ground_collision_calc_system = &mut self.ground_collision_calc_system;
         let frame_alloc = &mut engine_state.frame_alloc;
         let gres = &mut rsrc.gfx;
         let env = &engine_state.env;
@@ -271,6 +271,7 @@ impl Gameplay_System {
         levels.foreach_active_level(|level| {
             let world = &mut level.world;
 
+            ground_detection_system::update(world, &level.phys_world);
             inle_app::animation_system::update(&dt, world);
             controllable_system::update(&dt, actions, axes, world, input_cfg, cfg);
 
@@ -279,7 +280,7 @@ impl Gameplay_System {
             // @Incomplete: level-specific gameplay update
             update_demo_entites(world, &dt);
 
-            ground_collision_calc_system.update(world, &mut level.phys_world, &mut level.chunks);
+            //ground_collision_calc_system.update(world, &mut level.phys_world, &mut level.chunks);
 
             gravity_system::update(&dt, world, cfg);
 

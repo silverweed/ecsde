@@ -111,7 +111,7 @@ impl std::fmt::Debug for String_Id {
                 .read()
                 .expect("[ ERROR ] Failed to lock STRING_ID_MAP")
                 .get(self)
-                .map_or("??", |s| &s)
+                .map_or("??", |s| s)
         )
     }
 }

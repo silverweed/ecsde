@@ -306,7 +306,7 @@ impl Buffer_Allocator {
         if let Buffer_Handle_Inner::Non_Empty(h) = &handle.inner {
             #[cfg(debug_assertions)]
             {
-                debug_assert!(self.cur_allocated.contains(&h));
+                debug_assert!(self.cur_allocated.contains(h));
             }
             write_to_bucket(
                 &mut self.buckets[h.bucket_idx as usize],
@@ -320,7 +320,7 @@ impl Buffer_Allocator {
 
     fn find_first_bucket_with_capacity(&self, capacity: usize) -> Option<(usize, usize)> {
         for (bucket_idx, bucket) in self.buckets.iter().enumerate() {
-            if let Some(free_slot_idx) = bucket_has_contiguous_capacity(&bucket, capacity) {
+            if let Some(free_slot_idx) = bucket_has_contiguous_capacity(bucket, capacity) {
                 lverbose!(
                     "For capacity {}, found bucket with free list: {:?}",
                     capacity,

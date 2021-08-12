@@ -1,4 +1,5 @@
 use crate::input_utils::{get_movement_from_input, Input_Config};
+use crate::systems::ground_detection_system::C_Ground_Detection;
 use inle_cfg::{self, Cfg_Var};
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::Ecs_World;
@@ -15,6 +16,9 @@ pub struct C_Controllable {
     pub jump_impulse: Cfg_Var<f32>,
     pub dampening: Cfg_Var<f32>,
     pub horiz_max_speed: Cfg_Var<f32>,
+    pub max_jumps: Cfg_Var<i32>,
+
+    pub n_jumps_done: u32,
 }
 
 pub fn update(
@@ -28,7 +32,7 @@ pub fn update(
     let movement = get_movement_from_input(axes, input_cfg, cfg).x;
     let dt_secs = dt.as_secs_f32();
 
-    foreach_entity!(ecs_world, +C_Controllable, +C_Spatial2D, |entity| {
+    foreach_entity!(ecs_world, +C_Controllable, +C_Spatial2D, +C_Ground_Detection, |entity| {
         let ctrl = ecs_world
             .get_component::<C_Controllable>(entity)
             .unwrap();
@@ -37,13 +41,22 @@ pub fn update(
         let dampening = ctrl.dampening.read(cfg);
         let horiz_max_speed = ctrl.horiz_max_speed.read(cfg);
 
+        let ground_detect = ecs_world.get_component::<C_Ground_Detection>(entity).unwrap();
+        let reset_jumps = ground_detect.just_touched_ground;
+
+        let can_jump = (if reset_jumps { 0 } else { ctrl.n_jumps_done }) < ctrl.max_jumps.read(cfg) as u32;
+
         let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
         let velocity = &mut spatial.velocity;
 
         velocity.x += movement * acceleration * dt_secs;
-        if actions.contains(&(sid!("jump"), Action_Kind::Pressed)) {
+
+        let mut jumped = false;
+        if can_jump && actions.contains(&(sid!("jump"), Action_Kind::Pressed)) {
             velocity.y -= jump_impulse;
+            jumped = true;
         }
+
         let velocity_norm = velocity.normalized_or_zero();
         let speed = velocity.magnitude();
         *velocity -=  velocity_norm * dampening * speed * dt_secs;
@@ -54,5 +67,9 @@ pub fn update(
             .get_component_mut::<C_Controllable>(entity)
             .unwrap();
         ctrl.translation_this_frame = v;
+        if reset_jumps {
+            ctrl.n_jumps_done = 0;
+        }
+        ctrl.n_jumps_done += jumped as u32;
     });
 }

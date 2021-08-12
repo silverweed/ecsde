@@ -108,7 +108,7 @@ impl Debug_Element for Fadeout_Debug_Overlay {
         for line in self.fadeout_texts.iter() {
             let Fadeout_Text { text, color, time } = line;
 
-            let d = inle_core::time::duration_ratio(&time, &fadeout_time);
+            let d = inle_core::time::duration_ratio(time, &fadeout_time);
             let alpha = 255 - (d * d * 255.0f32) as u8;
             let text = inle_gfx::render::create_text(text, font, font_size);
             let color = Color { a: alpha, ..*color };

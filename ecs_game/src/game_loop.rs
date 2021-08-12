@@ -509,7 +509,7 @@ fn update_graphics<'a, 's, 'r>(
             .foreach_active_level(|level| {
                 batcher::draw_batches(
                     window,
-                    &gres,
+                    gres,
                     lv_batches.get_mut(&level.id).unwrap(),
                     shader_cache,
                     &level.get_camera().transform,
@@ -524,7 +524,7 @@ fn update_graphics<'a, 's, 'r>(
                 if enable_particles {
                     particle_mgrs.get_mut(&level.id).unwrap().render(
                         window,
-                        &gres,
+                        gres,
                         shader_cache,
                         &level.get_camera().transform,
                         frame_alloc,
@@ -534,7 +534,7 @@ fn update_graphics<'a, 's, 'r>(
 
         batcher::draw_batches(
             window,
-            &gres,
+            gres,
             &mut game_state.engine_state.global_batches,
             shader_cache,
             &Transform2D::default(),
@@ -833,7 +833,7 @@ fn update_debug(
                 update_entities_debug_overlay(debug_ui.get_overlay(sid!("entities")), &level.world);
                 update_camera_debug_overlay(
                     debug_ui.get_overlay(sid!("camera")),
-                    &level.get_camera(),
+                    level.get_camera(),
                 );
                 if let Some(cls_debug_data) = collision_debug_data.get(&level.id) {
                     update_physics_debug_overlay(
@@ -893,7 +893,7 @@ fn update_debug(
 
     // @Cleanup
     if cvars.draw_buf_alloc.read(&engine_state.config) {
-        inle_debug::backend_specific_debugs::draw_backend_specific_debug(&window, global_painter);
+        inle_debug::backend_specific_debugs::draw_backend_specific_debug(window, global_painter);
     }
 }
 
@@ -1362,11 +1362,11 @@ fn debug_draw_entities_prev_frame_ghost(
     is_paused: bool,
 ) {
     use crate::debug::entity_debug::C_Debug_Data;
-    use crate::systems::pixel_collision_system::C_Texture_Collider;
+    //use crate::systems::pixel_collision_system::C_Texture_Collider;
     use inle_gfx::components::C_Renderable;
     use inle_gfx::render;
 
-    foreach_entity!(ecs_world, +C_Spatial2D, +C_Renderable, +C_Debug_Data, ~C_Texture_Collider, |entity| {
+    foreach_entity!(ecs_world, +C_Spatial2D, +C_Renderable, +C_Debug_Data, /*~C_Texture_Collider,*/ |entity| {
         let frame_starting_pos = ecs_world.get_component::<C_Spatial2D>(entity).unwrap().frame_starting_pos;
         let C_Renderable {
             mut material,

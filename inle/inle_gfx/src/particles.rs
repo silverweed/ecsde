@@ -131,7 +131,7 @@ fn init_particle(
     props: &Particle_Props,
     precomp_rng: &Precomputed_Rand_Pool,
 ) -> (Transform2D, Vec2f, Duration) {
-    let pos = random_pos_in(&props.emission_shape, &precomp_rng);
+    let pos = random_pos_in(&props.emission_shape, precomp_rng);
     let rot = angle::rad(precomp_rng.rand_range(
         props.initial_rotation.start.as_rad(),
         props.initial_rotation.end.as_rad(),

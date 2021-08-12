@@ -158,7 +158,7 @@ pub fn init_engine_debug(
 
     let font = gfx_resources.load_font(&inle_resources::gfx::font_path(
         &engine_state.env,
-        &cfg.font.read(&engine_state.config),
+        cfg.font.read(&engine_state.config),
     ));
 
     engine_state

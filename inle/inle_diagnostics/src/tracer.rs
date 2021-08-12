@@ -303,7 +303,7 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
     tags_ordered
         .iter()
         .map(|hash| {
-            let info = &tag_map[&hash];
+            let info = &tag_map[hash];
             Tracer_Node_Final {
                 info: Scope_Trace_Info_Final::new(info.tag, info.n_calls, info.tot_duration),
                 parent_idx: info

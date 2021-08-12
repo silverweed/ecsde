@@ -3,7 +3,8 @@ use crate::gfx::multi_sprite_animation_system::{Animation_Track, C_Multi_Rendera
 use crate::gfx::shaders::*;
 use crate::systems::controllable_system::C_Controllable;
 use crate::systems::gravity_system::C_Gravity;
-use crate::systems::pixel_collision_system::C_Texture_Collider;
+use crate::systems::ground_detection_system::C_Ground_Detection;
+//use crate::systems::pixel_collision_system::C_Texture_Collider;
 use inle_cfg::{Cfg_Var, Config};
 use inle_core::env::Env_Info;
 use inle_ecs::components::base::C_Spatial2D;
@@ -28,7 +29,7 @@ fn next_name(name: &'static str) -> String {
     }
 
     let mut guard = N.lock().unwrap();
-    let n_ref = guard.entry(&name).or_insert(0);
+    let n_ref = guard.entry(name).or_insert(0);
     let n = *n_ref;
     *n_ref += 1;
     format!("{}_{}", name, n)
@@ -79,6 +80,7 @@ pub fn create_jelly(
                 jump_impulse: Cfg_Var::new("game/gameplay/player/jump_impulse", cfg),
                 dampening: Cfg_Var::new("game/gameplay/player/dampening", cfg),
                 horiz_max_speed: Cfg_Var::new("game/gameplay/player/horiz_max_speed", cfg),
+                max_jumps: Cfg_Var::new("game/gameplay/player/max_jumps", cfg),
                 ..Default::default()
             },
         );
@@ -119,6 +121,7 @@ pub fn create_jelly(
     let phys_body = phys_world.new_physics_body_with_rigidbody(cld, phys_data);
 
     world.add_component(entity, C_Collider { handle: phys_body });
+    world.add_component(entity, C_Ground_Detection::default());
 
     world.add_component(
         entity,
@@ -152,8 +155,8 @@ pub fn create_drill(
     let mut multi_rend = C_Multi_Renderable::default();
 
     {
-        let texture = gres.load_texture(&tex_path(&env, "drill_bottom.png"));
-        let normals = gres.load_texture(&tex_path(&env, "drill_bottom_n.png"));
+        let texture = gres.load_texture(&tex_path(env, "drill_bottom.png"));
+        let normals = gres.load_texture(&tex_path(env, "drill_bottom_n.png"));
         let (sw, sh) = render::get_texture_size(gres.get_texture(texture));
         multi_rend.add(C_Renderable {
             material: Material {
@@ -169,8 +172,8 @@ pub fn create_drill(
         });
     }
     let (sw, sh) = {
-        let texture = gres.load_texture(&tex_path(&env, "drill_center.png"));
-        let normals = gres.load_texture(&tex_path(&env, "drill_center_n.png"));
+        let texture = gres.load_texture(&tex_path(env, "drill_center.png"));
+        let normals = gres.load_texture(&tex_path(env, "drill_center_n.png"));
         let (sw, sh) = render::get_texture_size(gres.get_texture(texture));
         multi_rend.add(C_Renderable {
             material: Material {
@@ -187,8 +190,8 @@ pub fn create_drill(
         (sw, sh)
     };
     {
-        let texture = gres.load_texture(&tex_path(&env, "drill_top.png"));
-        let normals = gres.load_texture(&tex_path(&env, "drill_top_n.png"));
+        let texture = gres.load_texture(&tex_path(env, "drill_top.png"));
+        let normals = gres.load_texture(&tex_path(env, "drill_top_n.png"));
         let (sw, sh) = render::get_texture_size(gres.get_texture(texture));
         multi_rend.add(C_Renderable {
             material: Material {
@@ -332,24 +335,23 @@ pub fn create_terrain(
         t.transform.set_position(0., 600.);
     }
 
-    let rend = world.add_component(
-        gnd,
-        C_Renderable::new_with_diffuse(gres, env, "ground3.png")
-            .with_shader(shader_cache, env, SHD_SPRITE_FLAT)
-            //.with_shader(shader_cache, env, SHD_TERRAIN)
-            .with_shininess(0.2)
-            .with_z_index(1),
-    );
+    //let rend = world.add_component(
+    //gnd,
+    //C_Renderable::new_with_diffuse(gres, env, "ground3.png")
+    //.with_shader(shader_cache, env, SHD_SPRITE_FLAT)
+    ////.with_shader(shader_cache, env, SHD_TERRAIN)
+    //.with_shininess(0.2)
+    //.with_z_index(1),
+    //);
 
-    let texture = rend.material.texture;
-
-    world.add_component(
-        gnd,
-        C_Texture_Collider {
-            texture,
-            layer: Game_Collision_Layer::Ground as _,
-        },
-    );
+    //let texture = rend.material.texture;
+    //world.add_component(
+    //gnd,
+    //C_Texture_Collider {
+    //texture,
+    //layer: Game_Collision_Layer::Ground as _,
+    //},
+    //);
 
     #[cfg(debug_assertions)]
     {

@@ -165,7 +165,7 @@ unsafe fn create_white_texture(tex_cache: &mut cache::Texture_Cache) {
     let img = WHITE_IMAGE
         .as_ref()
         .expect("white image was not created yet!");
-    let mut tex = render::new_texture_from_image(&img, None);
+    let mut tex = render::new_texture_from_image(img, None);
     render::set_texture_repeated(&mut tex, true);
     tex_cache.cache.insert(WHITE_TEXTURE_KEY, tex);
 }

@@ -321,7 +321,7 @@ fn update_virtual_axes_from_real_axes(
                         continue;
                     }
                 }
-                let cur_value = virtual_axes.values.get_mut(&virtual_axis_name).unwrap();
+                let cur_value = virtual_axes.values.get_mut(virtual_axis_name).unwrap();
                 let new_value = real_axes[i as usize];
 
                 // It may be the case that multiple real axes map to the same virtual axis.
