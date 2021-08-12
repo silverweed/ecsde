@@ -295,8 +295,9 @@ pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mu
         .engine_state
         .debug_systems
         .debug_ui
-        .get_fadeout_overlay(sid!("msg"))
-        .add_line_color("+++ GAME RELOADED +++", colors::rgb(255, 128, 0));
+        .get_overlay(sid!("msg"))
+        .add_line("+++ GAME RELOADED +++")
+        .with_color(colors::rgb(255, 128, 0));
     ldebug!("+++ GAME RELOADED +++");
 
     inle_win::window::recreate_window(&mut game_state.window);

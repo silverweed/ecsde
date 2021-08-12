@@ -1,5 +1,4 @@
 use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
-use super::fadeout_overlay;
 use super::frame_scroller::Debug_Frame_Scroller;
 use super::graph;
 use super::log::Debug_Log;
@@ -153,7 +152,6 @@ impl<T> Debug_Element_Container<T> {
 #[derive(Default)]
 pub struct Debug_Ui_System {
     overlays: Debug_Element_Container<overlay::Debug_Overlay>,
-    fadeout_overlays: Debug_Element_Container<fadeout_overlay::Fadeout_Debug_Overlay>,
     graphs: Debug_Element_Container<graph::Debug_Graph_View>,
     log_windows: Debug_Element_Container<log_window::Log_Window>,
     pub frame_scroller: Debug_Frame_Scroller,
@@ -221,7 +219,6 @@ impl Debug_Ui_System {
     pub fn new() -> Debug_Ui_System {
         Debug_Ui_System {
             overlays: Debug_Element_Container::new(),
-            fadeout_overlays: Debug_Element_Container::new(),
             graphs: Debug_Element_Container::new(),
             log_windows: Debug_Element_Container::new(),
             frame_scroller: Debug_Frame_Scroller::default(),
@@ -237,16 +234,6 @@ impl Debug_Ui_System {
         get_overlay,
         set_overlay_enabled,
         is_overlay_enabled
-    );
-
-    add_debug_elem!(
-        fadeout_overlay::Fadeout_Debug_Overlay,
-        fadeout_overlay::Fadeout_Debug_Overlay_Config,
-        fadeout_overlays,
-        create_fadeout_overlay,
-        get_fadeout_overlay,
-        set_fadeout_overlay_enabled,
-        is_fadeout_overlay_enabled
     );
 
     add_debug_elem!(
@@ -304,16 +291,6 @@ impl Debug_Ui_System {
         update_and_draw_elems!(
             self,
             overlays,
-            dt,
-            window,
-            input_state,
-            gres,
-            config,
-            frame_alloc
-        );
-        update_and_draw_elems!(
-            self,
-            fadeout_overlays,
             dt,
             window,
             input_state,

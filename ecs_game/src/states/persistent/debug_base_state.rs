@@ -29,7 +29,7 @@ macro_rules! add_msg {
         $engine_state
             .debug_systems
             .debug_ui
-            .get_fadeout_overlay(sid!("msg"))
+            .get_overlay(sid!("msg"))
             .add_line($msg)
     };
 }

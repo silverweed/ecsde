@@ -1,6 +1,6 @@
 use super::element::{Debug_Element, Draw_Args, Update_Args, Update_Res};
 use inle_alloc::temp;
-use inle_cfg::Cfg_Var;
+use inle_cfg::{Cfg_Var, Config};
 use inle_common::colors::{self, Color};
 use inle_common::stringid::String_Id;
 use inle_common::variant::Variant;
@@ -9,15 +9,19 @@ use inle_gfx::render;
 use inle_math::rect::{Rect, Rectf};
 use inle_math::vector::Vec2f;
 use inle_resources::gfx::Font_Handle;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::convert::TryFrom;
+use std::time::Duration;
 
+#[derive(Default)]
 pub struct Debug_Line {
     pub text: String,
     pub color: Color,
     // Contains (fill_color, horizontal_fill_ratio 0-1)
     pub bg_rect_fill: Option<(Color, f32)>,
     pub metadata: HashMap<String_Id, Variant>,
+
+    fadeout_t: Duration,
 }
 
 impl Debug_Line {
@@ -45,6 +49,10 @@ pub struct Debug_Overlay_Config {
     pub pad_x: Cfg_Var<f32>,
     pub pad_y: Cfg_Var<f32>,
     pub background: Cfg_Var<u32>, // Color
+    pub fadeout_time: Cfg_Var<f32>,
+
+    // This should really be a Cfg_Var, but for convenience for now it's not.
+    pub max_rows: usize,
 
     pub font: Font_Handle,
     pub horiz_align: Align,
@@ -86,7 +94,7 @@ pub struct Hover_Data {
 
 #[derive(Default)]
 pub struct Debug_Overlay {
-    pub lines: Vec<Debug_Line>,
+    pub lines: VecDeque<Debug_Line>,
 
     pub cfg: Debug_Overlay_Config,
     pub position: Vec2f,
@@ -140,15 +148,24 @@ impl Debug_Element for Debug_Overlay {
         let mut max_row_height = 0f32;
 
         let font = gres.get_font(font);
+        let fadeout_time = self.get_fadeout_time(config);
         for line in self.lines.iter() {
-            let Debug_Line { text, color, .. } = line;
+            let Debug_Line {
+                text, mut color, ..
+            } = line;
             let text = render::create_text(text, font, font_size);
 
             let txt_size = render::get_text_size(&text);
             max_row_width = max_row_width.max(txt_size.x);
             max_row_height = max_row_height.max(txt_size.y);
 
-            texts.push((text, *color, txt_size));
+            if let Some(fadeout_time) = fadeout_time {
+                let d = inle_core::time::duration_ratio(&line.fadeout_t, &fadeout_time);
+                let alpha = 255 - (d * d * 255.0) as u8;
+                color.a = alpha;
+            }
+
+            texts.push((text, color, txt_size));
         }
 
         let position = self.position;
@@ -197,6 +214,7 @@ impl Debug_Element for Debug_Overlay {
                     *color = colors::WHITE;
                 }
             }
+
             render::render_text(window, text, *color, position + pos);
         }
     }
@@ -207,12 +225,28 @@ impl Debug_Element for Debug_Overlay {
             window,
             input_state,
             config,
+            dt,
             ..
         }: Update_Args,
     ) -> Update_Res {
         use inle_input::mouse;
 
         trace!("debug::overlay::update");
+
+        if let Some(fadeout_time) = self.get_fadeout_time(config) {
+            let mut n_drained = 0;
+            for (i, line) in self.lines.iter_mut().enumerate().rev() {
+                line.fadeout_t += *dt;
+                if line.fadeout_t >= fadeout_time {
+                    // All following texts must have a time >= fadeout_time, since they're sorted by insertion time.
+                    n_drained = i + 1;
+                    break;
+                }
+            }
+            for _ in 0..n_drained {
+                self.lines.pop_front();
+            }
+        }
 
         if !self.cfg.hoverable {
             return Update_Res::Stay_Enabled;
@@ -272,11 +306,13 @@ impl Debug_Overlay {
     }
 
     pub fn add_line(&mut self, line: &str) -> &mut Debug_Line {
-        self.lines.push(Debug_Line {
+        if self.lines.len() == self.cfg.max_rows {
+            self.lines.pop_front();
+        }
+        self.lines.push_back(Debug_Line {
             text: String::from(line),
             color: colors::WHITE,
-            bg_rect_fill: None,
-            metadata: HashMap::default(),
+            ..Default::default()
         });
         let len = self.lines.len();
         &mut self.lines[len - 1]
@@ -284,5 +320,14 @@ impl Debug_Overlay {
 
     pub fn bounds(&self) -> Rectf {
         self.latest_bounds.get()
+    }
+
+    fn get_fadeout_time(&self, config: &Config) -> Option<Duration> {
+        let fadeout_time = self.cfg.fadeout_time.read(config);
+        if fadeout_time > 0.0 {
+            Some(Duration::from_secs_f32(fadeout_time))
+        } else {
+            None
+        }
     }
 }

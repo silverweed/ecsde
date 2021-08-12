@@ -19,7 +19,6 @@ pub mod calipers;
 pub mod console;
 pub mod debug_ui;
 pub mod element;
-pub mod fadeout_overlay;
 pub mod fps;
 pub mod frame_scroller;
 pub mod graph;

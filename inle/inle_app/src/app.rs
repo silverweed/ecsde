@@ -153,7 +153,7 @@ pub fn init_engine_debug(
     cfg: inle_debug::debug_ui::Debug_Ui_System_Config,
 ) -> Maybe_Error {
     use inle_common::vis_align::Align;
-    use inle_debug::{fadeout_overlay, graph, overlay};
+    use inle_debug::{graph, overlay};
     use inle_math::vector::{Vec2f, Vec2u};
 
     let font = gfx_resources.load_font(&inle_resources::gfx::font_path(
@@ -209,7 +209,7 @@ pub fn init_engine_debug(
             .unwrap();
         joy_overlay.cfg.horiz_align = Align::End;
         joy_overlay.cfg.vert_align = Align::Middle;
-        joy_overlay.position = Vec2f::new(win_w, win_h * 0.5);
+        joy_overlay.position = v2!(win_w, win_h * 0.5);
 
         let time_overlay = debug_ui
             .create_overlay(sid!("time"), &debug_overlay_config)
@@ -223,13 +223,24 @@ pub fn init_engine_debug(
             .unwrap();
         win_overlay.cfg.horiz_align = Align::End;
         win_overlay.cfg.vert_align = Align::End;
-        win_overlay.position = Vec2f::new(win_w, win_h - 20. * ui_scale);
+        win_overlay.position = v2!(win_w, win_h - 20. * ui_scale);
 
         let fps_overlay = debug_ui
             .create_overlay(sid!("fps"), &debug_overlay_config)
             .unwrap();
         fps_overlay.cfg.vert_align = Align::End;
-        fps_overlay.position = Vec2f::new(0.0, win_h);
+        fps_overlay.position = v2!(0.0, win_h);
+
+        debug_overlay_config.fadeout_time = Cfg_Var::new(
+            "engine/debug/overlay/msg/fadeout_time",
+            &engine_state.config,
+        );
+        let msg_overlay = debug_ui
+            .create_overlay(sid!("msg"), &debug_overlay_config)
+            .unwrap();
+        msg_overlay.cfg.horiz_align = Align::Begin;
+        msg_overlay.position = Vec2f::new(0.0, 0.0);
+        debug_overlay_config.fadeout_time = Cfg_Var::new_from_val(0.0);
 
         debug_overlay_config.pad_x =
             Cfg_Var::new("engine/debug/overlay/mouse/pad_x", &engine_state.config);
@@ -259,7 +270,7 @@ pub fn init_engine_debug(
         trace_overlay.cfg.vert_align = Align::Middle;
         trace_overlay.cfg.horiz_align = Align::Middle;
         trace_overlay.cfg.hoverable = true;
-        trace_overlay.position = Vec2f::new(win_w * 0.5, win_h * 0.5);
+        trace_overlay.position = v2!(win_w * 0.5, win_h * 0.5);
         // Trace overlay starts disabled
         debug_ui.set_overlay_enabled(sid!("trace"), false);
 
@@ -280,37 +291,7 @@ pub fn init_engine_debug(
             .unwrap();
         record_overlay.cfg.vert_align = Align::Begin;
         record_overlay.cfg.horiz_align = Align::Begin;
-        record_overlay.position = Vec2f::new(2.0, 2.0);
-    }
-
-    // Debug fadeout overlays
-    {
-        let fadeout_overlay_config = fadeout_overlay::Fadeout_Debug_Overlay_Config {
-            row_spacing: Cfg_Var::new(
-                "engine/debug/fadeout_overlay/row_spacing",
-                &engine_state.config,
-            ),
-            font_size: cfg.font_size,
-            pad_x: Cfg_Var::new("engine/debug/fadeout_overlay/pad_x", &engine_state.config),
-            pad_y: Cfg_Var::new("engine/debug/fadeout_overlay/pad_y", &engine_state.config),
-            background: Cfg_Var::new(
-                "engine/debug/fadeout_overlay/background",
-                &engine_state.config,
-            ),
-            fadeout_time: Cfg_Var::new(
-                "engine/debug/fadeout_overlay/fadeout_time",
-                &engine_state.config,
-            ),
-            max_rows: (30.0 / ui_scale.max(0.1)) as _,
-            font,
-            ..Default::default()
-        };
-
-        let fadeout_overlay = debug_ui
-            .create_fadeout_overlay(sid!("msg"), &fadeout_overlay_config)
-            .unwrap();
-        fadeout_overlay.cfg.horiz_align = Align::Begin;
-        fadeout_overlay.position = Vec2f::new(0.0, 0.0);
+        record_overlay.position = v2!(2.0, 2.0);
     }
 
     // Graphs
