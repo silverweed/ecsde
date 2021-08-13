@@ -434,3 +434,8 @@ pub fn write_array_into_uniform_buffer<T: Std140>(
 pub fn bind_uniform_buffer(ubo: &Uniform_Buffer) {
     backend::bind_uniform_buffer(ubo);
 }
+
+#[inline]
+pub fn uniform_buffer_needs_transfer_to_gpu(ubo: &Uniform_Buffer) -> bool {
+    backend::uniform_buffer_needs_transfer_to_gpu(ubo)
+}

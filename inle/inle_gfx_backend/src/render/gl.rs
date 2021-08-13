@@ -1271,6 +1271,8 @@ pub fn create_or_get_uniform_buffer<'window>(
     shader: &Shader,
     name: &'static CStr,
 ) -> &'window mut Uniform_Buffer {
+    trace!("create_or_get_uniform_buffer");
+
     window
         .gl
         .uniform_buffers
@@ -1317,6 +1319,8 @@ pub unsafe fn write_into_uniform_buffer(
     size: usize,
     data: *const u8,
 ) -> usize {
+    trace!("write_into_uniform_buffer");
+
     debug_assert!(!ubo.mem.is_null());
     debug_assert!(!data.is_null());
 
@@ -1353,6 +1357,8 @@ pub unsafe fn write_into_uniform_buffer(
 }
 
 pub fn bind_uniform_buffer(ubo: &Uniform_Buffer) {
+    trace!("bind_uniform_buffer");
+
     unsafe {
         glcheck!(gl::BindBuffer(gl::UNIFORM_BUFFER, ubo.id));
 
@@ -1366,6 +1372,12 @@ pub fn bind_uniform_buffer(ubo: &Uniform_Buffer) {
                 ubo.mem as *const _,
                 gl::DYNAMIC_DRAW
             ));
+
+            #[cfg(debug_assertions)]
+            {
+                lverbose!("Transfered UBO {:?} to the GPU", ubo.name);
+            }
+
             ubo.needs_transfer_to_gpu.set(false);
         }
 
@@ -1375,6 +1387,11 @@ pub fn bind_uniform_buffer(ubo: &Uniform_Buffer) {
             ubo.id
         ));
     }
+}
+
+#[inline]
+pub fn uniform_buffer_needs_transfer_to_gpu(ubo: &Uniform_Buffer) -> bool {
+    ubo.needs_transfer_to_gpu.get()
 }
 
 // -----------------------------------------------------------------------

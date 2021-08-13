@@ -21,7 +21,7 @@ use inle_core::rand;
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::Ecs_World;
 use inle_gfx::components::{C_Animated_Sprite, C_Camera2D, C_Multi_Renderable, C_Renderable};
-use inle_gfx::light::{Lights, Point_Light, Rect_Light};
+use inle_gfx::light::{Ambient_Light, Light_Command, Lights, Point_Light, Rect_Light};
 use inle_math::rect::Rect;
 use inle_math::transform::Transform2D;
 use inle_physics::collider::C_Collider;
@@ -94,8 +94,11 @@ fn register_all_components(world: &mut Ecs_World) {
 // @Temporary
 fn init_demo_lights(lights: &mut Lights, cfg: &inle_cfg::Config) {
     let amb_intensity = Cfg_Var::<f32>::new("game/world/lighting/ambient_intensity", cfg).read(cfg);
-    lights.ambient_light.color = colors::rgb(200, 140, 180);
-    lights.ambient_light.intensity = amb_intensity;
+    let ambient_light = Ambient_Light {
+        color: colors::rgb(200, 140, 180),
+        intensity: amb_intensity,
+    };
+    lights.queue_command(Light_Command::Change_Ambient_Light(ambient_light));
 
     //let light = Rect_Light {
     //    rect: Rect::new(-37., -140., 90., 30.),

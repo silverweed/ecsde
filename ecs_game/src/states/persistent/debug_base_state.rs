@@ -5,12 +5,14 @@ use inle_math::math;
 use inle_math::vector::Vec2f;
 use inle_win::window;
 use std::convert::TryFrom;
+use std::time::Duration;
 
 pub struct Debug_Base_State {
     // @Cleanup: this cfg_var is already in Game_State!
     // Should we perhaps move it into Engine_State and read it from handle_actions?
     gameplay_update_tick_ms: Cfg_Var<f32>,
     digging: bool,
+    t: Duration,
 }
 
 const CHANGE_SPEED_DELTA: f32 = 0.1;
@@ -20,6 +22,7 @@ impl Debug_Base_State {
         Debug_Base_State {
             gameplay_update_tick_ms: Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg),
             digging: false,
+            t: Duration::default(),
         }
     }
 }
@@ -35,6 +38,35 @@ macro_rules! add_msg {
 }
 
 impl Persistent_Game_State for Debug_Base_State {
+    fn update(&mut self, args: &mut Game_State_Args, dt: &Duration, _real_dt: &Duration) {
+        self.t += *dt;
+
+        if self.t > Duration::from_secs(1) {
+            self.t = Duration::default();
+
+            let rng = &mut args.engine_state.rng;
+            args.gameplay_system.levels.foreach_active_level(|lv| {
+                let mut pls = vec![];
+                for pl in lv.lights.point_lights() {
+                    pls.push(inle_gfx::light::Point_Light {
+                        color: inle_common::colors::color_from_hex(inle_core::rand::rand_range(
+                            rng,
+                            0.0,
+                            0xffffffffu32 as f32,
+                        )
+                            as u32),
+                        ..*pl
+                    });
+                }
+
+                for (i, pl) in pls.iter().enumerate() {
+                    lv.lights
+                        .queue_command(inle_gfx::light::Light_Command::Change_Point_Light(i, *pl));
+                }
+            });
+        }
+    }
+
     fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Game_State_Args) {
         let Game_State_Args {
             engine_state,
@@ -78,7 +110,7 @@ impl Persistent_Game_State for Debug_Base_State {
                     );
                 }
                 (name, Action_Kind::Pressed) if *name == sid!("step_sim") => {
-                    let step_delta = std::time::Duration::from_millis(
+                    let step_delta = Duration::from_millis(
                         self.gameplay_update_tick_ms.read(&engine_state.config) as u64,
                     );
                     add_msg!(

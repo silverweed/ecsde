@@ -139,11 +139,7 @@ fn encode_rot_and_alpha_as_color(rot: Angle, alpha: u8) -> Color {
     }
 }
 
-fn prepare_light_uniforms<'win>(
-    window: &'win mut Render_Window_Handle,
-    shader: &mut Shader,
-    lights: &Lights,
-) -> &'win render::Uniform_Buffer {
+fn update_light_uniforms(ubo: &mut render::Uniform_Buffer, lights: &Lights) {
     // Assuming this layout in GLSL:
     //
     // layout (std140) uniform LightsBlock {
@@ -151,8 +147,6 @@ fn prepare_light_uniforms<'win>(
     //     Point_Light point_lights[MAX_POINT_LIGHTS];
     //     Rect_Light rect_lights[MAX_RECT_LIGHTS];
     // };
-
-    let ubo = render::create_or_get_uniform_buffer(window, shader, c_str!("LightsBlock"));
 
     let mut next_offset = 0;
     const COL_NORM: f32 = 1.0 / 255.0;
@@ -168,11 +162,12 @@ fn prepare_light_uniforms<'win>(
         }
         unsafe impl render::Std140 for Ambient_Light {}
 
+        let light = lights.ambient_light();
         let ambient_light = Ambient_Light {
-            r: lights.ambient_light.color.r as f32 * COL_NORM,
-            b: lights.ambient_light.color.b as f32 * COL_NORM,
-            g: lights.ambient_light.color.g as f32 * COL_NORM,
-            intensity: lights.ambient_light.intensity,
+            r: light.color.r as f32 * COL_NORM,
+            b: light.color.b as f32 * COL_NORM,
+            g: light.color.g as f32 * COL_NORM,
+            intensity: light.intensity,
         };
         next_offset = render::write_into_uniform_buffer(ubo, next_offset, ambient_light);
     }
@@ -195,7 +190,7 @@ fn prepare_light_uniforms<'win>(
 
         let mut point_lights = [Point_Light::default(); MAX_POINT_LIGHTS];
         for (i, pl) in lights
-            .point_lights
+            .point_lights()
             .iter()
             .take(MAX_POINT_LIGHTS)
             .enumerate()
@@ -235,7 +230,12 @@ fn prepare_light_uniforms<'win>(
         const MAX_RECT_LIGHTS: usize = 4;
 
         let mut rect_lights = [Rect_Light::default(); MAX_RECT_LIGHTS];
-        for (i, rl) in lights.rect_lights.iter().take(MAX_RECT_LIGHTS).enumerate() {
+        for (i, rl) in lights
+            .rect_lights()
+            .iter()
+            .take(MAX_RECT_LIGHTS)
+            .enumerate()
+        {
             let rect_light = Rect_Light {
                 r: rl.color.r as f32 * COL_NORM,
                 g: rl.color.g as f32 * COL_NORM,
@@ -253,8 +253,6 @@ fn prepare_light_uniforms<'win>(
 
         render::write_array_into_uniform_buffer(ubo, next_offset, &rect_lights);
     }
-
-    ubo
 }
 
 fn set_shader_uniforms(
@@ -263,12 +261,15 @@ fn set_shader_uniforms(
     material: &Material,
     gres: &Gfx_Resources,
     lights: &Lights,
+    lights_ubo_needs_update: bool,
     texture: &Texture,
     view_projection: &Matrix3<f32>,
 ) {
     use super::set_uniform;
 
     super::use_shader(shader);
+
+    // @TODO: use UBOs for all uniforms
 
     set_uniform(shader, c_str!("tex"), texture);
     set_uniform(shader, c_str!("vp"), view_projection);
@@ -277,17 +278,6 @@ fn set_shader_uniforms(
         let normals = gres.get_texture(material.normals);
         set_uniform(shader, c_str!("normals"), normals);
     }
-
-    // @Cleanup: currently unused: was used by old terrain shader
-    //let (tex_w, tex_h) = super::get_texture_size(texture);
-    //set_uniform(
-    //shader,
-    //c_str!("texture_size"),
-    //v2!(tex_w as f32, tex_h as f32),
-    //);
-
-    let lights_ubo = prepare_light_uniforms(window, shader, lights);
-    render::bind_uniform_buffer(lights_ubo);
 
     set_uniform(
         shader,
@@ -299,6 +289,13 @@ fn set_shader_uniforms(
         c_str!("specular_color"),
         Color3::from(material.specular_color),
     );
+
+    let lights_ubo = render::create_or_get_uniform_buffer(window, shader, c_str!("LightsBlock"));
+    // Note: we only update the light uniforms if lights have changed AND we didn't update this particular UBO yet.
+    if lights_ubo_needs_update && !render::uniform_buffer_needs_transfer_to_gpu(lights_ubo) {
+        update_light_uniforms(lights_ubo, lights);
+    }
+    render::bind_uniform_buffer(lights_ubo);
 }
 
 #[derive(Copy, Clone)]
@@ -323,7 +320,7 @@ pub fn draw_batches(
     batches: &mut Batches,
     shader_cache: &mut Shader_Cache,
     camera: &Transform2D,
-    lights: &Lights,
+    lights: &mut Lights,
     draw_params: Batcher_Draw_Params,
     frame_alloc: &mut temp::Temp_Allocator,
 ) {
@@ -331,6 +328,8 @@ pub fn draw_batches(
 
     let n_threads = rayon::current_num_threads();
     let view_projection = get_vp_matrix(window, camera);
+
+    let lights_ubo_needs_update = lights.process_commands();
 
     // for each Z-index...
     for sprite_map in batches.textures_ws.values_mut() {
@@ -357,6 +356,7 @@ pub fn draw_batches(
                         material,
                         gres,
                         lights,
+                        lights_ubo_needs_update,
                         texture,
                         &view_projection,
                     );

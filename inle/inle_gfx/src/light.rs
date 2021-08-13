@@ -49,10 +49,23 @@ pub struct Rect_Light {
     pub attenuation: f32,
 }
 
+// We're using 'Commands' rather than allowing direct access to the lights
+// so we can batch all the updates and we make clear that changing the lights
+// has performance implications (as the UBO needs to be updated etc).
+pub enum Light_Command {
+    Add_Point_Light(Point_Light),
+    Add_Rect_Light(Rect_Light),
+    Change_Ambient_Light(Ambient_Light),
+    Change_Point_Light(usize, Point_Light),
+    Change_Rect_Light(usize, Rect_Light),
+}
+
 pub struct Lights {
-    pub point_lights: Vec<Point_Light>,
-    pub rect_lights: Vec<Rect_Light>,
-    pub ambient_light: Ambient_Light,
+    point_lights: Vec<Point_Light>,
+    rect_lights: Vec<Rect_Light>,
+    ambient_light: Ambient_Light,
+
+    cmd_queue: Vec<Light_Command>,
 }
 
 impl Default for Lights {
@@ -61,17 +74,63 @@ impl Default for Lights {
             point_lights: vec![],
             rect_lights: vec![],
             ambient_light: Ambient_Light::default(),
+
+            cmd_queue: vec![],
         }
     }
 }
 
 impl Lights {
-    pub fn add_point_light(&mut self, light: Point_Light) {
-        self.point_lights.push(light);
+    pub fn point_lights(&self) -> &[Point_Light] {
+        &self.point_lights
     }
 
-    pub fn add_rect_light(&mut self, light: Rect_Light) {
-        self.rect_lights.push(light);
+    pub fn rect_lights(&self) -> &[Rect_Light] {
+        &self.rect_lights
+    }
+
+    pub fn ambient_light(&self) -> &Ambient_Light {
+        &self.ambient_light
+    }
+
+    pub fn queue_command(&mut self, cmd: Light_Command) {
+        self.cmd_queue.push(cmd);
+    }
+
+    /// Returns true if any commands were processed
+    pub fn process_commands(&mut self) -> bool {
+        let cmds = self.cmd_queue.split_off(0);
+        let are_there_cmds = !cmds.is_empty();
+        for cmd in cmds {
+            match cmd {
+                Light_Command::Add_Point_Light(light) => {
+                    self.point_lights.push(light);
+                }
+                Light_Command::Add_Rect_Light(light) => {
+                    self.rect_lights.push(light);
+                }
+                Light_Command::Change_Ambient_Light(light) => {
+                    self.ambient_light = light;
+                }
+                Light_Command::Change_Point_Light(idx, light) => {
+                    assert!(
+                        idx < self.point_lights.len(),
+                        "Invalid point light index {}",
+                        idx
+                    );
+                    self.point_lights[idx] = light;
+                }
+                Light_Command::Change_Rect_Light(idx, light) => {
+                    assert!(
+                        idx < self.rect_lights.len(),
+                        "Invalid rect light index {}",
+                        idx
+                    );
+                    self.rect_lights[idx] = light;
+                }
+            }
+        }
+        are_there_cmds
     }
 
     pub fn get_nearest_point_light(&self, pos: Vec2f) -> Option<&Point_Light> {

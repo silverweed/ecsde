@@ -23,7 +23,7 @@ use inle_core::rand;
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_gfx::components::{C_Animated_Sprite, C_Camera2D, C_Multi_Renderable, C_Renderable};
-use inle_gfx::light::{Lights, Point_Light, Rect_Light};
+use inle_gfx::light::{Light_Command, Lights, Point_Light, Rect_Light};
 use inle_math::rect::Rect;
 use inle_math::transform::Transform2D;
 use inle_physics::collider::C_Collider;
@@ -208,79 +208,79 @@ fn create_room_lights(room_center: Vec2f, lights: &mut Lights, cfg: &inle_cfg::C
     // -------------------------------------------
     // Corner lights
     // -------------------------------------------
-    lights.add_point_light(Point_Light {
+    lights.queue_command(Light_Command::Add_Point_Light(Point_Light {
         position: room_center + v2!(-280., -180.),
         radius: 250.,
         attenuation: 1.0,
         color: colors::YELLOW,
         intensity: 1.0,
-    });
+    }));
 
-    lights.add_point_light(Point_Light {
+    lights.queue_command(Light_Command::Add_Point_Light(Point_Light {
         position: room_center + v2!(280., -180.),
         radius: 250.,
         attenuation: 1.0,
         color: colors::YELLOW,
         intensity: 1.0,
-    });
+    }));
 
-    lights.add_point_light(Point_Light {
+    lights.queue_command(Light_Command::Add_Point_Light(Point_Light {
         position: room_center + v2!(-280., 180.),
         radius: 250.,
         attenuation: 1.0,
         color: colors::YELLOW,
         intensity: 1.0,
-    });
+    }));
 
-    lights.add_point_light(Point_Light {
+    lights.queue_command(Light_Command::Add_Point_Light(Point_Light {
         position: room_center + v2!(280., 180.),
         radius: 250.,
         attenuation: 1.0,
         color: colors::YELLOW,
         intensity: 1.0,
-    });
+    }));
 
     // -------------------------------------------
 
-    lights.add_point_light(Point_Light {
+    lights.queue_command(Light_Command::Add_Point_Light(Point_Light {
         position: room_center + v2!(0., 0.),
         radius: 350.,
         attenuation: 0.5,
         color: colors::DARK_ORANGE,
         intensity: 0.5,
-    });
+    }));
 
-    lights.add_rect_light(Rect_Light {
+    lights.queue_command(Light_Command::Add_Rect_Light(Rect_Light {
         rect: Rect::new(-300., -199., 600., 1.) + room_center,
         radius: 50.,
         attenuation: 1.0,
         color: colors::DARK_ORANGE,
         intensity: 0.5,
-    });
+    }));
 
-    lights.add_rect_light(Rect_Light {
+    lights.queue_command(Light_Command::Add_Rect_Light(Rect_Light {
         rect: Rect::new(-300., 199., 600., 1.) + room_center,
         radius: 50.,
         attenuation: 1.0,
         color: colors::DARK_ORANGE,
         intensity: 0.5,
-    });
+    }));
 
-    lights.add_rect_light(Rect_Light {
+    lights.queue_command(Light_Command::Add_Rect_Light(Rect_Light {
         rect: Rect::new(-299., -200., 1., 400.) + room_center,
         radius: 50.,
         attenuation: 1.0,
         color: colors::DARK_ORANGE,
         intensity: 0.5,
-    });
+    }));
 
-    lights.add_rect_light(Rect_Light {
+    lights.queue_command(Light_Command::Add_Rect_Light(Rect_Light {
         rect: Rect::new(299., -200., 1., 400.) + room_center,
         radius: 50.,
         attenuation: 1.0,
         color: colors::DARK_ORANGE,
         intensity: 0.5,
-    });
+    }));
 
     //let light = Point_Light {
     //position: v2!(0., 0.),

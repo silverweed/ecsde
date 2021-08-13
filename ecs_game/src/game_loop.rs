@@ -514,8 +514,8 @@ fn update_graphics<'a, 's, 'r>(
                     gres,
                     lv_batches.get_mut(&level.id).unwrap(),
                     shader_cache,
-                    &level.get_camera().transform,
-                    &level.lights,
+                    &level.get_camera().transform.clone(),
+                    &mut level.lights,
                     batcher::Batcher_Draw_Params {
                         enable_shaders,
                         enable_shadows,
@@ -540,7 +540,7 @@ fn update_graphics<'a, 's, 'r>(
             &mut game_state.engine_state.global_batches,
             shader_cache,
             &Transform2D::default(),
-            &inle_gfx::light::Lights::default(),
+            &mut inle_gfx::light::Lights::default(),
             batcher::Batcher_Draw_Params {
                 enable_shaders,
                 enable_shadows,
@@ -1264,19 +1264,19 @@ fn debug_draw_lights(
     screenspace_debug_painter.add_shaded_text(
         &format!(
             "Ambient Light: color: #{:X}, intensity: {}",
-            colors::color_to_hex_no_alpha(lights.ambient_light.color),
-            lights.ambient_light.intensity
+            colors::color_to_hex_no_alpha(lights.ambient_light().color),
+            lights.ambient_light().intensity
         ),
         v2!(5., 300.),
         15,
-        lights.ambient_light.color,
-        if colors::to_hsv(lights.ambient_light.color).v > 0.5 {
+        lights.ambient_light().color,
+        if colors::to_hsv(lights.ambient_light().color).v > 0.5 {
             colors::BLACK
         } else {
             colors::WHITE
         },
     );
-    for pl in &lights.point_lights {
+    for pl in lights.point_lights() {
         debug_painter.add_circle(
             Circle {
                 center: pl.position,
@@ -1312,7 +1312,7 @@ fn debug_draw_lights(
         );
     }
 
-    for rl in &lights.rect_lights {
+    for rl in lights.rect_lights() {
         debug_painter.add_rect(
             rl.rect.size(),
             &Transform2D::from_pos(rl.rect.pos_min()),
