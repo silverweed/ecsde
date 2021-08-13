@@ -53,11 +53,6 @@ pub struct Lights {
     pub point_lights: Vec<Point_Light>,
     pub rect_lights: Vec<Rect_Light>,
     pub ambient_light: Ambient_Light,
-
-    // @Temporary: this should stay somewhere else in the backend
-    // Also not be a stupid Cell, this is done for quick prototyping
-    // without changing the constness of Lights in the batcher
-    pub ubo_memory: std::cell::Cell<*mut u8>,
 }
 
 impl Default for Lights {
@@ -66,7 +61,6 @@ impl Default for Lights {
             point_lights: vec![],
             rect_lights: vec![],
             ambient_light: Ambient_Light::default(),
-            ubo_memory: std::cell::Cell::new(std::ptr::null_mut()),
         }
     }
 }
