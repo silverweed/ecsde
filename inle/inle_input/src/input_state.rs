@@ -61,12 +61,29 @@ pub fn create_input_state(env: &Env_Info) -> Input_State {
     }
 }
 
+#[derive(Default)]
+pub struct Input_State_Restore_Point {
+    raw_core_events: Vec<Input_Raw_Event>,
+    raw_events: Vec<Input_Raw_Event>,
+    processed_core_actions: Vec<Core_Action>,
+    processed_game_actions: Vec<Game_Action>,
+}
+
 impl Input_State {
-    pub fn clear(&mut self) {
-        self.raw.core_events.clear();
-        self.raw.events.clear();
-        self.processed.core_actions.clear();
-        self.processed.game_actions.clear();
+    pub fn clear(&mut self) -> Input_State_Restore_Point {
+        Input_State_Restore_Point {
+            raw_core_events: self.raw.core_events.split_off(0),
+            raw_events: self.raw.events.split_off(0),
+            processed_core_actions: self.processed.core_actions.split_off(0),
+            processed_game_actions: self.processed.game_actions.split_off(0),
+        }
+    }
+
+    pub fn restore(&mut self, restore_point: Input_State_Restore_Point) {
+        self.raw.core_events = restore_point.raw_core_events;
+        self.raw.events = restore_point.raw_events;
+        self.processed.core_actions = restore_point.processed_core_actions;
+        self.processed.game_actions = restore_point.processed_game_actions;
     }
 }
 

@@ -33,7 +33,7 @@ use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
 struct Room_Grid {
     size: Vec2u, // number of rooms in both directions
     spacing: f32,
-    room_size: Vec2f,
+    room_halfsize: Vec2f,
     first_room_center: Vec2f,
 }
 
@@ -57,7 +57,7 @@ pub fn generate_random_level(
     const GRID: Room_Grid = Room_Grid {
         size: v2!(3, 3),
         spacing: 32.0,
-        room_size: v2!(600., 400.),
+        room_halfsize: v2!(300., 200.),
         first_room_center: v2!(0., 0.),
     };
 
@@ -128,8 +128,8 @@ fn create_room_grid(
     for x in 0..grid.size.x {
         for y in 0..grid.size.y {
             create_room(
-                grid.first_room_center + grid.room_size * v2!(x as f32, y as f32),
-                grid.room_size,
+                grid.first_room_center + 2.0 * grid.room_halfsize * v2!(x as f32, y as f32),
+                grid.room_halfsize,
                 grid.spacing,
                 level,
                 gres,
@@ -201,10 +201,22 @@ fn create_room(
         cfg,
     );
 
-    create_room_lights(center, &mut level.lights, cfg);
+    create_room_lights(
+        center,
+        room_halfsize,
+        wall_thickness,
+        &mut level.lights,
+        cfg,
+    );
 }
 
-fn create_room_lights(room_center: Vec2f, lights: &mut Lights, cfg: &inle_cfg::Config) {
+fn create_room_lights(
+    room_center: Vec2f,
+    room_halfsize: Vec2f,
+    wall_thickness: f32,
+    lights: &mut Lights,
+    cfg: &inle_cfg::Config,
+) {
     // -------------------------------------------
     // Corner lights
     // -------------------------------------------
@@ -244,38 +256,62 @@ fn create_room_lights(room_center: Vec2f, lights: &mut Lights, cfg: &inle_cfg::C
 
     lights.queue_command(Light_Command::Add_Point_Light(Point_Light {
         position: room_center + v2!(0., 0.),
-        radius: 350.,
+        radius: 550.,
         attenuation: 0.5,
         color: colors::DARK_ORANGE,
         intensity: 0.5,
     }));
 
+    // top
     lights.queue_command(Light_Command::Add_Rect_Light(Rect_Light {
-        rect: Rect::new(-300., -199., 600., 1.) + room_center,
+        rect: Rect::new(
+            -room_halfsize.x,
+            -room_halfsize.y + wall_thickness,
+            2.0 * room_halfsize.x,
+            1.,
+        ) + room_center,
         radius: 50.,
         attenuation: 1.0,
         color: colors::DARK_ORANGE,
         intensity: 0.5,
     }));
 
+    // bot
     lights.queue_command(Light_Command::Add_Rect_Light(Rect_Light {
-        rect: Rect::new(-300., 199., 600., 1.) + room_center,
+        rect: Rect::new(
+            -room_halfsize.x,
+            room_halfsize.y - wall_thickness,
+            2.0 * room_halfsize.x,
+            1.,
+        ) + room_center,
         radius: 50.,
         attenuation: 1.0,
         color: colors::DARK_ORANGE,
         intensity: 0.5,
     }));
 
+    // left
     lights.queue_command(Light_Command::Add_Rect_Light(Rect_Light {
-        rect: Rect::new(-299., -200., 1., 400.) + room_center,
+        rect: Rect::new(
+            -room_halfsize.x + wall_thickness,
+            -room_halfsize.y,
+            1.,
+            2.0 * room_halfsize.y,
+        ) + room_center,
         radius: 50.,
         attenuation: 1.0,
         color: colors::DARK_ORANGE,
         intensity: 0.5,
     }));
 
+    // right
     lights.queue_command(Light_Command::Add_Rect_Light(Rect_Light {
-        rect: Rect::new(299., -200., 1., 400.) + room_center,
+        rect: Rect::new(
+            room_halfsize.x - wall_thickness,
+            -room_halfsize.y,
+            1.,
+            2.0 * room_halfsize.y,
+        ) + room_center,
         radius: 50.,
         attenuation: 1.0,
         color: colors::DARK_ORANGE,

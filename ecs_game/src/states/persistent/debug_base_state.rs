@@ -59,9 +59,26 @@ impl Persistent_Game_State for Debug_Base_State {
                     });
                 }
 
+                let mut rls = vec![];
+                for rl in lv.lights.rect_lights() {
+                    rls.push(inle_gfx::light::Rect_Light {
+                        color: inle_common::colors::color_from_hex(inle_core::rand::rand_range(
+                            rng,
+                            0.0,
+                            0xffffffffu32 as f32,
+                        )
+                            as u32),
+                        ..*rl
+                    });
+                }
+
                 for (i, pl) in pls.iter().enumerate() {
                     lv.lights
                         .queue_command(inle_gfx::light::Light_Command::Change_Point_Light(i, *pl));
+                }
+                for (i, rl) in rls.iter().enumerate() {
+                    lv.lights
+                        .queue_command(inle_gfx::light::Light_Command::Change_Rect_Light(i, *rl));
                 }
             });
         }

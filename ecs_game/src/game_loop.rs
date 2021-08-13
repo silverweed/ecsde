@@ -329,6 +329,11 @@ where
                 let mut n_updates = 0;
                 let mut time_spent_in_update = Duration::default();
 
+                // We must save the input state for later since it gets cleared in the simulation update loop
+                // @Cleanup: this kinda sucks, try to find a better solution
+                let mut orig_input_state =
+                    inle_input::input_state::Input_State_Restore_Point::default();
+
                 while game_state.accumulated_update_time >= update_dt {
                     let update_start = std::time::Instant::now();
 
@@ -362,10 +367,16 @@ where
                         break;
                     }
 
-                    game_state.engine_state.input_state.clear();
+                    if n_updates == 1 {
+                        orig_input_state = game_state.engine_state.input_state.clear();
+                    }
                 }
 
                 game_state.n_updates_last_frame = n_updates;
+                game_state
+                    .engine_state
+                    .input_state
+                    .restore(orig_input_state);
 
                 let cfg = &game_state.engine_state.config;
                 if game_state.cvars.enable_particles.read(cfg) {

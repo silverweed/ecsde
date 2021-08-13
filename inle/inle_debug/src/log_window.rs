@@ -101,6 +101,7 @@ impl Log_Window {
     }
 
     fn scroll_up(&mut self, n_lines: usize) {
+        ldebug!("SCROLL UP {}", n_lines);
         self.first_line = self.first_line.saturating_sub(n_lines);
     }
 
