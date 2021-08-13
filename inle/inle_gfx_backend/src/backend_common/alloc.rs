@@ -12,6 +12,14 @@ use std::rc::Rc;
 #[cfg(debug_assertions)]
 use std::collections::HashSet;
 
+macro_rules! glcheck {
+    ($expr: expr) => {{
+        let res = $expr;
+        check_gl_err();
+        res
+    }};
+}
+
 const MIN_BUCKET_SIZE: usize = units::kilobytes(32);
 
 #[repr(u8)]
@@ -380,28 +388,24 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
 
     let (mut vao, mut vbo) = (0, 0);
     unsafe {
-        gl::GenVertexArrays(1, &mut vao);
-        check_gl_err();
+        glcheck!(gl::GenVertexArrays(1, &mut vao));
         debug_assert!(vao != 0);
 
-        gl::GenBuffers(1, &mut vbo);
+        glcheck!(gl::GenBuffers(1, &mut vbo));
         debug_assert!(vbo != 0);
 
-        gl::BindVertexArray(vao);
-        check_gl_err();
+        glcheck!(gl::BindVertexArray(vao));
 
-        gl::BindBuffer(buf_type, vbo);
-        check_gl_err();
+        glcheck!(gl::BindBuffer(buf_type, vbo));
 
-        gl::BufferStorage(
+        glcheck!(gl::BufferStorage(
             buf_type,
             capacity as _,
             ptr::null(),
             gl::DYNAMIC_STORAGE_BIT,
-        );
-        check_gl_err();
+        ));
 
-        gl::VertexAttribPointer(
+        glcheck!(gl::VertexAttribPointer(
             LOC_IN_COLOR,
             4,
             gl::FLOAT,
@@ -409,11 +413,10 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
             mem::size_of::<Vertex>() as _,
             // @Robustness: use offsetof or similar
             ptr::null(),
-        );
-        gl::EnableVertexAttribArray(LOC_IN_COLOR);
-        check_gl_err();
+        ));
+        glcheck!(gl::EnableVertexAttribArray(LOC_IN_COLOR));
 
-        gl::VertexAttribPointer(
+        glcheck!(gl::VertexAttribPointer(
             LOC_IN_POS,
             2,
             gl::FLOAT,
@@ -421,11 +424,10 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
             mem::size_of::<Vertex>() as _,
             // @Robustness: use offsetof or similar
             mem::size_of::<Glsl_Vec4>() as *const c_void,
-        );
-        gl::EnableVertexAttribArray(LOC_IN_POS);
-        check_gl_err();
+        ));
+        glcheck!(gl::EnableVertexAttribArray(LOC_IN_POS));
 
-        gl::VertexAttribPointer(
+        glcheck!(gl::VertexAttribPointer(
             LOC_IN_TEXCOORD,
             2,
             gl::FLOAT,
@@ -433,12 +435,10 @@ fn allocate_bucket(buf_type: GLenum, capacity: usize) -> Buffer_Allocator_Bucket
             mem::size_of::<Vertex>() as _,
             // @Robustness: use offsetof or similar
             (mem::size_of::<Glsl_Vec4>() + mem::size_of::<Vec2f>()) as *const c_void,
-        );
-        gl::EnableVertexAttribArray(LOC_IN_TEXCOORD);
-        check_gl_err();
+        ));
+        glcheck!(gl::EnableVertexAttribArray(LOC_IN_TEXCOORD));
 
-        gl::BindVertexArray(0);
-        check_gl_err();
+        glcheck!(gl::BindVertexArray(0));
     }
 
     lverbose!(
@@ -588,16 +588,14 @@ fn write_to_bucket(
     debug_assert!(len <= handle.slot.len);
 
     unsafe {
-        gl::BindBuffer(bucket.buf_type, bucket.vbo);
-        check_gl_err();
+        glcheck!(gl::BindBuffer(bucket.buf_type, bucket.vbo));
 
-        gl::BufferSubData(
+        glcheck!(gl::BufferSubData(
             bucket.buf_type,
             (handle.slot.start + offset) as _,
             len as _,
             data,
-        );
-        check_gl_err();
+        ));
     }
 }
 

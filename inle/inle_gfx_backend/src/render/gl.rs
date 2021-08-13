@@ -19,6 +19,14 @@ use std::marker::PhantomData;
 use std::sync::Once;
 use std::{mem, ptr, str};
 
+macro_rules! glcheck {
+    ($expr: expr) => {{
+        let res = $expr;
+        check_gl_err();
+        res
+    }};
+}
+
 pub type Vertex = crate::backend_common::types::Vertex;
 
 fn max_texture_units() -> usize {
@@ -27,11 +35,10 @@ fn max_texture_units() -> usize {
 
     unsafe {
         INIT.call_once(|| {
-            gl::GetIntegerv(
+            glcheck!(gl::GetIntegerv(
                 gl::MAX_TEXTURE_IMAGE_UNITS,
                 &mut MAX_TEXTURE_UNITS as *mut usize as *mut i32,
-            );
-            check_gl_err();
+            ));
         });
 
         MAX_TEXTURE_UNITS
@@ -44,7 +51,7 @@ fn assert_shader_in_use(shader: &Shader) {
     {
         let mut id: GLint = 0;
         unsafe {
-            gl::GetIntegerv(gl::CURRENT_PROGRAM, &mut id);
+            glcheck!(gl::GetIntegerv(gl::CURRENT_PROGRAM, &mut id));
         }
         assert!(
             id as GLuint == shader.id,
@@ -80,8 +87,6 @@ impl Vertex_Buffer {
         if max_vertices == 0 {
             lwarn!("Creating a Vertex_Buffer with max_vertices = 0");
         }
-
-        check_gl_err();
 
         Self {
             buf,
@@ -179,7 +184,7 @@ impl Uniform_Value for f32 {
     fn apply_to(self, shader: &mut Shader, name: &CStr) {
         unsafe {
             assert_shader_in_use(shader);
-            gl::Uniform1f(get_uniform_loc(shader.id, name), self);
+            glcheck!(gl::Uniform1f(get_uniform_loc(shader.id, name), self));
         }
     }
 }
@@ -188,7 +193,11 @@ impl Uniform_Value for Vec2f {
     fn apply_to(self, shader: &mut Shader, name: &CStr) {
         unsafe {
             assert_shader_in_use(shader);
-            gl::Uniform2f(get_uniform_loc(shader.id, name), self.x, self.y);
+            glcheck!(gl::Uniform2f(
+                get_uniform_loc(shader.id, name),
+                self.x,
+                self.y
+            ));
         }
     }
 }
@@ -197,12 +206,12 @@ impl Uniform_Value for &Matrix3<f32> {
     fn apply_to(self, shader: &mut Shader, name: &CStr) {
         unsafe {
             assert_shader_in_use(shader);
-            gl::UniformMatrix3fv(
+            glcheck!(gl::UniformMatrix3fv(
                 get_uniform_loc(shader.id, name),
                 1,
                 gl::FALSE,
                 self.as_slice().as_ptr() as _,
-            );
+            ));
         }
     }
 }
@@ -212,7 +221,13 @@ impl Uniform_Value for Color {
         let v: Glsl_Vec4 = self.into();
         unsafe {
             assert_shader_in_use(shader);
-            gl::Uniform4f(get_uniform_loc(shader.id, name), v.x, v.y, v.z, v.w);
+            glcheck!(gl::Uniform4f(
+                get_uniform_loc(shader.id, name),
+                v.x,
+                v.y,
+                v.z,
+                v.w
+            ));
         }
     }
 }
@@ -222,7 +237,12 @@ impl Uniform_Value for Color3 {
         let v: Glsl_Vec3 = self.into();
         unsafe {
             assert_shader_in_use(shader);
-            gl::Uniform3f(get_uniform_loc(shader.id, name), v.x, v.y, v.z);
+            glcheck!(gl::Uniform3f(
+                get_uniform_loc(shader.id, name),
+                v.x,
+                v.y,
+                v.z
+            ));
         }
     }
 }
@@ -255,8 +275,7 @@ impl Uniform_Value for &Texture<'_> {
 #[inline]
 pub fn use_shader(shader: &mut Shader) {
     unsafe {
-        gl::UseProgram(shader.id);
-        check_gl_err();
+        glcheck!(gl::UseProgram(shader.id));
     }
 }
 
@@ -352,29 +371,37 @@ pub struct Text<'font> {
 #[inline]
 pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) -> GLuint {
     unsafe {
-        let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
-        check_gl_err();
+        let vertex_shader = glcheck!(gl::CreateShader(gl::VERTEX_SHADER));
 
         let c_str_vert = CString::new(vert_src)
             .unwrap_or_else(|_| fatal!("Vertex source did not contain a valid string."));
 
-        gl::ShaderSource(vertex_shader, 1, &c_str_vert.as_ptr(), ptr::null());
-        gl::CompileShader(vertex_shader);
+        glcheck!(gl::ShaderSource(
+            vertex_shader,
+            1,
+            &c_str_vert.as_ptr(),
+            ptr::null()
+        ));
+        glcheck!(gl::CompileShader(vertex_shader));
 
         const INFO_LOG_CAP: GLint = 512;
         let mut info_log = Vec::with_capacity(INFO_LOG_CAP as usize);
         info_log.set_len(INFO_LOG_CAP as usize - 1); // subtract 1 to skip the trailing null character
 
         let mut success = gl::FALSE as GLint;
-        gl::GetShaderiv(vertex_shader, gl::COMPILE_STATUS, &mut success);
+        glcheck!(gl::GetShaderiv(
+            vertex_shader,
+            gl::COMPILE_STATUS,
+            &mut success
+        ));
         let mut info_len = 0;
         if success != gl::TRUE.into() {
-            gl::GetShaderInfoLog(
+            glcheck!(gl::GetShaderInfoLog(
                 vertex_shader,
                 INFO_LOG_CAP,
                 &mut info_len,
                 info_log.as_mut_ptr() as *mut GLchar,
-            );
+            ));
             fatal!(
                 "Vertex shader `{}` failed to compile:\n----------\n{}\n-----------",
                 shader_name,
@@ -382,20 +409,29 @@ pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) 
             );
         }
 
-        let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
+        let fragment_shader = glcheck!(gl::CreateShader(gl::FRAGMENT_SHADER));
         let c_str_frag = CString::new(frag_src).unwrap();
 
-        gl::ShaderSource(fragment_shader, 1, &c_str_frag.as_ptr(), ptr::null());
-        gl::CompileShader(fragment_shader);
+        glcheck!(gl::ShaderSource(
+            fragment_shader,
+            1,
+            &c_str_frag.as_ptr(),
+            ptr::null()
+        ));
+        glcheck!(gl::CompileShader(fragment_shader));
 
-        gl::GetShaderiv(fragment_shader, gl::COMPILE_STATUS, &mut success);
+        glcheck!(gl::GetShaderiv(
+            fragment_shader,
+            gl::COMPILE_STATUS,
+            &mut success
+        ));
         if success != gl::TRUE.into() {
-            gl::GetShaderInfoLog(
+            glcheck!(gl::GetShaderInfoLog(
                 fragment_shader,
                 INFO_LOG_CAP,
                 &mut info_len,
                 info_log.as_mut_ptr() as *mut GLchar,
-            );
+            ));
             fatal!(
                 "Fragment shader `{}` failed to compile:\n----------\n{}\n-----------",
                 shader_name,
@@ -403,27 +439,31 @@ pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) 
             );
         }
 
-        let shader_program = gl::CreateProgram();
-        gl::AttachShader(shader_program, vertex_shader);
-        gl::AttachShader(shader_program, fragment_shader);
-        gl::LinkProgram(shader_program);
+        let shader_program = glcheck!(gl::CreateProgram());
+        glcheck!(gl::AttachShader(shader_program, vertex_shader));
+        glcheck!(gl::AttachShader(shader_program, fragment_shader));
+        glcheck!(gl::LinkProgram(shader_program));
 
-        gl::GetProgramiv(shader_program, gl::LINK_STATUS, &mut success);
+        glcheck!(gl::GetProgramiv(
+            shader_program,
+            gl::LINK_STATUS,
+            &mut success
+        ));
         if success != gl::TRUE.into() {
-            gl::GetProgramInfoLog(
+            glcheck!(gl::GetProgramInfoLog(
                 shader_program,
                 INFO_LOG_CAP,
                 &mut info_len,
                 info_log.as_mut_ptr() as *mut GLchar,
-            );
+            ));
             fatal!(
                 "Shader `{}` failed to link:\n----------\n{}\n-----------",
                 shader_name,
                 str::from_utf8(&info_log[..info_len as usize]).unwrap()
             );
         }
-        gl::DeleteShader(vertex_shader);
-        gl::DeleteShader(fragment_shader);
+        glcheck!(gl::DeleteShader(vertex_shader));
+        glcheck!(gl::DeleteShader(fragment_shader));
 
         debug_assert!(shader_program != 0);
         ldebug!(
@@ -465,7 +505,7 @@ pub fn fill_color_rect<R>(
         );
         use_rect_shader(window, paint_props.border_color, &outline_rect);
         unsafe {
-            gl::BindVertexArray(window.gl.rect_vao);
+            glcheck!(gl::BindVertexArray(window.gl.rect_vao));
             window
                 .gl
                 .draw_indexed(window.gl.n_rect_indices(), window.gl.rect_indices_type());
@@ -475,7 +515,7 @@ pub fn fill_color_rect<R>(
     use_rect_shader(window, paint_props.color, &rect);
 
     unsafe {
-        gl::BindVertexArray(window.gl.rect_vao);
+        glcheck!(gl::BindVertexArray(window.gl.rect_vao));
         window
             .gl
             .draw_indexed(window.gl.n_rect_indices(), window.gl.rect_indices_type());
@@ -510,7 +550,7 @@ pub fn fill_color_rect_ws<T>(
             camera,
         );
         unsafe {
-            gl::BindVertexArray(window.gl.rect_vao);
+            glcheck!(gl::BindVertexArray(window.gl.rect_vao));
             window
                 .gl
                 .draw_indexed(window.gl.n_rect_indices(), window.gl.rect_indices_type());
@@ -520,7 +560,7 @@ pub fn fill_color_rect_ws<T>(
     use_rect_ws_shader(window, paint_props.color, &rect, transform, camera);
 
     unsafe {
-        gl::BindVertexArray(window.gl.rect_vao);
+        glcheck!(gl::BindVertexArray(window.gl.rect_vao));
         window
             .gl
             .draw_indexed(window.gl.n_rect_indices(), window.gl.rect_indices_type());
@@ -548,7 +588,7 @@ fn fill_color_circle_internal(
     use_circle_shader(window, paint_props.color, &rect, mvp);
 
     unsafe {
-        gl::BindVertexArray(window.gl.rect_vao);
+        glcheck!(gl::BindVertexArray(window.gl.rect_vao));
         window
             .gl
             .draw_indexed(window.gl.n_rect_indices(), window.gl.rect_indices_type());
@@ -686,9 +726,8 @@ fn render_text_internal(window: &mut Render_Window_Handle, text: &mut Text) {
     unsafe {
         trace!("draw_text_vbuf");
 
-        gl::ActiveTexture(gl::TEXTURE0);
-        gl::BindTexture(gl::TEXTURE_2D, text.font.atlas.id);
-        check_gl_err();
+        glcheck!(gl::ActiveTexture(gl::TEXTURE0));
+        glcheck!(gl::BindTexture(gl::TEXTURE_2D, text.font.atlas.id));
 
         render_vbuf_internal(window, &vbuf);
     }
@@ -887,15 +926,13 @@ fn render_vbuf_internal(window: &mut Render_Window_Handle, vbuf: &Vertex_Buffer)
         vbuf_transfer_to_gpu(vbuf);
     }
     unsafe {
-        gl::BindVertexArray(vbuf.buf.vao());
-        check_gl_err();
+        glcheck!(gl::BindVertexArray(vbuf.buf.vao()));
 
         window.gl.draw_arrays(
             to_gl_primitive_type(vbuf.primitive_type),
             (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
             vbuf_cur_vertices(vbuf) as _,
         );
-        check_gl_err();
     }
 }
 
@@ -943,8 +980,8 @@ pub fn render_vbuf_ws_with_texture(
     use_vbuf_ws_shader(window, transform, camera, window.gl.vbuf_texture_shader);
 
     unsafe {
-        gl::ActiveTexture(gl::TEXTURE0);
-        gl::BindTexture(gl::TEXTURE_2D, texture.id);
+        glcheck!(gl::ActiveTexture(gl::TEXTURE0));
+        glcheck!(gl::BindTexture(gl::TEXTURE_2D, texture.id));
     }
 
     render_vbuf_internal(window, vbuf);
@@ -961,14 +998,12 @@ pub fn render_vbuf_with_shader(
     }
 
     unsafe {
-        gl::UseProgram(shader.id);
-        check_gl_err();
+        glcheck!(gl::UseProgram(shader.id));
 
         for (i, (loc, tex)) in shader.textures.iter().enumerate() {
-            gl::Uniform1i(*loc, i as i32);
-            gl::ActiveTexture(gl::TEXTURE0 + i as u32);
-            gl::BindTexture(gl::TEXTURE_2D, *tex);
-            check_gl_err();
+            glcheck!(gl::Uniform1i(*loc, i as i32));
+            glcheck!(gl::ActiveTexture(gl::TEXTURE0 + i as u32));
+            glcheck!(gl::BindTexture(gl::TEXTURE_2D, *tex));
         }
     }
 
@@ -990,7 +1025,7 @@ pub fn render_line(window: &mut Render_Window_Handle, start: &Vertex, end: &Vert
 
     unsafe {
         // We reuse the rect VAO since it has no vertices associated to it.
-        gl::BindVertexArray(window.gl.rect_vao);
+        glcheck!(gl::BindVertexArray(window.gl.rect_vao));
 
         window.gl.draw_arrays(gl::LINES, 0, 2);
     }
@@ -1002,14 +1037,14 @@ pub fn copy_texture_to_image(texture: &Texture) -> Image {
     let bit_depth = 1u8;
     let mut pixels = vec![0; (texture.width * texture.height * bit_depth as u32) as usize];
     unsafe {
-        gl::BindTexture(gl::TEXTURE_2D, texture.id);
-        gl::GetTexImage(
+        glcheck!(gl::BindTexture(gl::TEXTURE_2D, texture.id));
+        glcheck!(gl::GetTexImage(
             gl::TEXTURE_2D,
             0,
             gl::RGBA,
             gl::UNSIGNED_BYTE,
             pixels.as_mut_ptr() as _,
-        );
+        ));
     }
 
     Image {
@@ -1032,26 +1067,41 @@ pub fn new_texture_from_image<'img, 'tex>(
     let mut id = 0;
     let pixel_type = image.bit_depth_as_gl_type();
     unsafe {
-        gl::GenTextures(1, &mut id);
-        check_gl_err();
+        glcheck!(gl::GenTextures(1, &mut id));
 
         debug_assert!(id != 0);
 
-        gl::BindTexture(gl::TEXTURE_2D, id);
+        glcheck!(gl::BindTexture(gl::TEXTURE_2D, id));
 
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as _);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as _);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as _);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as _);
+        glcheck!(gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_MIN_FILTER,
+            gl::LINEAR as _
+        ));
+        glcheck!(gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_MAG_FILTER,
+            gl::LINEAR as _
+        ));
+        glcheck!(gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_WRAP_S,
+            gl::CLAMP_TO_EDGE as _
+        ));
+        glcheck!(gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_WRAP_T,
+            gl::CLAMP_TO_EDGE as _
+        ));
 
-        gl::TexStorage2D(
+        glcheck!(gl::TexStorage2D(
             gl::TEXTURE_2D,
             1,
             image.color_type_as_gl_type(),
             image.width as _,
             image.height as _,
-        );
-        gl::TexSubImage2D(
+        ));
+        glcheck!(gl::TexSubImage2D(
             gl::TEXTURE_2D,
             0,
             0,
@@ -1061,8 +1111,7 @@ pub fn new_texture_from_image<'img, 'tex>(
             image.pixel_format_as_gl_type(),
             pixel_type,
             image.bytes.as_ptr() as _,
-        );
-        check_gl_err();
+        ));
     }
 
     ldebug!(
@@ -1138,8 +1187,8 @@ pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
 #[inline]
 pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[Color]) {
     unsafe {
-        gl::BindTexture(gl::TEXTURE_2D, texture.id);
-        gl::TexSubImage2D(
+        glcheck!(gl::BindTexture(gl::TEXTURE_2D, texture.id));
+        glcheck!(gl::TexSubImage2D(
             gl::TEXTURE_2D,
             0,
             rect.x as _,
@@ -1149,8 +1198,7 @@ pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[
             gl::RGBA,
             texture.pixel_type,
             pixels.as_ptr() as _,
-        );
-        check_gl_err();
+        ));
     }
 }
 
@@ -1167,8 +1215,8 @@ pub fn geom_shaders_are_available() -> bool {
 #[inline]
 pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
     unsafe {
-        gl::BindTexture(gl::TEXTURE_2D, texture.id);
-        gl::TexParameteri(
+        glcheck!(gl::BindTexture(gl::TEXTURE_2D, texture.id));
+        glcheck!(gl::TexParameteri(
             gl::TEXTURE_2D,
             gl::TEXTURE_WRAP_S,
             if repeated {
@@ -1176,8 +1224,8 @@ pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
             } else {
                 gl::CLAMP_TO_EDGE
             } as _,
-        );
-        gl::TexParameteri(
+        ));
+        glcheck!(gl::TexParameteri(
             gl::TEXTURE_2D,
             gl::TEXTURE_WRAP_T,
             if repeated {
@@ -1185,7 +1233,7 @@ pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
             } else {
                 gl::CLAMP_TO_EDGE
             } as _,
-        );
+        ));
     }
 }
 
@@ -1193,17 +1241,17 @@ pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
 pub fn set_texture_smooth(texture: &mut Texture, smooth: bool) {
     // @TODO: make this work
     unsafe {
-        gl::BindTexture(gl::TEXTURE_2D, texture.id);
-        gl::TexParameteri(
+        glcheck!(gl::BindTexture(gl::TEXTURE_2D, texture.id));
+        glcheck!(gl::TexParameteri(
             gl::TEXTURE_2D,
             gl::TEXTURE_MIN_FILTER,
             if smooth { gl::LINEAR } else { gl::NEAREST } as _,
-        );
-        gl::TexParameteri(
+        ));
+        glcheck!(gl::TexParameteri(
             gl::TEXTURE_2D,
             gl::TEXTURE_MAG_FILTER,
             if smooth { gl::LINEAR } else { gl::NEAREST } as _,
-        );
+        ));
     }
 }
 
@@ -1224,31 +1272,28 @@ fn use_rect_shader_internal(color: Color, rect: &Rect<f32>, mvp: &Matrix3<f32>, 
 
     // @TODO: consider using UBOs
     unsafe {
-        gl::UseProgram(shader);
-        check_gl_err();
+        glcheck!(gl::UseProgram(shader));
 
-        gl::UniformMatrix3fv(
+        glcheck!(gl::UniformMatrix3fv(
             get_uniform_loc(shader, c_str!("mvp")),
             1,
             gl::FALSE,
             mvp.as_slice().as_ptr(),
-        );
-        check_gl_err();
+        ));
 
-        gl::Uniform2fv(
+        glcheck!(gl::Uniform2fv(
             get_uniform_loc(shader, c_str!("rect")),
             (rect_vertices.len() / 2) as _,
             rect_vertices.as_ptr(),
-        );
+        ));
 
-        gl::Uniform4f(
+        glcheck!(gl::Uniform4f(
             get_uniform_loc(shader, c_str!("color")),
             color.r as f32 / 255.0,
             color.g as f32 / 255.0,
             color.b as f32 / 255.0,
             color.a as f32 / 255.0,
-        );
-        check_gl_err();
+        ));
     }
 }
 
@@ -1278,30 +1323,29 @@ fn use_circle_shader(
     use_rect_shader_internal(color, rect, mvp, shader);
 
     unsafe {
-        gl::Uniform2f(
+        glcheck!(gl::Uniform2f(
             get_uniform_loc(shader, c_str!("center")),
             rect.x + rect.width * 0.5,
             rect.y + rect.height * 0.5,
-        );
-        gl::Uniform1f(
+        ));
+        glcheck!(gl::Uniform1f(
             get_uniform_loc(shader, c_str!("radius_squared")),
             rect.width * rect.width * 0.25,
-        );
+        ));
     }
 }
 
 fn use_vbuf_shader(window: &mut Render_Window_Handle, transform: &Transform2D) {
     let mvp = get_mvp_screen_matrix(window, transform);
     unsafe {
-        gl::UseProgram(window.gl.vbuf_shader);
-        check_gl_err();
+        glcheck!(gl::UseProgram(window.gl.vbuf_shader));
 
-        gl::UniformMatrix3fv(
+        glcheck!(gl::UniformMatrix3fv(
             get_uniform_loc(window.gl.vbuf_shader, c_str!("mvp")),
             1,
             gl::FALSE,
             mvp.as_slice().as_ptr(),
-        );
+        ));
     }
 }
 
@@ -1313,16 +1357,14 @@ fn use_vbuf_ws_shader(
 ) {
     let mvp = get_mvp_matrix(window, transform, camera);
     unsafe {
-        gl::UseProgram(shader);
-        check_gl_err();
+        glcheck!(gl::UseProgram(shader));
 
-        gl::UniformMatrix3fv(
+        glcheck!(gl::UniformMatrix3fv(
             get_uniform_loc(shader, c_str!("mvp")),
             1,
             gl::FALSE,
             mvp.as_slice().as_ptr(),
-        );
-        check_gl_err();
+        ));
     }
 }
 
@@ -1331,10 +1373,9 @@ fn use_line_shader(window: &mut Render_Window_Handle, start: &Vertex, end: &Vert
     let ww = ww as f32 * 0.5;
     let wh = wh as f32 * 0.5;
     unsafe {
-        gl::UseProgram(window.gl.line_shader);
-        check_gl_err();
+        glcheck!(gl::UseProgram(window.gl.line_shader));
 
-        gl::Uniform2fv(
+        glcheck!(gl::Uniform2fv(
             get_uniform_loc(window.gl.line_shader, c_str!("pos")),
             2,
             [
@@ -1344,10 +1385,9 @@ fn use_line_shader(window: &mut Render_Window_Handle, start: &Vertex, end: &Vert
                 (wh - end.position.y) / wh,
             ]
             .as_ptr(),
-        );
-        check_gl_err();
+        ));
 
-        gl::Uniform4fv(
+        glcheck!(gl::Uniform4fv(
             get_uniform_loc(window.gl.line_shader, c_str!("color")),
             2,
             [
@@ -1361,8 +1401,7 @@ fn use_line_shader(window: &mut Render_Window_Handle, start: &Vertex, end: &Vert
                 end.color.w,
             ]
             .as_ptr(),
-        );
-        check_gl_err();
+        ));
     }
 }
 
@@ -1374,31 +1413,29 @@ fn use_text_shader(
     let shader = window.gl.text_shader;
 
     unsafe {
-        gl::UseProgram(shader);
-        check_gl_err();
+        glcheck!(gl::UseProgram(shader));
 
-        gl::UniformMatrix3fv(
+        glcheck!(gl::UniformMatrix3fv(
             get_uniform_loc(shader, c_str!("mvp")),
             1,
             gl::FALSE,
             mvp.as_slice().as_ptr(),
-        );
+        ));
 
-        gl::Uniform4f(
+        glcheck!(gl::Uniform4f(
             get_uniform_loc(shader, c_str!("color")),
             paint_props.color.r as f32 / 255.0,
             paint_props.color.g as f32 / 255.0,
             paint_props.color.b as f32 / 255.0,
             paint_props.color.a as f32 / 255.0,
-        );
-        check_gl_err();
+        ));
     }
 }
 
 #[inline]
 fn get_uniform_loc(shader: GLuint, name: &CStr) -> GLint {
     unsafe {
-        let loc = gl::GetUniformLocation(shader, name.as_ptr());
+        let loc = glcheck!(gl::GetUniformLocation(shader, name.as_ptr()));
         #[cfg(debug_assertions)]
         if loc == -1 {
             let key = format!("{}.{:?}", shader, name);
