@@ -1,40 +1,46 @@
 #version 330 core
 
+// size: 16 B
 struct Ambient_Light {
-    vec3 color;
-    float intensity;
+    vec4 color_and_intensity;
 };
 
+// size: 32 B
 struct Point_Light {
+    vec4 color_and_intensity;
     vec2 position;
-    vec3 color;
     float radius;
     float attenuation;
-    float intensity;
 };
 
+// size: 48 B
 struct Rect_Light {
-    vec3 color;
+    vec4 color_and_intensity;
     vec2 pos_min;
     vec2 pos_max;
     float radius;
     float attenuation;
-    float intensity;
+    float _pad1;
+    float _pad2;
 };
 
 #define MAX_POINT_LIGHTS 4
 #define MAX_RECT_LIGHTS 4
+
+layout (std140) uniform LightsBlock {
+	Ambient_Light ambient_light;
+	Point_Light point_lights[MAX_POINT_LIGHTS];
+	Rect_Light rect_lights[MAX_RECT_LIGHTS];
+};
+
 #define DIFFUSE_BIAS 0.2
 #define MAX_ENCODED_ANGLE 65535
 #define PI 3.14159265359
 
 uniform sampler2D tex;
 uniform sampler2D normals;
-uniform Ambient_Light ambient_light;
-uniform Point_Light point_lights[MAX_POINT_LIGHTS];
 uniform float shininess;
 uniform vec3 specular_color;
-uniform Rect_Light rect_lights[MAX_RECT_LIGHTS];
 
 in vec4 color;
 in vec2 world_pos;
@@ -69,7 +75,7 @@ void main() {
     float vert_alpha = color.a;
     vec3 color = vec3(1.0);
 
-    color *= ambient_light.color * ambient_light.intensity;
+    color *= ambient_light.color_and_intensity.rgb * ambient_light.color_and_intensity.w;
 
     vec3 normal = 2.0 * (texture(normals, tex_coord).xyz - 0.5);
     float cos_a = cos(sprite_rot);
@@ -91,13 +97,13 @@ void main() {
         vec2 frag_to_light = light.position - world_pos;
         vec3 light_dir = normalize(vec3(frag_to_light, 0.0));
         float diff = max(dot(normal, light_dir), 0.0);
-        vec3 diffuse = (DIFFUSE_BIAS + diff) * light.color;
+        vec3 diffuse = (DIFFUSE_BIAS + diff) * light.color_and_intensity.rgb;
 
         vec3 half_dir = normalize(light_dir + view_dir);
         float spec = pow(max(dot(half_dir, normal), 0.0), max(1.0, shininess));
-        vec3 specular = specular_color * spec * light.color;
+        vec3 specular = specular_color * spec * light.color_and_intensity.rgb;
 
-        vec3 result = light.intensity * (diffuse + specular);
+        vec3 result = light.color_and_intensity.w * (diffuse + specular);
 
         float dist = length(frag_to_light);
         float atten = pow(max(0.0, mix(1.0, 0.0, dist / light.radius)), 1.0 + light.attenuation);
@@ -114,13 +120,13 @@ void main() {
         if (dist > 0.0) {
             diff = max(dot(normal, light_dir), 0.0);
         }
-        vec3 diffuse = (DIFFUSE_BIAS + diff) * light.color;
+        vec3 diffuse = (DIFFUSE_BIAS + diff) * light.color_and_intensity.rgb;
 
         vec3 half_dir = normalize(light_dir + view_dir);
         float spec = pow(max(dot(half_dir, normal), 0.0), max(1.0, shininess));
-        vec3 specular = specular_color * spec * light.color;
+        vec3 specular = specular_color * spec * light.color_and_intensity.rgb;
 
-        vec3 result = light.intensity * (diffuse + specular);
+        vec3 result = light.color_and_intensity.w * (diffuse + specular);
 
         float atten = pow(max(0.0, mix(1.0, 0.0, dist / light.radius)), 1.0 + light.attenuation);
 

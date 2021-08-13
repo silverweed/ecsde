@@ -1255,6 +1255,128 @@ pub fn set_texture_smooth(texture: &mut Texture, smooth: bool) {
     }
 }
 
+pub struct Uniform_Buffer {
+    pub id: GLuint,
+    pub block_index: GLuint,
+    pub mem: *mut u8,
+    pub layout: std::alloc::Layout,
+    pub needs_transfer_to_gpu: Cell<bool>,
+
+    #[cfg(debug_assertions)]
+    name: &'static CStr,
+}
+
+pub fn create_or_get_uniform_buffer<'window>(
+    window: &'window mut Render_Window_Handle,
+    shader: &Shader,
+    name: &'static CStr,
+) -> &'window mut Uniform_Buffer {
+    window
+        .gl
+        .uniform_buffers
+        .entry(name)
+        .or_insert_with(|| unsafe {
+            let block_index = glcheck!(gl::GetUniformBlockIndex(shader.id, name.as_ptr()));
+            let mut block_size = 0;
+            glcheck!(gl::GetActiveUniformBlockiv(
+                shader.id,
+                block_index,
+                gl::UNIFORM_BLOCK_DATA_SIZE,
+                &mut block_size
+            ));
+            assert!(block_size > 0);
+
+            let layout = std::alloc::Layout::from_size_align(block_size as usize, 1)
+                .unwrap_or_else(|e| fatal!("Failed to allocate memory for UBO {:?}: {}", name, e));
+            let mem = std::alloc::alloc(layout);
+            lverbose!("Allocated UBO {:?} with layout {:?}", name, layout);
+
+            let mut id = 0;
+            glcheck!(gl::GenBuffers(1, &mut id));
+
+            Uniform_Buffer {
+                id,
+                block_index,
+                mem,
+                layout,
+                needs_transfer_to_gpu: Cell::new(true),
+                #[cfg(debug_assertions)]
+                name,
+            }
+        })
+}
+
+#[inline]
+/// # Safety
+/// `data` must be valid: it must be non-null, aligned and it must
+/// correspond to an allocation of at least `size` bytes.
+pub unsafe fn write_into_uniform_buffer(
+    ubo: &mut Uniform_Buffer,
+    offset: usize,
+    align: usize,
+    size: usize,
+    data: *const u8,
+) -> usize {
+    debug_assert!(!ubo.mem.is_null());
+    debug_assert!(!data.is_null());
+
+    ubo.needs_transfer_to_gpu.set(true);
+
+    let write_p = ubo.mem.add(offset);
+    let align_offset = write_p.align_offset(align);
+    let write_p = write_p.add(align_offset);
+
+    #[cfg(debug_assertions)]
+    {
+        debug_assert!(
+            write_p.add(size) <= ubo.mem.add(ubo.layout.size()),
+            "Writing past bounds of UBO {:?}! (from {:?} to {:?}/{:?})",
+            ubo.name,
+            write_p.offset_from(ubo.mem),
+            write_p.add(size).offset_from(ubo.mem),
+            ubo.layout.size()
+        );
+
+        lverbose!(
+            "Writing into UBO {:?} from {:?} to {:?}/{:?} (len = {})",
+            ubo.name,
+            write_p.offset_from(ubo.mem),
+            write_p.add(size).offset_from(ubo.mem),
+            ubo.layout.size(),
+            size,
+        );
+    }
+
+    std::ptr::copy_nonoverlapping(data, write_p, size);
+
+    write_p.add(size).offset_from(ubo.mem) as usize
+}
+
+pub fn bind_uniform_buffer(ubo: &Uniform_Buffer) {
+    unsafe {
+        glcheck!(gl::BindBuffer(gl::UNIFORM_BUFFER, ubo.id));
+
+        if ubo.needs_transfer_to_gpu.get() {
+            debug_assert!(ubo.layout.size() < std::isize::MAX as usize);
+
+            // @Speed: we may optimize this to only transfer the subrange that changed
+            glcheck!(gl::BufferData(
+                gl::UNIFORM_BUFFER,
+                ubo.layout.size() as isize,
+                ubo.mem as *const _,
+                gl::DYNAMIC_DRAW
+            ));
+            ubo.needs_transfer_to_gpu.set(false);
+        }
+
+        glcheck!(gl::BindBufferBase(
+            gl::UNIFORM_BUFFER,
+            ubo.block_index,
+            ubo.id
+        ));
+    }
+}
+
 // -----------------------------------------------------------------------
 
 fn use_rect_shader_internal(color: Color, rect: &Rect<f32>, mvp: &Matrix3<f32>, shader: GLuint) {

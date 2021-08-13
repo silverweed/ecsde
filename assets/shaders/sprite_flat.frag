@@ -1,34 +1,39 @@
 #version 330 core
 
+// size: 16 B
 struct Ambient_Light {
-    vec3 color;
-    float intensity;
+    vec4 color_and_intensity;
 };
 
+// size: 32 B
 struct Point_Light {
+    vec4 color_and_intensity;
     vec2 position;
-    vec3 color;
     float radius;
     float attenuation;
-    float intensity;
 };
 
+// size: 48 B
 struct Rect_Light {
-    vec3 color;
+    vec4 color_and_intensity;
     vec2 pos_min;
     vec2 pos_max;
     float radius;
     float attenuation;
-    float intensity;
+    float _pad1;
+    float _pad2;
 };
 
 #define MAX_POINT_LIGHTS 4
 #define MAX_RECT_LIGHTS 4
 
 uniform sampler2D tex;
-uniform Ambient_Light ambient_light;
-uniform Point_Light point_lights[MAX_POINT_LIGHTS];
-uniform Rect_Light rect_lights[MAX_RECT_LIGHTS];
+
+layout (std140) uniform LightsBlock {
+	Ambient_Light ambient_light;
+	Point_Light point_lights[MAX_POINT_LIGHTS];
+	Rect_Light rect_lights[MAX_RECT_LIGHTS];
+};
 
 in vec4 color;
 in vec2 world_pos;
@@ -52,12 +57,12 @@ void main() {
     vec4 pixel = texture(tex, tex_coord);
 
     vec3 color = vec3(1.0);
-    color *= vec3(ambient_light.color) * ambient_light.intensity;
+    color *= vec3(ambient_light.color_and_intensity.rgb) * ambient_light.color_and_intensity.w;
 
     for (int i = 0; i < MAX_POINT_LIGHTS; ++i) {
         Point_Light light = point_lights[i];
         vec2 frag_to_light = light.position - world_pos;
-        vec3 diffuse = light.intensity * light.color;
+        vec3 diffuse = light.color_and_intensity.w * light.color_and_intensity.rgb;
 
         float dist = length(frag_to_light);
         float atten = pow(max(0.0, mix(1.0, 0.0, dist / light.radius)), 1.0 + light.attenuation);
@@ -70,7 +75,7 @@ void main() {
 
         vec2 frag_to_light = point_to_rect_vector(world_pos, light.pos_min, light.pos_max);
         vec2 light_dir = normalize(frag_to_light);
-        vec3 diffuse = light.intensity * light.color;
+        vec3 diffuse = light.color_and_intensity.w * light.color_and_intensity.rgb;
 
         float dist = length(frag_to_light);
         float atten = pow(max(0.0, mix(1.0, 0.0, dist / light.radius)), 1.0 + light.attenuation);

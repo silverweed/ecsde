@@ -21,6 +21,7 @@ pub type Texture<'a> = backend::Texture<'a>;
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
 pub type Color_Type = backend::Color_Type;
+pub type Uniform_Buffer = backend::Uniform_Buffer;
 
 //////////////////////////// DRAWING //////////////////////////////////
 
@@ -383,4 +384,53 @@ pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
 
 pub fn set_texture_smooth(texture: &mut Texture, smooth: bool) {
     backend::set_texture_repeated(texture, smooth);
+}
+
+pub fn create_or_get_uniform_buffer<'window>(
+    window: &'window mut Render_Window_Handle,
+    shader: &Shader,
+    name: &'static std::ffi::CStr,
+) -> &'window mut Uniform_Buffer {
+    backend::create_or_get_uniform_buffer(window, shader, name)
+}
+
+/// # Safety
+/// The struct must respect these specs for the std140 layout:
+/// https://www.khronos.org/registry/OpenGL/specs/gl/glspec45.core.pdf#page=159
+pub unsafe trait Std140 {}
+
+/// Returns the offset where to write next
+pub fn write_into_uniform_buffer<T: Std140>(
+    ubo: &mut Uniform_Buffer,
+    offset: usize,
+    data: T,
+) -> usize {
+    let align = std::mem::align_of::<T>();
+    let size = std::mem::size_of::<T>();
+    unsafe {
+        backend::write_into_uniform_buffer(ubo, offset, align, size, &data as *const _ as *const u8)
+    }
+}
+
+/// Returns the offset where to write next
+pub fn write_array_into_uniform_buffer<T: Std140>(
+    ubo: &mut Uniform_Buffer,
+    offset: usize,
+    data: &[T],
+) -> usize {
+    let align = std::mem::align_of::<T>();
+    let size = std::mem::size_of::<T>();
+    unsafe {
+        backend::write_into_uniform_buffer(
+            ubo,
+            offset,
+            align,
+            size * data.len(),
+            data.as_ptr() as *const u8,
+        )
+    }
+}
+
+pub fn bind_uniform_buffer(ubo: &Uniform_Buffer) {
+    backend::bind_uniform_buffer(ubo);
 }

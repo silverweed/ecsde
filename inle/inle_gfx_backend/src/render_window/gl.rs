@@ -1,6 +1,7 @@
 use crate::backend_common::alloc::Buffer_Allocators;
-use crate::backend_common::misc::check_gl_err;
+use crate::backend_common::misc::*;
 use crate::render::get_vp_matrix;
+use crate::render::gl::Uniform_Buffer;
 use gl::types::*;
 use inle_alloc::temp;
 use inle_common::colors::Color;
@@ -8,7 +9,22 @@ use inle_math::rect::{Rect, Rectf, Recti};
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::Window_Handle;
+use std::collections::HashMap;
 use std::{mem, ptr, str};
+
+// I'd like this to be in backend_common::misc, but fuck if I understand
+// how you're supposed to make it visible. It should be as simple as a
+// #[macro_export] in misc.rs and then using it from here, but no matter how
+// many #[macro_use] I put where, it's not being seen. So thanks a lot Rust,
+// I'll just copy-paste this macro where it's needed until I have time and
+// willpower to figure this garbage out.
+macro_rules! glcheck {
+    ($expr: expr) => {{
+        let res = $expr;
+        check_gl_err();
+        res
+    }};
+}
 
 pub struct Render_Window_Handle {
     window: Window_Handle,
@@ -30,7 +46,10 @@ impl AsMut<Window_Handle> for Render_Window_Handle {
 }
 
 pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
-    gl::load_with(|symbol| inle_win::window::get_gl_handle(&mut window, symbol));
+    glcheck!(gl::load_with(|symbol| inle_win::window::get_gl_handle(
+        &mut window,
+        symbol
+    )));
     let win_size = inle_win::window::get_window_target_size(&window);
     Render_Window_Handle {
         window,
@@ -59,6 +78,8 @@ pub struct Gl {
 
     pub text_shader: GLuint,
 
+    pub uniform_buffers: HashMap<&'static std::ffi::CStr, Uniform_Buffer>,
+
     #[cfg(debug_assertions)]
     pub n_draw_calls_this_frame: u32,
 }
@@ -74,8 +95,7 @@ impl Gl {
 
     pub fn draw_arrays(&mut self, primitive: GLenum, first: GLint, count: GLsizei) {
         unsafe {
-            gl::DrawArrays(primitive, first, count);
-            check_gl_err();
+            glcheck!(gl::DrawArrays(primitive, first, count));
         }
 
         #[cfg(debug_assertions)]
@@ -86,8 +106,12 @@ impl Gl {
 
     pub fn draw_indexed(&mut self, indices: GLsizei, indices_type: GLenum) {
         unsafe {
-            gl::DrawElements(gl::TRIANGLES, indices, indices_type, ptr::null());
-            check_gl_err();
+            glcheck!(gl::DrawElements(
+                gl::TRIANGLES,
+                indices,
+                indices_type,
+                ptr::null()
+            ));
         }
 
         #[cfg(debug_assertions)]
@@ -125,18 +149,17 @@ fn init_gl() -> Gl {
     gl.text_shader = create_shader_from!("vbuf", "msdf");
 
     unsafe {
-        gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-        gl::Enable(gl::BLEND);
+        glcheck!(gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA));
+        glcheck!(gl::Enable(gl::BLEND));
 
-        gl::FrontFace(gl::CW);
-        gl::Enable(gl::CULL_FACE);
+        glcheck!(gl::FrontFace(gl::CW));
+        glcheck!(gl::Enable(gl::CULL_FACE));
     }
 
     #[cfg(debug_assertions)]
     unsafe {
-        gl::Enable(gl::DEBUG_OUTPUT);
-        check_gl_err();
-        gl::DebugMessageCallback(Some(gl_msg_callback), ptr::null());
+        glcheck!(gl::Enable(gl::DEBUG_OUTPUT));
+        glcheck!(gl::DebugMessageCallback(Some(gl_msg_callback), ptr::null()));
     }
 
     gl
@@ -145,21 +168,22 @@ fn init_gl() -> Gl {
 fn fill_rect_buffers(gl: &mut Gl) {
     let (mut vao, mut ebo) = (0, 0);
     unsafe {
-        gl::GenVertexArrays(1, &mut vao);
-        gl::GenBuffers(1, &mut ebo);
-
-        debug_assert!(vao != 0);
+        glcheck!(gl::GenBuffers(1, &mut ebo));
         debug_assert!(ebo != 0);
 
-        gl::BindVertexArray(vao);
+        glcheck!(gl::GenVertexArrays(1, &mut vao));
+        debug_assert!(vao != 0);
 
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
-        gl::BufferStorage(
+        glcheck!(gl::BindVertexArray(vao));
+
+        glcheck!(gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo));
+
+        glcheck!(gl::BufferStorage(
             gl::ELEMENT_ARRAY_BUFFER,
             (RECT_INDICES.len() * mem::size_of::<GLuint>()) as _,
             RECT_INDICES.as_ptr() as *const _,
             0,
-        );
+        ));
     }
 
     gl.rect_vao = vao;
@@ -169,26 +193,45 @@ fn fill_rect_buffers(gl: &mut Gl) {
 #[inline(always)]
 pub fn shutdown(window: &mut Render_Window_Handle) {
     window.gl.buffer_allocators.destroy();
+
+    let buf_ids = window
+        .gl
+        .uniform_buffers
+        .iter()
+        .map(|(_, buf)| buf.id)
+        .collect::<Vec<_>>();
+    unsafe {
+        glcheck!(gl::DeleteBuffers(buf_ids.len() as _, buf_ids.as_ptr()));
+    }
+
+    for buf in window.gl.uniform_buffers.values_mut() {
+        unsafe {
+            std::alloc::dealloc(buf.mem, buf.layout);
+        }
+    }
 }
 
 pub fn recreate_render_window(window: &mut Render_Window_Handle) {
-    gl::load_with(|symbol| inle_win::window::get_gl_handle(&mut window.window, symbol));
+    glcheck!(gl::load_with(|symbol| inle_win::window::get_gl_handle(
+        &mut window.window,
+        symbol
+    )));
 }
 
 pub fn set_clear_color(_window: &mut Render_Window_Handle, color: Color) {
     unsafe {
-        gl::ClearColor(
+        glcheck!(gl::ClearColor(
             color.r as f32 / 255.0,
             color.g as f32 / 255.0,
             color.b as f32 / 255.0,
             color.a as f32 / 255.0,
-        );
+        ));
     }
 }
 
 pub fn clear(_window: &mut Render_Window_Handle) {
     unsafe {
-        gl::Clear(gl::COLOR_BUFFER_BIT);
+        glcheck!(gl::Clear(gl::COLOR_BUFFER_BIT));
     }
 }
 
@@ -208,7 +251,12 @@ pub fn set_viewport(window: &mut Render_Window_Handle, viewport: &Rectf, _view_r
     window.viewport = viewport;
 
     unsafe {
-        gl::Viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+        glcheck!(gl::Viewport(
+            viewport.x,
+            viewport.y,
+            viewport.width,
+            viewport.height
+        ));
     }
 }
 

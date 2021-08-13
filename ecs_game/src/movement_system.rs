@@ -30,7 +30,6 @@ pub fn update(
             spatial.velocity = v2!(0., 0.);
         }
         let translation = spatial.velocity * dt_secs;
-        ldebug!("translating {:?} * {:?} = {:?}", spatial.velocity, dt_secs, translation);
         spatial.transform.translate_v(translation);
 
         let pos = spatial.transform.position();

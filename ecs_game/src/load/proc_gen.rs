@@ -1,3 +1,6 @@
+// @Temporary
+#![allow(warnings)]
+
 use crate::entities;
 use crate::gameplay_system::Gameplay_System_Config;
 use crate::gfx::multi_sprite_animation_system::C_Multi_Renderable_Animation;

@@ -1,4 +1,4 @@
-use crate::light::{Lights, Point_Light, Rect_Light};
+use crate::light::{Lights, Point_Light};
 use crate::material::Material;
 use crate::render::{self, Primitive_Type};
 use crate::vbuf_holder::Vertex_Buffer_Holder;
@@ -139,72 +139,126 @@ fn encode_rot_and_alpha_as_color(rot: Angle, alpha: u8) -> Color {
     }
 }
 
-macro_rules! set_point_light_uniforms {
-    ($idx: expr, $shader: expr, $pl: expr) => {
-        set_uniform(
-            $shader,
-            c_str!(concat!("point_lights[", $idx, "].position")),
-            $pl.position,
-        );
-        set_uniform(
-            $shader,
-            c_str!(concat!("point_lights[", $idx, "].color")),
-            Color3::from($pl.color),
-        );
-        set_uniform(
-            $shader,
-            c_str!(concat!("point_lights[", $idx, "].radius")),
-            $pl.radius,
-        );
-        set_uniform(
-            $shader,
-            c_str!(concat!("point_lights[", $idx, "].attenuation")),
-            $pl.attenuation,
-        );
-        set_uniform(
-            $shader,
-            c_str!(concat!("point_lights[", $idx, "].intensity")),
-            $pl.intensity,
-        );
-    };
-}
+fn prepare_light_uniforms<'win>(
+    window: &'win mut Render_Window_Handle,
+    shader: &mut Shader,
+    lights: &Lights,
+) -> &'win render::Uniform_Buffer {
+    // Assuming this layout in GLSL:
+    //
+    // layout (std140) uniform LightsBlock {
+    //     Ambient_Light ambient_light;
+    //     Point_Light point_lights[MAX_POINT_LIGHTS];
+    //     Rect_Light rect_lights[MAX_RECT_LIGHTS];
+    // };
 
-macro_rules! set_rect_light_uniforms {
-    ($idx: expr, $shader: expr, $rl: expr) => {
-        set_uniform(
-            $shader,
-            c_str!(concat!("rect_lights[", $idx, "].pos_min")),
-            $rl.rect.pos_min(),
-        );
-        set_uniform(
-            $shader,
-            c_str!(concat!("rect_lights[", $idx, "].pos_max")),
-            $rl.rect.pos_max(),
-        );
-        set_uniform(
-            $shader,
-            c_str!(concat!("rect_lights[", $idx, "].color")),
-            Color3::from($rl.color),
-        );
-        set_uniform(
-            $shader,
-            c_str!(concat!("rect_lights[", $idx, "].radius")),
-            $rl.radius,
-        );
-        set_uniform(
-            $shader,
-            c_str!(concat!("rect_lights[", $idx, "].attenuation")),
-            $rl.attenuation,
-        );
-        set_uniform(
-            $shader,
-            c_str!(concat!("rect_lights[", $idx, "].intensity")),
-            $rl.intensity,
-        );
-    };
+    let ubo = render::create_or_get_uniform_buffer(window, shader, c_str!("LightsBlock"));
+
+    let mut next_offset = 0;
+    const COL_NORM: f32 = 1.0 / 255.0;
+
+    {
+        #[repr(C)]
+        #[derive(Copy, Clone)]
+        struct Ambient_Light {
+            r: f32,
+            g: f32,
+            b: f32,
+            intensity: f32,
+        }
+        unsafe impl render::Std140 for Ambient_Light {}
+
+        let ambient_light = Ambient_Light {
+            r: lights.ambient_light.color.r as f32 * COL_NORM,
+            b: lights.ambient_light.color.b as f32 * COL_NORM,
+            g: lights.ambient_light.color.g as f32 * COL_NORM,
+            intensity: lights.ambient_light.intensity,
+        };
+        next_offset = render::write_into_uniform_buffer(ubo, next_offset, ambient_light);
+    }
+
+    {
+        #[repr(C)]
+        #[derive(Copy, Clone, Default)]
+        struct Point_Light {
+            r: f32,
+            g: f32,
+            b: f32,
+            intensity: f32,
+            position: Vec2f,
+            radius: f32,
+            attenuation: f32,
+        }
+        unsafe impl render::Std140 for Point_Light {}
+
+        const MAX_POINT_LIGHTS: usize = 4;
+
+        let mut point_lights = [Point_Light::default(); MAX_POINT_LIGHTS];
+        for (i, pl) in lights
+            .point_lights
+            .iter()
+            .take(MAX_POINT_LIGHTS)
+            .enumerate()
+        {
+            let point_light = Point_Light {
+                r: pl.color.r as f32 * COL_NORM,
+                g: pl.color.g as f32 * COL_NORM,
+                b: pl.color.b as f32 * COL_NORM,
+                intensity: pl.intensity,
+                position: pl.position,
+                radius: pl.radius,
+                attenuation: pl.attenuation,
+            };
+            point_lights[i] = point_light;
+        }
+
+        next_offset = render::write_array_into_uniform_buffer(ubo, next_offset, &point_lights);
+    }
+
+    {
+        #[repr(C)]
+        #[derive(Copy, Clone, Default)]
+        struct Rect_Light {
+            r: f32,
+            g: f32,
+            b: f32,
+            intensity: f32,
+            pos_min: Vec2f,
+            pos_max: Vec2f,
+            radius: f32,
+            attenuation: f32,
+            _pad1: f32,
+            _pad2: f32,
+        }
+        unsafe impl render::Std140 for Rect_Light {}
+
+        const MAX_RECT_LIGHTS: usize = 4;
+
+        let mut rect_lights = [Rect_Light::default(); MAX_RECT_LIGHTS];
+        for (i, rl) in lights.rect_lights.iter().take(MAX_RECT_LIGHTS).enumerate() {
+            let rect_light = Rect_Light {
+                r: rl.color.r as f32 * COL_NORM,
+                g: rl.color.g as f32 * COL_NORM,
+                b: rl.color.b as f32 * COL_NORM,
+                intensity: rl.intensity,
+                pos_min: rl.rect.pos_min(),
+                pos_max: rl.rect.pos_max(),
+                radius: rl.radius,
+                attenuation: rl.attenuation,
+                _pad1: 0.0,
+                _pad2: 0.0,
+            };
+            rect_lights[i] = rect_light;
+        }
+
+        render::write_array_into_uniform_buffer(ubo, next_offset, &rect_lights);
+    }
+
+    ubo
 }
 
 fn set_shader_uniforms(
+    window: &mut Render_Window_Handle,
     shader: &mut Shader,
     material: &Material,
     gres: &Gfx_Resources,
@@ -223,16 +277,7 @@ fn set_shader_uniforms(
         let normals = gres.get_texture(material.normals);
         set_uniform(shader, c_str!("normals"), normals);
     }
-    set_uniform(
-        shader,
-        c_str!("ambient_light.color"),
-        Color3::from(lights.ambient_light.color),
-    );
-    set_uniform(
-        shader,
-        c_str!("ambient_light.intensity"),
-        lights.ambient_light.intensity,
-    );
+
     // @Cleanup: currently unused: was used by old terrain shader
     //let (tex_w, tex_h) = super::get_texture_size(texture);
     //set_uniform(
@@ -241,23 +286,8 @@ fn set_shader_uniforms(
     //v2!(tex_w as f32, tex_h as f32),
     //);
 
-    {
-        let pls = &lights.point_lights;
-        let pld = Point_Light::default();
-        set_point_light_uniforms!(0, shader, pls.get(0).unwrap_or(&pld));
-        set_point_light_uniforms!(1, shader, pls.get(1).unwrap_or(&pld));
-        set_point_light_uniforms!(2, shader, pls.get(2).unwrap_or(&pld));
-        set_point_light_uniforms!(3, shader, pls.get(3).unwrap_or(&pld));
-    }
-
-    {
-        let rls = &lights.rect_lights;
-        let rld = Rect_Light::default();
-        set_rect_light_uniforms!(0, shader, rls.get(0).unwrap_or(&rld));
-        set_rect_light_uniforms!(1, shader, rls.get(1).unwrap_or(&rld));
-        set_rect_light_uniforms!(2, shader, rls.get(2).unwrap_or(&rld));
-        set_rect_light_uniforms!(3, shader, rls.get(3).unwrap_or(&rld));
-    }
+    let lights_ubo = prepare_light_uniforms(window, shader, lights);
+    render::bind_uniform_buffer(lights_ubo);
 
     set_uniform(
         shader,
@@ -321,7 +351,15 @@ pub fn draw_batches(
             let shader = if draw_params.enable_shaders {
                 material.shader.map(|id| {
                     let shader = shader_cache.get_shader_mut(Some(id));
-                    set_shader_uniforms(shader, material, gres, lights, texture, &view_projection);
+                    set_shader_uniforms(
+                        window,
+                        shader,
+                        material,
+                        gres,
+                        lights,
+                        texture,
+                        &view_projection,
+                    );
                     shader
                 })
             } else {

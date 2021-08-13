@@ -1,3 +1,6 @@
+// @Temporary
+#![allow(warnings)]
+
 use crate::collisions::Game_Collision_Layer;
 use crate::gfx::multi_sprite_animation_system::{Animation_Track, C_Multi_Renderable_Animation};
 use crate::gfx::shaders::*;
