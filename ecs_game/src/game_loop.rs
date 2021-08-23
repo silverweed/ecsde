@@ -1268,23 +1268,25 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 
     foreach_entity!(ecs_world, +C_Spatial2D, |entity| {
         let spatial = ecs_world.get_component::<C_Spatial2D>(entity).unwrap();
-        let transform = &spatial.transform;
-        debug_painter.add_arrow(
-            Arrow {
-                center: transform.position(),
-                direction: spatial.velocity * 0.5,
-                thickness: 3.,
-                arrow_size: 20.,
-            },
-            COLOR,
-        );
-        debug_painter.add_shaded_text(
-            &spatial.velocity.to_string(),
-            transform.position() + Vec2f::new(1., -15.),
-            12,
-            COLOR,
-            colors::WHITE,
-        );
+        if spatial.velocity.magnitude2() > 0. {
+            let transform = &spatial.transform;
+            debug_painter.add_arrow(
+                Arrow {
+                    center: transform.position(),
+                    direction: spatial.velocity * 0.5,
+                    thickness: 3.,
+                    arrow_size: 20.,
+                },
+                COLOR,
+            );
+            debug_painter.add_shaded_text(
+                &spatial.velocity.to_string(),
+                transform.position() + Vec2f::new(1., -15.),
+                12,
+                COLOR,
+                colors::WHITE,
+            );
+        }
     });
 }
 

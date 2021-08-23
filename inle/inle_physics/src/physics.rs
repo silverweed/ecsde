@@ -97,6 +97,8 @@ fn detect_circle_circle(a: &Collider, b: &Collider) -> Option<Collision_Info_Int
 fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Internal> {
     trace!("physics::detect_rect_rect");
 
+    const OVERLAP_EPSILON: f32 = f32::EPSILON;
+
     let (a_width, a_height) = if let Collision_Shape::Rect { width, height } = a.shape {
         (width, height)
     } else {
@@ -114,7 +116,7 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Interna
 
     // Apply SAT on X axis
     let x_overlap = a_half_ext_x + b_half_ext_x - diff.x.abs();
-    if x_overlap <= 0. {
+    if x_overlap <= OVERLAP_EPSILON {
         return None;
     }
 
@@ -123,7 +125,7 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Interna
 
     // Apply SAT on Y axis
     let y_overlap = a_half_ext_y + b_half_ext_y - diff.y.abs();
-    if y_overlap <= 0. {
+    if y_overlap <= OVERLAP_EPSILON {
         return None;
     }
 
