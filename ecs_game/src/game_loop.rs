@@ -411,7 +411,7 @@ where
     }
 
     #[cfg(debug_assertions)]
-    update_debug(game_state, collision_debug_data);
+    update_debug(game_state, game_resources, collision_debug_data);
 
     update_graphics(game_state, game_resources);
     update_ui(game_state, &game_resources.gfx);
@@ -704,6 +704,7 @@ fn update_physics(
 #[cfg(debug_assertions)]
 fn update_debug(
     game_state: &mut Game_State,
+    game_resources: &mut Game_Resources,
     collision_debug_data: HashMap<String_Id, physics::Collision_System_Debug_Data>,
 ) {
     let engine_state = &mut game_state.engine_state;
@@ -834,6 +835,8 @@ fn update_debug(
     let lv_batches = &mut game_state.level_batches;
     let global_painter = &mut debug_systems.global_painter;
     let window = &mut game_state.window;
+    let shader_cache = &mut game_resources.shader_cache;
+    let env = &engine_state.env;
 
     game_state
         .gameplay_system
@@ -868,7 +871,14 @@ fn update_debug(
 
             if draw_entity_prev_frame_ghost {
                 let batches = lv_batches.get_mut(&level.id).unwrap();
-                debug_draw_entities_prev_frame_ghost(window, batches, &mut level.world, is_paused);
+                debug_draw_entities_prev_frame_ghost(
+                    window,
+                    batches,
+                    shader_cache,
+                    env,
+                    &mut level.world,
+                    is_paused,
+                );
             }
 
             if draw_component_lists {
@@ -1374,24 +1384,35 @@ fn debug_draw_lights(
 fn debug_draw_entities_prev_frame_ghost(
     window: &mut Render_Window_Handle,
     batches: &mut inle_gfx::render::batcher::Batches,
+    shader_cache: &mut inle_resources::gfx::Shader_Cache,
+    env: &inle_core::env::Env_Info,
     ecs_world: &mut Ecs_World,
     is_paused: bool,
 ) {
+    trace!("debug_draw_entities_prev_frame_ghost");
+
     use crate::debug::entity_debug::C_Debug_Data;
     //use crate::systems::pixel_collision_system::C_Texture_Collider;
+    use crate::gfx::shaders::SHD_SPRITE_UNLIT;
     use inle_gfx::components::C_Renderable;
     use inle_gfx::render;
+    use inle_resources::gfx::shader_path;
+
+    let unlit_shader = shader_cache.load_shader(&shader_path(env, SHD_SPRITE_UNLIT));
 
     foreach_entity!(ecs_world, +C_Spatial2D, +C_Renderable, +C_Debug_Data, /*~C_Texture_Collider,*/ |entity| {
         let frame_starting_pos = ecs_world.get_component::<C_Spatial2D>(entity).unwrap().frame_starting_pos;
         let C_Renderable {
-            mut material,
+            material,
             rect,
             modulate,
             z_index,
+            sprite_local_transform,
         } = *ecs_world.get_component::<C_Renderable>(entity).unwrap();
 
+        let mut material = material.clone();
         material.cast_shadows = false;
+        material.shader = unlit_shader;
 
         let debug_data = ecs_world.get_component_mut::<C_Debug_Data>(entity).unwrap();
         if !is_paused {
@@ -1414,7 +1435,7 @@ fn debug_draw_entities_prev_frame_ghost(
                 modulate.b,
                 200 - 10 * (debug_data.prev_positions.len() - i as usize) as u8,
             );
-            render::render_texture_ws(window, batches, material, &rect, color, &transform, z_index);
+            render::render_texture_ws(window, batches, material, &rect, color, &transform.combine(&sprite_local_transform), z_index);
         }
     });
 }

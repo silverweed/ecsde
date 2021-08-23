@@ -12,6 +12,7 @@ pub struct C_Renderable {
     pub rect: Rect<i32>,
     pub modulate: colors::Color, // @Redundant: we're already passing color to render_texture_ws! Do we care about this?
     pub z_index: render::Z_Index,
+    pub sprite_local_transform: Transform2D,
 }
 
 impl Default for C_Renderable {
@@ -24,6 +25,7 @@ impl Default for C_Renderable {
             rect: Rect::new(0, 0, 0, 0),
             modulate: colors::WHITE,
             z_index: 0,
+            sprite_local_transform: Transform2D::default(),
         }
     }
 }
@@ -83,13 +85,16 @@ impl C_Renderable {
         self.modulate = color;
         self
     }
+
+    pub fn with_local_transform(mut self, transform: &Transform2D) -> Self {
+        self.sprite_local_transform = *transform;
+        self
+    }
 }
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct C_Multi_Renderable {
     pub renderables: [C_Renderable; Self::MAX_RENDERABLES],
-    /// Local transforms relative to the entity
-    pub rend_transforms: [Transform2D; Self::MAX_RENDERABLES],
     pub n_renderables: u8,
 }
 
@@ -100,11 +105,6 @@ impl C_Multi_Renderable {
         assert!((self.n_renderables as usize) < self.renderables.len());
         self.renderables[self.n_renderables as usize] = renderable;
         self.n_renderables += 1;
-    }
-
-    pub fn add_with_local_transform(&mut self, renderable: C_Renderable, transform: &Transform2D) {
-        self.add(renderable);
-        self.rend_transforms[self.n_renderables as usize - 1] = *transform;
     }
 }
 

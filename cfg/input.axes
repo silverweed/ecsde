@@ -1,5 +1,5 @@
-horizontal: Stick_Left_H, +D, -A, Dpad_H
-vertical: Stick_Left_V, -W, +S, Dpad_V
+horizontal: Stick_Left_H, +D, -A, Dpad_H, +Right, -Left
+vertical: Stick_Left_V, -W, +S, Dpad_V, +Up, -Down
 
 trigger_l: Trigger_Left
 trigger_r: Trigger_Right

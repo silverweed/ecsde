@@ -533,6 +533,8 @@ fn fill_vertices_with_shadows(
     n_shadow_vertices: u32,
     shadow_data: &temp::Read_Only_Temp_Array<Entity_Shadow_Data>,
 ) {
+    trace!("fill_vertices_with_shadows");
+
     let n_vert_per_chunk = n_sprites_per_chunk * VERTICES_PER_SPRITE;
 
     if n_shadow_vertices > super::vbuf_max_vertices(&shadow_vbuffer.vbuf) {
@@ -677,6 +679,8 @@ fn fill_vertices(
     n_sprites_per_chunk: usize,
     has_shader: bool,
 ) {
+    trace!("fill_vertices");
+
     sprites
         .par_chunks(n_sprites_per_chunk)
         .zip(vert_chunks)

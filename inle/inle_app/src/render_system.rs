@@ -82,7 +82,10 @@ pub fn update(args: Render_System_Update_Args) {
                 rect: src_rect,
                 modulate,
                 z_index,
+                sprite_local_transform,
             } = rend;
+
+            let visual_transform = spatial.transform.combine(sprite_local_transform);
 
             let mut_in_debug!(material) = *material;
 
@@ -104,7 +107,7 @@ pub fn update(args: Render_System_Update_Args) {
                             mat,
                             src_rect,
                             color,
-                            &spatial.transform,
+                            &visual_transform,
                             *z_index,
                         );
                     }
@@ -128,7 +131,7 @@ pub fn update(args: Render_System_Update_Args) {
                 material,
                 src_rect,
                 *modulate,
-                &spatial.transform,
+                &visual_transform,
                 *z_index,
             );
         }
@@ -156,7 +159,6 @@ pub fn update(args: Render_System_Update_Args) {
 
         let C_Multi_Renderable {
             renderables,
-            rend_transforms,
             n_renderables,
         } = rend;
 
@@ -166,10 +168,10 @@ pub fn update(args: Render_System_Update_Args) {
                 rect: src_rect,
                 modulate,
                 z_index,
+                sprite_local_transform,
             } = &renderables[i as usize];
-            let rend_transform = &rend_transforms[i as usize];
 
-            let transform = spatial.transform.combine(rend_transform);
+            let transform = spatial.transform.combine(sprite_local_transform);
 
             let mut_in_debug!(material) = *material;
 

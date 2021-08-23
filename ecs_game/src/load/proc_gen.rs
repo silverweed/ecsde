@@ -163,8 +163,18 @@ fn create_room(
         gres,
         shader_cache,
         env,
-        &Transform2D::from_pos(center + v2!(0.0, room_halfsize.y)),
-        v2!((room_halfsize.x + wall_thickness) * 2.0, wall_thickness),
+        &Transform2D::from_pos(center + v2!(-room_halfsize.x - wall_thickness, room_halfsize.y)),
+        v2!(room_halfsize.x + wall_thickness, wall_thickness),
+        cfg,
+    );
+    create_wall(
+        world,
+        phys_world,
+        gres,
+        shader_cache,
+        env,
+        &Transform2D::from_pos(center + v2!(2.0 * wall_thickness, room_halfsize.y)),
+        v2!(room_halfsize.x - wall_thickness, wall_thickness),
         cfg,
     );
     // top
@@ -174,8 +184,20 @@ fn create_room(
         gres,
         shader_cache,
         env,
-        &Transform2D::from_pos(center + v2!(0.0, -room_halfsize.y)),
-        v2!((room_halfsize.x + wall_thickness) * 2.0, wall_thickness),
+        &Transform2D::from_pos(center + v2!(-room_halfsize.x, -room_halfsize.y - wall_thickness)),
+        v2!(room_halfsize.x, wall_thickness),
+        cfg,
+    );
+    create_wall(
+        world,
+        phys_world,
+        gres,
+        shader_cache,
+        env,
+        &Transform2D::from_pos(
+            center + v2!(2.0 * wall_thickness, -room_halfsize.y - wall_thickness),
+        ),
+        v2!(room_halfsize.x - wall_thickness, wall_thickness),
         cfg,
     );
     // left
@@ -185,8 +207,26 @@ fn create_room(
         gres,
         shader_cache,
         env,
-        &Transform2D::from_pos(center + v2!(-room_halfsize.x, 0.0)),
-        v2!(wall_thickness, (room_halfsize.y + wall_thickness) * 2.0),
+        &Transform2D::from_pos(
+            center
+                + v2!(
+                    -room_halfsize.x - wall_thickness,
+                    -room_halfsize.y - wall_thickness
+                ),
+        ),
+        v2!(wall_thickness, room_halfsize.y + wall_thickness),
+        cfg,
+    );
+    create_wall(
+        world,
+        phys_world,
+        gres,
+        shader_cache,
+        env,
+        &Transform2D::from_pos(
+            center + v2!(-room_halfsize.x - wall_thickness, 2.0 * wall_thickness),
+        ),
+        v2!(wall_thickness, room_halfsize.y - wall_thickness),
         cfg,
     );
     // right
@@ -196,8 +236,50 @@ fn create_room(
         gres,
         shader_cache,
         env,
-        &Transform2D::from_pos(center + v2!(room_halfsize.x, 0.0)),
-        v2!(wall_thickness, (room_halfsize.y + wall_thickness) * 2.0),
+        &Transform2D::from_pos(center + v2!(room_halfsize.x, -room_halfsize.y)),
+        v2!(wall_thickness, room_halfsize.y),
+        cfg,
+    );
+    create_wall(
+        world,
+        phys_world,
+        gres,
+        shader_cache,
+        env,
+        &Transform2D::from_pos(center + v2!(room_halfsize.x, 2.0 * wall_thickness)),
+        v2!(wall_thickness, room_halfsize.y - wall_thickness),
+        cfg,
+    );
+
+    // Central
+    create_wall(
+        world,
+        phys_world,
+        gres,
+        shader_cache,
+        env,
+        &Transform2D::from_pos(center + v2!(-room_halfsize.x * 0.5, room_halfsize.y * 0.2)),
+        v2!(wall_thickness * 4.0, wall_thickness),
+        cfg,
+    );
+    create_wall(
+        world,
+        phys_world,
+        gres,
+        shader_cache,
+        env,
+        &Transform2D::from_pos(center + v2!(room_halfsize.x * 0.2, -room_halfsize.y * 0.2)),
+        v2!(wall_thickness * 4.0, wall_thickness),
+        cfg,
+    );
+    create_wall(
+        world,
+        phys_world,
+        gres,
+        shader_cache,
+        env,
+        &Transform2D::from_pos(center + v2!(-room_halfsize.x * 0.3, -room_halfsize.y * 0.65)),
+        v2!(wall_thickness * 4.0, wall_thickness),
         cfg,
     );
 

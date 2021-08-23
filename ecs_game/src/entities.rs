@@ -457,7 +457,9 @@ pub fn create_wall(
         wall,
         C_Renderable::new_with_diffuse(gres, env, "wall.png")
             .with_normals(gres, env, "wall_n.png")
-            .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS),
+            .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS)
+            // NOTE: the wall's pivot, for convenience, is top-left.
+            .with_local_transform(&Transform2D::from_pos(wall_size * 0.5)),
     );
     renderable.rect.width = wall_size.x as i32;
     renderable.rect.height = wall_size.y as i32;
@@ -478,6 +480,8 @@ pub fn create_wall(
         },
         layer: Game_Collision_Layer::Ground as _,
         entity: wall,
+        // NOTE: the wall's pivot, for convenience, is top-left.
+        offset: wall_size * 0.5,
         ..Default::default()
     };
 
