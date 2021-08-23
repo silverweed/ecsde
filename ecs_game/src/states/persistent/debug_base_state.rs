@@ -20,7 +20,7 @@ const CHANGE_SPEED_DELTA: f32 = 0.1;
 impl Debug_Base_State {
     pub fn new(cfg: &inle_cfg::Config) -> Debug_Base_State {
         Debug_Base_State {
-            gameplay_update_tick_ms: Cfg_Var::new("engine/gameplay/gameplay_update_tick_ms", cfg),
+            gameplay_update_tick_ms: Cfg_Var::new("engine/gameplay/update_tick_ms", cfg),
             digging: false,
             t: Duration::default(),
         }
