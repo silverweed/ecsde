@@ -322,7 +322,10 @@ impl Physics_World {
             .or_insert_with(SmallVec::default)
             .push(Collision_Data {
                 other_collider: cld_b,
-                info: info.clone(),
+                info: Collision_Info {
+                    normal: -info.normal,
+                    ..*info
+                },
             });
         self.collisions
             .entry(cld_b)

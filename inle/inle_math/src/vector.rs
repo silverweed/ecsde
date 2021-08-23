@@ -98,6 +98,8 @@ impl<T: ToString> std::string::ToString for Vector2<T> {
     }
 }
 
+const NORMALIZE_EPSILON: f32 = 0.000_001;
+
 impl<T> Vector2<T>
 where
     T: Copy
@@ -107,16 +109,35 @@ where
         + std::convert::From<f32>
         + Default,
 {
+    #[inline]
     pub fn magnitude2(self) -> T {
         self.x * self.x + self.y * self.y
     }
 
+    #[inline]
     pub fn magnitude(self) -> f32 {
         self.magnitude2().into().sqrt()
     }
 
-    /// Like 'normalized_or_zero' but panics if length is 0.
+    #[inline]
+    pub fn magnitude_fast(self) -> f32 {
+        math::fast_sqrt(self.magnitude2().into())
+    }
+
+    #[inline]
+    /// Like `normalized_or_zero` but panics if length is 0.
     pub fn normalized(self) -> Self {
+        let mag = self.magnitude2().into();
+        let den = 1.0 / mag.sqrt();
+        Self {
+            x: T::from(self.x.into() * den),
+            y: T::from(self.y.into() * den),
+        }
+    }
+
+    #[inline]
+    /// Like `normalized` but faster and less precise
+    pub fn normalized_fast(self) -> Self {
         let mag = self.magnitude2().into();
         let den = math::fast_invsqrt(mag);
         Self {
@@ -125,7 +146,24 @@ where
         }
     }
 
+    #[inline]
+    /// Returns the normalized vector, or 0 if it has length 0.
     pub fn normalized_or_zero(self) -> Self {
+        let mag = self.magnitude2().into();
+        if mag == 0. {
+            return Self::default();
+        }
+
+        let den = 1.0 / mag.sqrt();
+        Self {
+            x: T::from(self.x.into() * den),
+            y: T::from(self.y.into() * den),
+        }
+    }
+
+    #[inline]
+    /// Like `normalized_or_zero` but faster and less precise
+    pub fn normalized_or_zero_fast(self) -> Self {
         let mag = self.magnitude2().into();
         if mag == 0. {
             return Self::default();
@@ -140,9 +178,16 @@ where
 
     #[inline]
     pub fn is_normalized(self) -> bool {
-        (self.magnitude2().into() - 1.0).abs() < f32::EPSILON
+        (self.magnitude2().into() - 1.0).abs() < NORMALIZE_EPSILON
     }
 
+    #[inline]
+    pub fn is_normalized_or_zero(self) -> bool {
+        let mag = self.magnitude2().into();
+        mag == 0. || (mag - 1.0).abs() < NORMALIZE_EPSILON
+    }
+
+    #[inline]
     pub fn rotated(self, angle: Angle) -> Self {
         let rads = angle.as_rad();
         let x = self.x.into();
@@ -654,12 +699,16 @@ mod tests {
         let v = Vec2f::new(1., 1.).normalized_or_zero();
         assert_approx_eq!(v.x, 0.707_106_7);
         assert_eq!(v.x, v.y);
+        assert!(v.is_normalized());
 
         let v = Vec2f::new(1., 1.).normalized();
         assert_approx_eq!(v.x, 0.707_106_7);
         assert_eq!(v.x, v.y);
+        assert!(v.is_normalized());
 
         assert_eq!(Vec2f::new(0., 0.).normalized_or_zero(), Vec2f::new(0., 0.));
+        assert!(Vec2f::new(0., 0.).is_normalized_or_zero());
+        assert!(!Vec2f::new(0., 0.).is_normalized());
     }
 
     #[test]

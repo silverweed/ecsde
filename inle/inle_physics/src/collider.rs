@@ -2,7 +2,6 @@ use super::layers::Collision_Layer;
 use super::phys_world::{Collider_Handle, Physics_Body_Handle};
 use inle_ecs::ecs_world::Entity;
 use inle_math::vector::Vec2f;
-use smallvec::SmallVec;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[non_exhaustive]

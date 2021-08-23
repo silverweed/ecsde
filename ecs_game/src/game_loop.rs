@@ -1159,12 +1159,8 @@ fn debug_draw_colliders(
     phys_world: &Physics_World,
 ) {
     use crate::collisions::Game_Collision_Layer;
-    use inle_ecs::ecs_world::Entity;
     use inle_physics::collider::{C_Collider, Collision_Shape};
-    use std::collections::HashSet;
     use std::convert::TryFrom;
-
-    let mut pairs_drawn: HashSet<(Entity, Entity)> = HashSet::default();
 
     foreach_entity!(ecs_world, +C_Collider, +C_Spatial2D, |entity| {
         let collider_comp = ecs_world.get_component::<C_Collider>(entity).unwrap();
@@ -1179,7 +1175,7 @@ fn debug_draw_colliders(
                     |_| format!("? {}", collider.layer),
                     |gcl| format!("{:?}", gcl),
                 ),
-                transform.position(),
+                collider.position,
                 8,
                 colors::BLACK);
 
@@ -1191,16 +1187,19 @@ fn debug_draw_colliders(
                 }
 
                 for cls_data in colliding_with {
-                    //if !pairs_drawn.contains(&(cls_info.entity, entity)) {
-                        let oth_cld = phys_world.get_collider(cls_data.other_collider).unwrap();
-                        debug_painter.add_arrow(Arrow {
-                            center: collider.position,
-                            direction: oth_cld.position - collider.position,
-                            thickness: 1.,
-                            arrow_size: 10.,
-                        }, colors::GREEN);
-                        pairs_drawn.insert((entity, oth_cld.entity));
-                    //}
+                    let oth_cld = phys_world.get_collider(cls_data.other_collider).unwrap();
+                    debug_painter.add_arrow(Arrow {
+                        center: collider.position,
+                        direction: oth_cld.position - collider.position,
+                        thickness: 1.,
+                        arrow_size: 10.,
+                    }, colors::GREEN);
+                    debug_painter.add_arrow(Arrow {
+                        center: collider.position, // @Incomplete: it'd be nice to have the exact collision position
+                        direction: cls_data.info.normal * 20.0,
+                        thickness: 1.,
+                        arrow_size: 10.,
+                    }, colors::PINK);
                 }
             }
 
@@ -1213,7 +1212,7 @@ fn debug_draw_colliders(
                     transform.translate(-radius * 0.5, -radius * 0.5);
                     debug_painter.add_circle(
                         Circle {
-                            center: transform.position(),
+                            center: collider.position,
                             radius,
                         },
                         cld_color,
@@ -1221,6 +1220,13 @@ fn debug_draw_colliders(
                 }
                 _ => {}
             }
+
+            debug_painter.add_circle(
+                Circle {
+                    center: collider.position,
+                    radius: 2.,
+                },
+                colors::ORANGE);
         }
     });
 }

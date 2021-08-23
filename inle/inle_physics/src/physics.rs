@@ -212,12 +212,14 @@ fn detect_circle_rect(circle: &Collider, rect: &Collider) -> Option<Collision_In
     }
 
     let d = d.sqrt();
+    let normal = normal.normalized_or_zero();
+    debug_assert!(normal.is_normalized(), "{}", normal.magnitude());
 
     Some(Collision_Info_Internal {
         cld1: circle.handle,
         cld2: rect.handle,
         info: Collision_Info {
-            normal: if inside { -normal } else { normal },
+            normal: if inside { normal } else { -normal },
             penetration: r - d,
         },
     })

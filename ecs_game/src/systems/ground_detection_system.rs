@@ -16,11 +16,12 @@ pub fn update(world: &mut Ecs_World, phys_world: &Physics_World) {
     trace!("ground_detection_system::update");
 
     foreach_entity!(world, +C_Collider, +C_Ground_Detection, |entity| {
-        let cld = world.get_component::<C_Collider>(entity).unwrap();
-        let cld = phys_world.get_collider(cld.handle).unwrap();
-        if let Some(collisions) = phys_world.get_collisions(cld.handle) {
-            let touching_ground = collisions.iter().any(|cls_data| {
-                debug_assert!(cls_data.info.normal.is_normalized());
+        let cld_handle = world.get_component::<C_Collider>(entity).unwrap().handle;
+        let touching_ground = if let Some(collisions) = phys_world.get_collisions(cld_handle) {
+             collisions.iter().any(|cls_data| {
+                debug_assert!(cls_data.info.normal.is_normalized(),
+                    "normal is not normalized: magnitude is {}",
+                    cls_data.info.normal.magnitude());
                 if cls_data.info.normal.y > GROUND_Y_COMP_THRESHOLD {
                     return false;
                 }
@@ -30,12 +31,14 @@ pub fn update(world: &mut Ecs_World, phys_world: &Physics_World) {
                 } else {
                     false
                 }
-            });
+            })
+        } else {
+            false
+        };
 
-            let ground_detect = world.get_component_mut::<C_Ground_Detection>(entity).unwrap();
-            ground_detect.just_touched_ground = touching_ground &&  ground_detect.touching_ground != touching_ground;
-            ground_detect.just_left_ground = !touching_ground &&  ground_detect.touching_ground != touching_ground;
-            ground_detect.touching_ground = touching_ground;
-        }
+        let ground_detect = world.get_component_mut::<C_Ground_Detection>(entity).unwrap();
+        ground_detect.just_touched_ground = touching_ground &&  ground_detect.touching_ground != touching_ground;
+        ground_detect.just_left_ground = !touching_ground &&  ground_detect.touching_ground != touching_ground;
+        ground_detect.touching_ground = touching_ground;
     });
 }
