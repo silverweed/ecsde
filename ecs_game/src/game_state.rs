@@ -70,6 +70,7 @@ pub struct Debug_CVars {
     pub trace_overlay_refresh_rate: Cfg_Var<f32>,
 
     pub draw_colliders: Cfg_Var<bool>,
+    pub draw_comp_alloc_colliders: Cfg_Var<bool>,
 
     pub draw_entities: Cfg_Var<bool>,
     pub draw_velocities: Cfg_Var<bool>,
@@ -85,8 +86,6 @@ pub struct Debug_CVars {
     pub draw_prev_frame_t_graph: Cfg_Var<bool>,
 
     pub draw_mouse_rulers: Cfg_Var<bool>,
-
-    pub draw_comp_alloc_colliders: Cfg_Var<bool>,
 
     pub draw_world_chunks: Cfg_Var<bool>,
 

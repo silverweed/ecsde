@@ -1,6 +1,5 @@
 use super::layers::Collision_Layer;
-use super::phys_world::Physics_Body_Handle;
-use super::physics::Collision_With_Entity_Data;
+use super::phys_world::{Collider_Handle, Physics_Body_Handle};
 use inle_ecs::ecs_world::Entity;
 use inle_math::vector::Vec2f;
 use smallvec::SmallVec;
@@ -32,10 +31,10 @@ pub struct Collider {
     pub shape: Collision_Shape,
     pub position: Vec2f, // This should not be set directly: it's computed by collision system
     pub offset: Vec2f,
-    pub colliding_with: SmallVec<[Collision_With_Entity_Data; 2]>,
     pub is_static: bool,
     pub layer: Collision_Layer,
     pub entity: Entity,
+    pub handle: Collider_Handle,
 }
 
 #[derive(Copy, Clone, Debug, Default)]

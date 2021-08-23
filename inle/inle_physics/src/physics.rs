@@ -1,7 +1,7 @@
 // reference: https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331
 
 use super::layers::Collision_Matrix;
-use super::phys_world::{Collider_Handle, Phys_Data, Physics_World};
+use super::phys_world::{Collider_Handle, Collision_Info, Phys_Data, Physics_World};
 use super::spatial::Spatial_Accelerator;
 use crate::collider::{Collider, Collision_Shape};
 use inle_ecs::components::base::C_Spatial2D;
@@ -12,12 +12,12 @@ use inle_math::vector::{sanity_check_v, Vec2f};
 use rayon::prelude::*;
 use std::collections::HashMap;
 
-type Rigidbodies = HashMap<usize, Rigidbody>;
+type Rigidbodies = HashMap<Collider_Handle, Rigidbody>;
 
 pub struct Evt_Collision_Happened;
 
 impl Event for Evt_Collision_Happened {
-    type Args = (Collider, Collider);
+    type Args = (Collider_Handle, Collider_Handle);
 }
 
 #[derive(Default)]
@@ -37,24 +37,9 @@ struct Rigidbody {
 
 #[derive(Debug, Clone)]
 struct Collision_Info_Internal {
-    // Note: cld1 and cld2 contain pointers to colliders. We're saving them as usize
-    // so this struct remains thread-safe (we're not doing pointery stuff from other
-    // threads: just using them as hashmap keys, so it's safe).
-    cld1: usize,
-    cld2: usize,
+    cld1: Collider_Handle,
+    cld2: Collider_Handle,
     info: Collision_Info,
-}
-
-#[derive(Debug, Clone)]
-pub struct Collision_With_Entity_Data {
-    pub entity: Entity,
-    pub info: Collision_Info,
-}
-
-#[derive(Debug, Clone)]
-pub struct Collision_Info {
-    pub penetration: f32,
-    pub normal: Vec2f,
 }
 
 #[cfg(debug_assertions)]
@@ -89,8 +74,8 @@ fn detect_circle_circle(a: &Collider, b: &Collider) -> Option<Collision_Info_Int
     let dist = diff.magnitude();
     if dist > std::f32::EPSILON {
         Some(Collision_Info_Internal {
-            cld1: a as *const _ as usize,
-            cld2: b as *const _ as usize,
+            cld1: a.handle,
+            cld2: b.handle,
             info: Collision_Info {
                 normal: diff / dist,
                 penetration: r - dist,
@@ -99,8 +84,8 @@ fn detect_circle_circle(a: &Collider, b: &Collider) -> Option<Collision_Info_Int
     } else {
         // circles are in the same position
         Some(Collision_Info_Internal {
-            cld1: a as *const _ as usize,
-            cld2: b as *const _ as usize,
+            cld1: a.handle,
+            cld2: b.handle,
             info: Collision_Info {
                 normal: v2!(1., 0.),   // Arbitrary
                 penetration: a_radius, // Arbitrary
@@ -150,8 +135,8 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Interna
             v2!(1., 0.)
         };
         Some(Collision_Info_Internal {
-            cld1: a as *const _ as usize,
-            cld2: b as *const _ as usize,
+            cld1: a.handle,
+            cld2: b.handle,
             info: Collision_Info {
                 normal,
                 penetration: x_overlap,
@@ -164,8 +149,8 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Interna
             v2!(0., 1.)
         };
         Some(Collision_Info_Internal {
-            cld1: a as *const _ as usize,
-            cld2: b as *const _ as usize,
+            cld1: a.handle,
+            cld2: b.handle,
             info: Collision_Info {
                 normal,
                 penetration: y_overlap,
@@ -229,8 +214,8 @@ fn detect_circle_rect(circle: &Collider, rect: &Collider) -> Option<Collision_In
     let d = d.sqrt();
 
     Some(Collision_Info_Internal {
-        cld1: circle as *const _ as usize,
-        cld2: rect as *const _ as usize,
+        cld1: circle.handle,
+        cld2: rect.handle,
         info: Collision_Info {
             normal: if inside { -normal } else { normal },
             penetration: r - d,
@@ -276,10 +261,7 @@ where
     let mut stored = std::collections::HashSet::new();
 
     // @Speed: maybe we should iterate on the chunks? Can we do that in parallel?
-    for a in phys_world.colliders.iter() {
-        if a.is_static {
-            continue;
-        }
+    for a in phys_world.colliders.iter().filter(|cld| !cld.is_static) {
         let a_extent = a.shape.extent();
         let a_shape = collision_shape_type_index(&a.shape);
         let a_part_cb = COLLISION_CB_TABLE[a_shape];
@@ -319,7 +301,12 @@ where
 }
 
 // "roughly" because it doesn't do the positional correction
-fn solve_collision_roughly(objects: &mut Rigidbodies, a_idx: usize, b_idx: usize, normal: Vec2f) {
+fn solve_collision_roughly(
+    objects: &mut Rigidbodies,
+    a_idx: Collider_Handle,
+    b_idx: Collider_Handle,
+    normal: Vec2f,
+) {
     trace!("physics::solve_collisions_roughly");
 
     let a = objects[&a_idx].clone();
@@ -381,8 +368,8 @@ fn solve_collision_roughly(objects: &mut Rigidbodies, a_idx: usize, b_idx: usize
 
 fn positional_correction(
     objects: &mut Rigidbodies,
-    a_idx: usize,
-    b_idx: usize,
+    a_idx: Collider_Handle,
+    b_idx: Collider_Handle,
     normal: Vec2f,
     penetration: f32,
 ) {
@@ -435,6 +422,8 @@ pub fn update_collisions<T_Spatial_Accelerator>(
 ) where
     T_Spatial_Accelerator: Spatial_Accelerator<Collider_Handle>,
 {
+    phys_world.clear_collisions();
+
     let mut objects = prepare_colliders_and_gather_rigidbodies(ecs_world, phys_world);
 
     let infos = detect_collisions(
@@ -445,34 +434,9 @@ pub fn update_collisions<T_Spatial_Accelerator>(
         debug_data,
     );
 
-    // @Audit: this is super unsafe! Transmuting `usizes` back to pointers.
-    // This should work fine, because Colliders should not be moved during the
-    // collision update, so the addresses should stay valid. The scariest point
-    // is whether it is UB or not converting to mut ptrs, but, I mean, why should it, right?
-    //
-    // !!! BY THE WAY !!!
-    // Probably we don't want to parallelize this ever. That would just throw more
-    // potential UB to us.
-    infos.iter().for_each(|info| unsafe {
-        let body2 = (*(info.cld2 as *const Collider)).entity;
-        (*(info.cld1 as *mut Collider))
-            .colliding_with
-            .push(Collision_With_Entity_Data {
-                entity: body2,
-                info: info.info.clone(),
-            });
-        let body1 = (*(info.cld1 as *const Collider)).entity;
-        (*(info.cld2 as *mut Collider))
-            .colliding_with
-            .push(Collision_With_Entity_Data {
-                entity: body1,
-                info: info.info.clone(),
-            });
-
-        evt_register.raise::<Evt_Collision_Happened>((
-            (*(info.cld1 as *const Collider)).clone(),
-            (*(info.cld2 as *const Collider)).clone(),
-        ));
+    infos.iter().for_each(|info| {
+        phys_world.add_collision(info.cld1, info.cld2, &info.info);
+        evt_register.raise::<Evt_Collision_Happened>((info.cld1, info.cld2));
     });
 
     // Note: this can be parallel because we're not actually using pointers; they're just
@@ -527,7 +491,6 @@ fn prepare_colliders_and_gather_rigidbodies(
         spatial.frame_starting_pos = pos;
 
         collider.position = pos + collider.offset;
-        collider.colliding_with.clear();
     }
 
     for body in &phys_world.bodies {
@@ -539,9 +502,7 @@ fn prepare_colliders_and_gather_rigidbodies(
                 sanity_check_v(velocity);
 
                 objects.insert(
-                    // @Audit: converting the memory address to a usize to use as an identifier.
-                    // If this turns out to be a bad idea, consider putting an ID inside the Collider struct.
-                    rb_cld as *const _ as usize,
+                    cld_handle,
                     Rigidbody {
                         entity: rb_cld.entity,
                         position: rb_cld.position,

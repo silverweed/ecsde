@@ -1159,38 +1159,20 @@ fn debug_draw_colliders(
     phys_world: &Physics_World,
 ) {
     use crate::collisions::Game_Collision_Layer;
+    use inle_ecs::ecs_world::Entity;
     use inle_physics::collider::{C_Collider, Collision_Shape};
+    use std::collections::HashSet;
     use std::convert::TryFrom;
 
+    let mut pairs_drawn: HashSet<(Entity, Entity)> = HashSet::default();
+
     foreach_entity!(ecs_world, +C_Collider, +C_Spatial2D, |entity| {
-        for collider in phys_world.get_all_colliders(ecs_world.get_component::<C_Collider>(entity).unwrap().handle) {
+        let collider_comp = ecs_world.get_component::<C_Collider>(entity).unwrap();
+
+        for collider in phys_world.get_all_colliders(collider_comp.handle) {
             // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
             // @Incomplete: scale?
             let mut transform = Transform2D::from_pos_rot_scale(collider.position, rad(0.), v2!(1., 1.));
-
-            let color = if !collider.colliding_with.is_empty() {
-                colors::rgba(255, 0, 0, 100)
-            } else {
-                colors::rgba(255, 255, 0, 100)
-            };
-
-            match collider.shape {
-                Collision_Shape::Rect { width, height } => {
-                    transform.translate(-width * 0.5, -height * 0.5);
-                    debug_painter.add_rect(Vec2f::new(width, height), &transform, color);
-                }
-                Collision_Shape::Circle { radius } => {
-                    transform.translate(-radius * 0.5, -radius * 0.5);
-                    debug_painter.add_circle(
-                        Circle {
-                            center: transform.position(),
-                            radius,
-                        },
-                        color,
-                    );
-                }
-                _ => {}
-            }
 
             debug_painter.add_text(
                 &Game_Collision_Layer::try_from(collider.layer).map_or_else(
@@ -1200,6 +1182,45 @@ fn debug_draw_colliders(
                 transform.position(),
                 8,
                 colors::BLACK);
+
+            let mut cld_color = colors::rgba(255, 255, 0, 100);
+
+            if let Some(colliding_with) = phys_world.get_collisions(collider.handle) {
+                if !colliding_with.is_empty() {
+                    cld_color = colors::rgba(255, 0, 0, 100);
+                }
+
+                for cls_data in colliding_with {
+                    //if !pairs_drawn.contains(&(cls_info.entity, entity)) {
+                        let oth_cld = phys_world.get_collider(cls_data.other_collider).unwrap();
+                        debug_painter.add_arrow(Arrow {
+                            center: collider.position,
+                            direction: oth_cld.position - collider.position,
+                            thickness: 1.,
+                            arrow_size: 10.,
+                        }, colors::GREEN);
+                        pairs_drawn.insert((entity, oth_cld.entity));
+                    //}
+                }
+            }
+
+            match collider.shape {
+                Collision_Shape::Rect { width, height } => {
+                    transform.translate(-width * 0.5, -height * 0.5);
+                    debug_painter.add_rect(Vec2f::new(width, height), &transform, cld_color);
+                }
+                Collision_Shape::Circle { radius } => {
+                    transform.translate(-radius * 0.5, -radius * 0.5);
+                    debug_painter.add_circle(
+                        Circle {
+                            center: transform.position(),
+                            radius,
+                        },
+                        cld_color,
+                    );
+                }
+                _ => {}
+            }
         }
     });
 }

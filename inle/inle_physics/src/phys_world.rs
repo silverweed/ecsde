@@ -1,6 +1,8 @@
 use super::collider::Collider;
 use inle_alloc::gen_alloc::{Generational_Allocator, Generational_Index};
+use inle_math::vector::Vec2f;
 use smallvec::SmallVec;
+use std::collections::HashMap;
 
 pub type Collider_Handle = Generational_Index;
 pub type Physics_Body_Handle = Generational_Index;
@@ -52,6 +54,18 @@ impl Iterator for Physics_Body_Cld_Iter<'_> {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Collision_Data {
+    pub other_collider: Collider_Handle,
+    pub info: Collision_Info,
+}
+
+#[derive(Debug, Clone)]
+pub struct Collision_Info {
+    pub penetration: f32,
+    pub normal: Vec2f,
+}
+
 pub struct Physics_World {
     cld_alloc: Generational_Allocator,
     /// Indexed by a Collider_Handle's index. Contains the index into `colliders`.
@@ -63,6 +77,9 @@ pub struct Physics_World {
     bodies_alloc: Generational_Allocator,
     /// Indexed by a Physics_Body_Handle's index.
     pub(super) bodies: Vec<Physics_Body>,
+
+    /// Contains all collisions for this frame.
+    collisions: HashMap<Collider_Handle, SmallVec<[Collision_Data; 4]>>,
 }
 
 impl Physics_World {
@@ -73,9 +90,11 @@ impl Physics_World {
             colliders: vec![],
             bodies_alloc: Generational_Allocator::new(INITIAL_SIZE),
             bodies: vec![],
+            collisions: HashMap::default(),
         }
     }
 
+    #[inline]
     pub fn is_valid_collider_handle(&self, handle: Collider_Handle) -> bool {
         self.cld_alloc.is_valid(handle)
     }
@@ -104,6 +123,7 @@ impl Physics_World {
         handle
     }
 
+    #[inline]
     pub fn get_physics_body(&self, handle: Physics_Body_Handle) -> Option<&Physics_Body> {
         if !self.bodies_alloc.is_valid(handle) {
             return None;
@@ -119,6 +139,7 @@ impl Physics_World {
         Some(&self.bodies[handle.index as usize])
     }
 
+    #[inline]
     pub fn get_physics_body_mut(
         &mut self,
         handle: Physics_Body_Handle,
@@ -137,10 +158,12 @@ impl Physics_World {
         Some(&mut self.bodies[handle.index as usize])
     }
 
-    pub fn add_collider(&mut self, cld: Collider) -> Collider_Handle {
+    #[inline]
+    pub fn add_collider(&mut self, mut cld: Collider) -> Collider_Handle {
         let handle = self.cld_alloc.allocate();
         debug_assert!((handle.index as usize) < std::u32::MAX as usize);
         let index = self.colliders.len();
+        cld.handle = handle;
         self.colliders.push(cld);
         self.cld_index_table.push(index);
         handle
@@ -174,6 +197,7 @@ impl Physics_World {
         self.cld_alloc.deallocate(handle);
     }
 
+    #[inline]
     pub fn get_collider(&self, handle: Collider_Handle) -> Option<&Collider> {
         if !self.cld_alloc.is_valid(handle) {
             return None;
@@ -191,6 +215,7 @@ impl Physics_World {
         Some(&self.colliders[index])
     }
 
+    #[inline]
     pub fn get_collider_mut(&mut self, handle: Collider_Handle) -> Option<&mut Collider> {
         if !self.cld_alloc.is_valid(handle) {
             return None;
@@ -208,6 +233,7 @@ impl Physics_World {
         Some(&mut self.colliders[index])
     }
 
+    #[inline]
     pub fn get_all_colliders(
         &self,
         handle: Physics_Body_Handle,
@@ -230,6 +256,7 @@ impl Physics_World {
         })
     }
 
+    #[inline]
     pub fn get_all_colliders_with_handles(
         &self,
         handle: Physics_Body_Handle,
@@ -252,6 +279,7 @@ impl Physics_World {
         })
     }
 
+    #[inline]
     pub fn get_first_rigidbody_collider(&self, handle: Physics_Body_Handle) -> Option<&Collider> {
         self.get_physics_body(handle).and_then(|body| {
             body.rigidbody_colliders
@@ -260,6 +288,7 @@ impl Physics_World {
         })
     }
 
+    #[inline]
     pub fn get_rigidbody_colliders(
         &self,
         handle: Physics_Body_Handle,
@@ -276,6 +305,37 @@ impl Physics_World {
                 None
             }
         })
+    }
+
+    pub(super) fn clear_collisions(&mut self) {
+        self.collisions.clear();
+    }
+
+    pub(super) fn add_collision(
+        &mut self,
+        cld_a: Collider_Handle,
+        cld_b: Collider_Handle,
+        info: &Collision_Info,
+    ) {
+        self.collisions
+            .entry(cld_a)
+            .or_insert_with(SmallVec::default)
+            .push(Collision_Data {
+                other_collider: cld_b,
+                info: info.clone(),
+            });
+        self.collisions
+            .entry(cld_b)
+            .or_insert_with(SmallVec::default)
+            .push(Collision_Data {
+                other_collider: cld_a,
+                info: info.clone(),
+            });
+    }
+
+    #[inline]
+    pub fn get_collisions(&self, cld: Collider_Handle) -> Option<&[Collision_Data]> {
+        self.collisions.get(&cld).map(|v| v.as_slice())
     }
 }
 
