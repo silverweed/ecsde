@@ -10,10 +10,11 @@ pub struct In_Game_State {
 impl Game_State for In_Game_State {
     fn on_start(&mut self, args: &mut Game_State_Args) {
         args.gameplay_system.load_test_level(
-            &mut args.window,
-            &mut args.engine_state,
-            &mut args.game_resources,
-            &mut args.level_batches,
+            args.window,
+            args.engine_state,
+            args.game_resources,
+            args.level_batches,
+            args.cvars,
         );
     }
 

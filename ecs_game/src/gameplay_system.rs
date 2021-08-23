@@ -105,9 +105,11 @@ impl Gameplay_System {
         engine_state: &mut Engine_State,
         game_res: &mut Game_Resources,
         level_batches: &mut HashMap<String_Id, Batches>,
+        cvars: &crate::game_state::CVars,
     ) {
         let level_id = sid!("test");
-        let mut level = load_system::level_load_sync(level_id, engine_state, game_res, self.cfg);
+        let mut level =
+            load_system::level_load_sync(level_id, engine_state, game_res, self.cfg, cvars);
 
         level.chunks.init(engine_state);
 

@@ -45,11 +45,19 @@ pub struct Game_State<'a> {
 pub struct CVars {
     pub gameplay_update_tick_ms: Cfg_Var<f32>,
     pub gameplay_max_time_budget_ms: Cfg_Var<f32>,
+
     pub vsync: Cfg_Var<bool>,
+
     pub clear_color: Cfg_Var<u32>,
+
     pub enable_shaders: Cfg_Var<bool>,
     pub enable_shadows: Cfg_Var<bool>,
     pub enable_particles: Cfg_Var<bool>,
+
+    // @Refactoring: these should be per-level, but for now we only
+    // have 1 level so we keep them global for convenience
+    pub ambient_intensity: Cfg_Var<f32>,
+    pub ambient_color: Cfg_Var<u32>,
 }
 
 #[cfg(debug_assertions)]
@@ -138,6 +146,7 @@ pub(super) fn internal_game_init<'a>(
             &mut *game_resources,
             &mut game_state.level_batches,
             &parsed_cmdline_args,
+            &game_state.cvars,
         );
 
         #[cfg(debug_assertions)]
@@ -302,6 +311,8 @@ fn create_cvars(cfg: &inle_cfg::Config) -> CVars {
     let enable_shaders = Cfg_Var::new("engine/rendering/enable_shaders", cfg);
     let enable_shadows = Cfg_Var::new("engine/rendering/enable_shadows", cfg);
     let enable_particles = Cfg_Var::new("engine/rendering/enable_particles", cfg);
+    let ambient_intensity = Cfg_Var::new("game/world/lighting/ambient_intensity", cfg);
+    let ambient_color = Cfg_Var::new("game/world/lighting/ambient_color", cfg);
 
     CVars {
         gameplay_update_tick_ms,
@@ -311,6 +322,8 @@ fn create_cvars(cfg: &inle_cfg::Config) -> CVars {
         enable_shaders,
         enable_shadows,
         enable_particles,
+        ambient_intensity,
+        ambient_color,
     }
 }
 
@@ -384,6 +397,7 @@ fn init_states(
     game_resources: &mut Game_Resources,
     level_batches: &mut Level_Batches,
     cmdline_args: &cmdline::Cmdline_Args,
+    cvars: &CVars,
 ) {
     let mut args = states::state::Game_State_Args {
         engine_state,
@@ -391,6 +405,7 @@ fn init_states(
         window,
         game_resources,
         level_batches,
+        cvars,
     };
     let base_state = Box::new(states::persistent::game_base_state::Game_Base_State::new());
     state_mgr.add_persistent_state(base_state, &mut args);
@@ -405,6 +420,7 @@ fn init_states(
             window,
             game_resources,
             level_batches,
+            cvars,
         };
         state_mgr.add_persistent_state(debug_base_state, &mut args);
     }
@@ -415,6 +431,7 @@ fn init_states(
         window,
         game_resources,
         level_batches,
+        cvars,
     };
     if cmdline_args.start_from_menu {
         let menu_state = Box::new(states::main_menu_state::Main_Menu_State::default());

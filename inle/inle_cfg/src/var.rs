@@ -84,31 +84,23 @@ where
 
 impl<T> Copy for Cfg_Var<T> where T: Copy + Default + Into<Cfg_Value> {}
 
+#[cfg(debug_assertions)]
 impl<T> Cfg_Var<T>
 where
     T: Default + Into<Cfg_Value> + TryFrom<Cfg_Value>,
 {
-    #[cfg(debug_assertions)]
     pub fn new(path: &str, _cfg: &Config) -> Self {
         Self {
             content: Cfg_Var_Content::Hot_Reloadable(String_Id::from(path)),
         }
     }
 
-    #[cfg(not(debug_assertions))]
-    pub fn new(path: &str, cfg: &Config) -> Self {
-        let id = String_Id::from(path);
-        Self(read_cfg(id, cfg))
-    }
-
-    #[cfg(debug_assertions)]
     fn new_from_sid(id: String_Id) -> Self {
         Self {
             content: Cfg_Var_Content::Hot_Reloadable(id),
         }
     }
 
-    #[cfg(debug_assertions)]
     pub fn new_from_val(value: T) -> Self
     where
         T: Debug,
@@ -118,7 +110,24 @@ where
         }
     }
 
-    #[cfg(not(debug_assertions))]
+    pub fn has_changed(&self, cfg: &Config) -> bool {
+        match self.content {
+            Cfg_Var_Content::Hot_Reloadable(id) => cfg.has_changed(id),
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[cfg(not(debug_assertions))]
+impl<T> Cfg_Var<T>
+where
+    T: Default + Into<Cfg_Value> + TryFrom<Cfg_Value>,
+{
+    pub fn new(path: &str, cfg: &Config) -> Self {
+        let id = String_Id::from(path);
+        Self(read_cfg(id, cfg))
+    }
+
     pub fn new_from_val(value: T) -> Self {
         Self(value)
     }

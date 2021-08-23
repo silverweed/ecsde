@@ -1,7 +1,7 @@
 use super::parsing::Raw_Config;
 use super::value::Cfg_Value;
 use inle_common::stringid::String_Id;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::From;
 use std::path::Path;
 
@@ -13,6 +13,9 @@ use {
 
 pub struct Config {
     cfg_var_table: HashMap<String_Id, Cfg_Value>,
+
+    #[cfg(debug_assertions)]
+    just_changed: HashSet<String_Id>,
 
     #[cfg(debug_assertions)]
     change_rx: Receiver<Cfg_Entry>,
@@ -56,6 +59,8 @@ impl Config {
         Config {
             cfg_var_table,
             #[cfg(debug_assertions)]
+            just_changed: HashSet::default(),
+            #[cfg(debug_assertions)]
             change_rx,
             #[cfg(debug_assertions)]
             change_tx: Some(change_tx),
@@ -72,6 +77,8 @@ impl Config {
     }
 
     pub fn update(&mut self) {
+        self.just_changed.clear();
+
         let changes = self.change_rx.try_iter().collect::<Vec<Cfg_Entry>>();
         for change in changes {
             self.change_entry_value(&change.key, change.value);
@@ -84,18 +91,23 @@ impl Config {
 
     pub fn write_cfg(&mut self, id: String_Id, val: Cfg_Value) {
         self.cfg_var_table.insert(id, val);
+        self.just_changed.insert(id);
     }
 
     fn change_entry_value(&mut self, var_path: &str, value: Cfg_Value) {
         let id = String_Id::from(var_path);
         // @Incomplete: maybe give a warning if type changes?
-        self.cfg_var_table.insert(id, value);
+        self.write_cfg(id, value);
     }
 
     pub fn get_all_pairs(&self) -> impl Iterator<Item = (String, Cfg_Value)> + '_ {
         self.cfg_var_table
             .iter()
             .map(|(key, val)| (key.to_string(), val.clone()))
+    }
+
+    pub fn has_changed(&self, id: String_Id) -> bool {
+        self.just_changed.contains(&id)
     }
 }
 

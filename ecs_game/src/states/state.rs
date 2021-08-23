@@ -19,6 +19,7 @@ pub struct Game_State_Args<'e, 'r, 'g, 'w, 'r1, 'r2> {
     pub window: &'w mut Render_Window_Handle,
     pub game_resources: &'r1 mut Game_Resources<'r2>,
     pub level_batches: &'g mut Level_Batches,
+    pub cvars: &'g crate::game_state::CVars,
 }
 
 pub trait Game_State {

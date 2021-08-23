@@ -250,6 +250,7 @@ where
                 window: &mut game_state.window,
                 game_resources,
                 level_batches: &mut game_state.level_batches,
+                cvars: &game_state.cvars,
             };
             game_state.state_mgr.handle_actions(&actions, &mut args);
             if game_state.engine_state.should_close {
@@ -312,6 +313,7 @@ where
                     window: &mut game_state.window,
                     game_resources,
                     level_batches: &mut game_state.level_batches,
+                    cvars: &game_state.cvars,
                 };
                 game_state.state_mgr.update(&mut args, &dt, &real_dt);
             }
@@ -478,6 +480,31 @@ fn update_graphics<'a, 's, 'r>(
     }
 
     let cfg = &game_state.engine_state.config;
+
+    #[cfg(debug_assertions)]
+    {
+        use inle_gfx::light::*;
+
+        if game_state.cvars.ambient_intensity.has_changed(cfg)
+            || game_state.cvars.ambient_color.has_changed(cfg)
+        {
+            let new_amb_intensity = game_state.cvars.ambient_intensity.read(cfg);
+            let new_amb_color =
+                inle_common::colors::color_from_hex(game_state.cvars.ambient_color.read(cfg));
+            game_state
+                .gameplay_system
+                .levels
+                .foreach_active_level(|level| {
+                    level
+                        .lights
+                        .queue_command(Light_Command::Change_Ambient_Light(Ambient_Light {
+                            intensity: new_amb_intensity,
+                            color: new_amb_color,
+                        }));
+                });
+        }
+    }
+
     let render_cfg = render_system::Render_System_Config {
         clear_color: colors::color_from_hex(game_state.cvars.clear_color.read(cfg) as u32),
         #[cfg(debug_assertions)]

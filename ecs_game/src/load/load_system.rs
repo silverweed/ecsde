@@ -36,6 +36,7 @@ pub fn level_load_sync(
     engine_state: &mut Engine_State,
     game_resources: &mut Game_Resources,
     gs_cfg: Gameplay_System_Config,
+    cvars: &crate::game_state::CVars,
 ) -> Level {
     let mut level = Level {
         id: level_id,
@@ -58,7 +59,7 @@ pub fn level_load_sync(
         &mut level,
         gs_cfg,
     );
-    init_demo_lights(&mut level.lights, &engine_state.config);
+    init_demo_lights(&mut level.lights, &engine_state.config, cvars);
     fill_world_chunks(&mut level.chunks, &mut level.world, &level.phys_world);
     lok!(
         "Loaded level {}. N. entities = {}, n. cameras = {}",
@@ -92,10 +93,11 @@ fn register_all_components(world: &mut Ecs_World) {
 }
 
 // @Temporary
-fn init_demo_lights(lights: &mut Lights, cfg: &inle_cfg::Config) {
-    let amb_intensity = Cfg_Var::<f32>::new("game/world/lighting/ambient_intensity", cfg).read(cfg);
+fn init_demo_lights(lights: &mut Lights, cfg: &inle_cfg::Config, cvars: &crate::game_state::CVars) {
+    let amb_intensity = cvars.ambient_intensity.read(cfg);
+    let amb_color = colors::color_from_hex(cvars.ambient_color.read(cfg));
     let ambient_light = Ambient_Light {
-        color: colors::rgb(200, 140, 180),
+        color: amb_color,
         intensity: amb_intensity,
     };
     lights.queue_command(Light_Command::Change_Ambient_Light(ambient_light));
