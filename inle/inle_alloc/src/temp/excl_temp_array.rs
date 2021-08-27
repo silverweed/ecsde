@@ -122,8 +122,9 @@ impl<T> Exclusive_Temp_Array<'_, T> {
         }
         if self.n_elems > 0 {
             let elem = unsafe {
-                let ptr = self.ptr.add(self.n_elems);
-                ptr.read()
+                let ptr = self.ptr.add(self.n_elems - 1);
+                let elem = ptr.read();
+                elem
             };
             self.n_elems -= 1;
             Some(elem)
@@ -305,6 +306,7 @@ unsafe impl<T> Send for Read_Only_Temp_Array<T> {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::AtomicI32;
 
     #[test]
     fn test_excl_temp_array() {
@@ -373,5 +375,77 @@ mod tests {
         assert_eq!(roary[1], 2);
         assert_eq!(tmpary[0], 3);
         assert_eq!(tmpary[1], 4);
+    }
+
+    struct Drop_Counting<'a> {
+        drop_count: &'a AtomicI32,
+    }
+
+    impl Drop for Drop_Counting<'_> {
+        fn drop(&mut self) {
+            self.drop_count
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+
+    #[test]
+    fn excl_temp_array_drop() {
+        let mut allocator = Temp_Allocator::with_capacity(100);
+        let mut tmpary = excl_temp_array(&mut allocator);
+        let drop_count = AtomicI32::new(0);
+
+        tmpary.push(Drop_Counting {
+            drop_count: &drop_count,
+        });
+        tmpary.push(Drop_Counting {
+            drop_count: &drop_count,
+        });
+        tmpary.push(Drop_Counting {
+            drop_count: &drop_count,
+        });
+        tmpary.pop();
+        assert_eq!(drop_count.load(std::sync::atomic::Ordering::SeqCst), 1);
+
+        drop(tmpary);
+        assert_eq!(drop_count.load(std::sync::atomic::Ordering::SeqCst), 3);
+    }
+
+    #[test]
+    fn read_only_excl_temp_array_drop() {
+        let mut allocator = Temp_Allocator::with_capacity(100);
+        let drop_count = AtomicI32::new(0);
+
+        let mut tmpary = excl_temp_array(&mut allocator);
+        tmpary.push(Drop_Counting {
+            drop_count: &drop_count,
+        });
+        tmpary.push(Drop_Counting {
+            drop_count: &drop_count,
+        });
+        tmpary.push(Drop_Counting {
+            drop_count: &drop_count,
+        });
+        tmpary.pop();
+
+        let rotmpary = unsafe { tmpary.into_read_only() };
+
+        assert_eq!(rotmpary.len(), 2);
+
+        let mut tmpary2 = excl_temp_array(&mut allocator);
+        tmpary2.push(Drop_Counting {
+            drop_count: &drop_count,
+        });
+        tmpary2.push(Drop_Counting {
+            drop_count: &drop_count,
+        });
+
+        assert_eq!(drop_count.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert_eq!(rotmpary.len(), 2);
+
+        drop(rotmpary);
+        assert_eq!(drop_count.load(std::sync::atomic::Ordering::SeqCst), 3);
+
+        drop(tmpary2);
+        assert_eq!(drop_count.load(std::sync::atomic::Ordering::SeqCst), 5);
     }
 }
