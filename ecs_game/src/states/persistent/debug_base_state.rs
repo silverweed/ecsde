@@ -201,7 +201,8 @@ impl Persistent_Game_State for Debug_Base_State {
                     .unwrap();
                     engine_state
                         .config
-                        .write_cfg(sid!("game/camera/on_player"), Cfg_Value::from(!cur));
+                        .write_cfg(sid!("game/camera/on_player"), Cfg_Value::from(!cur))
+                        .unwrap();
                 }
                 _ => {}
             }

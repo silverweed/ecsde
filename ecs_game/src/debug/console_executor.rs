@@ -112,8 +112,9 @@ fn execute_command(
             linfo!("Setting {} to {:?}", name, value);
             engine_state
                 .config
-                .write_cfg(String_Id::from(name.as_str()), value);
-            None
+                .write_cfg(String_Id::from(name.as_str()), value)
+                .err()
+                .map(|msg| (msg, colors::RED))
         }
         Console_Cmd::Toggle_Cfg_Var { name } => {
             linfo!("Toggling {}", name);
@@ -125,7 +126,8 @@ fn execute_command(
             if let Cfg_Value::Bool(val) = val {
                 engine_state
                     .config
-                    .write_cfg(String_Id::from(name.as_str()), Cfg_Value::Bool(!val));
+                    .write_cfg(String_Id::from(name.as_str()), Cfg_Value::Bool(!val))
+                    .unwrap();
                 None
             } else {
                 Some((format!("Cfg_Var {} is not a bool!", name), colors::RED))

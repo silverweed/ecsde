@@ -1,7 +1,7 @@
 use super::parsing::Raw_Config;
 use super::value::Cfg_Value;
 use inle_common::stringid::String_Id;
-use std::collections::{HashMap, HashSet};
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 use std::convert::From;
 use std::path::Path;
 
@@ -89,15 +89,28 @@ impl Config {
         self.cfg_var_table.get(&id)
     }
 
-    pub fn write_cfg(&mut self, id: String_Id, val: Cfg_Value) {
-        self.cfg_var_table.insert(id, val);
+    pub fn write_cfg(&mut self, id: String_Id, val: Cfg_Value) -> Result<(), String> {
+        match self.cfg_var_table.entry(id) {
+            Entry::Vacant(v) => {
+                v.insert(val);
+            }
+            Entry::Occupied(mut o) => {
+                if std::mem::discriminant(&val) == std::mem::discriminant(o.get()) {
+                    o.insert(val);
+                } else {
+                    return Err(format!("Cfg_Var {:?} was not updated because its current value ({:?}) has a type different from the new one ({:?})", id, o.get(), val));
+                }
+            }
+        }
         self.just_changed.insert(id);
+        Ok(())
     }
 
     fn change_entry_value(&mut self, var_path: &str, value: Cfg_Value) {
         let id = String_Id::from(var_path);
-        // @Incomplete: maybe give a warning if type changes?
-        self.write_cfg(id, value);
+        if let Err(msg) = self.write_cfg(id, value) {
+            lwarn!("{}", msg);
+        }
     }
 
     pub fn get_all_pairs(&self) -> impl Iterator<Item = (String, Cfg_Value)> + '_ {
