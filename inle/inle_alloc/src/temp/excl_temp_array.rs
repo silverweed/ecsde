@@ -384,7 +384,7 @@ mod tests {
     impl Drop for Drop_Counting<'_> {
         fn drop(&mut self) {
             self.drop_count
-                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         }
     }
 
@@ -404,10 +404,10 @@ mod tests {
             drop_count: &drop_count,
         });
         tmpary.pop();
-        assert_eq!(drop_count.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert_eq!(drop_count.load(std::sync::atomic::Ordering::Relaxed), 1);
 
         drop(tmpary);
-        assert_eq!(drop_count.load(std::sync::atomic::Ordering::SeqCst), 3);
+        assert_eq!(drop_count.load(std::sync::atomic::Ordering::Relaxed), 3);
     }
 
     #[test]
@@ -439,13 +439,13 @@ mod tests {
             drop_count: &drop_count,
         });
 
-        assert_eq!(drop_count.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert_eq!(drop_count.load(std::sync::atomic::Ordering::Relaxed), 1);
         assert_eq!(rotmpary.len(), 2);
 
         drop(rotmpary);
-        assert_eq!(drop_count.load(std::sync::atomic::Ordering::SeqCst), 3);
+        assert_eq!(drop_count.load(std::sync::atomic::Ordering::Relaxed), 3);
 
         drop(tmpary2);
-        assert_eq!(drop_count.load(std::sync::atomic::Ordering::SeqCst), 5);
+        assert_eq!(drop_count.load(std::sync::atomic::Ordering::Relaxed), 5);
     }
 }
