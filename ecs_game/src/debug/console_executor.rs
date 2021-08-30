@@ -66,7 +66,7 @@ fn parse_cmd(cmdline: &str) -> Result<Console_Cmd, Console_Error> {
                 name: (*name).to_string(),
             }),
             ["fps"] => Ok(Console_Cmd::Toggle_Cfg_Var {
-                name: String::from("engine/debug/graphs/fps"),
+                name: String::from("debug/graphs/fps"),
             }),
             ["trace", fn_name] => Ok(Console_Cmd::Trace_Fn {
                 fn_name: (*fn_name).to_string(),
@@ -75,10 +75,10 @@ fn parse_cmd(cmdline: &str) -> Result<Console_Cmd, Console_Error> {
                 fn_name: String::default(),
             }),
             ["log"] => Ok(Console_Cmd::Toggle_Cfg_Var {
-                name: String::from("engine/debug/log_window/display"),
+                name: String::from("debug/log_window/display"),
             }),
             ["hud"] => Ok(Console_Cmd::Toggle_Cfg_Var {
-                name: String::from("engine/debug/overlay/display"),
+                name: String::from("debug/overlay/display"),
             }),
             _ => Err(Console_Error::new(format!("Unknown command: {}", cmdline))),
         }

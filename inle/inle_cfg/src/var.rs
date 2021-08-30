@@ -90,6 +90,9 @@ where
     T: Default + Into<Cfg_Value> + TryFrom<Cfg_Value>,
 {
     pub fn new(path: &str, _cfg: &Config) -> Self {
+        if path.starts_with('/') {
+            fatal!("Cfg_Var path passed to Cfg_Var::new should not start with '/': please trim it!\nOffender: {}", path);
+        }
         Self {
             content: Cfg_Var_Content::Hot_Reloadable(String_Id::from(path)),
         }

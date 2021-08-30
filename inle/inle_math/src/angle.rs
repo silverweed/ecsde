@@ -8,12 +8,14 @@ pub const PI: f32 = std::f32::consts::PI;
 pub const TAU: f32 = 2.0 * PI;
 
 impl PartialEq for Angle {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.as_rad_0tau() == other.as_rad_0tau()
     }
 }
 
 impl PartialOrd for Angle {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.as_rad_0tau().partial_cmp(&other.as_rad_0tau())
     }
@@ -21,6 +23,8 @@ impl PartialOrd for Angle {
 
 impl Neg for Angle {
     type Output = Self;
+
+    #[inline]
     fn neg(self) -> Self::Output {
         Angle(-self.0)
     }
@@ -28,6 +32,8 @@ impl Neg for Angle {
 
 impl Add for Angle {
     type Output = Self;
+
+    #[inline]
     fn add(self, other: Self) -> Self::Output {
         Angle(self.0 + other.0)
     }
@@ -35,6 +41,8 @@ impl Add for Angle {
 
 impl Sub for Angle {
     type Output = Self;
+
+    #[inline]
     fn sub(self, other: Self) -> Self::Output {
         Angle(self.0 - other.0)
     }
@@ -42,6 +50,8 @@ impl Sub for Angle {
 
 impl Mul<f32> for Angle {
     type Output = Self;
+
+    #[inline]
     fn mul(self, other: f32) -> Self::Output {
         Angle(self.0 * other)
     }
@@ -49,6 +59,8 @@ impl Mul<f32> for Angle {
 
 impl Mul<Angle> for f32 {
     type Output = Angle;
+
+    #[inline]
     fn mul(self, other: Angle) -> Self::Output {
         Angle(self * other.0)
     }
@@ -56,6 +68,8 @@ impl Mul<Angle> for f32 {
 
 impl Div<f32> for Angle {
     type Output = Self;
+
+    #[inline]
     fn div(self, other: f32) -> Self::Output {
         Angle(self.0 / other)
     }
@@ -63,30 +77,36 @@ impl Div<f32> for Angle {
 
 impl Div for Angle {
     type Output = f32;
+
+    #[inline]
     fn div(self, other: Angle) -> f32 {
         self.0 / other.0
     }
 }
 
 impl AddAssign for Angle {
+    #[inline]
     fn add_assign(&mut self, other: Self) {
         *self = Angle(self.0 + other.0)
     }
 }
 
 impl SubAssign for Angle {
+    #[inline]
     fn sub_assign(&mut self, other: Self) {
         *self = Angle(self.0 - other.0)
     }
 }
 
 impl MulAssign<f32> for Angle {
+    #[inline]
     fn mul_assign(&mut self, other: f32) {
         *self = Angle(self.0 * other)
     }
 }
 
 impl DivAssign<f32> for Angle {
+    #[inline]
     fn div_assign(&mut self, other: f32) {
         *self = Angle(self.0 / other)
     }
@@ -98,36 +118,43 @@ impl fmt::Debug for Angle {
     }
 }
 
+#[inline]
 pub const fn rad(r: f32) -> Angle {
     Angle(r)
 }
 
 // @WaitForStable: make this const as soon as stabilization lands
+#[inline]
 pub fn deg(d: f32) -> Angle {
     Angle(deg2rad(d))
 }
 
 // @WaitForStable: make this const as soon as stabilization lands
+#[inline]
 pub fn deg2rad(deg: f32) -> f32 {
     deg * 0.0174_5329_2
 }
 
 // @WaitForStable: make this const as soon as stabilization lands
+#[inline]
 pub fn rad2deg(rad: f32) -> f32 {
     rad * 57.2957_8
 }
 
 impl Angle {
+    #[inline]
     pub const fn as_rad(self) -> f32 {
         self.0
     }
 
     // @WaitForStable: make this const as soon as stabilization lands
+    #[inline]
     pub fn as_deg(self) -> f32 {
         rad2deg(self.0)
     }
 
     /// Returns the angle between [-PI, PI)
+    #[inline]
     pub fn as_rad_negpipi(self) -> f32 {
         let mut a = (self.0 + PI) % TAU;
         if a < 0. {
@@ -137,6 +164,7 @@ impl Angle {
     }
 
     /// Returns the angle between [0-TAU)
+    #[inline]
     pub fn as_rad_0tau(self) -> f32 {
         let mut a = self.0 % TAU;
         if a < 0. {
@@ -146,11 +174,13 @@ impl Angle {
     }
 
     /// Returns the angle between [-180, 180)
+    #[inline]
     pub fn as_deg_neg180180(self) -> f32 {
         rad2deg(self.as_rad_negpipi())
     }
 
     /// Returns the angle between [0-360)
+    #[inline]
     pub fn as_deg_0360(self) -> f32 {
         rad2deg(self.as_rad_0tau())
     }

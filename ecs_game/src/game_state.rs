@@ -285,6 +285,7 @@ fn create_game_state<'a>(
         }
     }
 
+    let game_debug_systems = Game_Debug_Systems::new(&engine_state.config);
     Ok((
         Box::new(Game_State {
             window,
@@ -301,7 +302,7 @@ fn create_game_state<'a>(
             #[cfg(debug_assertions)]
             debug_cvars,
             #[cfg(debug_assertions)]
-            game_debug_systems: Game_Debug_Systems::default(),
+            game_debug_systems,
             #[cfg(debug_assertions)]
             fps_debug: inle_debug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(2)),
             #[cfg(debug_assertions)]
@@ -337,28 +338,26 @@ fn create_cvars(cfg: &inle_cfg::Config) -> CVars {
 
 #[cfg(debug_assertions)]
 fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
-    let render_debug_visualization =
-        Cfg_Var::new("engine/debug/rendering/debug_visualization", cfg);
-    let draw_lights = Cfg_Var::new("engine/debug/rendering/draw_lights", cfg);
+    let render_debug_visualization = Cfg_Var::new("debug/rendering/debug_visualization", cfg);
+    let draw_lights = Cfg_Var::new("debug/rendering/draw_lights", cfg);
     let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
     let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
-    let draw_entities = Cfg_Var::new("engine/debug/entities/draw_entities", cfg);
-    let draw_velocities = Cfg_Var::new("engine/debug/entities/draw_velocities", cfg);
-    let draw_component_lists = Cfg_Var::new("engine/debug/entities/draw_component_lists", cfg);
-    let draw_entity_prev_frame_ghost =
-        Cfg_Var::new("engine/debug/entities/draw_prev_frame_ghost", cfg);
-    let draw_entity_pos_history = Cfg_Var::new("engine/debug/entities/draw_pos_history", cfg);
-    let draw_colliders = Cfg_Var::new("engine/debug/collisions/draw_colliders", cfg);
-    let draw_debug_grid = Cfg_Var::new("engine/debug/rendering/grid/draw_grid", cfg);
-    let debug_grid_square_size = Cfg_Var::new("engine/debug/rendering/grid/square_size", cfg);
-    let debug_grid_opacity = Cfg_Var::new("engine/debug/rendering/grid/opacity", cfg);
-    let debug_grid_font_size = Cfg_Var::new("engine/debug/rendering/grid/font_size", cfg);
-    let draw_fps_graph = Cfg_Var::new("engine/debug/graphs/fps", cfg);
-    let draw_prev_frame_t_graph = Cfg_Var::new("engine/debug/graphs/prev_frame_t", cfg);
-    let draw_mouse_rulers = Cfg_Var::new("engine/debug/window/draw_mouse_rulers", cfg);
-    let draw_comp_alloc_colliders = Cfg_Var::new("engine/debug/ecs/comp_alloc/colliders", cfg);
-    let draw_world_chunks = Cfg_Var::new("engine/debug/world/draw_chunks", cfg);
-    let draw_buf_alloc = Cfg_Var::new("engine/debug/rendering/draw_buf_alloc", cfg);
+    let draw_entities = Cfg_Var::new("debug/entities/draw_entities", cfg);
+    let draw_velocities = Cfg_Var::new("debug/entities/draw_velocities", cfg);
+    let draw_component_lists = Cfg_Var::new("debug/entities/draw_component_lists", cfg);
+    let draw_entity_prev_frame_ghost = Cfg_Var::new("debug/entities/draw_prev_frame_ghost", cfg);
+    let draw_entity_pos_history = Cfg_Var::new("debug/entities/pos_history/draw", cfg);
+    let draw_colliders = Cfg_Var::new("debug/collisions/draw_colliders", cfg);
+    let draw_debug_grid = Cfg_Var::new("debug/rendering/grid/draw_grid", cfg);
+    let debug_grid_square_size = Cfg_Var::new("debug/rendering/grid/square_size", cfg);
+    let debug_grid_opacity = Cfg_Var::new("debug/rendering/grid/opacity", cfg);
+    let debug_grid_font_size = Cfg_Var::new("debug/rendering/grid/font_size", cfg);
+    let draw_fps_graph = Cfg_Var::new("debug/graphs/fps", cfg);
+    let draw_prev_frame_t_graph = Cfg_Var::new("debug/graphs/prev_frame_t", cfg);
+    let draw_mouse_rulers = Cfg_Var::new("debug/window/draw_mouse_rulers", cfg);
+    let draw_comp_alloc_colliders = Cfg_Var::new("debug/ecs/comp_alloc/colliders", cfg);
+    let draw_world_chunks = Cfg_Var::new("debug/world/draw_chunks", cfg);
+    let draw_buf_alloc = Cfg_Var::new("debug/rendering/draw_buf_alloc", cfg);
     let display_log_window = Cfg_Var::new("engine/debug/log_window/display", cfg);
     let display_overlays = Cfg_Var::new("engine/debug/overlay/display", cfg);
 
@@ -486,11 +485,11 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
     }
 
     let overlay_cfg = Debug_Overlay_Config {
-        row_spacing: Cfg_Var::new("engine/debug/overlay/gameplay/row_spacing", cfg),
+        row_spacing: Cfg_Var::new("debug/overlay/gameplay/row_spacing", cfg),
         font_size: debug_ui.cfg.font_size,
-        pad_x: Cfg_Var::new("engine/debug/overlay/gameplay/pad_x", cfg),
-        pad_y: Cfg_Var::new("engine/debug/overlay/gameplay/pad_y", cfg),
-        background: Cfg_Var::new("engine/debug/overlay/gameplay/background", cfg),
+        pad_x: Cfg_Var::new("debug/overlay/gameplay/pad_x", cfg),
+        pad_y: Cfg_Var::new("debug/overlay/gameplay/pad_y", cfg),
+        background: Cfg_Var::new("debug/overlay/gameplay/background", cfg),
         ui_scale: debug_ui.cfg.ui_scale,
         font,
         ..Default::default()

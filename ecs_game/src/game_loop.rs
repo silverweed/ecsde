@@ -868,6 +868,7 @@ fn update_debug(
     let shader_cache = &mut game_resources.shader_cache;
     let env = &engine_state.env;
     let pos_hist_system = &mut game_state.game_debug_systems.position_history_system;
+    let cfg = &engine_state.config;
 
     game_state
         .gameplay_system
@@ -913,7 +914,7 @@ fn update_debug(
             }
 
             if draw_entity_pos_history {
-                pos_hist_system.update(&mut level.world, dt);
+                pos_hist_system.update(&mut level.world, dt, cfg);
                 debug_draw_entities_pos_history(debug_painter, &level.world, pos_hist_system);
             }
 
@@ -1510,37 +1511,43 @@ fn debug_draw_entities_pos_history(
     pos_hist_system: &Position_History_System,
 ) {
     use crate::debug::systems::position_history_system::C_Position_History;
+    use inle_math::math::lerp;
 
     let history_comps = ecs_world.get_component_storage::<C_Position_History>();
     for (_entity, pos_hist) in &history_comps {
         let positions = pos_hist_system.get_positions_of(pos_hist);
         let mut last_pos_latest_slice = None;
+        let mut idx = 0;
+        //let poly_line = painter.start_poly_line(
         let (slice1, slice2) = positions.as_slices();
         for slice in &[slice1, slice2] {
             if slice.is_empty() {
                 continue;
             }
             if let Some(prev_pos) = last_pos_latest_slice {
+                let t = idx as f32 / positions.len() as f32;
                 painter.add_line(
                     Line {
                         from: prev_pos,
                         to: slice[0],
-                        thickness: 1.0,
+                        thickness: lerp(0.5, 1.5, t),
                     },
-                    colors::rgba(255, 255, 255, 200),
+                    colors::rgba(255, 255, 255, lerp(30.0, 225.0, t) as u8),
                 );
             }
             for pair in slice.windows(2) {
                 let prev_pos = pair[0];
                 let pos = pair[1];
+                let t = idx as f32 / positions.len() as f32;
                 painter.add_line(
                     Line {
                         from: prev_pos,
                         to: pos,
-                        thickness: 1.0,
+                        thickness: lerp(0.5, 1.5, t),
                     },
-                    colors::rgba(255, 255, 255, 200),
+                    colors::rgba(255, 255, 255, lerp(30.0, 225.0, t) as u8),
                 );
+                idx += 1;
             }
             last_pos_latest_slice = Some(slice[slice.len() - 1]);
         }

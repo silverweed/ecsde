@@ -69,7 +69,7 @@ impl Debug_Systems {
                 },
             ),
             painters: HashMap::default(),
-            global_painter: Debug_Painter::new(),
+            global_painter: Debug_Painter::default(),
             show_trace_overlay: false,
             trace_overlay_update_t: 0.0,
             console: console::Console::new(),
@@ -91,7 +91,7 @@ impl Debug_Systems {
             lvid
         );
 
-        let mut painter = Debug_Painter::new();
+        let mut painter = Debug_Painter::default();
         painter.init(gres, env);
         self.painters.insert(lvid, painter);
     }

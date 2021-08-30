@@ -51,7 +51,7 @@ fn add_debug_data<'a>(
     if world.has_component::<C_Spatial2D>(entity) {
         world.add_component(
             entity,
-            C_Position_History::new(entity, std::time::Duration::from_micros(200), 0.01),
+            C_Position_History::new(entity, std::time::Duration::from_micros(200), 0.1),
         );
     }
     let debug = world.add_component(entity, C_Debug_Data::default());

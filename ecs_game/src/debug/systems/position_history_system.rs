@@ -1,3 +1,4 @@
+use inle_cfg::Cfg_Var;
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_math::vector::Vec2f;
@@ -27,11 +28,11 @@ impl C_Position_History {
 pub struct Position_History_System {
     // indexed by entities' idx
     positions: Vec<VecDeque<Vec2f>>,
-    hist_size: usize,
+    hist_size: Cfg_Var<u32>,
 }
 
 impl Position_History_System {
-    pub fn new(hist_size: usize) -> Self {
+    pub fn new(hist_size: Cfg_Var<u32>) -> Self {
         Self {
             positions: vec![],
             hist_size,
@@ -42,8 +43,10 @@ impl Position_History_System {
         &self.positions[comp.idx]
     }
 
-    pub fn update(&mut self, world: &mut Ecs_World, dt: Duration) {
+    pub fn update(&mut self, world: &mut Ecs_World, dt: Duration, cfg: &inle_cfg::Config) {
         trace!("position_history_system::update");
+
+        let hist_size = self.hist_size.read(cfg) as usize;
 
         foreach_entity!(world, +C_Position_History, +C_Spatial2D, |entity| {
             let spatial = world.get_component::<C_Spatial2D>(entity).unwrap();
@@ -52,7 +55,6 @@ impl Position_History_System {
             let pos_hist = world.get_component_mut::<C_Position_History>(entity).unwrap();
             pos_hist.time_since_latest_record += dt;
 
-            let hist_size = self.hist_size;
             if self.positions.len() <= pos_hist.idx {
                 self.positions.resize_with(pos_hist.idx + 1, || VecDeque::with_capacity(hist_size));
             }
@@ -68,8 +70,9 @@ impl Position_History_System {
                 if dist_sqr < 0.0 || dist_sqr >= min_delta_pos_sqr {
                     pos_hist.time_since_latest_record -= pos_hist.sampling_interval;
                     prev_positions.push_back(pos);
-                    if prev_positions.len() == hist_size + 1{
-                        prev_positions.pop_front();
+                    let eccess = prev_positions.len().saturating_sub(hist_size);
+                    if eccess > 0 {
+                        prev_positions.drain(0..eccess);
                     }
                 }
             }

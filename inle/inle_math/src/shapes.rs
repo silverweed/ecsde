@@ -14,7 +14,7 @@ pub struct Arrow {
     pub arrow_size: f32,
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct Line {
     pub from: Vec2f,
     pub to: Vec2f,

@@ -14,6 +14,7 @@ pub struct Transform2D {
 }
 
 impl Default for Transform2D {
+    #[inline]
     fn default() -> Self {
         Transform2D {
             position: Vec2f::new(0.0, 0.0),
@@ -24,10 +25,12 @@ impl Default for Transform2D {
 }
 
 impl Transform2D {
+    #[inline]
     pub fn new() -> Transform2D {
         Transform2D::default()
     }
 
+    #[inline]
     pub fn from_pos_rot_scale(pos: Vec2f, rot: Angle, scale: Vec2f) -> Transform2D {
         let mut t = Transform2D::new();
         t.set_position_v(pos);
@@ -36,12 +39,14 @@ impl Transform2D {
         t
     }
 
+    #[inline]
     pub fn from_pos(pos: Vec2f) -> Transform2D {
         let mut t = Transform2D::new();
         t.set_position_v(pos);
         t
     }
 
+    #[inline]
     pub fn new_from_matrix(m: &Matrix3<f32>) -> Transform2D {
         let sx = m[0][0].hypot(m[0][1]);
         let sy = m[1][0].hypot(m[1][1]);
@@ -55,66 +60,80 @@ impl Transform2D {
         }
     }
 
+    #[inline]
     pub fn translate(&mut self, x: f32, y: f32) {
         self.position.x += x;
         self.position.y += y;
     }
 
+    #[inline]
     pub fn translate_v(&mut self, v: Vec2f) {
         self.position.x += v.x;
         self.position.y += v.y;
     }
 
+    #[inline]
     pub fn set_position(&mut self, x: f32, y: f32) {
         self.position.x = x;
         self.position.y = y;
     }
 
+    #[inline]
     pub fn set_position_v(&mut self, p: Vec2f) {
         self.position.x = p.x;
         self.position.y = p.y;
     }
 
+    #[inline]
     pub fn position(&self) -> Vec2f {
         self.position
     }
 
+    #[inline]
     pub fn add_scale(&mut self, x: f32, y: f32) {
         self.scale.x += x;
         self.scale.y += y;
     }
 
+    #[inline]
     pub fn add_scale_v(&mut self, s: Vec2f) {
         self.scale.x += s.x;
         self.scale.y += s.y;
     }
 
+    #[inline]
     pub fn set_scale(&mut self, x: f32, y: f32) {
         self.scale.x = x;
         self.scale.y = y;
     }
 
+    #[inline]
     pub fn set_scale_v(&mut self, s: Vec2f) {
         self.scale.x = s.x;
         self.scale.y = s.y;
     }
 
+    #[inline]
     pub fn scale(&self) -> Vec2f {
         self.scale
     }
 
+    #[inline]
     pub fn set_rotation(&mut self, angle: Angle) {
         self.rotation = angle;
     }
 
+    #[inline]
     pub fn rotate(&mut self, angle: Angle) {
         self.rotation += angle;
     }
 
+    #[inline]
     pub fn rotation(&self) -> Angle {
         self.rotation
     }
 
+    #[inline]
     pub fn get_matrix(&self) -> Matrix3<f32> {
         let angle = self.rotation.as_rad();
         let angle = -angle;
@@ -131,11 +150,13 @@ impl Transform2D {
         Matrix3::new(sxc, sys, tx, -sxs, syc, ty, 0.0, 0.0, 1.0)
     }
 
+    #[inline]
     pub fn combine(&self, other: &Transform2D) -> Transform2D {
         trace!("transform::combine");
         Transform2D::new_from_matrix(&(self.get_matrix() * other.get_matrix()))
     }
 
+    #[inline]
     pub fn inverse(&self) -> Transform2D {
         let s = self.scale();
         Transform2D::from_pos_rot_scale(
@@ -149,6 +170,7 @@ impl Transform2D {
 impl std::ops::Mul<Vec2f> for Transform2D {
     type Output = Vec2f;
 
+    #[inline]
     fn mul(self, v: Vec2f) -> Self::Output {
         let m = self.get_matrix();
         Vec2f::new(
