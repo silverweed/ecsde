@@ -180,22 +180,22 @@ impl Debug_Painter {
 fn draw_arrow(vbuf: &mut Vertex_Buffer_Quads, arrow: &Arrow, props: &Paint_Properties) {
     trace!("draw_arrow");
 
-    draw_line_internal(vbuf, arrow.center, arrow.direction, arrow.thickness, props);
+    let (magnitude, m) =
+        draw_line_internal(vbuf, arrow.center, arrow.direction, arrow.thickness, props);
 
-    let magnitude = arrow.direction.magnitude();
     // Draw arrow tip
     {
         let v5 = render::new_vertex(
-            Vec2f::new(magnitude - arrow.arrow_size * 0.5, -arrow.arrow_size * 0.5),
+            m * Vec2f::new(magnitude - arrow.arrow_size * 0.5, -arrow.arrow_size * 0.5),
             props.color,
             Vec2f::default(),
         );
         let v6 = render::new_vertex(
-            Vec2f::new(magnitude - arrow.arrow_size * 0.5, arrow.arrow_size * 0.5),
+            m * Vec2f::new(magnitude - arrow.arrow_size * 0.5, arrow.arrow_size * 0.5),
             props.color,
             Vec2f::default(),
         );
-        let v7 = render::new_vertex(Vec2f::new(magnitude, 0.), props.color, Vec2f::default());
+        let v7 = render::new_vertex(m * Vec2f::new(magnitude, 0.), props.color, Vec2f::default());
 
         render::add_quad(vbuf, &v5, &v7, &v7, &v6);
     }
@@ -207,7 +207,7 @@ fn draw_line_internal(
     direction: Vec2f,
     thickness: f32,
     props: &Paint_Properties,
-) {
+) -> (f32, Transform2D) {
     trace!("draw_line_internal");
 
     let length = direction.magnitude();
@@ -236,4 +236,6 @@ fn draw_line_internal(
     );
 
     render::add_quad(vbuf, &v1, &v2, &v3, &v4);
+
+    (length, m)
 }
