@@ -43,6 +43,8 @@ impl Position_History_System {
     }
 
     pub fn update(&mut self, world: &mut Ecs_World, dt: Duration) {
+        trace!("position_history_system::update");
+
         foreach_entity!(world, +C_Position_History, +C_Spatial2D, |entity| {
             let spatial = world.get_component::<C_Spatial2D>(entity).unwrap();
             let pos = spatial.transform.position();
