@@ -4,6 +4,7 @@ use inle_common::bitset::Bit_Set;
 use inle_events::evt_register;
 use std::any::type_name;
 use std::collections::HashSet;
+use std::marker::PhantomData;
 
 #[cfg(debug_assertions)]
 use inle_debug::painter::Debug_Painter;
@@ -221,6 +222,42 @@ impl<T: Copy> Component_Storage<'_, T> {
 
     pub fn get_component(&self, entity: Entity) -> Option<&T> {
         self.storage.get_component::<T>(entity)
+    }
+}
+
+impl<'a, T: 'a + Copy> IntoIterator for &Component_Storage<'a, T> {
+    type Item = (Entity, &'a T);
+    type IntoIter = Component_Storage_Iterator<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter::new(self.storage)
+    }
+}
+
+pub struct Component_Storage_Iterator<'a, T> {
+    storage: &'a comp_mgr::Component_Storage,
+    comp_map_iter: std::collections::hash_map::Iter<'a, Entity, u32>,
+    _pd: PhantomData<T>,
+}
+
+impl<'a, T: 'a + Copy> Component_Storage_Iterator<'a, T> {
+    fn new<'b: 'a>(storage: &'b comp_mgr::Component_Storage) -> Self {
+        Self {
+            storage,
+            comp_map_iter: storage.ent_comp_map.iter(),
+            _pd: PhantomData,
+        }
+    }
+}
+
+impl<'a, T: 'a + Copy> Iterator for Component_Storage_Iterator<'a, T> {
+    type Item = (Entity, &'a T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (entity, idx) = self.comp_map_iter.next()?;
+        // @Cleanup: maybe refactor this to be hidden inside comp_mgr
+        let comp = unsafe { self.storage.alloc.get(*idx) };
+        Some((*entity, comp))
     }
 }
 

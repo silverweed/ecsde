@@ -12,6 +12,7 @@ use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use {
+    crate::debug::systems::position_history_system::Position_History_System,
     inle_common::paint_props::Paint_Properties,
     inle_common::stringid::String_Id,
     inle_debug::painter::Debug_Painter,
@@ -21,7 +22,7 @@ use {
     inle_input::input_state::Input_State,
     inle_input::mouse,
     inle_math::angle::rad,
-    inle_math::shapes::{Arrow, Circle},
+    inle_math::shapes::{Arrow, Circle, Line},
     inle_math::vector::Vec2f,
     inle_physics::phys_world::Physics_World,
     inle_win::window,
@@ -413,7 +414,7 @@ where
     }
 
     #[cfg(debug_assertions)]
-    update_debug(game_state, game_resources, collision_debug_data);
+    update_debug(game_state, game_resources, collision_debug_data, dt);
 
     update_graphics(game_state, game_resources);
     update_ui(game_state, &game_resources.gfx);
@@ -733,6 +734,7 @@ fn update_debug(
     game_state: &mut Game_State,
     game_resources: &mut Game_Resources,
     collision_debug_data: HashMap<String_Id, physics::Collision_System_Debug_Data>,
+    dt: Duration,
 ) {
     let engine_state = &mut game_state.engine_state;
     let debug_systems = &mut engine_state.debug_systems;
@@ -851,6 +853,7 @@ fn update_debug(
     let draw_entity_prev_frame_ghost = cvars
         .draw_entity_prev_frame_ghost
         .read(&engine_state.config);
+    let draw_entity_pos_history = cvars.draw_entity_pos_history.read(&engine_state.config);
     let draw_colliders = cvars.draw_colliders.read(&engine_state.config);
     let draw_debug_grid = cvars.draw_debug_grid.read(&engine_state.config);
     let draw_comp_alloc_colliders = cvars.draw_comp_alloc_colliders.read(&engine_state.config);
@@ -864,6 +867,7 @@ fn update_debug(
     let window = &mut game_state.window;
     let shader_cache = &mut game_resources.shader_cache;
     let env = &engine_state.env;
+    let pos_hist_system = &mut game_state.game_debug_systems.position_history_system;
 
     game_state
         .gameplay_system
@@ -906,6 +910,11 @@ fn update_debug(
                     &mut level.world,
                     is_paused,
                 );
+            }
+
+            if draw_entity_pos_history {
+                pos_hist_system.update(&mut level.world, dt);
+                debug_draw_entities_pos_history(debug_painter, &level.world, pos_hist_system);
             }
 
             if draw_component_lists {
@@ -1031,8 +1040,6 @@ fn update_mouse_debug_overlay(
     camera: Option<Transform2D>,
     input_state: &Input_State,
 ) {
-    use inle_math::shapes::Line;
-
     let (win_w, win_h) = window::get_window_target_size(window);
     let (win_w, win_h) = (win_w as i32, win_h as i32);
     let pos = mouse::mouse_pos_in_window(window, &input_state.raw.mouse_state);
@@ -1466,7 +1473,7 @@ fn debug_draw_entities_prev_frame_ghost(
             sprite_local_transform,
         } = *ecs_world.get_component::<C_Renderable>(entity).unwrap();
 
-        let mut material = material.clone();
+        let mut material = material;
         material.cast_shadows = false;
         material.shader = unlit_shader;
 
@@ -1494,6 +1501,50 @@ fn debug_draw_entities_prev_frame_ghost(
             render::render_texture_ws(window, batches, material, &rect, color, &transform.combine(&sprite_local_transform), z_index);
         }
     });
+}
+
+#[cfg(debug_assertions)]
+fn debug_draw_entities_pos_history(
+    painter: &mut Debug_Painter,
+    ecs_world: &Ecs_World,
+    pos_hist_system: &Position_History_System,
+) {
+    use crate::debug::systems::position_history_system::C_Position_History;
+
+    let history_comps = ecs_world.get_component_storage::<C_Position_History>();
+    for (_entity, pos_hist) in &history_comps {
+        let positions = pos_hist_system.get_positions_of(pos_hist);
+        let mut last_pos_latest_slice = None;
+        let (slice1, slice2) = positions.as_slices();
+        for slice in &[slice1, slice2] {
+            if slice.is_empty() {
+                continue;
+            }
+            if let Some(prev_pos) = last_pos_latest_slice {
+                painter.add_line(
+                    Line {
+                        from: prev_pos,
+                        to: slice[0],
+                        thickness: 1.0,
+                    },
+                    colors::rgba(255, 255, 255, 200),
+                );
+            }
+            for pair in slice.windows(2) {
+                let prev_pos = pair[0];
+                let pos = pair[1];
+                painter.add_line(
+                    Line {
+                        from: prev_pos,
+                        to: pos,
+                        thickness: 1.0,
+                    },
+                    colors::rgba(255, 255, 255, 200),
+                );
+            }
+            last_pos_latest_slice = Some(slice[slice.len() - 1]);
+        }
+    }
 }
 
 /// Draws a grid made of squares, each of size `square_size`.

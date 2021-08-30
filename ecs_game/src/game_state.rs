@@ -10,6 +10,9 @@ use inle_gfx::{self, render_window::Render_Window_Handle};
 use std::collections::HashMap;
 use std::time::Duration;
 
+#[cfg(debug_assertions)]
+use crate::debug::systems::Game_Debug_Systems;
+
 pub type Level_Batches = HashMap<String_Id, inle_gfx::render::batcher::Batches>;
 
 #[repr(C)]
@@ -33,6 +36,9 @@ pub struct Game_State<'a> {
 
     #[cfg(debug_assertions)]
     pub debug_cvars: Debug_CVars,
+
+    #[cfg(debug_assertions)]
+    pub game_debug_systems: Game_Debug_Systems,
 
     #[cfg(debug_assertions)]
     pub fps_debug: inle_debug::fps::Fps_Counter,
@@ -76,6 +82,7 @@ pub struct Debug_CVars {
     pub draw_velocities: Cfg_Var<bool>,
     pub draw_entity_prev_frame_ghost: Cfg_Var<bool>,
     pub draw_component_lists: Cfg_Var<bool>,
+    pub draw_entity_pos_history: Cfg_Var<bool>,
 
     pub draw_debug_grid: Cfg_Var<bool>,
     pub debug_grid_square_size: Cfg_Var<f32>,
@@ -294,6 +301,8 @@ fn create_game_state<'a>(
             #[cfg(debug_assertions)]
             debug_cvars,
             #[cfg(debug_assertions)]
+            game_debug_systems: Game_Debug_Systems::default(),
+            #[cfg(debug_assertions)]
             fps_debug: inle_debug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(2)),
             #[cfg(debug_assertions)]
             already_added_fn_hints: false,
@@ -338,6 +347,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     let draw_component_lists = Cfg_Var::new("engine/debug/entities/draw_component_lists", cfg);
     let draw_entity_prev_frame_ghost =
         Cfg_Var::new("engine/debug/entities/draw_prev_frame_ghost", cfg);
+    let draw_entity_pos_history = Cfg_Var::new("engine/debug/entities/draw_pos_history", cfg);
     let draw_colliders = Cfg_Var::new("engine/debug/collisions/draw_colliders", cfg);
     let draw_debug_grid = Cfg_Var::new("engine/debug/rendering/grid/draw_grid", cfg);
     let debug_grid_square_size = Cfg_Var::new("engine/debug/rendering/grid/square_size", cfg);
@@ -362,6 +372,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
         draw_velocities,
         draw_entity_prev_frame_ghost,
         draw_component_lists,
+        draw_entity_pos_history,
         draw_debug_grid,
         debug_grid_square_size,
         debug_grid_opacity,

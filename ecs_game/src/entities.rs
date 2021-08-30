@@ -23,7 +23,11 @@ use inle_physics::phys_world::{Phys_Data, Physics_World};
 use inle_resources::gfx::{shader_path, tex_path, Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
-use {crate::debug::entity_debug::C_Debug_Data, std::collections::HashMap, std::sync::Mutex};
+use {
+    crate::debug::entity_debug::C_Debug_Data,
+    crate::debug::systems::position_history_system::C_Position_History, std::collections::HashMap,
+    std::sync::Mutex,
+};
 
 #[cfg(debug_assertions)]
 fn next_name(name: &'static str) -> String {
@@ -44,6 +48,12 @@ fn add_debug_data<'a>(
     entity: Entity,
     name: &'static str,
 ) -> &'a mut C_Debug_Data {
+    if world.has_component::<C_Spatial2D>(entity) {
+        world.add_component(
+            entity,
+            C_Position_History::new(entity, std::time::Duration::from_micros(200), 0.01),
+        );
+    }
     let debug = world.add_component(entity, C_Debug_Data::default());
     debug.entity_name.set(&next_name(name));
     debug

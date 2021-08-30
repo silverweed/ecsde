@@ -30,8 +30,9 @@ pub struct Component_Manager {
 }
 
 pub struct Component_Storage {
-    alloc: Component_Allocator,
-    ent_comp_map: HashMap<Entity, u32>,
+    // @Cleanup: remove these pub, then implement Iterator for this struct
+    pub(super) alloc: Component_Allocator,
+    pub(super) ent_comp_map: HashMap<Entity, u32>,
     comp_layout: std::alloc::Layout,
 }
 

@@ -29,7 +29,10 @@ use inle_physics::phys_world::Physics_World;
 use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
-use crate::debug::entity_debug::C_Debug_Data;
+use {
+    crate::debug::entity_debug::C_Debug_Data,
+    crate::debug::systems::position_history_system::C_Position_History,
+};
 
 pub fn level_load_sync(
     level_id: String_Id,
@@ -89,6 +92,7 @@ fn register_all_components(world: &mut Ecs_World) {
     #[cfg(debug_assertions)]
     {
         world.register_component::<C_Debug_Data>();
+        world.register_component::<C_Position_History>();
     }
 }
 

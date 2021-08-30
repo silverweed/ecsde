@@ -123,8 +123,7 @@ impl<T> Exclusive_Temp_Array<'_, T> {
         if self.n_elems > 0 {
             let elem = unsafe {
                 let ptr = self.ptr.add(self.n_elems - 1);
-                let elem = ptr.read();
-                elem
+                ptr.read()
             };
             self.n_elems -= 1;
             Some(elem)
