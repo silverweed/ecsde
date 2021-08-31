@@ -257,9 +257,10 @@ fn draw_rect_internal(
 ) {
     trace!("painter::draw_rect_internal");
 
+    // @Incomplete: the rect aabb is not considering rotation!
     if inle_math::rect::rects_intersection(
         visible_viewport,
-        &Rect::from_topleft_size(transform.position(), size),
+        &Rect::from_topleft_size(transform.position(), size * transform.scale()),
     )
     .is_none()
     {

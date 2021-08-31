@@ -407,6 +407,11 @@ pub fn draw_batches(
             }
             debug_assert!(n_vertices_without_shadows <= super::vbuf_max_vertices(&vbuffer.vbuf));
 
+            // @Speed: implement frustum culling.
+            // This requires to change a bit the logic as we can't know a priori how many vertices we're gonna
+            // render. We may initially try to simplify stuff by not doing things in parallel and just dynamically
+            // push vertices in the vbuffer rather than working on chunks, and see if that yields improvements or not.
+            // Or we may pre-cull the sprites and then operate on the remaining ones in parallel.
             if cast_shadows {
                 fill_vertices_with_shadows(
                     window,
