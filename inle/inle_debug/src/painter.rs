@@ -1,15 +1,14 @@
 use inle_common::colors::Color;
 use inle_common::paint_props::Paint_Properties;
 use inle_core::env::Env_Info;
-use inle_gfx::render;
-use inle_gfx::render::Vertex_Buffer_Quads;
+use inle_gfx::render::{self, Vertex_Buffer_Triangles};
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::angle::rad;
-use inle_math::rect::Rect;
 use inle_math::shapes::{Arrow, Circle, Line};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
 use inle_resources::gfx;
+use std::convert::TryFrom;
 
 #[derive(Default)]
 pub struct Debug_Painter {
@@ -35,6 +34,7 @@ impl Debug_Painter {
         self.rects.push((size, *transform, props.into()));
     }
 
+    // @Consistency: we should allow to pass the transform here like in add_rect
     pub fn add_circle<T>(&mut self, circle: Circle, props: T)
     where
         T: Into<Paint_Properties>,
@@ -42,6 +42,7 @@ impl Debug_Painter {
         self.circles.push((circle, props.into()));
     }
 
+    // @Consistency: we should allow to pass the transform here like in add_rect
     pub fn add_arrow<T>(&mut self, arrow: Arrow, props: T)
     where
         T: Into<Paint_Properties>,
@@ -49,6 +50,7 @@ impl Debug_Painter {
         self.arrows.push((arrow, props.into()));
     }
 
+    // @Consistency: we should allow to pass the transform here like in add_rect
     pub fn add_text<T>(&mut self, text: &str, world_pos: Vec2f, font_size: u16, props: T)
     where
         T: Into<Paint_Properties>,
@@ -57,6 +59,7 @@ impl Debug_Painter {
             .push((String::from(text), world_pos, font_size, props.into()));
     }
 
+    // @Consistency: we should allow to pass the transform here like in add_rect
     pub fn add_shaded_text_with_shade_distance<T>(
         &mut self,
         text: &str,
@@ -83,6 +86,7 @@ impl Debug_Painter {
             .push((String::from(text), world_pos, font_size, props));
     }
 
+    // @Consistency: we should allow to pass the transform here like in add_rect
     pub fn add_shaded_text<T>(
         &mut self,
         text: &str,
@@ -103,6 +107,7 @@ impl Debug_Painter {
         );
     }
 
+    // @Consistency: maybe we should allow to pass the transform here like in add_rect
     pub fn add_line<T>(&mut self, line: Line, props: T)
     where
         T: Into<Paint_Properties>,
@@ -126,32 +131,37 @@ impl Debug_Painter {
     ) {
         trace!("painter::draw");
 
-        for (size, transform, props) in &self.rects {
-            let rect = Rect::new(0., 0., size.x, size.y);
-            trace!("painter::fill_rect");
-            render::render_rect_ws(window, rect, *props, transform, camera);
-        }
+        let tot_circle_points_needed = 3 * self
+            .circles
+            .iter()
+            .map(|(_, props)| props.point_count as usize)
+            .sum::<usize>();
+        let tot_triangles = tot_circle_points_needed
+            + 2 * self.rects.len()
+            + 3 * self.arrows.len()
+            + 2 * self.lines.len();
 
-        for (circle, props) in &self.circles {
-            render::render_circle_ws(window, *circle, *props, camera);
-        }
+        if tot_triangles > 0 {
+            let mut vbuf =
+                render::start_draw_triangles_temp(window, u32::try_from(tot_triangles).unwrap());
 
-        if !self.arrows.is_empty() {
-            trace!("painter::draw_arrows");
-            let mut vbuf = render::start_draw_quads_temp(window, self.arrows.len() as u32 * 2);
+            for (size, transform, props) in &self.rects {
+                draw_rect_internal(&mut vbuf, *size, transform, props);
+            }
+
+            for (circle, props) in &self.circles {
+                draw_circle_internal(&mut vbuf, circle, props);
+            }
+
             for (arrow, props) in &self.arrows {
                 draw_arrow(&mut vbuf, arrow, props);
             }
-            render::render_vbuf_ws(window, &vbuf, &Transform2D::default(), camera);
-        }
 
-        if !self.lines.is_empty() {
-            trace!("painter::draw_lines");
-            let mut vbuf = render::start_draw_quads_temp(window, self.lines.len() as _);
             for (line, props) in &self.lines {
                 let direction = line.to - line.from;
                 draw_line_internal(&mut vbuf, line.from, direction, line.thickness, props);
             }
+
             render::render_vbuf_ws(window, &vbuf, &Transform2D::default(), camera);
         }
 
@@ -177,7 +187,7 @@ impl Debug_Painter {
     }
 }
 
-fn draw_arrow(vbuf: &mut Vertex_Buffer_Quads, arrow: &Arrow, props: &Paint_Properties) {
+fn draw_arrow(vbuf: &mut Vertex_Buffer_Triangles, arrow: &Arrow, props: &Paint_Properties) {
     trace!("draw_arrow");
 
     let (magnitude, m) =
@@ -197,12 +207,12 @@ fn draw_arrow(vbuf: &mut Vertex_Buffer_Quads, arrow: &Arrow, props: &Paint_Prope
         );
         let v7 = render::new_vertex(m * Vec2f::new(magnitude, 0.), props.color, Vec2f::default());
 
-        render::add_quad(vbuf, &v5, &v7, &v7, &v6);
+        render::add_triangle(vbuf, &v5, &v7, &v6);
     }
 }
 
 fn draw_line_internal(
-    vbuf: &mut Vertex_Buffer_Quads,
+    vbuf: &mut Vertex_Buffer_Triangles,
     start: Vec2f,
     direction: Vec2f,
     thickness: f32,
@@ -235,7 +245,52 @@ fn draw_line_internal(
         Vec2f::default(),
     );
 
-    render::add_quad(vbuf, &v1, &v2, &v3, &v4);
+    render::add_triangle(vbuf, &v1, &v2, &v3);
+    render::add_triangle(vbuf, &v3, &v4, &v1);
 
     (length, m)
+}
+
+fn draw_rect_internal(
+    vbuf: &mut Vertex_Buffer_Triangles,
+    size: Vec2f,
+    transform: &Transform2D,
+    props: &Paint_Properties,
+) {
+    let m = *transform;
+    let v1 = render::new_vertex(m * v2!(0., 0.), props.color, v2!(0., 0.));
+    let v2 = render::new_vertex(m * v2!(size.x, 0.), props.color, v2!(0., 0.));
+    let v3 = render::new_vertex(m * size, props.color, v2!(0., 0.));
+    let v4 = render::new_vertex(m * v2!(0., size.y), props.color, v2!(0., 0.));
+
+    render::add_triangle(vbuf, &v1, &v2, &v3);
+    render::add_triangle(vbuf, &v3, &v4, &v1);
+}
+
+fn draw_circle_internal(
+    vbuf: &mut Vertex_Buffer_Triangles,
+    circle: &Circle,
+    props: &Paint_Properties,
+) {
+    let angle_step = std::f32::consts::TAU / props.point_count as f32;
+    let cos_and_sin = (0..props.point_count)
+        .map(|i| {
+            let (s, c) = (i as f32 * angle_step).sin_cos();
+            v2!(c, s)
+        })
+        .collect::<Vec<_>>();
+
+    for i in 0..props.point_count {
+        let pt = cos_and_sin[i as usize];
+        let pt_next = cos_and_sin[((i + 1) % props.point_count) as usize];
+
+        let v1 = render::new_vertex(circle.center, props.color, v2!(0., 0.));
+        let v2 = render::new_vertex(circle.center + pt * circle.radius, props.color, v2!(0., 0.));
+        let v3 = render::new_vertex(
+            circle.center + pt_next * circle.radius,
+            props.color,
+            v2!(0., 0.),
+        );
+        render::add_triangle(vbuf, &v1, &v2, &v3);
+    }
 }
