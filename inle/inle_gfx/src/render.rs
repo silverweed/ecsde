@@ -318,6 +318,7 @@ pub fn start_draw_points_temp(
 
 ///////////////////////////////// UPDATING ///////////////////////////////////
 
+#[inline]
 pub fn add_quad(
     vbuf: &mut Vertex_Buffer_Quads,
     v1: &Vertex,
@@ -328,22 +329,27 @@ pub fn add_quad(
     backend::add_vertices(vbuf, &[*v1, *v2, *v3, *v3, *v4, *v1]);
 }
 
+#[inline]
 pub fn add_triangle(vbuf: &mut Vertex_Buffer_Triangles, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
     backend::add_vertices(vbuf, &[*v1, *v2, *v3]);
 }
 
+#[inline]
 pub fn add_line(vbuf: &mut Vertex_Buffer_Lines, from: &Vertex, to: &Vertex) {
     backend::add_vertices(vbuf, &[*from, *to]);
 }
 
+#[inline]
 pub fn add_vertex(vbuf: &mut Vertex_Buffer_Linestrip, v: &Vertex) {
     backend::add_vertices(vbuf, &[*v]);
 }
 
+#[inline]
 pub fn add_point(vbuf: &mut Vertex_Buffer_Points, v: &Vertex) {
     backend::add_vertices(vbuf, &[*v]);
 }
 
+#[inline]
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     backend::new_vertex(pos, col, tex_coords)
 }
