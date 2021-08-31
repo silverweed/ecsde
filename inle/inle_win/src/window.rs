@@ -1,3 +1,5 @@
+use inle_math::rect::{Rect, Rectf};
+use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i, Vec2u};
 
 #[cfg(feature = "win-sfml")]
@@ -75,6 +77,14 @@ pub fn get_window_target_size<W: AsRef<Window_Handle>>(window: &W) -> (u32, u32)
 pub fn get_window_real_size<W: AsRef<Window_Handle>>(window: &W) -> (u32, u32) {
     trace!("get_window_real_size");
     backend::get_window_real_size(window.as_ref())
+}
+
+#[inline]
+pub fn get_camera_viewport<W: AsRef<Window_Handle>>(window: &W, camera: &Transform2D) -> Rectf {
+    let viewport = Vec2f::from(Vec2u::from(get_window_target_size(window)));
+    let mut visible = Rect::from_topleft_size(camera.position(), viewport * camera.scale());
+    visible = visible - visible.size() * 0.5;
+    visible
 }
 
 #[inline(always)]

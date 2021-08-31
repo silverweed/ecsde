@@ -85,6 +85,16 @@ where
             height: botright.y - topleft.y,
         }
     }
+
+    // @WaitForStable: mark this const
+    pub fn from_topleft_size(topleft: Vector2<T>, size: Vector2<T>) -> Rect<T> {
+        Rect {
+            x: topleft.x,
+            y: topleft.y,
+            width: size.x,
+            height: size.y,
+        }
+    }
 }
 
 impl<T: Copy> Rect<T> {

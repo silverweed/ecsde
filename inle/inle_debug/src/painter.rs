@@ -1,9 +1,10 @@
 use inle_common::colors::Color;
 use inle_common::paint_props::Paint_Properties;
 use inle_core::env::Env_Info;
-use inle_gfx::render::{self, Vertex_Buffer_Triangles};
+use inle_gfx::render::{self, Font, Vertex_Buffer_Triangles};
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::angle::rad;
+use inle_math::rect::{Rect, Rectf};
 use inle_math::shapes::{Arrow, Circle, Line};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
@@ -131,6 +132,8 @@ impl Debug_Painter {
     ) {
         trace!("painter::draw");
 
+        let visible_viewport = inle_win::window::get_camera_viewport(window, camera);
+
         let tot_circle_points_needed = 3 * self
             .circles
             .iter()
@@ -146,11 +149,11 @@ impl Debug_Painter {
                 render::start_draw_triangles_temp(window, u32::try_from(tot_triangles).unwrap());
 
             for (size, transform, props) in &self.rects {
-                draw_rect_internal(&mut vbuf, *size, transform, props);
+                draw_rect_internal(&mut vbuf, *size, transform, props, &visible_viewport);
             }
 
             for (circle, props) in &self.circles {
-                draw_circle_internal(&mut vbuf, circle, props);
+                draw_circle_internal(&mut vbuf, circle, props, &visible_viewport);
             }
 
             for (arrow, props) in &self.arrows {
@@ -167,28 +170,22 @@ impl Debug_Painter {
 
         let font = gres.get_font(self.font);
         for (text, world_pos, font_size, props) in &self.texts {
-            trace!("painter::draw_text");
-            let aa_adj_scale = if *font_size < 10 {
-                4
-            } else if *font_size < 20 {
-                2
-            } else {
-                1
-            };
-            let aa_adj_inv_scale = 1. / (aa_adj_scale as f32);
-            let mut txt = render::create_text(text, font, aa_adj_scale * *font_size);
-            let transform = Transform2D::from_pos_rot_scale(
+            draw_text(
+                window,
+                text,
                 *world_pos,
-                rad(0.),
-                v2!(aa_adj_inv_scale, aa_adj_inv_scale),
+                font,
+                *font_size,
+                props,
+                camera,
+                &visible_viewport,
             );
-            render::render_text_ws(window, &mut txt, *props, &transform, camera);
         }
     }
 }
 
 fn draw_arrow(vbuf: &mut Vertex_Buffer_Triangles, arrow: &Arrow, props: &Paint_Properties) {
-    trace!("draw_arrow");
+    trace!("painter::draw_arrow");
 
     let (magnitude, m) =
         draw_line_internal(vbuf, arrow.center, arrow.direction, arrow.thickness, props);
@@ -218,7 +215,7 @@ fn draw_line_internal(
     thickness: f32,
     props: &Paint_Properties,
 ) -> (f32, Transform2D) {
-    trace!("draw_line_internal");
+    trace!("painter::draw_line_internal");
 
     let length = direction.magnitude();
     let rot = rad(direction.y.atan2(direction.x));
@@ -256,7 +253,19 @@ fn draw_rect_internal(
     size: Vec2f,
     transform: &Transform2D,
     props: &Paint_Properties,
+    visible_viewport: &Rectf,
 ) {
+    trace!("painter::draw_rect_internal");
+
+    if inle_math::rect::rects_intersection(
+        visible_viewport,
+        &Rect::from_topleft_size(transform.position(), size),
+    )
+    .is_none()
+    {
+        return;
+    }
+
     let m = *transform;
     let v1 = render::new_vertex(m * v2!(0., 0.), props.color, v2!(0., 0.));
     let v2 = render::new_vertex(m * v2!(size.x, 0.), props.color, v2!(0., 0.));
@@ -271,7 +280,20 @@ fn draw_circle_internal(
     vbuf: &mut Vertex_Buffer_Triangles,
     circle: &Circle,
     props: &Paint_Properties,
+    visible_viewport: &Rectf,
 ) {
+    trace!("painter::draw_circle_internal");
+
+    let aabb = Rect::new(
+        circle.center.x - circle.radius,
+        circle.center.y - circle.radius,
+        2. * circle.radius,
+        2. * circle.radius,
+    );
+    if inle_math::rect::rects_intersection(visible_viewport, &aabb).is_none() {
+        return;
+    }
+
     let angle_step = std::f32::consts::TAU / props.point_count as f32;
     let cos_and_sin = (0..props.point_count)
         .map(|i| {
@@ -293,4 +315,42 @@ fn draw_circle_internal(
         );
         render::add_triangle(vbuf, &v1, &v2, &v3);
     }
+}
+
+fn draw_text(
+    window: &mut Render_Window_Handle,
+    text: &str,
+    world_pos: Vec2f,
+    font: &Font,
+    font_size: u16,
+    props: &Paint_Properties,
+    camera: &Transform2D,
+    visible_viewport: &Rectf,
+) {
+    // @Speed: batch the texts!
+    trace!("painter::draw_text");
+
+    let aa_adj_scale = if font_size < 10 {
+        4
+    } else if font_size < 20 {
+        2
+    } else {
+        1
+    };
+    let aa_adj_inv_scale = 1. / (aa_adj_scale as f32);
+
+    let mut txt = render::create_text(text, font, aa_adj_scale * font_size);
+    let transform = Transform2D::from_pos_rot_scale(
+        world_pos,
+        rad(0.),
+        v2!(aa_adj_inv_scale, aa_adj_inv_scale),
+    );
+
+    let text_size = render::get_text_size(&txt);
+    let text_aabb = Rect::from_topleft_size(transform.position(), text_size);
+    if inle_math::rect::rects_intersection(visible_viewport, &text_aabb).is_none() {
+        return;
+    }
+
+    render::render_text_ws(window, &mut txt, *props, &transform, camera);
 }
