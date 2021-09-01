@@ -146,6 +146,7 @@ impl Lights {
         nearest
     }
 
+    #[inline]
     pub fn get_all_point_lights_sorted_by_distance_within<E: Extend<Point_Light>>(
         &self,
         pos: Vec2f,

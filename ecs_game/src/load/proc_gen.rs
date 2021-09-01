@@ -67,7 +67,7 @@ pub fn generate_random_level(
         let x = rand::rand_01(rng);
         let y = rand::rand_01(rng);
         let pos = if i > 0 {
-            v2!(x * 50., 1. * y * 50.)
+            v2!(x * 500., 1. * y * 500.)
         } else {
             v2!(20., 20.)
         };

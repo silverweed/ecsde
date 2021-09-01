@@ -211,7 +211,7 @@ where
 }
 
 #[inline]
-pub fn aabb_of_points(points: &[Vec2f]) -> Rectf {
+pub fn aabb_of_points<'a, T: IntoIterator<Item = &'a Vec2f>>(points: T) -> Rectf {
     let mut min_x = f32::INFINITY;
     let mut min_y = f32::INFINITY;
     let mut max_x = f32::NEG_INFINITY;
