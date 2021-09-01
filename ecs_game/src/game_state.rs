@@ -287,7 +287,9 @@ fn create_game_state<'a>(
         }
     }
 
+    #[cfg(debug_assertions)]
     let game_debug_systems = Game_Debug_Systems::new(&engine_state.config);
+
     Ok((
         Box::new(Game_State {
             window,
