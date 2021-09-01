@@ -874,8 +874,8 @@ pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
     #[cfg(debug_assertions)]
     {
         debug_assert_eq!(
-            vbuf.vertices.len() - prev_vertices,
-            vertices.len() - (prev_vertices - offset as usize)
+            vbuf.vertices.len() as isize - prev_vertices as isize,
+            vertices.len() as isize - (prev_vertices as isize - offset as isize)
         );
     }
 }

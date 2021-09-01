@@ -1,4 +1,4 @@
-use crate::vector::Vector2;
+use crate::vector::{Vec2f, Vector2};
 use std::cmp::{Eq, Ordering, PartialEq};
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};
@@ -210,6 +210,23 @@ where
     }
 }
 
+#[inline]
+pub fn aabb_of_points(points: &[Vec2f]) -> Rectf {
+    let mut min_x = f32::INFINITY;
+    let mut min_y = f32::INFINITY;
+    let mut max_x = f32::NEG_INFINITY;
+    let mut max_y = f32::NEG_INFINITY;
+
+    for &pt in points {
+        min_x = pt.x.min(min_x);
+        min_y = pt.y.min(min_y);
+        max_x = pt.x.max(max_x);
+        max_y = pt.y.max(max_y);
+    }
+
+    Rect::from_topleft_botright(v2!(min_x, min_y), v2!(max_x, max_y))
+}
+
 impl<T> Rect<T>
 where
     T: Add<Output = T> + Copy,
@@ -280,5 +297,14 @@ mod tests {
 
         let c = Rect::new(-30, -40, 8, 19);
         assert_eq!(rects_intersection(&a, &c), None);
+    }
+
+    #[test]
+    fn aabb_points() {
+        let p1 = v2!(0., 0.);
+        let p2 = v2!(10., 0.);
+        let p3 = v2!(-8., 30.);
+
+        assert_eq!(aabb_of_points(&[p1, p2, p3]), Rect::new(-8., 0., 18., 30.));
     }
 }

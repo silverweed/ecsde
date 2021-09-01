@@ -4,13 +4,15 @@ use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::Ecs_World;
 use inle_ecs::entity_stream::new_entity_stream;
 use inle_gfx::components::{C_Multi_Renderable, C_Renderable};
-use inle_gfx::render;
+use inle_gfx::material::Material;
+use inle_gfx::render::batcher::Batches;
+use inle_gfx::render::{self, Z_Index};
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::transform::Transform2D;
 use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
-use inle_common::colors;
+use {inle_common::colors, inle_math::rect::Rect};
 
 #[derive(Copy, Clone)]
 pub struct Render_System_Config {
@@ -32,7 +34,7 @@ pub enum Debug_Visualization {
 
 pub struct Render_System_Update_Args<'a> {
     pub window: &'a mut Render_Window_Handle,
-    pub batches: &'a mut render::batcher::Batches,
+    pub batches: &'a mut Batches,
     pub ecs_world: &'a Ecs_World,
     pub frame_alloc: &'a mut temp::Temp_Allocator,
     pub cfg: Render_System_Config,
@@ -48,8 +50,8 @@ pub fn update(args: Render_System_Update_Args) {
         frame_alloc,
         cfg,
         window,
-        camera: _,
         gres,
+        shader_cache,
         ..
     } = args;
 
@@ -58,82 +60,65 @@ pub fn update(args: Render_System_Update_Args) {
     ////
     //// Renderables
     ////
-
-    let renderables = ecs_world.get_component_storage::<C_Renderable>();
     let spatials = ecs_world.get_component_storage::<C_Spatial2D>();
-
     {
-        let mut entities = temp::excl_temp_array(frame_alloc);
-        new_entity_stream(ecs_world)
-            .require::<C_Renderable>()
-            .require::<C_Spatial2D>()
-            .build()
-            .collect(ecs_world, &mut entities);
+        trace!("draw_renderables");
 
-        #[cfg(debug_assertions)]
-        let (min_z, max_z) = get_min_max_z(ecs_world, &entities);
+        let renderables = ecs_world.get_component_storage::<C_Renderable>();
 
-        for &entity in entities.as_slice() {
-            let rend = renderables.get_component(entity).unwrap();
-            let spatial = spatials.get_component(entity).unwrap();
-
-            let C_Renderable {
-                material,
-                rect: src_rect,
-                modulate,
-                z_index,
-                sprite_local_transform,
-            } = rend;
-
-            let visual_transform = spatial.transform.combine(sprite_local_transform);
-
-            let mut_in_debug!(material) = *material;
+        {
+            let mut entities = temp::excl_temp_array(frame_alloc);
+            new_entity_stream(ecs_world)
+                .require::<C_Renderable>()
+                .require::<C_Spatial2D>()
+                .build()
+                .collect(ecs_world, &mut entities);
 
             #[cfg(debug_assertions)]
-            {
-                use inle_gfx::material::Material;
+            let (min_z, max_z) = get_min_max_z(ecs_world, &entities);
 
-                match cfg.debug_visualization {
-                    Debug_Visualization::Sprites_Boundaries => {
-                        let mat = Material::with_texture(gres.get_white_texture_handle());
-                        let color = colors::lerp_col(
-                            colors::RED,
-                            colors::AQUA,
-                            (*z_index - min_z) as f32 / (max_z - min_z) as f32,
-                        );
-                        render::render_texture_ws(
-                            window,
-                            batches,
-                            mat,
-                            src_rect,
-                            color,
-                            &visual_transform,
-                            *z_index,
-                        );
-                    }
-                    Debug_Visualization::Normals => {
-                        let mut mat = Material::with_texture(if material.normals.is_some() {
-                            material.normals
-                        } else {
-                            gres.get_white_texture_handle()
-                        });
-                        mat.shader = args.shader_cache.get_basic_batcher_shader_handle();
-                        mat.cast_shadows = false;
-                        material = mat;
-                    }
-                    _ => {}
+            for &entity in entities.as_slice() {
+                let rend = renderables.get_component(entity).unwrap();
+                let spatial = spatials.get_component(entity).unwrap();
+
+                let C_Renderable {
+                    material,
+                    rect: src_rect,
+                    modulate,
+                    z_index,
+                    sprite_local_transform,
+                } = rend;
+
+                let visual_transform = spatial.transform.combine(sprite_local_transform);
+                let mut_in_debug!(material) = *material;
+
+                #[cfg(debug_assertions)]
+                {
+                    display_debug_visualization(
+                        window,
+                        batches,
+                        gres,
+                        shader_cache,
+                        spatial,
+                        &mut material,
+                        src_rect,
+                        *z_index,
+                        min_z,
+                        max_z,
+                        cfg.debug_visualization,
+                    );
                 }
-            }
 
-            render::render_texture_ws(
-                window,
-                batches,
-                material,
-                src_rect,
-                *modulate,
-                &visual_transform,
-                *z_index,
-            );
+                render::render_texture_ws(
+                    window,
+                    batches,
+                    &material,
+                    src_rect,
+                    *modulate,
+                    &visual_transform,
+                    *z_index,
+                );
+            }
         }
     }
 
@@ -141,79 +126,62 @@ pub fn update(args: Render_System_Update_Args) {
     //// Multi_Renderables
     ////
 
-    let mut entities = temp::excl_temp_array(frame_alloc);
-    new_entity_stream(ecs_world)
-        .require::<C_Multi_Renderable>()
-        .require::<C_Spatial2D>()
-        .build()
-        .collect(ecs_world, &mut entities);
+    {
+        trace!("draw_multi_renderables");
+        let mut entities = temp::excl_temp_array(frame_alloc);
+        new_entity_stream(ecs_world)
+            .require::<C_Multi_Renderable>()
+            .require::<C_Spatial2D>()
+            .build()
+            .collect(ecs_world, &mut entities);
 
-    let multi_renderables = ecs_world.get_component_storage::<C_Multi_Renderable>();
+        let multi_renderables = ecs_world.get_component_storage::<C_Multi_Renderable>();
 
-    #[cfg(debug_assertions)]
-    let (min_z, max_z) = get_min_max_z_multi(ecs_world, &entities);
+        #[cfg(debug_assertions)]
+        let (min_z, max_z) = get_min_max_z_multi(ecs_world, &entities);
 
-    for &entity in entities.as_slice() {
-        let rend = multi_renderables.get_component(entity).unwrap();
-        let spatial = spatials.get_component(entity).unwrap();
+        for &entity in entities.as_slice() {
+            let rend = multi_renderables.get_component(entity).unwrap();
+            let spatial = spatials.get_component(entity).unwrap();
 
-        let C_Multi_Renderable {
-            renderables,
-            n_renderables,
-        } = rend;
+            let C_Multi_Renderable {
+                renderables,
+                n_renderables,
+            } = rend;
 
-        for i in 0..*n_renderables {
-            let C_Renderable {
-                material,
-                rect: src_rect,
-                modulate,
-                z_index,
-                sprite_local_transform,
-            } = &renderables[i as usize];
+            for i in 0..*n_renderables {
+                let C_Renderable {
+                    material,
+                    rect: src_rect,
+                    modulate,
+                    z_index,
+                    sprite_local_transform,
+                } = &renderables[i as usize];
 
-            let transform = spatial.transform.combine(sprite_local_transform);
+                let transform = spatial.transform.combine(sprite_local_transform);
+                let mut_in_debug!(material) = *material;
 
-            let mut_in_debug!(material) = *material;
-
-            #[cfg(debug_assertions)]
-            {
-                use inle_gfx::material::Material;
-
-                match cfg.debug_visualization {
-                    Debug_Visualization::Sprites_Boundaries => {
-                        let mat = Material::with_texture(gres.get_white_texture_handle());
-                        let color = colors::lerp_col(
-                            colors::RED,
-                            colors::AQUA,
-                            (*z_index - min_z) as f32 / (max_z - min_z) as f32,
-                        );
-                        render::render_texture_ws(
-                            window,
-                            batches,
-                            mat,
-                            src_rect,
-                            color,
-                            &spatial.transform,
-                            *z_index,
-                        );
-                    }
-                    Debug_Visualization::Normals => {
-                        let mut mat = Material::with_texture(if material.normals.is_some() {
-                            material.normals
-                        } else {
-                            gres.get_white_texture_handle()
-                        });
-                        mat.shader = args.shader_cache.get_basic_batcher_shader_handle();
-                        mat.cast_shadows = false;
-                        material = mat;
-                    }
-                    _ => {}
+                #[cfg(debug_assertions)]
+                {
+                    display_debug_visualization(
+                        window,
+                        batches,
+                        gres,
+                        shader_cache,
+                        spatial,
+                        &mut material,
+                        src_rect,
+                        *z_index,
+                        min_z,
+                        max_z,
+                        cfg.debug_visualization,
+                    );
                 }
-            }
 
-            render::render_texture_ws(
-                window, batches, material, src_rect, *modulate, &transform, *z_index,
-            );
+                render::render_texture_ws(
+                    window, batches, &material, src_rect, *modulate, &transform, *z_index,
+                );
+            }
         }
     }
 }
@@ -223,6 +191,8 @@ fn get_min_max_z(
     ecs_world: &Ecs_World,
     entities: &[inle_ecs::ecs_world::Entity],
 ) -> (render::Z_Index, render::Z_Index) {
+    trace!("get_min_max_z");
+
     let mut min_z = render::Z_Index::MAX;
     let mut max_z = render::Z_Index::MIN;
     for &entity in entities {
@@ -247,6 +217,8 @@ fn get_min_max_z_multi(
     ecs_world: &Ecs_World,
     entities: &[inle_ecs::ecs_world::Entity],
 ) -> (render::Z_Index, render::Z_Index) {
+    trace!("get_min_max_z_multi");
+
     let mut min_z = render::Z_Index::MAX;
     let mut max_z = render::Z_Index::MIN;
     for &entity in entities {
@@ -268,4 +240,50 @@ fn get_min_max_z_multi(
     }
 
     (min_z, max_z)
+}
+
+#[cfg(debug_assertions)]
+fn display_debug_visualization(
+    window: &mut Render_Window_Handle,
+    batches: &mut Batches,
+    gres: &Gfx_Resources,
+    shader_cache: &Shader_Cache,
+    spatial: &C_Spatial2D,
+    material: &mut Material,
+    src_rect: &Rect<i32>,
+    z_index: Z_Index,
+    min_z: Z_Index,
+    max_z: Z_Index,
+    debug_visualization: Debug_Visualization,
+) {
+    match debug_visualization {
+        Debug_Visualization::Sprites_Boundaries => {
+            let mat = Material::with_texture(gres.get_white_texture_handle());
+            let color = colors::lerp_col(
+                colors::RED,
+                colors::AQUA,
+                (z_index - min_z) as f32 / (max_z - min_z) as f32,
+            );
+            render::render_texture_ws(
+                window,
+                batches,
+                &mat,
+                src_rect,
+                color,
+                &spatial.transform,
+                z_index,
+            );
+        }
+        Debug_Visualization::Normals => {
+            let mut mat = Material::with_texture(if material.normals.is_some() {
+                material.normals
+            } else {
+                gres.get_white_texture_handle()
+            });
+            mat.shader = shader_cache.get_basic_batcher_shader_handle();
+            mat.cast_shadows = false;
+            *material = mat;
+        }
+        _ => {}
+    }
 }

@@ -337,6 +337,19 @@ where
                 let mut orig_input_state =
                     inle_input::input_state::Input_State_Restore_Point::default();
 
+                let do_update_physics;
+                #[cfg(debug_assertions)]
+                {
+                    do_update_physics = game_state
+                        .debug_cvars
+                        .update_physics
+                        .read(&game_state.engine_state.config);
+                }
+                #[cfg(not(debug_assertions))]
+                {
+                    do_update_physics = true;
+                }
+
                 while game_state.accumulated_update_time >= update_dt {
                     let update_start = std::time::Instant::now();
 
@@ -347,12 +360,14 @@ where
                         &game_state.window,
                     );
 
-                    update_physics(
-                        game_state,
-                        update_dt,
-                        #[cfg(debug_assertions)]
-                        &mut collision_debug_data,
-                    );
+                    if do_update_physics {
+                        update_physics(
+                            game_state,
+                            update_dt,
+                            #[cfg(debug_assertions)]
+                            &mut collision_debug_data,
+                        );
+                    }
 
                     game_state
                         .gameplay_system
@@ -1499,7 +1514,7 @@ fn debug_draw_entities_prev_frame_ghost(
                 modulate.b,
                 200 - 10 * (debug_data.prev_positions.len() - i as usize) as u8,
             );
-            render::render_texture_ws(window, batches, material, &rect, color, &transform.combine(&sprite_local_transform), z_index);
+            render::render_texture_ws(window, batches, &material, &rect, color, &transform.combine(&sprite_local_transform), z_index);
         }
     });
 }

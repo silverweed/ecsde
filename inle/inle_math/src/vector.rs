@@ -128,6 +128,7 @@ where
     /// Like `normalized_or_zero` but panics if length is 0.
     pub fn normalized(self) -> Self {
         let mag = self.magnitude2().into();
+        debug_assert!(mag > 0.);
         let den = 1.0 / mag.sqrt();
         Self {
             x: T::from(self.x.into() * den),
@@ -139,6 +140,7 @@ where
     /// Like `normalized` but faster and less precise
     pub fn normalized_fast(self) -> Self {
         let mag = self.magnitude2().into();
+        debug_assert!(mag > 0.);
         let den = math::fast_invsqrt(mag);
         Self {
             x: T::from(self.x.into() * den),

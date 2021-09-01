@@ -22,7 +22,7 @@ impl Vertex_Buffer_Holder {
         }
     }
 
-    pub fn update(&mut self, vertices: &mut [Vertex], n_vertices: u32) {
+    pub fn update(&mut self, vertices: &[Vertex], n_vertices: u32) {
         trace!("vbuf_holder::update");
 
         debug_assert!(vertices.len() <= std::u32::MAX as usize);

@@ -13,8 +13,8 @@ use std::collections::HashMap;
 use {inle_debug::painter::Debug_Painter, std::collections::HashSet};
 
 // @Speed: tune these numbers
-const CHUNK_WIDTH: f32 = 2000.;
-const CHUNK_HEIGHT: f32 = 2000.;
+const CHUNK_WIDTH: f32 = 200.;
+const CHUNK_HEIGHT: f32 = 200.;
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Chunk_Coords {

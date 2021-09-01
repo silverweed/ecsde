@@ -78,7 +78,7 @@ pub fn render_circle_ws<P>(
 pub fn render_texture_ws(
     window: &mut Render_Window_Handle,
     batches: &mut batcher::Batches,
-    material: Material,
+    material: &Material,
     tex_rect: &Rect<i32>,
     color: Color,
     transform: &Transform2D,
@@ -86,7 +86,7 @@ pub fn render_texture_ws(
 ) {
     trace!("render_texture_ws");
     batcher::add_texture_ws(
-        window, batches, material, tex_rect, color, transform, z_index,
+        window, batches, &material, tex_rect, color, transform, z_index,
     );
 }
 
