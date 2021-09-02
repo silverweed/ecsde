@@ -22,7 +22,7 @@ impl Collision_Matrix {
         debug_assert!(a < MAX_LAYERS);
         debug_assert!(b < MAX_LAYERS);
 
-        (self.rows[a as usize] & (1 << b as usize)) == 1
+        (self.rows[a as usize] & (1 << b as usize)) != 0
     }
 
     #[allow(unused_parens)]
