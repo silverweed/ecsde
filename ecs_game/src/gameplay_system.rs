@@ -269,11 +269,12 @@ impl Gameplay_System {
         let env = &engine_state.env;
         let shader_cache = &mut rsrc.shader_cache;
         let input_state = &engine_state.input_state;
+        let phys_settings = &engine_state.systems.physics_settings;
 
         levels.foreach_active_level(|level| {
             let world = &mut level.world;
 
-            ground_detection_system::update(world, &level.phys_world);
+            ground_detection_system::update(world, &level.phys_world, phys_settings);
             inle_app::animation_system::update(&dt, world);
             controllable_system::update(&dt, actions, axes, world, input_cfg, cfg);
 
