@@ -153,10 +153,12 @@ pub fn display(window: &mut Window_Handle) {
     window.handle.swap_buffers();
 }
 
+#[inline]
 pub fn get_window_target_size(window: &Window_Handle) -> (u32, u32) {
     window.target_size
 }
 
+#[inline]
 pub fn get_window_real_size(window: &Window_Handle) -> (u32, u32) {
     window.real_size
 }
@@ -181,4 +183,5 @@ pub fn poll_event(window: &mut Window_Handle) -> Option<Event> {
     evt
 }
 
+#[inline(always)]
 pub fn set_key_repeat_enabled(_window: &mut Window_Handle, _enabled: bool) {}
