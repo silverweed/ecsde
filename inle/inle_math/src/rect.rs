@@ -1,3 +1,4 @@
+use crate::transform::Transform2D;
 use crate::vector::{Vec2f, Vector2};
 use std::cmp::{Eq, Ordering, PartialEq};
 use std::fmt::Debug;
@@ -75,6 +76,7 @@ where
     T: Sub<Output = T> + PartialOrd + Copy,
 {
     // @WaitForStable: mark this const
+    #[track_caller]
     pub fn from_topleft_botright(topleft: Vector2<T>, botright: Vector2<T>) -> Rect<T> {
         debug_assert!(topleft.x <= botright.x);
         debug_assert!(topleft.y <= botright.y);
@@ -91,6 +93,17 @@ where
         Rect {
             x: topleft.x,
             y: topleft.y,
+            width: size.x,
+            height: size.y,
+        }
+    }
+}
+
+impl Rect<f32> {
+    pub fn from_center_size(center: Vector2<f32>, size: Vector2<f32>) -> Rect<f32> {
+        Rect {
+            x: center.x - size.x * 0.5,
+            y: center.y - size.y * 0.5,
             width: size.x,
             height: size.y,
         }
@@ -227,6 +240,38 @@ pub fn aabb_of_points<'a, T: IntoIterator<Item = &'a Vec2f>>(points: T) -> Rectf
     Rect::from_topleft_botright(v2!(min_x, min_y), v2!(max_x, max_y))
 }
 
+#[inline]
+pub fn aabb_of_transformed_rect(rect: &Rectf, transform: &Transform2D) -> Rectf {
+    let (s, c) = transform.rotation().as_rad().sin_cos();
+    let Vec2f { x: tx, y: ty } = transform.position();
+    let (min, max) = (rect.pos_min(), rect.pos_max());
+    if c >= 0.0 {
+        if s >= 0.0 {
+            Rect::from_topleft_botright(
+                v2!(min.x * c - max.y * s + tx, min.x * s + min.y * c + ty),
+                v2!(max.x * c - min.y * s + tx, max.x * s + max.y * c + ty),
+            )
+        } else {
+            Rect::from_topleft_botright(
+                v2!(min.x * c - min.y * s + tx, max.x * s + min.y * c + ty),
+                v2!(max.x * c - max.y * s + tx, min.x * s + max.y * c + ty),
+            )
+        }
+    } else {
+        if s >= 0.0 {
+            Rect::from_topleft_botright(
+                v2!(max.x * c - max.y * s + tx, min.x * s + max.y * c + ty),
+                v2!(min.x * c - min.y * s + tx, max.x * s + min.y * c + ty),
+            )
+        } else {
+            Rect::from_topleft_botright(
+                v2!(max.x * c - min.y * s + tx, max.x * s + max.y * c + ty),
+                v2!(min.x * c - max.y * s + tx, min.x * s + min.y * c + ty),
+            )
+        }
+    }
+}
+
 impl<T> Rect<T>
 where
     T: Add<Output = T> + Copy,
@@ -244,12 +289,21 @@ where
             && pos.y <= self.y + self.height
     }
 
+    #[inline]
     pub fn pos_min(&self) -> Vector2<T> {
         v2!(self.x, self.y)
     }
 
+    #[inline]
     pub fn pos_max(&self) -> Vector2<T> {
         v2!(self.x + self.width, self.y + self.height)
+    }
+}
+
+impl Rect<f32> {
+    #[inline]
+    pub fn pos_center(&self) -> Vector2<f32> {
+        v2!(self.x + self.width * 0.5, self.y + self.height * 0.5)
     }
 }
 

@@ -877,6 +877,7 @@ fn update_debug(
     let grid_opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
     let draw_world_chunks = cvars.draw_world_chunks.read(&engine_state.config);
     let draw_lights = cvars.draw_lights.read(&engine_state.config);
+    let draw_particle_emitters = cvars.draw_particle_emitters.read(&engine_state.config);
     let lv_batches = &mut game_state.level_batches;
     let global_painter = &mut debug_systems.global_painter;
     let window = &mut game_state.window;
@@ -884,6 +885,7 @@ fn update_debug(
     let env = &engine_state.env;
     let pos_hist_system = &mut game_state.game_debug_systems.position_history_system;
     let cfg = &engine_state.config;
+    let particle_mgrs = &engine_state.systems.particle_mgrs;
 
     game_state
         .gameplay_system
@@ -943,6 +945,10 @@ fn update_debug(
 
             if draw_lights {
                 debug_draw_lights(global_painter, debug_painter, &level.lights);
+            }
+
+            if draw_particle_emitters {
+                debug_draw_particle_emitters(debug_painter, &particle_mgrs.get(&level.id).unwrap());
             }
 
             // Debug grid
@@ -1679,4 +1685,45 @@ fn set_debug_hud_enabled(debug_ui: &mut inle_debug::debug_ui::Debug_Ui_System, e
     debug_ui.set_overlay_enabled(sid!("physics"), enabled);
     debug_ui.set_overlay_enabled(sid!("joysticks"), enabled);
     debug_ui.frame_scroller.hidden = !enabled;
+}
+
+#[cfg(debug_assertions)]
+fn debug_draw_particle_emitters(
+    painter: &mut Debug_Painter,
+    particle_mgr: &inle_gfx::particles::Particle_Manager,
+) {
+    for emitter in &particle_mgr.active_emitters {
+        let aabb = inle_math::rect::aabb_of_transformed_rect(&emitter.bounds, &emitter.transform);
+        painter.add_rect(
+            aabb.size(),
+            &Transform2D::from_pos(aabb.pos_min()),
+            Paint_Properties {
+                color: colors::rgba(58, 162, 252, 80),
+                border_color: colors::rgb(58, 162, 252),
+                border_thick: 1.0,
+                ..Default::default()
+            },
+        );
+        painter.add_rect(
+            emitter.bounds.size(),
+            &emitter
+                .transform
+                .combine(&Transform2D::from_pos(emitter.bounds.pos_min())),
+            Paint_Properties {
+                color: colors::rgba(208, 80, 232, 100),
+                border_color: colors::rgb(208, 80, 232),
+                border_thick: 1.0,
+                ..Default::default()
+            },
+        );
+        painter.add_arrow(
+            Arrow {
+                center: emitter.transform.position(),
+                direction: Vec2f::from_rotation(emitter.transform.rotation()) * 30.0,
+                thickness: 1.0,
+                arrow_size: 20.,
+            },
+            colors::rgb(0, 141, 94),
+        );
+    }
 }

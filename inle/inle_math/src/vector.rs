@@ -394,6 +394,18 @@ impl inle_test::approx_eq_testable::Approx_Eq_Testable for Vec2f {
 }
 
 impl Vec2f {
+    #[inline]
+    pub fn from_polar(r: f32, theta: f32) -> Self {
+        let (s, c) = theta.sin_cos();
+        Self { x: r * c, y: r * s }
+    }
+
+    #[inline]
+    pub fn from_rotation(rot: Angle) -> Self {
+        let (s, c) = rot.as_rad().sin_cos();
+        v2!(c, s)
+    }
+
     // @WaitForStable: make this const as soon as sqrt() is stable as const
     pub fn distance(self, other: Self) -> f32 {
         self.distance2(other).sqrt()
@@ -404,12 +416,6 @@ impl Vec2f {
         let dx = self.x - other.x;
         let dy = self.y - other.y;
         dx * dx + dy * dy
-    }
-
-    #[inline(always)]
-    pub fn from_polar(r: f32, theta: f32) -> Self {
-        let (s, c) = theta.sin_cos();
-        Self { x: r * c, y: r * s }
     }
 }
 

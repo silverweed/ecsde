@@ -60,6 +60,9 @@ pub struct Gameplay_System {
 
     // @Cleanup: this is pretty ugly here
     camera_on_player: Cfg_Var<bool>,
+
+    // @Temporary: we should create a C_Particle_Emitter to treat emitters like entities
+    test_particle_emitter: inle_gfx::particles::Particle_Emitter_Handle,
 }
 
 #[cfg(debug_assertions)]
@@ -81,6 +84,7 @@ impl Gameplay_System {
             #[cfg(debug_assertions)]
             debug_data: Debug_Data::default(),
             camera_on_player: Cfg_Var::default(),
+            test_particle_emitter: inle_gfx::particles::Particle_Emitter_Handle::default(),
         }
     }
 
@@ -163,7 +167,12 @@ impl Gameplay_System {
                 .particle_mgrs
                 .get_mut(&level_id)
                 .unwrap();
-            let handle = particle_mgr.add_emitter(window, &props, rng);
+            let handle = particle_mgr.add_emitter(
+                window,
+                &props,
+                Rect::from_center_size(v2!(0., 0.), v2!(10., 20.)),
+                rng,
+            );
             particle_mgr
                 .get_emitter_mut(handle)
                 .transform
@@ -172,6 +181,8 @@ impl Gameplay_System {
                 .get_emitter_mut(handle)
                 .transform
                 .set_rotation(angle::deg(-90.0));
+
+            self.test_particle_emitter = handle;
 
             /*
             let texture = game_res
@@ -270,6 +281,8 @@ impl Gameplay_System {
         let shader_cache = &mut rsrc.shader_cache;
         let input_state = &engine_state.input_state;
         let phys_settings = &engine_state.systems.physics_settings;
+        let particle_mgrs = &mut engine_state.systems.particle_mgrs;
+        let test_emitter_handle = self.test_particle_emitter;
 
         levels.foreach_active_level(|level| {
             let world = &mut level.world;
@@ -289,6 +302,13 @@ impl Gameplay_System {
 
             gfx::multi_sprite_animation_system::update(&dt, world, frame_alloc);
             level.chunks.update(&mut level.world, &level.phys_world);
+
+            // @Temporary DEBUG (this only works if we only have 1 test level)
+            //let particle_mgr = particle_mgrs.get_mut(&level.id).unwrap();
+            //particle_mgr
+            //.get_emitter_mut(test_emitter_handle)
+            //.transform
+            //.rotate(inle_math::angle::deg(dt.as_secs_f32() * 30.0));
         });
     }
 

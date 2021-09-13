@@ -8,6 +8,7 @@ use inle_common::colors;
 use inle_core::env::Env_Info;
 use inle_core::rand::{Default_Rng, Precomputed_Rand_Pool};
 use inle_math::angle::{self, Angle};
+use inle_math::rect::{self, Rectf};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
 use inle_resources::gfx::{
@@ -19,6 +20,7 @@ use std::time::Duration;
 
 pub struct Particle_Emitter {
     pub transform: Transform2D,
+    pub bounds: Rectf, // the emitter will be culled if its bounds are outside the viewport
     pub props: Particle_Props,
     pub particles: Particles,
 }
@@ -86,9 +88,14 @@ impl Default for Particle_Props {
     }
 }
 
-pub fn create_particle_emitter(props: &Particle_Props, rng: &mut Default_Rng) -> Particle_Emitter {
+pub fn create_particle_emitter(
+    props: &Particle_Props,
+    bounds: Rectf,
+    rng: &mut Default_Rng,
+) -> Particle_Emitter {
     Particle_Emitter {
         transform: Transform2D::default(),
+        bounds,
         props: props.clone(),
         particles: create_particles(props, rng),
     }
@@ -153,6 +160,7 @@ fn init_particle(
     )
 }
 
+// @Speed: do this on the GPU
 pub fn update_particles(emitter: &mut Particle_Emitter, dt: &Duration, chunk_size: usize) {
     trace!("update_particles");
 
@@ -253,7 +261,7 @@ impl Particle_Emitter_Handle {
 
 pub struct Particle_Manager {
     particle_shader: Shader_Handle,
-    active_emitters: Vec<Particle_Emitter>,
+    pub active_emitters: Vec<Particle_Emitter>,
     // This is in a separate array because we want active_emitters to be processable in parallel
     active_emitters_vbufs: Vec<Vertex_Buffer_Holder>,
     coarse_chunk_size: Cfg_Var<i32>,
@@ -276,11 +284,12 @@ impl Particle_Manager {
         &mut self,
         window: &mut Render_Window_Handle,
         props: &Particle_Props,
+        bounds: Rectf,
         rng: &mut Default_Rng,
     ) -> Particle_Emitter_Handle {
         debug_assert!(props.n_particles < std::u32::MAX as usize);
         self.active_emitters
-            .push(create_particle_emitter(props, rng));
+            .push(create_particle_emitter(props, bounds, rng));
         self.active_emitters_vbufs
             .push(Vertex_Buffer_Holder::with_initial_vertex_count(
                 window,
@@ -330,9 +339,15 @@ impl Particle_Manager {
         render::use_shader(shader);
         render::set_uniform(shader, c_str!("camera_scale"), 1.0 / camera.scale().x);
 
+        let visible_viewport = inle_win::window::get_camera_viewport(window, camera);
+
         for (particles, vbuf) in self
             .active_emitters
             .iter()
+            .filter(|emitter| {
+                let aabb = rect::aabb_of_transformed_rect(&emitter.bounds, &emitter.transform);
+                rect::rects_intersection(&visible_viewport, &aabb).is_some()
+            })
             .zip(self.active_emitters_vbufs.iter_mut())
         {
             // @Incomplete: we must handle the case where the texture is unset.

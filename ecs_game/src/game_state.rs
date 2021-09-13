@@ -70,6 +70,7 @@ pub struct CVars {
 pub struct Debug_CVars {
     pub render_debug_visualization: Cfg_Var<String>,
     pub draw_lights: Cfg_Var<bool>,
+    pub draw_particle_emitters: Cfg_Var<bool>,
 
     pub record_replay: Cfg_Var<bool>,
 
@@ -344,6 +345,7 @@ fn create_cvars(cfg: &inle_cfg::Config) -> CVars {
 fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     let render_debug_visualization = Cfg_Var::new("debug/rendering/debug_visualization", cfg);
     let draw_lights = Cfg_Var::new("debug/rendering/draw_lights", cfg);
+    let draw_particle_emitters = Cfg_Var::new("debug/rendering/draw_particle_emitters", cfg);
     let record_replay = Cfg_Var::new("engine/debug/replay/record", cfg);
     let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
     let draw_entities = Cfg_Var::new("debug/entities/draw_entities", cfg);
@@ -369,6 +371,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     Debug_CVars {
         render_debug_visualization,
         draw_lights,
+        draw_particle_emitters,
         record_replay,
         trace_overlay_refresh_rate,
         draw_colliders,
