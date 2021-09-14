@@ -133,10 +133,6 @@ where
 
         let log = &mut game_state.engine_state.debug_systems.log;
 
-        if let Some(gpu_profiler) = game_state.engine_state.debug_systems.gpu_profiler.as_mut() {
-            gpu_profiler.start_gpu_frame();
-        }
-
         inle_gfx::render_window::start_new_frame(&mut game_state.window);
 
         if !game_state.engine_state.time.paused {
@@ -200,13 +196,6 @@ where
                 game_state.window.gl.n_draw_calls_this_frame,
                 t_before_work.elapsed()
             );
-        }
-    }
-
-    #[cfg(debug_assertions)]
-    {
-        if let Some(gpu_profiler) = game_state.engine_state.debug_systems.gpu_profiler.as_mut() {
-            gpu_profiler.end_gpu_frame();
         }
     }
 

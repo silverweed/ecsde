@@ -10,7 +10,6 @@ use {
     inle_debug::{calipers, console, debug_ui, log, painter::Debug_Painter},
     inle_replay::recording_system,
     inle_resources::gfx::Gfx_Resources,
-    inle_gfx_backend::backend_common::prof::Gpu_Profiler,
 };
 
 pub struct Core_Systems<'r> {
@@ -33,7 +32,6 @@ pub struct Debug_Systems {
     pub console: console::Console,
     pub log: log::Debug_Log,
     pub calipers: calipers::Debug_Calipers,
-    pub gpu_profiler: Option<Gpu_Profiler>,
 
     pub show_trace_overlay: bool,
     pub trace_overlay_update_t: f32,
@@ -62,14 +60,6 @@ impl Debug_Systems {
         let debug_log_size =
             inle_cfg::Cfg_Var::<i32>::new("engine/debug/log/hist_size_seconds", cfg).read(cfg);
         let fps = (1000. / ms_per_frame + 0.5) as i32;
-
-        let gpu_profiler;
-        if Gpu_Profiler::is_available() { 
-            gpu_profiler = Some(Gpu_Profiler::new());
-        } else { 
-            lwarn!("This platform does not support GPU profiling.");
-            gpu_profiler = None;
-        }
         Debug_Systems {
             debug_ui: debug_ui::Debug_Ui_System::new(),
             replay_recording_system: recording_system::Replay_Recording_System::new(
@@ -86,7 +76,6 @@ impl Debug_Systems {
             log: log::Debug_Log::with_hist_len((debug_log_size * fps) as _),
             calipers: calipers::Debug_Calipers::default(),
             traced_fn: String::default(),
-            gpu_profiler
         }
     }
 

@@ -18,7 +18,6 @@ inle_ecs = { path = "../inle_ecs" }
 inle_events = { path = "../inle_events" }
 inle_fs = { path = "../inle_fs" }
 inle_gfx = { path = "../inle_gfx" }
-inle_gfx_backend = { path = "../inle_gfx_backend" }
 inle_input = { path = "../inle_input" }
 inle_math = { path = "../inle_math" }
 inle_physics = { path = "../inle_physics" }
