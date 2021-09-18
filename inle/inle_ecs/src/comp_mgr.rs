@@ -346,13 +346,5 @@ pub(super) fn draw_comp_alloc<T: 'static + Copy>(
     world: &super::ecs_world::Ecs_World,
     painter: &mut Debug_Painter,
 ) {
-    if size_of::<T>() != 0 {
-        unsafe {
-            world
-                .component_manager
-                .must_get_storage(world.component_manager.get_handle::<T>())
-                .alloc
-                .debug_draw::<T>(painter);
-        }
-    }
+    ldebug!("Remove me!");
 }
