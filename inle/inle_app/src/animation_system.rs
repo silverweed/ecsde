@@ -5,10 +5,10 @@ use std::time::Duration;
 pub fn update(dt: &Duration, ecs_world: &mut Ecs_World) {
     let dt_secs = dt.as_secs_f32();
 
-    foreach_entity!(ecs_world, +C_Renderable, +C_Animated_Sprite, |entity| {
-        let sprite = ecs_world
-            .get_component_mut::<C_Animated_Sprite>(entity)
-            .unwrap();
+    foreach_entity_new!(ecs_world,
+        read: ;
+        write: C_Renderable, C_Animated_Sprite;
+        |entity, (), (renderable, sprite): (&mut C_Renderable, &mut C_Animated_Sprite)| {
         if sprite.frame_time <= 0.0 || sprite.n_frames <= 1 {
             return;
         }
@@ -24,7 +24,6 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World) {
         if frame_time_elapsed >= frame_time {
             sprite.frame_time_elapsed = 0.0;
 
-            let renderable = ecs_world.get_component_mut::<C_Renderable>(entity).unwrap();
             let rect = renderable.rect;
             let width = rect.width;
             let x = (rect.x + width) % (width * n_frames as i32).max(1);

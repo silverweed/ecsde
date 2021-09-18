@@ -8,6 +8,8 @@ use std::collections::HashSet;
 pub type Entity = Generational_Index;
 
 pub type Component_Storage<T> = comp_mgr::Component_Storage<T>;
+pub type Component_Storage_Read<'a, T> = comp_mgr::Component_Storage_Read<'a, T>;
+pub type Component_Storage_Write<'a, T> = comp_mgr::Component_Storage_Write<'a, T>;
 pub type Component_Read<'l, T> = comp_mgr::Component_Read<'l, T>;
 pub type Component_Write<'l, T> = comp_mgr::Component_Write<'l, T>;
 
@@ -80,11 +82,7 @@ impl Ecs_World {
             && !self.entities_pending_destroy.contains(&entity)
     }
 
-    pub fn register_component<T: 'static + Copy>(&mut self) {
-        ldebug!("This is not needed anymore!");
-    }
-
-    pub fn add_component<T: 'static + Default>(&mut self, entity: Entity, data: T) {
+    pub fn add_component<T: 'static>(&mut self, entity: Entity, data: T) {
         self.component_manager.add_component::<T>(entity, data);
     }
 
@@ -118,7 +116,7 @@ impl Ecs_World {
         self.component_manager.get_component_mut(entity)
     }
 
-    pub fn remove_component<T: 'static + Copy>(&mut self, entity: Entity) {
+    pub fn remove_component<T: 'static>(&mut self, entity: Entity) {
         trace!("remove_component");
 
         if !self.entity_manager.is_valid_entity(entity) {
@@ -132,7 +130,7 @@ impl Ecs_World {
         self.component_manager.remove_component::<T>(entity);
     }
 
-    pub fn has_component<T: 'static + Copy>(&self, entity: Entity) -> bool {
+    pub fn has_component<T: 'static>(&self, entity: Entity) -> bool {
         trace!("has_component");
 
         if !self.entity_manager.is_valid_entity(entity) {
@@ -188,6 +186,13 @@ impl Entity_Manager {
 
     pub fn n_live_entities(&self) -> usize {
         self.entities.len()
+    }
+}
+
+#[cfg(debug_assertions)]
+impl Ecs_World {
+    pub fn get_comp_name_list_for_entity(&self, entity: Entity) -> Vec<&'static str> {
+        self.component_manager.get_comp_name_list_for_entity(entity)
     }
 }
 

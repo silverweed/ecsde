@@ -2,19 +2,31 @@ use crate::comp_mgr::{
     Component_Manager, Component_Storage, Component_Storage_Interface, Component_Storage_Read,
     Component_Storage_Write,
 };
-use crate::ecs_world::Entity;
+use crate::ecs_world::{Ecs_World, Entity};
 use anymap::any::UncheckedAnyExt;
 use std::any::TypeId;
 use std::collections::HashMap;
 
-struct Ecs_Query<'mgr, 'str> {
+pub struct Ecs_Query<'mgr, 'str> {
     comp_mgr: &'mgr Component_Manager,
     storages: Storages<'str>,
     entities: Vec<Entity>,
 }
 
+impl<'m, 's> Ecs_Query<'m, 's> {
+    #[inline]
+    pub fn entities(&self) -> &[Entity] {
+        &self.entities
+    }
+
+    #[inline]
+    pub fn storages(&self) -> &Storages {
+        &self.storages
+    }
+}
+
 #[derive(Default)]
-struct Storages<'a> {
+pub struct Storages<'a> {
     reads: Vec<&'a dyn Component_Storage_Interface>,
     writes: Vec<&'a dyn Component_Storage_Interface>,
 
@@ -40,45 +52,40 @@ impl<'mgr, 'str> Ecs_Query<'mgr, 'str>
 where
     'mgr: 'str,
 {
-    // @Refactor: construct using Ecs_World rather than separate comp_mgr/entities
-    fn new(comp_mgr: &'mgr Component_Manager, entities: &[Entity]) -> Self {
+    pub fn new(ecs_world: &'mgr Ecs_World) -> Self {
         Self {
-            comp_mgr,
+            comp_mgr: &ecs_world.component_manager,
             storages: Storages::default(),
-            entities: entities.to_vec(),
+            entities: ecs_world.entities().to_vec(),
         }
     }
 
-    fn read<T: 'static>(mut self) -> Self {
-        let storage = self
-            .comp_mgr
-            .get_component_storage::<T>()
-            .expect("TODO: handle missing comp");
-        self.storages.reads.push(storage);
-        self.storages
-            .read_indices
-            .insert(TypeId::of::<T>(), self.storages.reads.len() - 1);
+    pub fn read<T: 'static>(mut self) -> Self {
+        if let Some(storage) = self.comp_mgr.get_component_storage::<T>() {
+            self.storages.reads.push(storage);
+            self.storages
+                .read_indices
+                .insert(TypeId::of::<T>(), self.storages.reads.len() - 1);
 
-        // @Speed: this may probably be accelerated with some dedicated data structure on Component_Manager
-        let comp_mgr = self.comp_mgr;
-        self.entities.retain(|&e| comp_mgr.has_component::<T>(e));
+            // @Speed: this may probably be accelerated with some dedicated data structure on Component_Manager
+            let comp_mgr = self.comp_mgr;
+            self.entities.retain(|&e| comp_mgr.has_component::<T>(e));
+        }
 
         self
     }
 
-    fn write<T: 'static>(mut self) -> Self {
-        let storage = self
-            .comp_mgr
-            .get_component_storage::<T>()
-            .expect("TODO: handle missing comp");
-        self.storages.writes.push(storage);
-        self.storages
-            .write_indices
-            .insert(TypeId::of::<T>(), self.storages.writes.len() - 1);
+    pub fn write<T: 'static>(mut self) -> Self {
+        if let Some(storage) = self.comp_mgr.get_component_storage::<T>() {
+            self.storages.writes.push(storage);
+            self.storages
+                .write_indices
+                .insert(TypeId::of::<T>(), self.storages.writes.len() - 1);
 
-        // @Speed: this may probably be accelerated with some dedicated data structure on Component_Manager
-        let comp_mgr = self.comp_mgr;
-        self.entities.retain(|&e| comp_mgr.has_component::<T>(e));
+            // @Speed: this may probably be accelerated with some dedicated data structure on Component_Manager
+            let comp_mgr = self.comp_mgr;
+            self.entities.retain(|&e| comp_mgr.has_component::<T>(e));
+        }
 
         self
     }
@@ -103,23 +110,19 @@ mod tests {
             v: Vec<String>,
         }
 
-        let mut comp_mgr = Component_Manager::new();
-        let entities = [
-            Entity { index: 1, gen: 1 },
-            Entity { index: 2, gen: 1 },
-            Entity { index: 3, gen: 1 },
-        ];
+        let mut world = Ecs_World::new();
+        let entities = [world.new_entity(), world.new_entity(), world.new_entity()];
 
         for e in &entities {
-            comp_mgr.add_component(*e, A { x: 42 });
-            comp_mgr.add_component(*e, B { y: 0.3 });
-            comp_mgr.add_component(
+            world.add_component(*e, A { x: 42 });
+            world.add_component(*e, B { y: 0.3 });
+            world.add_component(
                 *e,
                 C {
                     s: "Hello sailor".to_string(),
                 },
             );
-            comp_mgr.add_component(
+            world.add_component(
                 *e,
                 D {
                     v: vec!["asd".to_string(), "bar".to_string()],
@@ -127,7 +130,7 @@ mod tests {
             );
         }
 
-        foreach_entity_new!(comp_mgr, entities,
+        foreach_entity_new!(&world,
             read: A, B;
             write: C, D;
             |_entity, (a, b): (&A, &B), (c, d): (&mut C, &mut D)| {

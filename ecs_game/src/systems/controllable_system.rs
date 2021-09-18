@@ -34,22 +34,20 @@ pub fn update(
     let movement = get_movement_from_input(axes, input_cfg, cfg).x;
     let dt_secs = dt.as_secs_f32();
 
-    foreach_entity!(ecs_world, +C_Controllable, +C_Spatial2D, +C_Ground_Detection, |entity| {
-        let ctrl = ecs_world
-            .get_component::<C_Controllable>(entity)
-            .unwrap();
+    foreach_entity_new!(ecs_world,
+        read: C_Ground_Detection;
+        write: C_Controllable, C_Spatial2D;
+        |entity, (ground_detect,): (&C_Ground_Detection,), (ctrl, spatial): (&mut C_Controllable, C_Spatial2D)| {
         let acceleration = ctrl.acceleration.read(cfg);
         let jump_impulse = ctrl.jump_impulse.read(cfg);
         let dampening = ctrl.dampening.read(cfg);
         let horiz_max_speed = ctrl.horiz_max_speed.read(cfg);
         let vert_max_speed = ctrl.vert_max_speed.read(cfg);
 
-        let ground_detect = ecs_world.get_component::<C_Ground_Detection>(entity).unwrap();
         let reset_jumps = ground_detect.just_touched_ground;
 
         let can_jump = (if reset_jumps { 0 } else { ctrl.n_jumps_done }) < ctrl.max_jumps.read(cfg) as u32;
 
-        let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
         let velocity = &mut spatial.velocity;
 
         velocity.x += movement * acceleration * dt_secs;
@@ -67,9 +65,6 @@ pub fn update(
         velocity.y = clamp(velocity.y, -vert_max_speed, vert_max_speed);
 
         let v = *velocity * dt_secs;
-        let ctrl = ecs_world
-            .get_component_mut::<C_Controllable>(entity)
-            .unwrap();
         ctrl.translation_this_frame = v;
         if reset_jumps {
             ctrl.n_jumps_done = 0;

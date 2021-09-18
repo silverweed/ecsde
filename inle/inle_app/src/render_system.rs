@@ -1,8 +1,8 @@
 use inle_alloc::temp;
 use inle_common::colors::Color;
 use inle_ecs::components::base::C_Spatial2D;
-use inle_ecs::ecs_world::Ecs_World;
-use inle_ecs::entity_stream::new_entity_stream;
+use inle_ecs::ecs_query::Ecs_Query;
+use inle_ecs::ecs_world::{Component_Storage_Read, Ecs_World, Entity};
 use inle_gfx::components::{C_Multi_Renderable, C_Renderable};
 use inle_gfx::material::Material;
 use inle_gfx::render::batcher::Batches;
@@ -60,26 +60,22 @@ pub fn update(args: Render_System_Update_Args) {
     ////
     //// Renderables
     ////
-    let spatials = ecs_world.get_component_storage::<C_Spatial2D>();
     {
         trace!("draw_renderables");
 
-        let renderables = ecs_world.get_component_storage::<C_Renderable>();
-
+        let mut query = Ecs_Query::new(ecs_world)
+            .read::<C_Spatial2D>()
+            .read::<C_Renderable>();
+        let storages = query.storages();
+        let spatials = storages.begin_read::<C_Spatial2D>();
+        let renderables = storages.begin_read::<C_Renderable>();
         {
-            let mut entities = temp::excl_temp_array(frame_alloc);
-            new_entity_stream(ecs_world)
-                .require::<C_Renderable>()
-                .require::<C_Spatial2D>()
-                .build()
-                .collect(ecs_world, &mut entities);
-
             #[cfg(debug_assertions)]
-            let (min_z, max_z) = get_min_max_z(ecs_world, &entities);
+            let (min_z, max_z) = get_min_max_z(query.entities(), &renderables);
 
-            for &entity in entities.as_slice() {
-                let rend = renderables.get_component(entity).unwrap();
-                let spatial = spatials.get_component(entity).unwrap();
+            for &entity in query.entities() {
+                let rend = renderables.must_get(entity);
+                let spatial = spatials.must_get(entity);
 
                 let C_Renderable {
                     material,
@@ -128,21 +124,20 @@ pub fn update(args: Render_System_Update_Args) {
 
     {
         trace!("draw_multi_renderables");
-        let mut entities = temp::excl_temp_array(frame_alloc);
-        new_entity_stream(ecs_world)
-            .require::<C_Multi_Renderable>()
-            .require::<C_Spatial2D>()
-            .build()
-            .collect(ecs_world, &mut entities);
 
-        let multi_renderables = ecs_world.get_component_storage::<C_Multi_Renderable>();
+        let mut query = Ecs_Query::new(ecs_world)
+            .read::<C_Spatial2D>()
+            .read::<C_Multi_Renderable>();
+        let storages = query.storages();
+        let spatials = storages.begin_read::<C_Spatial2D>();
+        let multi_renderables = storages.begin_read::<C_Multi_Renderable>();
 
         #[cfg(debug_assertions)]
-        let (min_z, max_z) = get_min_max_z_multi(ecs_world, &entities);
+        let (min_z, max_z) = get_min_max_z_multi(query.entities(), &multi_renderables);
 
-        for &entity in entities.as_slice() {
-            let rend = multi_renderables.get_component(entity).unwrap();
-            let spatial = spatials.get_component(entity).unwrap();
+        for &entity in query.entities() {
+            let rend = multi_renderables.must_get(entity);
+            let spatial = spatials.must_get(entity);
 
             let C_Multi_Renderable {
                 renderables,
@@ -188,15 +183,15 @@ pub fn update(args: Render_System_Update_Args) {
 
 #[cfg(debug_assertions)]
 fn get_min_max_z(
-    ecs_world: &Ecs_World,
-    entities: &[inle_ecs::ecs_world::Entity],
+    entities: &[Entity],
+    renderables: &Component_Storage_Read<C_Renderable>,
 ) -> (render::Z_Index, render::Z_Index) {
     trace!("get_min_max_z");
 
     let mut min_z = render::Z_Index::MAX;
     let mut max_z = render::Z_Index::MIN;
     for &entity in entities {
-        let C_Renderable { z_index, .. } = ecs_world.get_component::<C_Renderable>(entity).unwrap();
+        let C_Renderable { z_index, .. } = renderables.must_get(entity);
 
         let z_index = *z_index;
 
@@ -214,17 +209,15 @@ fn get_min_max_z(
 
 #[cfg(debug_assertions)]
 fn get_min_max_z_multi(
-    ecs_world: &Ecs_World,
-    entities: &[inle_ecs::ecs_world::Entity],
+    entities: &[Entity],
+    multi_renderables: &Component_Storage_Read<C_Multi_Renderable>,
 ) -> (render::Z_Index, render::Z_Index) {
     trace!("get_min_max_z_multi");
 
     let mut min_z = render::Z_Index::MAX;
     let mut max_z = render::Z_Index::MIN;
     for &entity in entities {
-        let C_Multi_Renderable { renderables, .. } = ecs_world
-            .get_component::<C_Multi_Renderable>(entity)
-            .unwrap();
+        let C_Multi_Renderable { renderables, .. } = multi_renderables.must_get(entity);
 
         for rend in renderables {
             let z_index = rend.z_index;

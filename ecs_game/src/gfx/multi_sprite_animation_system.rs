@@ -34,11 +34,11 @@ pub struct C_Multi_Renderable_Animation {
 }
 
 pub fn update(dt: &Duration, world: &mut Ecs_World, frame_alloc: &mut Temp_Allocator) {
-    foreach_entity!(world, +C_Multi_Renderable, +C_Multi_Renderable_Animation, |entity| {
-        let mr = world.get_component::<C_Multi_Renderable>(entity).unwrap();
+    foreach_entity_new!(world,
+        read: ;
+        write: C_Multi_Renderable, C_Multi_Renderable_Animation;
+        |entity, (), (mr, mr_anim): (&mut C_Multi_Renderable, &mut C_Multi_Renderable_Animation)| {
         let n_renderables = mr.n_renderables;
-
-        let mr_anim = world.get_component_mut::<C_Multi_Renderable_Animation>(entity).unwrap();
 
         #[derive(Copy, Clone)]
         struct Anim_Result {

@@ -12,11 +12,18 @@ pub struct C_Ground_Detection {
 
 const GROUND_Y_COMP_THRESHOLD: f32 = -0.9;
 
-pub fn update(world: &mut Ecs_World, phys_world: &Physics_World, physics_settings: &Physics_Settings) {
+pub fn update(
+    world: &mut Ecs_World,
+    phys_world: &Physics_World,
+    physics_settings: &Physics_Settings,
+) {
     trace!("ground_detection_system::update");
 
-    foreach_entity!(world, +C_Collider, +C_Ground_Detection, |entity| {
-        let cld_handle = world.get_component::<C_Collider>(entity).unwrap().handle;
+    foreach_entity_new!(world,
+        read: C_Collider;
+        write: C_Ground_Detection;
+        |entity, (collider,): (&C_Collider,), (ground_detect,): (&mut C_Ground_Detection,)| {
+        let cld_handle = collider.handle;
         let touching_ground = if let Some(collisions) = phys_world.get_collisions(cld_handle) {
             let cld = phys_world.get_collider(cld_handle).unwrap();
              collisions.iter().any(|cls_data| {
@@ -37,7 +44,6 @@ pub fn update(world: &mut Ecs_World, phys_world: &Physics_World, physics_setting
             false
         };
 
-        let ground_detect = world.get_component_mut::<C_Ground_Detection>(entity).unwrap();
         ground_detect.just_touched_ground = touching_ground &&  ground_detect.touching_ground != touching_ground;
         ground_detect.just_left_ground = !touching_ground &&  ground_detect.touching_ground != touching_ground;
         ground_detect.touching_ground = touching_ground;

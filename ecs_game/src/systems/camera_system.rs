@@ -25,8 +25,10 @@ pub struct C_Camera_Follow {
 }
 
 pub fn update(dt: &Duration, world: &mut Ecs_World, cfg: &Config) {
-    foreach_entity!(world, +C_Camera_Follow, +C_Camera2D, |entity| {
-        let cam_follow = world.get_component::<C_Camera_Follow>(entity).unwrap();
+    foreach_entity_new!(world,
+        read: C_Camera_Follow;
+        write: C_Camera2D;
+        |entity, (cam_follow,): (&C_Camera_Follow,), (camera,): (&mut C_Camera2D,)| {
         let target = cam_follow.target;
         let lerp_factor = cam_follow.lerp_factor.read(cfg);
 
@@ -39,7 +41,6 @@ pub fn update(dt: &Duration, world: &mut Ecs_World, cfg: &Config) {
             },
         };
 
-        let camera = world.get_component_mut::<C_Camera2D>(entity).unwrap();
         let cam_pos = camera.transform.position();
         let diff = target_pos - cam_pos;
         camera.transform.translate_v(lerp_factor * diff * dt.as_secs_f32());

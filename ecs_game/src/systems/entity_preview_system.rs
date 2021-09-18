@@ -24,8 +24,10 @@ pub fn update(
     actions: &[Game_Action],
     cfg: &Config,
 ) {
-    foreach_entity!(world, +C_Spatial2D, +C_Entity_Preview, |entity| {
-        let spatial = world.get_component_mut::<C_Spatial2D>(entity).unwrap();
+    foreach_entity_new!(world,
+        read: C_Entity_Preview;
+        write: C_Spatial2D;
+        |entity, (), (spatial, entity_preview): (&mut C_Spatial2D, &mut C_Entity_Preview)| {
         let mpos = mouse_pos_in_world(window, &input_state.raw.mouse_state, camera);
         spatial.transform.set_position_v(mpos);
 

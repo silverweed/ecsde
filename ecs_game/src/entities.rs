@@ -43,20 +43,20 @@ fn next_name(name: &'static str) -> String {
 }
 
 #[cfg(debug_assertions)]
-fn add_debug_data<'a>(
-    world: &'a mut Ecs_World,
-    entity: Entity,
-    name: &'static str,
-) -> &'a mut C_Debug_Data {
+fn add_debug_data<'a>(world: &'a mut Ecs_World, entity: Entity, name: &'static str) {
     if world.has_component::<C_Spatial2D>(entity) {
         world.add_component(
             entity,
             C_Position_History::new(entity, std::time::Duration::from_micros(200), 0.1),
         );
     }
-    let debug = world.add_component(entity, C_Debug_Data::default());
-    debug.entity_name.set(&next_name(name));
-    debug
+    world.add_component(
+        entity,
+        C_Debug_Data {
+            entity_name: next_name(name).as_str().into(),
+            ..Default::default()
+        },
+    );
 }
 
 pub fn create_jelly(
@@ -224,7 +224,7 @@ pub fn create_drill(
 
     world.add_component(entity, multi_rend);
 
-    let mr_anim = world.add_component(entity, C_Multi_Renderable_Animation::default());
+    let mut mr_anim = C_Multi_Renderable_Animation::default();
     // Bottom
     mr_anim.anim_tracks_x[0] = Animation_Track::Sinusoidal {
         freq_hz: 100.,
@@ -246,6 +246,7 @@ pub fn create_drill(
         phase: 0.7,
         exp: 3,
     };
+    world.add_component(entity, mr_anim);
 
     world.add_component(
         entity,
@@ -291,20 +292,20 @@ pub fn create_sky(
     let sky = world.new_entity();
 
     {
-        let spatial = world.add_component(sky, C_Spatial2D::default());
+        let mut spatial = C_Spatial2D::default();
         spatial.transform.set_position(0., -370.);
+        world.add_component(sky, spatial);
     }
 
-    let renderable = world.add_component(
-        sky,
-        C_Renderable::new_with_diffuse(gres, env, "sky.png").with_shader(
-            shader_cache,
-            env,
-            SHD_SPRITE_UNLIT,
-        ),
+    let renderable = C_Renderable::new_with_diffuse(gres, env, "sky.png").with_shader(
+        shader_cache,
+        env,
+        SHD_SPRITE_UNLIT,
     );
+    let texture = renderable.material.texture;
+    world.add_component(sky, renderable);
 
-    let (sw, sh) = render::get_texture_size(gres.get_texture(renderable.material.texture));
+    let (sw, sh) = render::get_texture_size(gres.get_texture(texture));
 
     let cld = Collider {
         shape: Collision_Shape::Rect {
@@ -345,8 +346,9 @@ pub fn create_terrain(
     let gnd = world.new_entity();
 
     {
-        let t = world.add_component(gnd, C_Spatial2D::default());
+        let mut t = C_Spatial2D::default();
         t.transform.set_position(0., 600.);
+        world.add_component(gnd, t);
     }
 
     //let rend = world.add_component(
@@ -381,14 +383,12 @@ pub fn create_background(
     _cfg: &Config,
 ) {
     let ground = world.new_entity();
-    let rend = world.add_component(
-        ground,
-        C_Renderable::new_with_diffuse(gres, env, "ground.png")
-            .with_shader(shader_cache, env, SHD_SPRITE_FLAT)
-            .with_z_index(-1),
-    );
-
+    let rend = C_Renderable::new_with_diffuse(gres, env, "ground.png")
+        .with_shader(shader_cache, env, SHD_SPRITE_FLAT)
+        .with_z_index(-1);
     let texture = gres.get_texture_mut(rend.material.texture);
+    world.add_component(ground, rend);
+
     let (sw, sh) = render::get_texture_size(texture);
     rend.rect = Rect::new(0, 0, sw as i32 * 100, sh as i32 * 100);
     render::set_texture_repeated(texture, true);
@@ -463,23 +463,23 @@ pub fn create_wall(
 ) {
     let wall = world.new_entity();
 
-    let renderable = world.add_component(
-        wall,
-        C_Renderable::new_with_diffuse(gres, env, "wall.png")
-            .with_normals(gres, env, "wall_n.png")
-            .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS)
-            // NOTE: the wall's pivot, for convenience, is top-left.
-            .with_local_transform(&Transform2D::from_pos(wall_size * 0.5)),
-    );
+    let mut renderable = C_Renderable::new_with_diffuse(gres, env, "wall.png")
+        .with_normals(gres, env, "wall_n.png")
+        .with_shader(shader_cache, env, SHD_SPRITE_WITH_NORMALS)
+        // NOTE: the wall's pivot, for convenience, is top-left.
+        .with_local_transform(&Transform2D::from_pos(wall_size * 0.5));
     renderable.rect.width = wall_size.x as i32;
     renderable.rect.height = wall_size.y as i32;
+    let texture = renderable.material.texture;
+    let normals = renderable.material.normals;
+    world.add_component(wall, renderable);
 
     {
-        let tex = gres.get_texture_mut(renderable.material.texture);
+        let tex = gres.get_texture_mut(texture);
         render::set_texture_repeated(tex, true);
     }
     {
-        let tex = gres.get_texture_mut(renderable.material.normals);
+        let tex = gres.get_texture_mut(normals);
         render::set_texture_repeated(tex, true);
     }
 
@@ -514,7 +514,8 @@ pub fn create_wall(
     }
 
     {
-        let spatial = world.add_component(wall, C_Spatial2D::default());
+        let mut spatial = C_Spatial2D::default();
         spatial.transform = *transform;
+        world.add_component(wall, spatial);
     }
 }

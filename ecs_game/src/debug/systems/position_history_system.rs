@@ -48,11 +48,12 @@ impl Position_History_System {
 
         let hist_size = self.hist_size.read(cfg) as usize;
 
-        foreach_entity!(world, +C_Position_History, +C_Spatial2D, |entity| {
-            let spatial = world.get_component::<C_Spatial2D>(entity).unwrap();
+        foreach_entity_new!(world,
+            read: C_Spatial2D;
+            write: C_Position_History;
+            |entity, (spatial,): (&C_Spatial2D,), (pos_hist,): (&mut C_Position_History,)| {
             let pos = spatial.transform.position();
 
-            let pos_hist = world.get_component_mut::<C_Position_History>(entity).unwrap();
             pos_hist.time_since_latest_record += dt;
 
             if self.positions.len() <= pos_hist.idx {

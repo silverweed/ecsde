@@ -48,14 +48,14 @@ macro_rules! foreach_entity_enumerate {
 // https://stackoverflow.com/questions/66396814/generating-tuple-indices-based-on-macro-rules-repetition-expansion/66420824#66420824
 //
 
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! tpl_map_apply {
     ($f:ident, $e:expr) => {
         $f!($e)
     };
 }
 
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! tpl_map {
     (@, [], [$(($idx:tt))*], $tpl:ident, $fn:ident, ($($result:tt)*)) => {($($result)*)};
     (@, [$queue0:expr, $($queue:expr,)*], [($idx0:tt) $(($idx:tt))*], $tpl:ident, $fn:ident, ($($result:tt)*)) => {
@@ -80,15 +80,15 @@ macro_rules! tpl_map {
 
 #[macro_export]
 macro_rules! foreach_entity_new {
-    ($cm: expr, $ent: expr, read: $($read: ty),*; write: $($writ: ty),*; $fn: expr) => {
-        let mut query = $crate::ecs_query::Ecs_Query::new(&$cm,  &$ent);
+    ($ecs_world: expr, read: $($read: ty),*; write: $($writ: ty),*; $fn: expr) => {
+        let mut query = $crate::ecs_query::Ecs_Query::new($ecs_world);
         $(query = query.read::<$read>();)*
         $(query = query.write::<$writ>();)*
 
-        let storages = &query.storages;
+        let storages = query.storages();
         let comp_reads = ($(storages.begin_read::<$read>(),)*);
         let mut comp_writs = ($(storages.begin_write::<$writ>(),)*);
-        for &entity in &query.entities {
+        for &entity in query.entities() {
             macro_rules! tpl_map_get     { ($elem:expr) => { $elem.must_get(entity) } }
             macro_rules! tpl_map_get_mut { ($elem:expr) => { $elem.must_get_mut(entity) } }
 

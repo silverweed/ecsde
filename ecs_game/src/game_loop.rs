@@ -966,11 +966,6 @@ fn update_debug(
             if draw_world_chunks {
                 level.chunks.debug_draw(debug_painter);
             }
-
-            if draw_comp_alloc_colliders {
-                use inle_physics::collider::C_Collider;
-                inle_ecs::ecs_world::draw_comp_alloc::<C_Collider>(&level.world, global_painter);
-            }
         });
 
     // @Cleanup
@@ -1191,9 +1186,10 @@ fn debug_draw_colliders(
     use inle_physics::collider::{C_Collider, Collision_Shape};
     use std::convert::TryFrom;
 
-    foreach_entity!(ecs_world, +C_Collider, +C_Spatial2D, |entity| {
-        let collider_comp = ecs_world.get_component::<C_Collider>(entity).unwrap();
-
+    foreach_entity_new!(ecs_world,
+        read: C_Collider, C_Spatial2D;
+        write: ;
+    |entity, (collider_comp, spatial): (&C_Collider, &C_Spatial2D), ()| {
         for collider in phys_world.get_all_colliders(collider_comp.handle) {
             // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
             // @Incomplete: scale?
@@ -1262,8 +1258,10 @@ fn debug_draw_colliders(
 
 #[cfg(debug_assertions)]
 fn debug_draw_transforms(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
-    foreach_entity!(ecs_world, +C_Spatial2D, |entity| {
-        let spatial = ecs_world.get_component::<C_Spatial2D>(entity).unwrap();
+    foreach_entity_new!(ecs_world,
+        read: C_Spatial2D;
+        write: ;
+        |entity, (spatial, ): (&C_Spatial2D,), () | {
         let transform = &spatial.transform;
         debug_painter.add_circle(
             Circle {
@@ -1295,8 +1293,10 @@ fn debug_draw_transforms(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
     const COLOR: colors::Color = colors::rgb(100, 0, 120);
 
-    foreach_entity!(ecs_world, +C_Spatial2D, |entity| {
-        let spatial = ecs_world.get_component::<C_Spatial2D>(entity).unwrap();
+    foreach_entity_new!(ecs_world,
+        read: C_Spatial2D;
+        write: ;
+    |entity, (spatial, ): (&C_Spatial2D, ), ()| {
         if spatial.velocity.magnitude2() > 0. {
             let transform = &spatial.transform;
             debug_painter.add_arrow(
@@ -1325,7 +1325,10 @@ fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs
     use inle_common::bitset::Bit_Set;
     use std::borrow::Borrow;
 
-    foreach_entity!(ecs_world, |entity| {
+    foreach_entity_new!(ecs_world,
+        read: ;
+        write: ;
+    |entity, (), ()| {
         let pos = if let Some(spatial) = ecs_world.get_component::<C_Spatial2D>(entity) {
             spatial.transform.position() + v2!(0., -15.)
         } else {
@@ -1339,17 +1342,10 @@ fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs
         };
         debug_painter.add_shaded_text(name, pos, 7, colors::GREEN, colors::BLACK);
 
-        let comp_set = ecs_world.get_entity_comp_set(entity);
-        let comp_set_b: &Bit_Set = comp_set.borrow();
-        for (i, handle) in comp_set_b.into_iter().enumerate() {
+        for (i, comp_name) in ecs_world.get_comp_name_list_for_entity(entity) {
             debug_painter.add_shaded_text_with_shade_distance(
                 &format!(
-                    " {}",
-                    ecs_world::component_name_from_handle(
-                        ecs_world,
-                        handle as ecs_world::Component_Handle
-                    )
-                    .unwrap()
+                    " {}", comp_name
                 ),
                 pos + v2!(0., (i + 1) as f32 * 8.5),
                 6,
@@ -1485,21 +1481,23 @@ fn debug_draw_entities_prev_frame_ghost(
 
     let unlit_shader = shader_cache.load_shader(&shader_path(env, SHD_SPRITE_UNLIT));
 
-    foreach_entity!(ecs_world, +C_Spatial2D, +C_Renderable, +C_Debug_Data, /*~C_Texture_Collider,*/ |entity| {
-        let frame_starting_pos = ecs_world.get_component::<C_Spatial2D>(entity).unwrap().frame_starting_pos;
+    foreach_entity_new!(ecs_world,
+        read: C_Spatial2D, C_Renderable;
+        write:  C_Debug_Data;
+        |entity, (spatial, renderable): (&C_Spatial2D, &C_Renderable), (debug_data,): (&mut C_Debug_Data,)| {
+        let frame_starting_pos = spatial.frame_starting_pos;
         let C_Renderable {
             material,
             rect,
             modulate,
             z_index,
             sprite_local_transform,
-        } = *ecs_world.get_component::<C_Renderable>(entity).unwrap();
+        } = *renderable;
 
         let mut material = material;
         material.cast_shadows = false;
         material.shader = unlit_shader;
 
-        let debug_data = ecs_world.get_component_mut::<C_Debug_Data>(entity).unwrap();
         if !is_paused {
             if (debug_data.n_prev_positions_filled as usize) < debug_data.prev_positions.len() {
                 debug_data.prev_positions[debug_data.n_prev_positions_filled as usize] = frame_starting_pos;

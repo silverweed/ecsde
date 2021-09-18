@@ -22,7 +22,6 @@ use inle_core::env::Env_Info;
 use inle_core::{rand, time};
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::{Ecs_World, Entity};
-use inle_ecs::entity_stream::new_entity_stream;
 use inle_events::evt_register::Event_Register;
 use inle_gfx::components::{C_Animated_Sprite, C_Camera2D, C_Renderable};
 use inle_gfx::particles::Particle_Manager;
@@ -547,9 +546,10 @@ fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration) {
     //spat.velocity.y = transl.y;
     //}
 
-    foreach_entity_enumerate!(ecs_world, +C_Spatial2D, +C_Controllable, |entity, i| {
-        let t = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
-
+    foreach_entity_new!(ecs_world,
+        read: C_Controllable;
+        write: C_Spatial2D;
+    |entity, (_, ): (&C_Controllable,), (_spatial,): (&mut C_Spatial2D,)| {
         //if i == 1 {
         //t.velocity = Vec2f::new(-50.0, 0.);
         //}
