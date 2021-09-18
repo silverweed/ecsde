@@ -14,11 +14,9 @@ extern crate inle_math;
 pub mod prelude;
 
 mod comp_mgr;
-mod comp_mgr_new;
 
 pub mod components;
 pub mod ecs_query;
 pub mod ecs_world;
-pub mod entity_stream;
 
 pub use prelude::*;

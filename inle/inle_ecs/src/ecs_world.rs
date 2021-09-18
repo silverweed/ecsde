@@ -4,13 +4,12 @@ use inle_common::bitset::Bit_Set;
 use inle_events::evt_register;
 use std::any::type_name;
 use std::collections::HashSet;
-use std::marker::PhantomData;
-
-#[cfg(debug_assertions)]
-use inle_debug::painter::Debug_Painter;
 
 pub type Entity = Generational_Index;
-pub type Component_Handle = comp_mgr::Component_Handle;
+
+pub type Component_Storage<T> = comp_mgr::Component_Storage<T>;
+pub type Component_Read<'l, T> = comp_mgr::Component_Read<'l, T>;
+pub type Component_Write<'l, T> = comp_mgr::Component_Write<'l, T>;
 
 pub struct Evt_Entity_Destroyed;
 
@@ -37,12 +36,14 @@ impl Ecs_World {
     }
 
     pub fn get_entity_comp_set(&self, entity: Entity) -> std::borrow::Cow<'_, Bit_Set> {
-        assert!(
-            self.entity_manager.is_valid_entity(entity),
-            "Invalid entity {:?}",
-            entity
-        );
-        self.component_manager.get_entity_comp_set(entity)
+        // TODO
+        std::borrow::Cow::Owned(Bit_Set::default())
+        //assert!(
+        //self.entity_manager.is_valid_entity(entity),
+        //"Invalid entity {:?}",
+        //entity
+        //);
+        //self.component_manager.get_entity_comp_set(entity)
     }
 
     pub fn new_entity(&mut self) -> Entity {
@@ -80,14 +81,15 @@ impl Ecs_World {
     }
 
     pub fn register_component<T: 'static + Copy>(&mut self) {
-        self.component_manager.register_component::<T>();
+        ldebug!("This is not needed anymore!");
     }
 
-    pub fn add_component<T: 'static + Copy>(&mut self, entity: Entity, data: T) -> &mut T {
-        self.component_manager.add_component::<T>(entity, data)
+    pub fn add_component<T: 'static + Default>(&mut self, entity: Entity, data: T) {
+        self.component_manager.add_component::<T>(entity, data);
     }
 
-    pub fn get_component<T: 'static + Copy>(&self, entity: Entity) -> Option<&T> {
+    #[inline]
+    pub fn get_component<T: 'static>(&self, entity: Entity) -> Option<Component_Read<T>> {
         trace!("get_component");
 
         if !self.entity_manager.is_valid_entity(entity) {
@@ -98,10 +100,11 @@ impl Ecs_World {
             );
         }
 
-        self.component_manager.get_component::<T>(entity)
+        self.component_manager.get_component(entity)
     }
 
-    pub fn get_component_mut<T: 'static + Copy>(&mut self, entity: Entity) -> Option<&mut T> {
+    #[inline]
+    pub fn get_component_mut<T: 'static>(&self, entity: Entity) -> Option<Component_Write<T>> {
         trace!("get_component_mut");
 
         if !self.entity_manager.is_valid_entity(entity) {
@@ -112,7 +115,7 @@ impl Ecs_World {
             );
         }
 
-        self.component_manager.get_component_mut::<T>(entity)
+        self.component_manager.get_component_mut(entity)
     }
 
     pub fn remove_component<T: 'static + Copy>(&mut self, entity: Entity) {
@@ -143,30 +146,14 @@ impl Ecs_World {
         self.component_manager.has_component::<T>(entity)
     }
 
-    pub fn get_components<T: 'static + Copy>(&self) -> impl Iterator<Item = &T> {
-        trace!("get_components");
-
-        self.component_manager.get_components::<T>()
+    pub fn get_component_storage<T: Copy + 'static>(&self) -> Option<&Component_Storage<T>> {
+        self.component_manager.get_component_storage::<T>()
     }
 
-    pub fn get_components_mut<T: 'static + Copy>(&mut self) -> impl Iterator<Item = &mut T> {
-        trace!("get_components_mut");
-
-        self.component_manager.get_components_mut::<T>()
-    }
-
-    pub fn get_component_storage<T: Copy + 'static>(&self) -> Component_Storage<T> {
-        Component_Storage {
-            storage: self.component_manager.get_component_storage::<T>(),
-            _marker: std::marker::PhantomData,
-        }
-    }
-
-    pub fn get_component_storage_mut<T: Copy + 'static>(&mut self) -> Component_Storage_Mut<T> {
-        Component_Storage_Mut {
-            storage: self.component_manager.get_component_storage_mut::<T>(),
-            _marker: std::marker::PhantomData,
-        }
+    pub fn get_component_storage_mut<T: Copy + 'static>(
+        &mut self,
+    ) -> Option<&mut Component_Storage<T>> {
+        self.component_manager.get_component_storage_mut::<T>()
     }
 }
 
@@ -201,93 +188,6 @@ impl Entity_Manager {
 
     pub fn n_live_entities(&self) -> usize {
         self.entities.len()
-    }
-}
-
-// Conveniency wrapper for the untyped Component_Storage
-pub struct Component_Storage<'a, T> {
-    storage: &'a comp_mgr::Component_Storage,
-    _marker: std::marker::PhantomData<T>,
-}
-
-pub struct Component_Storage_Mut<'a, T> {
-    storage: &'a mut comp_mgr::Component_Storage,
-    _marker: std::marker::PhantomData<T>,
-}
-
-impl<T: Copy> Component_Storage<'_, T> {
-    pub fn has_component(&self, entity: Entity) -> bool {
-        self.storage.has_component::<T>(entity)
-    }
-
-    pub fn get_component(&self, entity: Entity) -> Option<&T> {
-        self.storage.get_component::<T>(entity)
-    }
-}
-
-impl<'a, T: 'a + Copy> IntoIterator for &Component_Storage<'a, T> {
-    type Item = (Entity, &'a T);
-    type IntoIter = Component_Storage_Iterator<'a, T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        Self::IntoIter::new(self.storage)
-    }
-}
-
-pub struct Component_Storage_Iterator<'a, T> {
-    storage: &'a comp_mgr::Component_Storage,
-    comp_map_iter: std::collections::hash_map::Iter<'a, Entity, u32>,
-    _pd: PhantomData<T>,
-}
-
-impl<'a, T: 'a + Copy> Component_Storage_Iterator<'a, T> {
-    fn new<'b: 'a>(storage: &'b comp_mgr::Component_Storage) -> Self {
-        Self {
-            storage,
-            comp_map_iter: storage.ent_comp_map.iter(),
-            _pd: PhantomData,
-        }
-    }
-}
-
-impl<'a, T: 'a + Copy> Iterator for Component_Storage_Iterator<'a, T> {
-    type Item = (Entity, &'a T);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let (entity, idx) = self.comp_map_iter.next()?;
-        // @Cleanup: maybe refactor this to be hidden inside comp_mgr
-        let comp = unsafe { self.storage.alloc.get(*idx) };
-        Some((*entity, comp))
-    }
-}
-
-impl<T: Copy> Component_Storage_Mut<'_, T> {
-    pub fn has_component(&self, entity: Entity) -> bool {
-        self.storage.has_component::<T>(entity)
-    }
-
-    pub fn get_component(&self, entity: Entity) -> Option<&T> {
-        self.storage.get_component::<T>(entity)
-    }
-
-    pub fn get_component_mut(&mut self, entity: Entity) -> Option<&mut T> {
-        self.storage.get_component_mut::<T>(entity)
-    }
-}
-
-#[cfg(debug_assertions)]
-pub fn draw_comp_alloc<T: 'static + Copy>(world: &Ecs_World, painter: &mut Debug_Painter) {
-    comp_mgr::draw_comp_alloc::<T>(world, painter);
-}
-
-#[cfg(debug_assertions)]
-pub fn component_name_from_handle(world: &Ecs_World, handle: Component_Handle) -> Option<&str> {
-    let idx = handle as usize;
-    let names = &world.component_manager.debug.comp_names;
-    if idx < names.len() {
-        Some(names[idx])
-    } else {
-        None
     }
 }
 

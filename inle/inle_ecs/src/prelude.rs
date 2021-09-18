@@ -48,12 +48,14 @@ macro_rules! foreach_entity_enumerate {
 // https://stackoverflow.com/questions/66396814/generating-tuple-indices-based-on-macro-rules-repetition-expansion/66420824#66420824
 //
 
+#[allow(unused_macros)]
 macro_rules! tpl_map_apply {
     ($f:ident, $e:expr) => {
         $f!($e)
     };
 }
 
+#[allow(unused_macros)]
 macro_rules! tpl_map {
     (@, [], [$(($idx:tt))*], $tpl:ident, $fn:ident, ($($result:tt)*)) => {($($result)*)};
     (@, [$queue0:expr, $($queue:expr,)*], [($idx0:tt) $(($idx:tt))*], $tpl:ident, $fn:ident, ($($result:tt)*)) => {

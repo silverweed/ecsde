@@ -1,350 +1,476 @@
-mod comp_alloc;
-
-use super::ecs_world::Entity;
-use comp_alloc::Component_Allocator;
-use inle_common::bitset::Bit_Set;
-use std::any::{type_name, TypeId};
-use std::borrow::Cow;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::mem::size_of;
-
-#[cfg(debug_assertions)]
-use inle_debug::painter::Debug_Painter;
-
-// Note: must be visible to entity_stream
-pub(super) type Component_Handle = u32;
+use crate::ecs_world::Entity;
+use anymap::any::UncheckedAnyExt;
+use anymap::Map;
+use std::any::type_name;
+use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 pub struct Component_Manager {
-    /// Note: storage is None for ZST components
-    storages: Vec<Option<Component_Storage>>,
-
-    last_comp_handle: Component_Handle,
-    handles: HashMap<TypeId, Component_Handle>,
-
-    /// Indexed by entity index
-    entity_comp_set: Vec<Bit_Set>,
-
-    #[cfg(debug_assertions)]
-    pub(super) debug: Components_Debug,
-}
-
-pub struct Component_Storage {
-    // @Cleanup: remove these pub, then implement Iterator for this struct
-    pub(super) alloc: Component_Allocator,
-    pub(super) ent_comp_map: HashMap<Entity, u32>,
-    comp_layout: std::alloc::Layout,
-}
-
-#[cfg(debug_assertions)]
-pub(super) struct Components_Debug {
-    /// Indexed by handle
-    pub comp_names: Vec<&'static str>,
-}
-
-impl Component_Storage {
-    pub fn new<T: Copy>() -> Self {
-        Self {
-            alloc: Component_Allocator::new::<T>(),
-            ent_comp_map: HashMap::new(),
-            comp_layout: Component_Allocator::get_comp_layout::<T>(),
-        }
-    }
-
-    pub fn has_component<T>(&self, entity: Entity) -> bool {
-        self.ent_comp_map.contains_key(&entity)
-    }
-
-    pub fn get_component<T: Copy>(&self, entity: Entity) -> Option<&T> {
-        self.ent_comp_map
-            .get(&entity)
-            // Note: safe as long as ent_comp_map is in sync with the allocator
-            .map(|&idx| unsafe { self.alloc.get(idx) })
-    }
-
-    pub fn get_component_mut<T: Copy>(&mut self, entity: Entity) -> Option<&mut T> {
-        self.ent_comp_map
-            .get(&entity)
-            .cloned()
-            // Note: safe as long as ent_comp_map is in sync with the allocator
-            .map(move |idx| unsafe { self.alloc.get_mut(idx) })
-    }
-
-    pub fn add_component<T: Copy>(&mut self, entity: Entity, data: T) -> &mut T {
-        match self.ent_comp_map.entry(entity) {
-            Entry::Occupied(_) => {
-                fatal!(
-                    "Entity {:?} already has component {:?}!",
-                    entity,
-                    type_name::<T>()
-                );
-            }
-            Entry::Vacant(v) => {
-                let (idx, comp) = self.alloc.add(data);
-                v.insert(idx);
-                comp
-            }
-        }
-    }
-
-    pub fn remove_component<T: Copy>(&mut self, entity: Entity) {
-        let idx = self.ent_comp_map.get(&entity).unwrap_or_else(|| {
-            fatal!(
-                "Tried to remove inexisting component {:?} from entity {:?}",
-                type_name::<T>(),
-                entity
-            )
-        });
-        // Note: safe as long as ent_comp_map is in sync with the allocator
-        unsafe {
-            self.alloc.remove::<T>(*idx);
-        }
-    }
-
-    pub fn remove_component_dyn(&mut self, entity: Entity) {
-        let idx = self.ent_comp_map.get(&entity).unwrap_or_else(|| {
-            fatal!(
-                "Tried to remove inexisting component from entity {:?}",
-                entity
-            )
-        });
-        // Note: safe as long as ent_comp_map is in sync with the allocator
-        unsafe {
-            self.alloc.remove_dyn(*idx, &self.comp_layout);
-        }
-    }
+    storages: Map<dyn Component_Storage_Interface>,
 }
 
 impl Component_Manager {
     pub fn new() -> Self {
         Self {
-            storages: vec![],
-            last_comp_handle: 0,
-            handles: HashMap::new(),
-            entity_comp_set: vec![],
-            #[cfg(debug_assertions)]
-            debug: Components_Debug { comp_names: vec![] },
+            storages: Map::new(),
         }
     }
 
-    pub fn register_component<T: Copy + 'static>(&mut self) -> Component_Handle {
-        let comp_id = TypeId::of::<T>();
-        let handles_entry = match self.handles.entry(comp_id) {
-            Entry::Occupied(_) => {
-                fatal!("Component {:?} registered twice!", type_name::<T>());
-            }
-            Entry::Vacant(v) => v,
-        };
+    #[inline]
+    pub fn has_component<T: 'static>(&self, entity: Entity) -> bool {
+        if let Some(storage) = self.get_component_storage::<T>() {
+            storage.has_component(entity)
+        } else {
+            false
+        }
+    }
 
-        let handle = self.last_comp_handle;
-        self.storages.push(if size_of::<T>() != 0 {
-            Some(Component_Storage::new::<T>())
+    #[inline]
+    pub fn get_component<T: 'static>(&self, entity: Entity) -> Option<Component_Read<T>> {
+        if let Some(storage) = self.get_component_storage::<T>() {
+            storage.get_component(entity)
         } else {
             None
-        });
-
-        #[cfg(debug_assertions)]
-        {
-            // Note: we sort of assume that type_name returns a full path like foo::bar::Type,
-            // although that's not guaranteed. This won't break if that's not the case, so it's fine.
-            let full_name = type_name::<T>();
-            let base_name = full_name.rsplit(':').next().unwrap_or(full_name);
-            self.debug.comp_names.push(base_name);
         }
-
-        self.last_comp_handle += 1;
-
-        handles_entry.insert(handle);
-
-        handle
     }
 
-    pub fn has_component<T: 'static>(&self, entity: Entity) -> bool {
-        let handle = self.get_handle::<T>();
-        let bit_is_set = self.entity_comp_set[entity.index as usize].get(handle as usize);
+    #[inline]
+    pub fn get_component_mut<T: 'static>(&self, entity: Entity) -> Option<Component_Write<T>> {
+        if let Some(storage) = self.get_component_storage::<T>() {
+            storage.get_component_mut(entity)
+        } else {
+            None
+        }
+    }
 
-        #[cfg(debug_assertions)]
+    #[inline]
+    pub fn add_component<T: 'static>(&mut self, entity: Entity, data: T) {
+        let storage = self
+            .storages
+            .entry::<Component_Storage<T>>()
+            .or_insert_with(Component_Storage::<T>::default);
+
+        let mut components = storage.components.write().unwrap();
+        let cur_components_len = components.len();
+
+        // Ensure the entity doesn't have this component already
         {
-            if size_of::<T>() != 0 {
-                debug_assert_eq!(
-                    unsafe { self.must_get_storage(handle).has_component::<T>(entity) },
-                    bit_is_set
+            let slot = storage.entity_comp_index.get(entity.index as usize);
+            if slot.copied().flatten().is_some() {
+                fatal!(
+                    "Component {:?} added twice to entity {:?}!",
+                    type_name::<T>(),
+                    entity
                 );
             }
+
+            storage
+                .entity_comp_index
+                .resize(entity.index as usize + 1, None);
+            storage
+                .entity_comp_index
+                .insert(entity.index as usize, Some(cur_components_len));
         }
 
-        bit_is_set
+        #[cfg(debug_assertions)]
+        {
+            storage
+                .entity_comp_generation
+                .resize(entity.index as usize + 1, 0);
+            storage
+                .entity_comp_generation
+                .insert(entity.index as usize, entity.gen);
+        }
+
+        components.push(data);
     }
 
-    pub fn get_component<T: Copy + 'static>(&self, entity: Entity) -> Option<&T> {
-        static UNIT: () = ();
-
-        let handle = self.get_handle::<T>();
-        if size_of::<T>() == 0 {
-            if self.has_component::<T>(entity) {
-                unsafe { Some(&*(&UNIT as *const () as *const T)) }
-            } else {
-                None
-            }
+    #[inline]
+    pub fn remove_component<T: 'static>(&mut self, entity: Entity) {
+        if let Some(storage) = self.get_component_storage_mut::<T>() {
+            storage.remove_component(entity);
         } else {
-            unsafe { self.must_get_storage(handle).get_component::<T>(entity) }
+            lerr!(
+                "Tried to remove inexisting component {:?} from entity {:?}",
+                type_name::<T>(),
+                entity
+            );
         }
     }
 
-    pub fn get_component_mut<T: Copy + 'static>(&mut self, entity: Entity) -> Option<&mut T> {
-        static mut UNIT: () = ();
-
-        let handle = self.get_handle::<T>();
-        if size_of::<T>() == 0 {
-            if self.has_component::<T>(entity) {
-                unsafe { Some(&mut *(&mut UNIT as *mut () as *mut T)) }
-            } else {
-                None
-            }
-        } else {
-            unsafe {
-                self.must_get_storage_mut(handle)
-                    .get_component_mut::<T>(entity)
-            }
-        }
-    }
-
-    pub fn add_component<T: Copy + 'static>(&mut self, entity: Entity, data: T) -> &mut T {
-        if self.entity_comp_set.len() <= entity.index as usize {
-            self.entity_comp_set
-                .resize(entity.index as usize + 1, Bit_Set::default());
-        }
-        let handle = self.get_handle::<T>();
-        self.entity_comp_set[entity.index as usize].set(handle as usize, true);
-
-        if size_of::<T>() != 0 {
-            unsafe {
-                self.must_get_storage_mut(handle)
-                    .add_component::<T>(entity, data)
-            }
-        } else {
-            static mut UNIT: () = ();
-            unsafe { &mut *(&mut UNIT as *mut () as *mut T) }
-        }
-    }
-
-    pub fn remove_component<T: Copy + 'static>(&mut self, entity: Entity) {
-        let handle = self.get_handle::<T>();
-        self.entity_comp_set[entity.index as usize].set(handle as usize, false);
-        if size_of::<T>() != 0 {
-            unsafe {
-                self.must_get_storage_mut(handle)
-                    .remove_component::<T>(entity);
-            }
-        }
-    }
-
+    #[inline]
     pub fn remove_all_components(&mut self, entity: Entity) {
-        let comp_set = self.entity_comp_set[entity.index as usize].clone();
-        for handle in &comp_set {
-            if self.storages[handle as usize].is_some() {
-                unsafe {
-                    self.must_get_storage_mut(handle as _)
-                        .remove_component_dyn(entity);
-                }
-            }
+        for raw_storage in self.storages.as_mut().iter_mut() {
+            raw_storage.remove_component(entity);
         }
     }
 
-    pub fn get_components<T: Copy + 'static>(&self) -> impl Iterator<Item = &T> {
-        if size_of::<T>() == 0 {
-            comp_alloc::Component_Allocator_Iter::empty()
-        } else {
-            let handle = self.get_handle::<T>();
-            unsafe { self.must_get_storage(handle).alloc.iter::<T>() }
-        }
+    #[inline]
+    pub fn get_component_storage<T: 'static>(&self) -> Option<&Component_Storage<T>> {
+        self.storages.get::<Component_Storage<T>>()
     }
 
-    pub fn get_components_mut<T: Copy + 'static>(&mut self) -> impl Iterator<Item = &mut T> {
-        if size_of::<T>() == 0 {
-            comp_alloc::Component_Allocator_Iter_Mut::empty()
-        } else {
-            let handle = self.get_handle::<T>();
-            unsafe { self.must_get_storage_mut(handle).alloc.iter_mut::<T>() }
-        }
+    #[inline]
+    pub fn get_component_storage_mut<T: 'static>(&mut self) -> Option<&mut Component_Storage<T>> {
+        self.storages.get_mut::<Component_Storage<T>>()
     }
 
-    pub fn get_component_storage<T: Copy + 'static>(&self) -> &Component_Storage {
-        assert_ne!(
-            size_of::<T>(),
-            0,
-            "Cannot get storage of Component {:?} (has zero size)",
-            type_name::<T>()
-        );
-        let handle = self.get_handle::<T>();
-        unsafe { self.must_get_storage(handle) }
+    #[inline]
+    pub fn read_component_storage<T: 'static>(&self) -> Option<Component_Storage_Read<T>> {
+        self.storages
+            .get::<Component_Storage<T>>()
+            .map(|storage| storage.lock_for_read())
     }
 
-    pub fn get_component_storage_mut<T: Copy + 'static>(&mut self) -> &mut Component_Storage {
-        assert_ne!(
-            size_of::<T>(),
-            0,
-            "Cannot get storage of Component {:?} (has zero size)",
-            type_name::<T>()
-        );
-        let handle = self.get_handle::<T>();
-        unsafe { self.must_get_storage_mut(handle) }
-    }
-
-    pub fn get_entity_comp_set(&self, entity: Entity) -> Cow<'_, Bit_Set> {
-        if (entity.index as usize) < self.entity_comp_set.len() {
-            Cow::Borrowed(&self.entity_comp_set[entity.index as usize])
-        } else {
-            Cow::Owned(Bit_Set::default())
-        }
-    }
-
-    #[inline(always)]
-    // Note: must be visible to entity_stream
-    pub(super) fn get_handle<T: 'static>(&self) -> Component_Handle {
-        *self
-            .handles
-            .get(&TypeId::of::<T>())
-            .unwrap_or_else(|| fatal!("Component {:?} was not registered!", type_name::<T>()))
-    }
-
-    /// # Safety
-    /// The caller must ensure that `handle` is valid and that it corresponds to a non-ZST storage
-    unsafe fn must_get_storage(&self, handle: Component_Handle) -> &Component_Storage {
-        debug_assert!((handle as usize) < self.storages.len());
-        let storage = self.storages.get_unchecked(handle as usize).as_ref();
-        debug_assert!(
-            storage.is_some(),
-            "must_get_storage[{}] failed!",
-            handle as usize
-        );
-        match storage {
-            Some(x) => x,
-            None => std::hint::unreachable_unchecked(),
-        }
-    }
-
-    /// # Safety
-    /// The caller must ensure that `handle` is valid and that it corresponds to a non-ZST storage
-    unsafe fn must_get_storage_mut(&mut self, handle: Component_Handle) -> &mut Component_Storage {
-        debug_assert!((handle as usize) < self.storages.len());
-        let storage = self.storages.get_unchecked_mut(handle as usize).as_mut();
-        debug_assert!(
-            storage.is_some(),
-            "must_get_storage_mut[{}] failed!",
-            handle as usize
-        );
-        match storage {
-            Some(x) => x,
-            None => std::hint::unreachable_unchecked(),
-        }
+    #[inline]
+    pub fn write_component_storage<T: 'static>(&self) -> Option<Component_Storage_Write<T>> {
+        self.storages
+            .get::<Component_Storage<T>>()
+            .map(|storage| storage.lock_for_write())
     }
 }
 
 #[cfg(debug_assertions)]
-pub(super) fn draw_comp_alloc<T: 'static + Copy>(
-    world: &super::ecs_world::Ecs_World,
-    painter: &mut Debug_Painter,
+impl Component_Manager {
+    pub fn get_comp_name_list_for_entity(&self, entity: Entity) -> Vec<&'static str> {
+        self.storages
+            .as_ref()
+            .iter()
+            .filter_map(|storage| {
+                if storage.has_component(entity) {
+                    Some(storage.comp_name())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+}
+
+pub struct Component_Storage<T> {
+    /// Indexed by entity_comp_index
+    components: RwLock<Vec<T>>,
+
+    /// Indexed by entity index.
+    entity_comp_index: Vec<Option<usize>>,
+
+    #[cfg(debug_assertions)]
+    /// Keeps track of the generation of the entity when the component was last added to ensure consistency.
+    /// Indexed by entity index
+    entity_comp_generation: Vec<inle_alloc::gen_alloc::Gen_Type>,
+}
+
+impl<T> Component_Storage<T> {
+    pub fn get_component(&self, entity: Entity) -> Option<Component_Read<T>> {
+        if let Some(slot) = self.entity_comp_index.get(entity.index as usize) {
+            slot.map(|idx| {
+                let comps = self.components.read().unwrap();
+                Component_Read { lock: comps, idx }
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn get_component_mut(&self, entity: Entity) -> Option<Component_Write<T>> {
+        if let Some(slot) = self.entity_comp_index.get(entity.index as usize) {
+            slot.map(move |idx| {
+                let comps = self.components.write().unwrap();
+                Component_Write { lock: comps, idx }
+            })
+        } else {
+            None
+        }
+    }
+}
+
+impl<T> Default for Component_Storage<T> {
+    fn default() -> Self {
+        Self {
+            components: RwLock::new(vec![]),
+            entity_comp_index: vec![],
+            #[cfg(debug_assertions)]
+            entity_comp_generation: vec![],
+        }
+    }
+}
+
+pub struct Component_Read<'l, T> {
+    lock: RwLockReadGuard<'l, Vec<T>>,
+    idx: usize,
+}
+
+impl<'l, T> std::ops::Deref for Component_Read<'l, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.lock[self.idx]
+    }
+}
+
+pub struct Component_Write<'l, T> {
+    lock: RwLockWriteGuard<'l, Vec<T>>,
+    idx: usize,
+}
+
+impl<'l, T> std::ops::Deref for Component_Write<'l, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.lock[self.idx]
+    }
+}
+
+impl<'l, T> std::ops::DerefMut for Component_Write<'l, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.lock[self.idx]
+    }
+}
+
+pub struct Component_Storage_Read<'a, T> {
+    components: RwLockReadGuard<'a, Vec<T>>,
+    entity_comp_index: &'a [Option<usize>],
+    #[cfg(debug_assertions)]
+    entity_comp_generation: &'a [inle_alloc::gen_alloc::Gen_Type],
+}
+
+pub struct Component_Storage_Write<'a, T> {
+    components: RwLockWriteGuard<'a, Vec<T>>,
+    entity_comp_index: &'a [Option<usize>],
+    #[cfg(debug_assertions)]
+    entity_comp_generation: &'a [inle_alloc::gen_alloc::Gen_Type],
+}
+
+impl<T> Component_Storage<T> {
+    pub fn lock_for_read(&self) -> Component_Storage_Read<'_, T> {
+        Component_Storage_Read {
+            components: self.components.read().unwrap(),
+            entity_comp_index: &self.entity_comp_index,
+            #[cfg(debug_assertions)]
+            entity_comp_generation: &self.entity_comp_generation,
+        }
+    }
+
+    pub fn lock_for_write(&self) -> Component_Storage_Write<'_, T> {
+        Component_Storage_Write {
+            components: self.components.write().unwrap(),
+            entity_comp_index: &self.entity_comp_index,
+            #[cfg(debug_assertions)]
+            entity_comp_generation: &self.entity_comp_generation,
+        }
+    }
+}
+
+impl<T> Component_Storage_Read<'_, T> {
+    pub fn get(&self, entity: Entity) -> Option<&T> {
+        #[cfg(debug_assertions)]
+        {
+            assert_gen_consistency(
+                self.entity_comp_index,
+                self.entity_comp_generation,
+                entity,
+                type_name::<T>(),
+            );
+        }
+        self.entity_comp_index[entity.index as usize].map(|idx| &self.components[idx])
+    }
+
+    pub fn must_get(&self, entity: Entity) -> &T {
+        #[cfg(debug_assertions)]
+        {
+            assert_gen_consistency(
+                self.entity_comp_index,
+                self.entity_comp_generation,
+                entity,
+                type_name::<T>(),
+            );
+        }
+        let idx = self.entity_comp_index[entity.index as usize].unwrap();
+        &self.components[idx]
+    }
+}
+
+impl<T> Component_Storage_Write<'_, T> {
+    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
+        #[cfg(debug_assertions)]
+        {
+            assert_gen_consistency(
+                self.entity_comp_index,
+                self.entity_comp_generation,
+                entity,
+                type_name::<T>(),
+            );
+        }
+        self.entity_comp_index[entity.index as usize].map(move |idx| &mut self.components[idx])
+    }
+
+    pub fn must_get_mut(&mut self, entity: Entity) -> &mut T {
+        #[cfg(debug_assertions)]
+        {
+            assert_gen_consistency(
+                self.entity_comp_index,
+                self.entity_comp_generation,
+                entity,
+                type_name::<T>(),
+            );
+        }
+        let idx = self.entity_comp_index[entity.index as usize].unwrap();
+        &mut self.components[idx]
+    }
+}
+
+impl<T: 'static> Component_Storage<T> {
+    #[inline]
+    pub fn has_component(&self, entity: Entity) -> bool {
+        if let Some(slot) = self.entity_comp_index.get(entity.index as usize) {
+            #[cfg(debug_assertions)]
+            {
+                assert_gen_consistency(
+                    &self.entity_comp_index,
+                    &self.entity_comp_generation,
+                    entity,
+                    type_name::<T>(),
+                );
+            }
+
+            slot.is_some()
+        } else {
+            false
+        }
+    }
+}
+
+impl<'a, T: 'a> IntoIterator for &'a Component_Storage_Read<'a, T> {
+    type IntoIter = Component_Storage_Iter<'a, T>;
+    type Item = &'a T;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter {
+            inner: self.components.iter(),
+        }
+    }
+}
+
+pub struct Component_Storage_Iter<'a, T> {
+    inner: std::slice::Iter<'a, T>,
+}
+
+impl<'a, T: 'a> Iterator for Component_Storage_Iter<'a, T> {
+    type Item = &'a T;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
+
+impl<'a, T: 'a> IntoIterator for &'a mut Component_Storage_Write<'a, T> {
+    type IntoIter = Component_Storage_Iter_Mut<'a, T>;
+    type Item = &'a mut T;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter {
+            inner: self.components.iter_mut(),
+        }
+    }
+}
+
+pub struct Component_Storage_Iter_Mut<'a, T> {
+    inner: std::slice::IterMut<'a, T>,
+}
+
+impl<'a, T: 'a> Iterator for Component_Storage_Iter_Mut<'a, T> {
+    type Item = &'a mut T;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
+
+#[cfg(debug_assertions)]
+fn assert_gen_consistency(
+    comp_index: &[Option<usize>],
+    comp_gen: &[inle_alloc::gen_alloc::Gen_Type],
+    entity: Entity,
+    type_name: &'static str,
 ) {
-    ldebug!("Remove me!");
+    debug_assert_eq!(comp_index.len(), comp_gen.len());
+    debug_assert_eq!(
+                entity.gen,
+                comp_gen[entity.index as usize],
+                "Entity {:?} is not the same as the one contained in Component_Storage<{:?}> ({:?})! Probably it was destroyed and recreated but its components were not updated properly!", entity, type_name, comp_gen[entity.index as usize]);
+}
+
+// This trait is required to define common methods for all storages
+// so we can iterate on them in an untyped fashion and still be
+// able to do stuff on them (e.g. remove_all_components)
+pub(super) trait Component_Storage_Interface: anymap::any::Any {
+    fn remove_component(&mut self, entity: Entity);
+
+    #[cfg(debug_assertions)]
+    fn has_component(&self, entity: Entity) -> bool;
+
+    #[cfg(debug_assertions)]
+    fn comp_name(&self) -> &'static str;
+}
+
+impl<T: 'static> Component_Storage_Interface for Component_Storage<T> {
+    fn remove_component(&mut self, entity: Entity) {
+        if let Some(slot) = self.entity_comp_index.get_mut(entity.index as usize) {
+            *slot = None;
+        } else {
+            lerr!(
+                "Tried to remove inexisting component {:?} from entity {:?}",
+                type_name::<T>(),
+                entity
+            );
+        }
+    }
+
+    // @Cleanup: I wonder if this is the best way to do this.
+    // Should we just expose the trait and have all methods be
+    // trait methods? But would that mean that we'd have to go through
+    // a vtable all the time? I guess not if we have the concrete type?
+    // Investigate on this.
+    #[cfg(debug_assertions)]
+    fn has_component(&self, entity: Entity) -> bool {
+        Component_Storage::<T>::has_component(self, entity)
+    }
+
+    #[cfg(debug_assertions)]
+    fn comp_name(&self) -> &'static str {
+        // Note: we assume that type_name returns a full path like foo::bar::Type, although that's not guaranteed.
+        // This won't break if that's not the case anyway.
+        let full_name = type_name::<T>();
+        let base_name = full_name.rsplit(':').next().unwrap_or(full_name);
+        base_name
+    }
+}
+
+//
+// The following traits are to make anymap::Map work with our trait
+//
+
+impl UncheckedAnyExt for dyn Component_Storage_Interface {
+    #[inline]
+    unsafe fn downcast_ref_unchecked<T: 'static>(&self) -> &T {
+        &*(self as *const Self as *const T)
+    }
+
+    #[inline]
+    unsafe fn downcast_mut_unchecked<T: 'static>(&mut self) -> &mut T {
+        &mut *(self as *mut Self as *mut T)
+    }
+
+    #[inline]
+    unsafe fn downcast_unchecked<T: 'static>(self: Box<Self>) -> Box<T> {
+        Box::from_raw(Box::into_raw(self) as *mut T)
+    }
+}
+
+impl<T: 'static> anymap::any::IntoBox<dyn Component_Storage_Interface> for Component_Storage<T> {
+    #[inline]
+    fn into_box(self) -> Box<dyn Component_Storage_Interface> {
+        Box::new(self)
+    }
 }

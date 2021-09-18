@@ -1,4 +1,4 @@
-use crate::comp_mgr_new::{
+use crate::comp_mgr::{
     Component_Manager, Component_Storage, Component_Storage_Interface, Component_Storage_Read,
     Component_Storage_Write,
 };
@@ -130,7 +130,7 @@ mod tests {
         foreach_entity_new!(comp_mgr, entities,
             read: A, B;
             write: C, D;
-            |entity, (a, b): (&A, &B), (c, d): (&mut C, &mut D)| {
+            |_entity, (a, b): (&A, &B), (c, d): (&mut C, &mut D)| {
             c.s = format!("{}, {}", a.x, b.y);
             d.v.push(c.s.clone());
 

@@ -469,7 +469,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
                     ..
                 } = objects[cld];
 
-                let spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
+                let mut spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
                 spatial.transform.set_position_v(position - offset);
                 spatial.velocity = velocity;
             }
@@ -488,7 +488,7 @@ fn prepare_colliders_and_gather_rigidbodies(
     let mut objects = HashMap::new();
 
     for collider in &mut phys_world.colliders {
-        let spatial = world
+        let mut spatial = world
             .get_component_mut::<C_Spatial2D>(collider.entity)
             .unwrap();
         let pos = spatial.transform.position();
