@@ -52,7 +52,6 @@ pub fn level_load_sync(
     };
 
     linfo!("Loading level {} ...", level_id);
-    register_all_components(&mut level.world);
     init_demo_entities(
         &mut game_resources.gfx,
         &mut game_resources.shader_cache,
@@ -72,28 +71,6 @@ pub fn level_load_sync(
     );
 
     level
-}
-
-fn register_all_components(world: &mut Ecs_World) {
-    world.register_component::<C_Spatial2D>();
-    world.register_component::<Transform2D>();
-    world.register_component::<C_Camera2D>();
-    world.register_component::<C_Renderable>();
-    world.register_component::<C_Animated_Sprite>();
-    world.register_component::<C_Controllable>();
-    world.register_component::<C_Collider>();
-    //world.register_component::<C_Ground>();
-    world.register_component::<C_Multi_Renderable>();
-    world.register_component::<C_Multi_Renderable_Animation>();
-    world.register_component::<C_Gravity>();
-    world.register_component::<C_Camera_Follow>();
-    world.register_component::<C_Ground_Detection>();
-
-    #[cfg(debug_assertions)]
-    {
-        world.register_component::<C_Debug_Data>();
-        world.register_component::<C_Position_History>();
-    }
 }
 
 // @Temporary
@@ -219,7 +196,7 @@ fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World, phys_worl
     foreach_entity_new!(world,
         read: C_Collider;
         write: C_Spatial2D;
-        |entity, (collider,): (&C_Collider), (spatial,): (&mut C_Spatial2D)| {
+        |entity, (collider,): (&C_Collider,), (spatial,): (&mut C_Spatial2D,)| {
         let pos = spatial.transform.position();
         spatial.frame_starting_pos = pos;
         let body_handle = collider.handle;

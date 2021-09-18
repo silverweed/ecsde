@@ -364,7 +364,7 @@ impl Gameplay_System {
                 v
             };
 
-            let camera = level
+            let mut camera = level
                 .world
                 .get_component_mut::<C_Camera2D>(level.cameras[level.active_camera])
                 .unwrap();

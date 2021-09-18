@@ -383,16 +383,15 @@ pub fn create_background(
     _cfg: &Config,
 ) {
     let ground = world.new_entity();
-    let rend = C_Renderable::new_with_diffuse(gres, env, "ground.png")
+    let mut rend = C_Renderable::new_with_diffuse(gres, env, "ground.png")
         .with_shader(shader_cache, env, SHD_SPRITE_FLAT)
         .with_z_index(-1);
     let texture = gres.get_texture_mut(rend.material.texture);
-    world.add_component(ground, rend);
-
     let (sw, sh) = render::get_texture_size(texture);
     rend.rect = Rect::new(0, 0, sw as i32 * 100, sh as i32 * 100);
     render::set_texture_repeated(texture, true);
 
+    world.add_component(ground, rend);
     world.add_component(ground, C_Spatial2D::default());
 
     #[cfg(debug_assertions)]

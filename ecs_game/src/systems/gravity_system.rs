@@ -15,6 +15,6 @@ pub fn update(dt: &Duration, world: &mut Ecs_World, cfg: &Config) {
         read: C_Gravity;
         write: C_Spatial2D;
         |entity, (gravity,): (&C_Gravity,), (spatial,): (&mut C_Spatial2D,)| {
-        spatial.velocity += secs * v2!(0.0, gravity);
+        spatial.velocity += secs * v2!(0.0, gravity.acceleration.read(cfg));
     });
 }

@@ -98,18 +98,17 @@ pub fn generate_random_level(
 fn create_camera(level: &mut Level, cfg: &Config) -> Entity {
     let camera = level.world.new_entity();
     {
-        let cam = level.world.add_component(camera, C_Camera2D::default());
+        let mut cam = C_Camera2D::default();
         let scale = Cfg_Var::<f32>::new("game/camera/initial_scale", cfg).read(cfg);
         cam.transform.set_scale(scale, scale);
+        let cam = level.world.add_component(camera, cam);
     }
     {
-        let mut ctrl = level.world.add_component(
-            camera,
-            C_Controllable {
-                speed: Cfg_Var::new("game/camera/speed", cfg),
-                ..Default::default()
-            },
-        );
+        let ctrl = C_Controllable {
+            speed: Cfg_Var::new("game/camera/speed", cfg),
+            ..Default::default()
+        };
+        level.world.add_component(camera, ctrl);
     }
 
     level.cameras.push(camera);

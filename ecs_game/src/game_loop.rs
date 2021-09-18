@@ -899,7 +899,7 @@ fn update_debug(
                 update_entities_debug_overlay(debug_ui.get_overlay(sid!("entities")), &level.world);
                 update_camera_debug_overlay(
                     debug_ui.get_overlay(sid!("camera")),
-                    level.get_camera(),
+                    &level.get_camera(),
                 );
                 if let Some(cls_debug_data) = collision_debug_data.get(&level.id) {
                     update_physics_debug_overlay(
@@ -1335,14 +1335,14 @@ fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs
             v2!(0., 0.) // @Incomplete
         };
 
-        let name = if let Some(debug) = ecs_world.get_component::<C_Debug_Data>(entity) {
-            debug.entity_name.as_ref()
+         if let Some(debug) = ecs_world.get_component::<C_Debug_Data>(entity) {
+            let name = debug.entity_name.as_ref();
+            debug_painter.add_shaded_text(name, pos, 7, colors::GREEN, colors::BLACK);
         } else {
-            "<Unknown>"
-        };
-        debug_painter.add_shaded_text(name, pos, 7, colors::GREEN, colors::BLACK);
+            debug_painter.add_shaded_text("<Unknown>", pos, 7, colors::GREEN, colors::BLACK);
+        }
 
-        for (i, comp_name) in ecs_world.get_comp_name_list_for_entity(entity) {
+        for (i, comp_name) in ecs_world.get_comp_name_list_for_entity(entity).iter().enumerate() {
             debug_painter.add_shaded_text_with_shade_distance(
                 &format!(
                     " {}", comp_name
@@ -1532,8 +1532,10 @@ fn debug_draw_entities_pos_history(
     use crate::debug::systems::position_history_system::C_Position_History;
     use inle_math::math::lerp;
 
-    let history_comps = ecs_world.get_component_storage::<C_Position_History>();
-    for (_entity, pos_hist) in &history_comps {
+    foreach_entity_new!(ecs_world,
+        read: C_Position_History;
+        write: ;
+        |entity, (pos_hist,): (&C_Position_History,), ()| {
         let positions = pos_hist_system.get_positions_of(pos_hist);
         let mut last_pos_latest_slice = None;
         let mut idx = 0;
@@ -1570,7 +1572,7 @@ fn debug_draw_entities_pos_history(
             }
             last_pos_latest_slice = Some(slice[slice.len() - 1]);
         }
-    }
+    });
 }
 
 /// Draws a grid made of squares, each of size `square_size`.

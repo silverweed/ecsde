@@ -130,6 +130,7 @@ impl Ecs_World {
         self.component_manager.remove_component::<T>(entity);
     }
 
+    #[inline]
     pub fn has_component<T: 'static>(&self, entity: Entity) -> bool {
         trace!("has_component");
 
@@ -144,14 +145,26 @@ impl Ecs_World {
         self.component_manager.has_component::<T>(entity)
     }
 
+    #[inline]
     pub fn get_component_storage<T: Copy + 'static>(&self) -> Option<&Component_Storage<T>> {
         self.component_manager.get_component_storage::<T>()
     }
 
+    #[inline]
     pub fn get_component_storage_mut<T: Copy + 'static>(
         &mut self,
     ) -> Option<&mut Component_Storage<T>> {
         self.component_manager.get_component_storage_mut::<T>()
+    }
+
+    #[inline]
+    pub fn read_component_storage<T: 'static>(&self) -> Option<Component_Storage_Read<T>> {
+        self.component_manager.read_component_storage::<T>()
+    }
+
+    #[inline]
+    pub fn write_component_storage<T: 'static>(&self) -> Option<Component_Storage_Write<T>> {
+        self.component_manager.write_component_storage::<T>()
     }
 }
 
