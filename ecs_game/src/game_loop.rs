@@ -12,7 +12,6 @@ use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use {
-    crate::debug::systems::position_history_system::Position_History_System,
     inle_common::paint_props::Paint_Properties,
     inle_common::stringid::String_Id,
     inle_debug::painter::Debug_Painter,
@@ -931,7 +930,7 @@ fn update_debug(
 
             if draw_entity_pos_history {
                 pos_hist_system.update(&mut level.world, dt, cfg);
-                debug_draw_entities_pos_history(debug_painter, &level.world, pos_hist_system);
+                debug_draw_entities_pos_history(debug_painter, &level.world);
             }
 
             if draw_component_lists {
@@ -1521,11 +1520,7 @@ fn debug_draw_entities_prev_frame_ghost(
 }
 
 #[cfg(debug_assertions)]
-fn debug_draw_entities_pos_history(
-    painter: &mut Debug_Painter,
-    ecs_world: &Ecs_World,
-    pos_hist_system: &Position_History_System,
-) {
+fn debug_draw_entities_pos_history(painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
     use crate::debug::systems::position_history_system::C_Position_History;
     use inle_math::math::lerp;
 
@@ -1533,7 +1528,7 @@ fn debug_draw_entities_pos_history(
         read: C_Position_History;
         write: ;
         |_e, (pos_hist,): (&C_Position_History,), ()| {
-        let positions = pos_hist_system.get_positions_of(pos_hist);
+        let positions = &pos_hist.positions;
         let mut last_pos_latest_slice = None;
         let mut idx = 0;
         let (slice1, slice2) = positions.as_slices();
