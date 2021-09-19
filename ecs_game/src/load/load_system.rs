@@ -193,7 +193,7 @@ fn init_demo_entities(
 }
 
 fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World, phys_world: &Physics_World) {
-    foreach_entity_new!(world,
+    foreach_entity!(world,
         read: C_Collider;
         write: C_Spatial2D;
         |entity, (collider,): (&C_Collider,), (spatial,): (&mut C_Spatial2D,)| {

@@ -1,48 +1,3 @@
-#[macro_export]
-macro_rules! foreach_entity {
-    ($world: expr, $(+$req: ty,)* $(~$exc: ty,)* $fn: expr) => {
-        let mut entity_stream = $crate::entity_stream::new_entity_stream($world);
-        $(entity_stream = entity_stream.require::<$req>();)*
-        $(entity_stream = entity_stream.exclude::<$exc>();)*
-
-        let mut entity_stream = entity_stream.build();
-
-        loop {
-            let entity = entity_stream.next($world);
-            if entity.is_none() {
-                break;
-            }
-            let entity = entity.unwrap();
-
-            $fn(entity);
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! foreach_entity_enumerate {
-    ($world: expr, $(+$req: ty,)* $(~$exc: ty,)* $fn: expr) => {
-        let mut entity_stream = $crate::entity_stream::new_entity_stream($world);
-        $(entity_stream = entity_stream.require::<$req>();)*
-        $(entity_stream = entity_stream.exclude::<$exc>();)*
-
-        let mut entity_stream = entity_stream.build();
-
-        let mut i = 0;
-        loop {
-            let entity = entity_stream.next($world);
-            if entity.is_none() {
-                break;
-            }
-            let entity = entity.unwrap();
-
-            $fn(entity, i);
-
-            i += 1;
-        }
-    };
-}
-
 //
 // tpl_map macro wizardry courtesy of
 // https://stackoverflow.com/questions/66396814/generating-tuple-indices-based-on-macro-rules-repetition-expansion/66420824#66420824
@@ -79,7 +34,7 @@ macro_rules! tpl_map {
 }
 
 #[macro_export]
-macro_rules! foreach_entity_new {
+macro_rules! foreach_entity {
     ($ecs_world: expr, read: $($read: ty),*; write: $($writ: ty),*; $fn: expr) => {
         let mut query = $crate::ecs_query::Ecs_Query::new($ecs_world);
         $(query = query.read::<$read>();)*

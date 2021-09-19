@@ -24,7 +24,7 @@ pub fn update(
     actions: &[Game_Action],
     cfg: &Config,
 ) {
-    foreach_entity_new!(world,
+    foreach_entity!(world,
         read: C_Entity_Preview;
         write: C_Spatial2D;
         |entity, (_,): (&C_Entity_Preview,), (spatial,): (&mut C_Spatial2D,)| {

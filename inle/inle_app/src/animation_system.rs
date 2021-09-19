@@ -5,7 +5,7 @@ use std::time::Duration;
 pub fn update(dt: &Duration, ecs_world: &mut Ecs_World) {
     let dt_secs = dt.as_secs_f32();
 
-    foreach_entity_new!(ecs_world,
+    foreach_entity!(ecs_world,
         read: ;
         write: C_Renderable, C_Animated_Sprite;
         |_e, (), (renderable, sprite): (&mut C_Renderable, &mut C_Animated_Sprite)| {

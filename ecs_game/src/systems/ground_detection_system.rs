@@ -19,7 +19,7 @@ pub fn update(
 ) {
     trace!("ground_detection_system::update");
 
-    foreach_entity_new!(world,
+    foreach_entity!(world,
         read: C_Collider;
         write: C_Ground_Detection;
         |_e, (collider,): (&C_Collider,), (ground_detect,): (&mut C_Ground_Detection,)| {

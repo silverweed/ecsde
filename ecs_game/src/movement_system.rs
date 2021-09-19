@@ -24,7 +24,7 @@ pub fn update(
 ) {
     let dt_secs = dt.as_secs_f32();
 
-    foreach_entity_new!(ecs_world,
+    foreach_entity!(ecs_world,
         read: ;
         write: C_Spatial2D;
         |entity, (), (spatial,): (&mut C_Spatial2D,)| {

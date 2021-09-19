@@ -48,7 +48,7 @@ impl Position_History_System {
 
         let hist_size = self.hist_size.read(cfg) as usize;
 
-        foreach_entity_new!(world,
+        foreach_entity!(world,
             read: C_Spatial2D;
             write: C_Position_History;
             |_e, (spatial,): (&C_Spatial2D,), (pos_hist,): (&mut C_Position_History,)| {

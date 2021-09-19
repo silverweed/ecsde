@@ -34,7 +34,7 @@ pub struct C_Multi_Renderable_Animation {
 }
 
 pub fn update(dt: &Duration, world: &mut Ecs_World, frame_alloc: &mut Temp_Allocator) {
-    foreach_entity_new!(world,
+    foreach_entity!(world,
         read: ;
         write: C_Multi_Renderable, C_Multi_Renderable_Animation;
         |entity, (), (mr, mr_anim): (&mut C_Multi_Renderable, &mut C_Multi_Renderable_Animation)| {

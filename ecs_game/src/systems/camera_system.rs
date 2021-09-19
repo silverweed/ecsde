@@ -25,7 +25,7 @@ pub struct C_Camera_Follow {
 }
 
 pub fn update(dt: &Duration, world: &mut Ecs_World, cfg: &Config) {
-    foreach_entity_new!(world,
+    foreach_entity!(world,
         read: C_Camera_Follow;
         write: C_Camera2D;
         |_e, (cam_follow,): (&C_Camera_Follow,), (camera,): (&mut C_Camera2D,)| {

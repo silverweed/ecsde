@@ -213,7 +213,7 @@ mod tests {
             );
         }
 
-        foreach_entity_new!(&world,
+        foreach_entity!(&world,
             read: A, B;
             write: C, D;
             |_entity, (a, b): (&A, &B), (c, d): (&mut C, &mut D)| {

@@ -1185,7 +1185,7 @@ fn debug_draw_colliders(
     use inle_physics::collider::{C_Collider, Collision_Shape};
     use std::convert::TryFrom;
 
-    foreach_entity_new!(ecs_world,
+    foreach_entity!(ecs_world,
         read: C_Collider, C_Spatial2D;
         write: ;
     |_e, (collider_comp, _spatial): (&C_Collider, &C_Spatial2D), ()| {
@@ -1257,7 +1257,7 @@ fn debug_draw_colliders(
 
 #[cfg(debug_assertions)]
 fn debug_draw_transforms(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
-    foreach_entity_new!(ecs_world,
+    foreach_entity!(ecs_world,
         read: C_Spatial2D;
         write: ;
         |_e, (spatial, ): (&C_Spatial2D,), () | {
@@ -1292,7 +1292,7 @@ fn debug_draw_transforms(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
     const COLOR: colors::Color = colors::rgb(100, 0, 120);
 
-    foreach_entity_new!(ecs_world,
+    foreach_entity!(ecs_world,
         read: C_Spatial2D;
         write: ;
     |_e, (spatial, ): (&C_Spatial2D, ), ()| {
@@ -1322,7 +1322,7 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
     use crate::debug::entity_debug::C_Debug_Data;
 
-    foreach_entity_new!(ecs_world,
+    foreach_entity!(ecs_world,
         read: ;
         write: ;
     |entity, (), ()| {
@@ -1478,7 +1478,7 @@ fn debug_draw_entities_prev_frame_ghost(
 
     let unlit_shader = shader_cache.load_shader(&shader_path(env, SHD_SPRITE_UNLIT));
 
-    foreach_entity_new!(ecs_world,
+    foreach_entity!(ecs_world,
         read: C_Spatial2D, C_Renderable;
         write:  C_Debug_Data;
         |_e, (spatial, renderable): (&C_Spatial2D, &C_Renderable), (debug_data,): (&mut C_Debug_Data,)| {
@@ -1529,7 +1529,7 @@ fn debug_draw_entities_pos_history(
     use crate::debug::systems::position_history_system::C_Position_History;
     use inle_math::math::lerp;
 
-    foreach_entity_new!(ecs_world,
+    foreach_entity!(ecs_world,
         read: C_Position_History;
         write: ;
         |_e, (pos_hist,): (&C_Position_History,), ()| {
