@@ -4,7 +4,7 @@ use crate::comp_mgr::{
 };
 use crate::ecs_world::{Ecs_World, Entity};
 use anymap::any::UncheckedAnyExt;
-use std::any::TypeId;
+use std::any::{type_name, TypeId};
 use std::collections::HashMap;
 
 pub struct Ecs_Query<'mgr, 'str> {
@@ -32,17 +32,50 @@ pub struct Storages<'a> {
 
     read_indices: HashMap<TypeId, usize>,
     write_indices: HashMap<TypeId, usize>,
+
+    #[cfg(debug_assertions)]
+    human_readable_query: String,
 }
 
 impl Storages<'_> {
     pub fn begin_read<T: 'static>(&self) -> Component_Storage_Read<T> {
-        let idx = self.read_indices.get(&TypeId::of::<T>()).unwrap();
+        trace!("ecs_query::storages::begin_read");
+
+        let idx = self
+            .read_indices
+            .get(&TypeId::of::<T>())
+            .unwrap_or_else(|| {
+                let mut_in_debug!(msg) = format!(
+                    "Tried to read type {:?} but either it is not part of this query or there are no entities satisfying this query. You should always check if query.entities() is empty before calling begin_read() or begin_write().",
+                    base_type_name::<T>()
+                );
+                #[cfg(debug_assertions)]
+                {
+                    msg.push_str(&format!(" (query = {})", self.human_readable_query));
+                }
+                panic!("{}", msg);
+            });
         let storage = unsafe { self.reads[*idx].downcast_ref_unchecked::<Component_Storage<T>>() };
         storage.lock_for_read()
     }
 
     pub fn begin_write<T: 'static>(&self) -> Component_Storage_Write<T> {
-        let idx = self.write_indices.get(&TypeId::of::<T>()).unwrap();
+        trace!("ecs_query::storages::begin_write");
+
+        let idx = self
+            .write_indices
+            .get(&TypeId::of::<T>())
+            .unwrap_or_else(|| {
+                let mut_in_debug!(msg) = format!(
+                    "Tried to write type {:?} but either it is not part of this query or there are no entities satisfying this query. You should always check if query.entities() is empty before calling begin_read() or begin_write().",
+                    base_type_name::<T>()
+                );
+                #[cfg(debug_assertions)]
+                {
+                    msg.push_str(&format!(" (query = {})", self.human_readable_query));
+                }
+                panic!("{}", msg);
+            });
         let storage = unsafe { self.writes[*idx].downcast_ref_unchecked::<Component_Storage<T>>() };
         storage.lock_for_write()
     }
@@ -61,34 +94,84 @@ where
     }
 
     pub fn read<T: 'static>(mut self) -> Self {
-        if let Some(storage) = self.comp_mgr.get_component_storage::<T>() {
-            self.storages.reads.push(storage);
-            self.storages
-                .read_indices
-                .insert(TypeId::of::<T>(), self.storages.reads.len() - 1);
+        trace!("ecs_query::read");
 
-            // @Speed: this may probably be accelerated with some dedicated data structure on Component_Manager
-            let comp_mgr = self.comp_mgr;
-            self.entities.retain(|&e| comp_mgr.has_component::<T>(e));
+        #[cfg(debug_assertions)]
+        {
+            self.storages
+                .human_readable_query
+                .push_str(&format!("read {}, ", base_type_name::<T>()));
+        }
+
+        let mut added = false;
+        if !self.entities.is_empty() {
+            if let Some(storage) = self.comp_mgr.get_component_storage::<T>() {
+                self.storages.reads.push(storage);
+                self.storages
+                    .read_indices
+                    .insert(TypeId::of::<T>(), self.storages.reads.len() - 1);
+
+                // @Speed: this may probably be accelerated with some dedicated data structure on Component_Manager
+                let comp_mgr = self.comp_mgr;
+                {
+                    trace!("ecs_query::entities_retain");
+                    self.entities.retain(|&e| comp_mgr.has_component::<T>(e));
+                }
+
+                added = true;
+            }
+        }
+
+        if !added {
+            // Instead of retaining, since we know no entity has this component, just clear the array.
+            self.entities.clear();
         }
 
         self
     }
 
     pub fn write<T: 'static>(mut self) -> Self {
-        if let Some(storage) = self.comp_mgr.get_component_storage::<T>() {
-            self.storages.writes.push(storage);
-            self.storages
-                .write_indices
-                .insert(TypeId::of::<T>(), self.storages.writes.len() - 1);
+        trace!("ecs_query::write");
 
-            // @Speed: this may probably be accelerated with some dedicated data structure on Component_Manager
-            let comp_mgr = self.comp_mgr;
-            self.entities.retain(|&e| comp_mgr.has_component::<T>(e));
+        #[cfg(debug_assertions)]
+        {
+            self.storages
+                .human_readable_query
+                .push_str(&format!("write {}, ", base_type_name::<T>()));
+        }
+
+        let mut added = false;
+        if !self.entities.is_empty() {
+            if let Some(storage) = self.comp_mgr.get_component_storage::<T>() {
+                self.storages.writes.push(storage);
+                self.storages
+                    .write_indices
+                    .insert(TypeId::of::<T>(), self.storages.writes.len() - 1);
+
+                // @Speed: this may probably be accelerated with some dedicated data structure on Component_Manager
+                let comp_mgr = self.comp_mgr;
+                {
+                    trace!("ecs_query::entities_retain");
+                    self.entities.retain(|&e| comp_mgr.has_component::<T>(e));
+                }
+
+                added = true;
+            }
+        }
+
+        if !added {
+            self.entities.clear();
         }
 
         self
     }
+}
+
+#[cfg(debug_assertions)]
+fn base_type_name<T>() -> &'static str {
+    let full_name = type_name::<T>();
+    let base_name = full_name.rsplit(':').next().unwrap_or(full_name);
+    base_name
 }
 
 #[cfg(test)]

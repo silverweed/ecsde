@@ -246,6 +246,8 @@ pub struct Component_Storage_Write<'a, T> {
 
 impl<T> Component_Storage<T> {
     pub fn lock_for_read(&self) -> Component_Storage_Read<'_, T> {
+        trace!("Component_Storage::lock_for_read");
+
         Component_Storage_Read {
             components: self.components.read().unwrap(),
             entity_comp_index: &self.entity_comp_index,
@@ -255,6 +257,8 @@ impl<T> Component_Storage<T> {
     }
 
     pub fn lock_for_write(&self) -> Component_Storage_Write<'_, T> {
+        trace!("Component_Storage::lock_for_write");
+
         Component_Storage_Write {
             components: self.components.write().unwrap(),
             entity_comp_index: &self.entity_comp_index,
@@ -266,6 +270,8 @@ impl<T> Component_Storage<T> {
 
 impl<T> Component_Storage_Read<'_, T> {
     pub fn get(&self, entity: Entity) -> Option<&T> {
+        trace!("Component_Storage_Read::get");
+
         #[cfg(debug_assertions)]
         {
             assert_gen_consistency(
@@ -279,6 +285,8 @@ impl<T> Component_Storage_Read<'_, T> {
     }
 
     pub fn must_get(&self, entity: Entity) -> &T {
+        trace!("Component_Storage_Read::must_get");
+
         #[cfg(debug_assertions)]
         {
             assert_gen_consistency(
@@ -295,6 +303,8 @@ impl<T> Component_Storage_Read<'_, T> {
 
 impl<T> Component_Storage_Write<'_, T> {
     pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
+        trace!("Component_Storage_Write::get_mut");
+
         #[cfg(debug_assertions)]
         {
             assert_gen_consistency(
@@ -308,6 +318,8 @@ impl<T> Component_Storage_Write<'_, T> {
     }
 
     pub fn must_get_mut(&mut self, entity: Entity) -> &mut T {
+        trace!("Component_Storage_Write::must_get_mut");
+
         #[cfg(debug_assertions)]
         {
             assert_gen_consistency(
@@ -326,16 +338,6 @@ impl<T: 'static> Component_Storage<T> {
     #[inline]
     pub fn has_component(&self, entity: Entity) -> bool {
         if let Some(slot) = self.entity_comp_index.get(entity.index as usize) {
-            #[cfg(debug_assertions)]
-            {
-                assert_gen_consistency(
-                    &self.entity_comp_index,
-                    &self.entity_comp_generation,
-                    entity,
-                    type_name::<T>(),
-                );
-            }
-
             slot.is_some()
         } else {
             false

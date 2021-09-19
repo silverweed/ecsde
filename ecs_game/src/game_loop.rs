@@ -278,7 +278,7 @@ where
                         .calipers
                         .start_measuring_dist(
                             &game_state.window,
-                            &level.get_camera().transform,
+                            &level.get_camera_transform(),
                             &game_state.engine_state.input_state,
                         );
                 }
@@ -538,7 +538,7 @@ fn update_graphics<'a, 's, 'r>(
                 frame_alloc,
                 cfg: render_cfg,
                 window,
-                camera: &level.get_camera().transform,
+                camera: &level.get_camera_transform(),
                 gres,
                 shader_cache,
             };
@@ -568,7 +568,7 @@ fn update_graphics<'a, 's, 'r>(
                     gres,
                     lv_batches.get_mut(&level.id).unwrap(),
                     shader_cache,
-                    &level.get_camera().transform.clone(),
+                    &level.get_camera_transform(),
                     &mut level.lights,
                     batcher::Batcher_Draw_Params {
                         enable_shaders,
@@ -582,7 +582,7 @@ fn update_graphics<'a, 's, 'r>(
                         window,
                         gres,
                         shader_cache,
-                        &level.get_camera().transform,
+                        &level.get_camera_transform(),
                         frame_alloc,
                     );
                 }
@@ -619,7 +619,7 @@ fn update_debug_graphics<'a, 's, 'r>(
             calipers.draw(
                 &game_state.window,
                 painters.get_mut(&level.id).unwrap(),
-                &level.get_camera().transform,
+                &level.get_camera_transform(),
                 &game_state.engine_state.input_state,
             );
         }
@@ -635,7 +635,7 @@ fn update_debug_graphics<'a, 's, 'r>(
             let painter = painters
                 .get_mut(&level.id)
                 .unwrap_or_else(|| panic!("Debug painter not found for level {:?}", level.id));
-            painter.draw(window, gres, &level.get_camera().transform);
+            painter.draw(window, gres, &level.get_camera_transform());
             painter.clear();
         });
 
@@ -807,7 +807,7 @@ fn update_debug(
                 .gameplay_system
                 .levels
                 .first_active_level()
-                .map(|level| level.get_camera().transform),
+                .map(|level| level.get_camera_transform()),
             input_state,
         );
     }
@@ -899,7 +899,7 @@ fn update_debug(
                 update_entities_debug_overlay(debug_ui.get_overlay(sid!("entities")), &level.world);
                 update_camera_debug_overlay(
                     debug_ui.get_overlay(sid!("camera")),
-                    &level.get_camera(),
+                    &level.get_camera_transform(),
                 );
                 if let Some(cls_debug_data) = collision_debug_data.get(&level.id) {
                     update_physics_debug_overlay(
@@ -955,7 +955,7 @@ fn update_debug(
             if draw_debug_grid {
                 debug_draw_grid(
                     debug_painter,
-                    &level.get_camera().transform,
+                    &level.get_camera_transform(),
                     target_win_size,
                     grid_square_size,
                     grid_opacity,
@@ -1129,15 +1129,15 @@ fn update_entities_debug_overlay(
 #[cfg(debug_assertions)]
 fn update_camera_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
-    camera: &inle_gfx::components::C_Camera2D,
+    camera: &Transform2D,
 ) {
     debug_overlay.clear();
     debug_overlay
         .add_line(&format!(
             "[cam] pos: {:.2},{:.2}, scale: {:.1}",
-            camera.transform.position().x,
-            camera.transform.position().y,
-            camera.transform.scale().x
+            camera.position().x,
+            camera.position().y,
+            camera.scale().x
         ))
         .with_color(colors::rgba(220, 180, 100, 220));
 }

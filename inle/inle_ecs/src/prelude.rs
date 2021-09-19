@@ -86,15 +86,17 @@ macro_rules! foreach_entity_new {
         $(query = query.write::<$writ>();)*
 
         let storages = query.storages();
-        let comp_reads = ($(storages.begin_read::<$read>(),)*);
-        let mut comp_writs = ($(storages.begin_write::<$writ>(),)*);
-        for &entity in query.entities() {
-            macro_rules! tpl_map_get     { ($elem:expr) => { $elem.must_get(entity) } }
-            macro_rules! tpl_map_get_mut { ($elem:expr) => { $elem.must_get_mut(entity) } }
+        if !query.entities().is_empty() {
+            let comp_reads = ($(storages.begin_read::<$read>(),)*);
+            let mut comp_writs = ($(storages.begin_write::<$writ>(),)*);
+            for &entity in query.entities() {
+                macro_rules! tpl_map_get     { ($elem:expr) => { $elem.must_get(entity) } }
+                macro_rules! tpl_map_get_mut { ($elem:expr) => { $elem.must_get_mut(entity) } }
 
-            let reads = tpl_map!([$(std::mem::size_of::<$read>(),)*], comp_reads, tpl_map_get);
-            let writs = tpl_map!([$(std::mem::size_of::<$writ>(),)*], comp_writs, tpl_map_get_mut);
-            $fn(entity, reads, writs);
+                let reads = tpl_map!([$(std::mem::size_of::<$read>(),)*], comp_reads, tpl_map_get);
+                let writs = tpl_map!([$(std::mem::size_of::<$writ>(),)*], comp_writs, tpl_map_get_mut);
+                $fn(entity, reads, writs);
+            }
         }
     };
 }

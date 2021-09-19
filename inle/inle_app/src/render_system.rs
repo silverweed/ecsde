@@ -63,13 +63,14 @@ pub fn update(args: Render_System_Update_Args) {
     {
         trace!("draw_renderables");
 
-        let mut query = Ecs_Query::new(ecs_world)
+        let query = Ecs_Query::new(ecs_world)
             .read::<C_Spatial2D>()
             .read::<C_Renderable>();
         let storages = query.storages();
-        let spatials = storages.begin_read::<C_Spatial2D>();
-        let renderables = storages.begin_read::<C_Renderable>();
-        {
+        if !query.entities().is_empty() {
+            let spatials = storages.begin_read::<C_Spatial2D>();
+            let renderables = storages.begin_read::<C_Renderable>();
+
             #[cfg(debug_assertions)]
             let (min_z, max_z) = get_min_max_z(query.entities(), &renderables);
 
@@ -125,57 +126,60 @@ pub fn update(args: Render_System_Update_Args) {
     {
         trace!("draw_multi_renderables");
 
-        let mut query = Ecs_Query::new(ecs_world)
+        let query = Ecs_Query::new(ecs_world)
             .read::<C_Spatial2D>()
             .read::<C_Multi_Renderable>();
         let storages = query.storages();
-        let spatials = storages.begin_read::<C_Spatial2D>();
-        let multi_renderables = storages.begin_read::<C_Multi_Renderable>();
 
-        #[cfg(debug_assertions)]
-        let (min_z, max_z) = get_min_max_z_multi(query.entities(), &multi_renderables);
+        if !query.entities().is_empty() {
+            let spatials = storages.begin_read::<C_Spatial2D>();
+            let multi_renderables = storages.begin_read::<C_Multi_Renderable>();
 
-        for &entity in query.entities() {
-            let rend = multi_renderables.must_get(entity);
-            let spatial = spatials.must_get(entity);
+            #[cfg(debug_assertions)]
+            let (min_z, max_z) = get_min_max_z_multi(query.entities(), &multi_renderables);
 
-            let C_Multi_Renderable {
-                renderables,
-                n_renderables,
-            } = rend;
+            for &entity in query.entities() {
+                let rend = multi_renderables.must_get(entity);
+                let spatial = spatials.must_get(entity);
 
-            for i in 0..*n_renderables {
-                let C_Renderable {
-                    material,
-                    rect: src_rect,
-                    modulate,
-                    z_index,
-                    sprite_local_transform,
-                } = &renderables[i as usize];
+                let C_Multi_Renderable {
+                    renderables,
+                    n_renderables,
+                } = rend;
 
-                let transform = spatial.transform.combine(sprite_local_transform);
-                let mut_in_debug!(material) = *material;
+                for i in 0..*n_renderables {
+                    let C_Renderable {
+                        material,
+                        rect: src_rect,
+                        modulate,
+                        z_index,
+                        sprite_local_transform,
+                    } = &renderables[i as usize];
 
-                #[cfg(debug_assertions)]
-                {
-                    display_debug_visualization(
-                        window,
-                        batches,
-                        gres,
-                        shader_cache,
-                        spatial,
-                        &mut material,
-                        src_rect,
-                        *z_index,
-                        min_z,
-                        max_z,
-                        cfg.debug_visualization,
+                    let transform = spatial.transform.combine(sprite_local_transform);
+                    let mut_in_debug!(material) = *material;
+
+                    #[cfg(debug_assertions)]
+                    {
+                        display_debug_visualization(
+                            window,
+                            batches,
+                            gres,
+                            shader_cache,
+                            spatial,
+                            &mut material,
+                            src_rect,
+                            *z_index,
+                            min_z,
+                            max_z,
+                            cfg.debug_visualization,
+                        );
+                    }
+
+                    render::render_texture_ws(
+                        window, batches, &material, src_rect, *modulate, &transform, *z_index,
                     );
                 }
-
-                render::render_texture_ws(
-                    window, batches, &material, src_rect, *modulate, &transform, *z_index,
-                );
             }
         }
     }
