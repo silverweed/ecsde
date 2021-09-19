@@ -47,7 +47,6 @@ pub fn update(args: Render_System_Update_Args) {
     let Render_System_Update_Args {
         batches,
         ecs_world,
-        frame_alloc,
         cfg,
         window,
         gres,

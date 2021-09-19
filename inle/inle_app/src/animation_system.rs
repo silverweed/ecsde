@@ -8,7 +8,7 @@ pub fn update(dt: &Duration, ecs_world: &mut Ecs_World) {
     foreach_entity_new!(ecs_world,
         read: ;
         write: C_Renderable, C_Animated_Sprite;
-        |entity, (), (renderable, sprite): (&mut C_Renderable, &mut C_Animated_Sprite)| {
+        |_e, (), (renderable, sprite): (&mut C_Renderable, &mut C_Animated_Sprite)| {
         if sprite.frame_time <= 0.0 || sprite.n_frames <= 1 {
             return;
         }
@@ -39,20 +39,21 @@ mod tests {
     use inle_math::rect::Rect;
     use inle_resources::gfx::tex_path;
     use inle_test::test_common;
+    use serial_test::serial;
 
-    #[ignore] // until we fix create_test_resources_and_env
     #[test]
+    #[serial]
     fn animation_system() {
+        let (_win, _glfw) = test_common::load_gl_pointers();
         let (mut gres, _, env) = test_common::create_test_resources_and_env();
         let mut ecs_world = Ecs_World::new();
-        ecs_world.register_component::<C_Renderable>();
-        ecs_world.register_component::<C_Animated_Sprite>();
 
         let e = ecs_world.new_entity();
         {
-            let mut r = ecs_world.add_component(e, C_Renderable::default());
+            let mut r = C_Renderable::default();
             r.material.texture = gres.load_texture(&tex_path(&env, "ground.png"));
             r.rect = Rect::new(0, 0, 96, 96);
+            ecs_world.add_component(e, r);
         }
         {
             ecs_world.add_component(

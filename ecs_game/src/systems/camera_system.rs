@@ -28,7 +28,7 @@ pub fn update(dt: &Duration, world: &mut Ecs_World, cfg: &Config) {
     foreach_entity_new!(world,
         read: C_Camera_Follow;
         write: C_Camera2D;
-        |entity, (cam_follow,): (&C_Camera_Follow,), (camera,): (&mut C_Camera2D,)| {
+        |_e, (cam_follow,): (&C_Camera_Follow,), (camera,): (&mut C_Camera2D,)| {
         let target = cam_follow.target;
         let lerp_factor = cam_follow.lerp_factor.read(cfg);
 

@@ -77,7 +77,6 @@ pub struct Debug_CVars {
     pub trace_overlay_refresh_rate: Cfg_Var<f32>,
 
     pub draw_colliders: Cfg_Var<bool>,
-    pub draw_comp_alloc_colliders: Cfg_Var<bool>,
 
     pub draw_entities: Cfg_Var<bool>,
     pub draw_velocities: Cfg_Var<bool>,
@@ -361,7 +360,6 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     let draw_fps_graph = Cfg_Var::new("debug/graphs/fps", cfg);
     let draw_prev_frame_t_graph = Cfg_Var::new("debug/graphs/prev_frame_t", cfg);
     let draw_mouse_rulers = Cfg_Var::new("debug/window/draw_mouse_rulers", cfg);
-    let draw_comp_alloc_colliders = Cfg_Var::new("debug/ecs/comp_alloc/colliders", cfg);
     let draw_world_chunks = Cfg_Var::new("debug/world/draw_chunks", cfg);
     let draw_buf_alloc = Cfg_Var::new("debug/rendering/draw_buf_alloc", cfg);
     let display_log_window = Cfg_Var::new("engine/debug/log_window/display", cfg);
@@ -387,7 +385,6 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
         draw_fps_graph,
         draw_prev_frame_t_graph,
         draw_mouse_rulers,
-        draw_comp_alloc_colliders,
         draw_world_chunks,
         draw_buf_alloc,
         display_log_window,

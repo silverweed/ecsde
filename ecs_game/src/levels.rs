@@ -1,7 +1,7 @@
 use crate::spatial::World_Chunks;
 use inle_common::stringid::String_Id;
 use inle_ecs::ecs_query::Ecs_Query;
-use inle_ecs::ecs_world::{Component_Read, Ecs_World, Entity};
+use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_gfx::components::C_Camera2D;
 use inle_gfx::light::Lights;
 use inle_math::vector::Vec2f;

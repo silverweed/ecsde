@@ -51,7 +51,7 @@ impl Position_History_System {
         foreach_entity_new!(world,
             read: C_Spatial2D;
             write: C_Position_History;
-            |entity, (spatial,): (&C_Spatial2D,), (pos_hist,): (&mut C_Position_History,)| {
+            |_e, (spatial,): (&C_Spatial2D,), (pos_hist,): (&mut C_Position_History,)| {
             let pos = spatial.transform.position();
 
             pos_hist.time_since_latest_record += dt;

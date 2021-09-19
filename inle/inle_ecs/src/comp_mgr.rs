@@ -63,7 +63,7 @@ impl Component_Manager {
                 );
             }
 
-            if storage.len() <= entity.index as usize {
+            if storage.entity_comp_index.len() <= entity.index as usize {
                 storage
                     .entity_comp_index
                     .resize(entity.index as usize + 1, None);
@@ -75,11 +75,11 @@ impl Component_Manager {
 
         #[cfg(debug_assertions)]
         {
-            if storage.len() <= entity.index as usize {
+            if storage.entity_comp_index.len() <= entity.index as usize {
                 storage
                     .entity_comp_generation
                     .resize(entity.index as usize + 1, 0);
-            } 
+            }
             storage
                 .entity_comp_generation
                 .insert(entity.index as usize, entity.gen);

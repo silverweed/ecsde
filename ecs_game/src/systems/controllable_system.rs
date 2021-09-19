@@ -37,7 +37,7 @@ pub fn update(
     foreach_entity_new!(ecs_world,
         read: C_Ground_Detection;
         write: C_Controllable, C_Spatial2D;
-        |entity, (ground_detect,): (&C_Ground_Detection,), (ctrl, spatial): (&mut C_Controllable, &mut C_Spatial2D)| {
+        |_e, (ground_detect,): (&C_Ground_Detection,), (ctrl, spatial): (&mut C_Controllable, &mut C_Spatial2D)| {
         let acceleration = ctrl.acceleration.read(cfg);
         let jump_impulse = ctrl.jump_impulse.read(cfg);
         let dampening = ctrl.dampening.read(cfg);

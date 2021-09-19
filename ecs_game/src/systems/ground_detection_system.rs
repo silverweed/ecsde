@@ -22,7 +22,7 @@ pub fn update(
     foreach_entity_new!(world,
         read: C_Collider;
         write: C_Ground_Detection;
-        |entity, (collider,): (&C_Collider,), (ground_detect,): (&mut C_Ground_Detection,)| {
+        |_e, (collider,): (&C_Collider,), (ground_detect,): (&mut C_Ground_Detection,)| {
         let cld_handle = collider.handle;
         let touching_ground = if let Some(collisions) = phys_world.get_collisions(cld_handle) {
             let cld = phys_world.get_collider(cld_handle).unwrap();

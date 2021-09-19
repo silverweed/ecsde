@@ -17,7 +17,7 @@ use {
     inle_common::stringid::String_Id,
     inle_debug::painter::Debug_Painter,
     inle_ecs::components::base::C_Spatial2D,
-    inle_ecs::ecs_world::{self, Ecs_World},
+    inle_ecs::ecs_world::Ecs_World,
     inle_gfx::render_window,
     inle_input::input_state::Input_State,
     inle_input::mouse,
@@ -871,7 +871,6 @@ fn update_debug(
     let draw_entity_pos_history = cvars.draw_entity_pos_history.read(&engine_state.config);
     let draw_colliders = cvars.draw_colliders.read(&engine_state.config);
     let draw_debug_grid = cvars.draw_debug_grid.read(&engine_state.config);
-    let draw_comp_alloc_colliders = cvars.draw_comp_alloc_colliders.read(&engine_state.config);
     let grid_square_size = cvars.debug_grid_square_size.read(&engine_state.config);
     let grid_font_size = cvars.debug_grid_font_size.read(&engine_state.config);
     let grid_opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
@@ -1189,7 +1188,7 @@ fn debug_draw_colliders(
     foreach_entity_new!(ecs_world,
         read: C_Collider, C_Spatial2D;
         write: ;
-    |entity, (collider_comp, spatial): (&C_Collider, &C_Spatial2D), ()| {
+    |_e, (collider_comp, _spatial): (&C_Collider, &C_Spatial2D), ()| {
         for collider in phys_world.get_all_colliders(collider_comp.handle) {
             // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
             // @Incomplete: scale?
@@ -1261,7 +1260,7 @@ fn debug_draw_transforms(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
     foreach_entity_new!(ecs_world,
         read: C_Spatial2D;
         write: ;
-        |entity, (spatial, ): (&C_Spatial2D,), () | {
+        |_e, (spatial, ): (&C_Spatial2D,), () | {
         let transform = &spatial.transform;
         debug_painter.add_circle(
             Circle {
@@ -1296,7 +1295,7 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
     foreach_entity_new!(ecs_world,
         read: C_Spatial2D;
         write: ;
-    |entity, (spatial, ): (&C_Spatial2D, ), ()| {
+    |_e, (spatial, ): (&C_Spatial2D, ), ()| {
         if spatial.velocity.magnitude2() > 0. {
             let transform = &spatial.transform;
             debug_painter.add_arrow(
@@ -1322,8 +1321,6 @@ fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
 #[cfg(debug_assertions)]
 fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
     use crate::debug::entity_debug::C_Debug_Data;
-    use inle_common::bitset::Bit_Set;
-    use std::borrow::Borrow;
 
     foreach_entity_new!(ecs_world,
         read: ;
@@ -1484,7 +1481,7 @@ fn debug_draw_entities_prev_frame_ghost(
     foreach_entity_new!(ecs_world,
         read: C_Spatial2D, C_Renderable;
         write:  C_Debug_Data;
-        |entity, (spatial, renderable): (&C_Spatial2D, &C_Renderable), (debug_data,): (&mut C_Debug_Data,)| {
+        |_e, (spatial, renderable): (&C_Spatial2D, &C_Renderable), (debug_data,): (&mut C_Debug_Data,)| {
         let frame_starting_pos = spatial.frame_starting_pos;
         let C_Renderable {
             material,
@@ -1535,11 +1532,10 @@ fn debug_draw_entities_pos_history(
     foreach_entity_new!(ecs_world,
         read: C_Position_History;
         write: ;
-        |entity, (pos_hist,): (&C_Position_History,), ()| {
+        |_e, (pos_hist,): (&C_Position_History,), ()| {
         let positions = pos_hist_system.get_positions_of(pos_hist);
         let mut last_pos_latest_slice = None;
         let mut idx = 0;
-        //let poly_line = painter.start_poly_line(
         let (slice1, slice2) = positions.as_slices();
         for slice in &[slice1, slice2] {
             if slice.is_empty() {
