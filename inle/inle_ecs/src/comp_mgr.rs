@@ -75,7 +75,7 @@ impl Component_Manager {
 
         #[cfg(debug_assertions)]
         {
-            if storage.entity_comp_index.len() <= entity.index as usize {
+            if storage.entity_comp_generation.len() <= entity.index as usize {
                 storage
                     .entity_comp_generation
                     .resize(entity.index as usize + 1, 0);
