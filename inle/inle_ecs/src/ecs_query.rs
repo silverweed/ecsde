@@ -167,7 +167,6 @@ where
     }
 }
 
-#[cfg(debug_assertions)]
 fn base_type_name<T>() -> &'static str {
     let full_name = type_name::<T>();
     let base_name = full_name.rsplit(':').next().unwrap_or(full_name);
