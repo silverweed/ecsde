@@ -1,6 +1,5 @@
 use super::comp_mgr::{self, Component_Manager};
 use inle_alloc::gen_alloc::{Generational_Allocator, Generational_Index};
-use inle_common::bitset::Bit_Set;
 use inle_events::evt_register;
 use std::any::type_name;
 use std::collections::HashSet;
@@ -35,17 +34,6 @@ impl Ecs_World {
             entities_pending_destroy_notify: HashSet::new(),
             entities_pending_destroy: vec![],
         }
-    }
-
-    pub fn get_entity_comp_set(&self, entity: Entity) -> std::borrow::Cow<'_, Bit_Set> {
-        // TODO
-        std::borrow::Cow::Owned(Bit_Set::default())
-        //assert!(
-        //self.entity_manager.is_valid_entity(entity),
-        //"Invalid entity {:?}",
-        //entity
-        //);
-        //self.component_manager.get_entity_comp_set(entity)
     }
 
     pub fn new_entity(&mut self) -> Entity {

@@ -946,7 +946,7 @@ fn update_debug(
             }
 
             if draw_particle_emitters {
-                debug_draw_particle_emitters(debug_painter, &particle_mgrs.get(&level.id).unwrap());
+                debug_draw_particle_emitters(debug_painter, particle_mgrs.get(&level.id).unwrap());
             }
 
             // Debug grid

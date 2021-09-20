@@ -86,7 +86,7 @@ pub fn render_texture_ws(
 ) {
     trace!("render_texture_ws");
     batcher::add_texture_ws(
-        window, batches, &material, tex_rect, color, transform, z_index,
+        window, batches, material, tex_rect, color, transform, z_index,
     );
 }
 

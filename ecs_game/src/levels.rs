@@ -25,7 +25,7 @@ impl Level {
         let query = Ecs_Query::new(&self.world).read::<C_Camera2D>();
         let cam_entity = query.entities()[0];
         let cams = query.storages().begin_read::<C_Camera2D>();
-        cams.must_get(cam_entity).transform.clone()
+        cams.must_get(cam_entity).transform
     }
 
     // @Temporary

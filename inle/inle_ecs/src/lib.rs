@@ -11,9 +11,6 @@ extern crate inle_common;
 extern crate inle_diagnostics;
 
 #[macro_use]
-extern crate inle_math;
-
-#[macro_use]
 pub mod prelude;
 
 mod comp_mgr;

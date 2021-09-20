@@ -228,7 +228,7 @@ pub fn render_particles(
     }
 
     let vert_count = vertices.len() as u32;
-    vbuf.update(&mut vertices, vert_count);
+    vbuf.update(&vertices, vert_count);
 
     if let Some(texture) = texture {
         render::set_uniform(shader, c_str!("tex"), texture);
