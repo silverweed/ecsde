@@ -116,8 +116,10 @@ pub fn create_window(
     // We handle aspect ratio ourselves
     window.set_aspect_ratio(glfw::ffi::DONT_CARE as u32, glfw::ffi::DONT_CARE as u32);
     window.set_mouse_button_polling(true);
+
     let (joy_cb, joy_evt_recv) = create_joystick_callback(&glfw);
     glfw.set_joystick_callback(Some(joy_cb));
+
     // @Incomplete: vsync, etc
 
     Window_Handle {

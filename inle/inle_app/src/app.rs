@@ -130,7 +130,11 @@ pub fn init_engine_systems(
     gres.init();
     shader_cache.init();
 
-    inle_input::joystick::init_joysticks(window, &mut engine_state.input_state.raw.joy_state);
+    inle_input::joystick::init_joysticks(
+        window,
+        &engine_state.env,
+        &mut engine_state.input_state.raw.joy_state,
+    );
     inle_ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
 
     linfo!("Number of Rayon threads: {}", rayon::current_num_threads());

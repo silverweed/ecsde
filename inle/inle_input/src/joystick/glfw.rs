@@ -1,5 +1,6 @@
 use super::{Joystick_Axis, Joystick_Button, Joystick_Id};
 use glfw::{GamepadAxis, GamepadButton};
+use inle_core::env::{asset_path, Env_Info};
 use inle_win::window::Window_Handle;
 
 pub(super) const JOY_COUNT: u32 = glfw::ffi::JOYSTICK_LAST as u32 + 1;
@@ -69,6 +70,33 @@ fn norm_minus_one_to_one(x: f32, min: f32, max: f32) -> f32 {
 
 #[inline(always)]
 pub(super) fn update_joysticks() {}
+
+pub(super) fn init_joysticks(window: &Window_Handle, env: &Env_Info) {
+    let controller_db = asset_path(env, "", "gamecontrollerdb.txt");
+    let now = std::time::Instant::now();
+    match std::fs::read_to_string(&controller_db) {
+        Ok(db) => {
+            if window.glfw.update_gamepad_mappings(&db) {
+                let took = now.elapsed();
+                lok!(
+                    "Successfully updated gamepad mappings from {} in {:?}",
+                    controller_db.display(),
+                    took
+                );
+            } else {
+                lerr!(
+                    "Failed to update gamepad mappings from {}",
+                    controller_db.display()
+                );
+            }
+        }
+        Err(err) => lwarn!(
+            "Failed to read controller db from {}: {}",
+            controller_db.display(),
+            err
+        ),
+    }
+}
 
 #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
 const AXES_ENGINE_TO_FRAMEWORK_XBOX360: [Option<GamepadAxis>; Joystick_Axis::_Count as usize] = [

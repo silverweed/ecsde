@@ -3,11 +3,10 @@ mod font;
 mod image;
 mod shader;
 
-use super::asset_path;
 use super::loaders;
 use inle_common::colors;
 use inle_common::stringid::{const_sid_from_str, String_Id};
-use inle_core::env::Env_Info;
+use inle_core::env::{asset_path, Env_Info};
 use inle_gfx_backend::render::{self, Font, Image, Shader, Texture};
 use std::path::Path;
 

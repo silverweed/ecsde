@@ -1,7 +1,6 @@
-use super::asset_path;
 use super::loaders;
 use inle_audio_backend::sound::Sound_Buffer;
-use inle_core::env::Env_Info;
+use inle_core::env::{asset_path, Env_Info};
 use std::path::Path;
 
 mod cache;

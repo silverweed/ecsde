@@ -37,3 +37,12 @@ impl Env_Info {
         })
     }
 }
+
+// @Speed: when we have a frame temp allocator, this should probably allocate there.
+#[inline]
+pub fn asset_path(env: &Env_Info, dir: &str, file: &str) -> Box<Path> {
+    let mut s = PathBuf::from(env.assets_root.as_ref());
+    s.push(dir);
+    s.push(file);
+    s.into_boxed_path()
+}

@@ -1,4 +1,5 @@
 use crate::events::Input_Raw_Event;
+use inle_core::env::Env_Info;
 use inle_win::window::Window_Handle;
 use std::convert::TryFrom;
 use std::fmt;
@@ -230,10 +231,17 @@ pub struct Joystick_State {
     buttons_prev_state: [Joystick_Button_Values; JOY_COUNT as usize],
 }
 
-pub fn init_joysticks<T: AsRef<Window_Handle>>(window: &T, joy_state: &mut Joystick_State) {
+pub fn init_joysticks<T: AsRef<Window_Handle>>(
+    window: &T,
+    env: &Env_Info,
+    joy_state: &mut Joystick_State,
+) {
+    let win = window.as_ref();
+
+    backend::init_joysticks(win, env);
+
     update_joysticks();
 
-    let win = window.as_ref();
     let mut joy_found = 0;
     for i in 0..(JOY_COUNT as u32) {
         let (connected, guid) = is_joy_connected_internal(win, i);
