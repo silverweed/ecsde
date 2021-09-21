@@ -37,8 +37,11 @@ pub(super) fn is_joy_btn_pressed_internal_xbox360(
             glfw: window.glfw.clone(),
             id: engine_to_framework_joy_id(joystick_id),
         };
+
         if let Some(gamepad_state) = joy.get_gamepad_state() {
             return gamepad_state.get_button_state(btn) == glfw::Action::Press;
+        } else {
+            lerr!("failed to get gamepad state for joy {:?}", joy);
         }
     }
     false

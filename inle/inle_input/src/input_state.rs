@@ -178,12 +178,13 @@ fn process_event_core_actions(
     _bindings: &Input_Bindings,
     processed: &mut Processed_Input,
 ) -> bool {
-    match *event {
+    match event {
         Input_Raw_Event::Quit => processed.core_actions.push(Core_Action::Quit),
-        Input_Raw_Event::Resized(width, height) => processed
+        &Input_Raw_Event::Resized(width, height) => processed
             .core_actions
             .push(Core_Action::Resize(width, height)),
         Input_Raw_Event::Focus_Lost => processed.core_actions.push(Core_Action::Focus_Lost),
+        // NOTE: we're currently handling joystick connections/disconnections in joystick::update_joystick_state()
         _ => {
             return false;
         }
