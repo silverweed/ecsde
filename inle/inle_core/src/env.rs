@@ -1,5 +1,6 @@
 use std::boxed::Box;
 use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -14,11 +15,31 @@ pub struct Env_Info {
 impl Env_Info {
     pub fn gather() -> std::io::Result<Env_Info> {
         let full_exe_path = fs::canonicalize(env::current_exe()?)?;
-        let working_dir = PathBuf::from(
+        let mut working_dir = PathBuf::from(
             full_exe_path
                 .parent()
                 .unwrap_or_else(|| panic!("Wierd exe path: {:?}", full_exe_path)),
         );
+
+        // Find out if we're in a dev environment and, if so, set the working dir to the repository
+        // root (so we don't have to symlink/copy assets, cfg etc).
+        // @Cleanup: this should be a dev-only thing, maybe turn it on with a feature flag?
+        let cur_dir = working_dir
+            .as_path()
+            .file_name()
+            .map(OsStr::to_str)
+            .flatten();
+        let parent_dir = working_dir
+            .as_path()
+            .parent()
+            .and_then(Path::file_name)
+            .map(OsStr::to_str)
+            .flatten();
+        if matches!(cur_dir, Some("debug" | "release")) && matches!(parent_dir, Some("target")) {
+            working_dir.pop();
+            working_dir.pop();
+        }
+
         let assets_root = {
             let mut assets_root_buf = working_dir.clone();
             assets_root_buf.push("assets");
