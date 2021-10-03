@@ -269,6 +269,7 @@ impl<T> Component_Storage<T> {
 }
 
 impl<T> Component_Storage_Read<'_, T> {
+    #[inline]
     pub fn get(&self, entity: Entity) -> Option<&T> {
         trace!("Component_Storage_Read::get");
 
@@ -284,6 +285,7 @@ impl<T> Component_Storage_Read<'_, T> {
         self.entity_comp_index[entity.index as usize].map(|idx| &self.components[idx])
     }
 
+    #[inline]
     pub fn must_get(&self, entity: Entity) -> &T {
         trace!("Component_Storage_Read::must_get");
 
@@ -302,6 +304,7 @@ impl<T> Component_Storage_Read<'_, T> {
 }
 
 impl<T> Component_Storage_Write<'_, T> {
+    #[inline]
     pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
         trace!("Component_Storage_Write::get_mut");
 
@@ -317,6 +320,7 @@ impl<T> Component_Storage_Write<'_, T> {
         self.entity_comp_index[entity.index as usize].map(move |idx| &mut self.components[idx])
     }
 
+    #[inline]
     pub fn must_get_mut(&mut self, entity: Entity) -> &mut T {
         trace!("Component_Storage_Write::must_get_mut");
 
