@@ -3,6 +3,7 @@
 use super::levels::{Level, Levels};
 use super::systems::camera_system;
 use super::systems::controllable_system::{self, C_Controllable};
+use crate::systems::ai;
 use crate::systems::ground_detection_system;
 //use super::systems::dumb_movement_system;
 use super::systems::gravity_system;
@@ -50,10 +51,11 @@ pub struct Gameplay_System {
     pub input_cfg: Input_Config,
     cfg: Gameplay_System_Config,
 
+    ai_system: ai::Ai_System,
+
     //ground_collision_calc_system: Ground_Collision_Calculation_System,
     //pub pixel_collision_system: Pixel_Collision_System,
-    pub cursor_entity: Option<Entity>,
-
+    //pub cursor_entity: Option<Entity>,
     #[cfg(debug_assertions)]
     debug_data: Debug_Data,
 
@@ -77,9 +79,10 @@ impl Gameplay_System {
             levels: Levels::default(),
             input_cfg: Input_Config::default(),
             cfg: Gameplay_System_Config::default(),
+            ai_system: ai::Ai_System::default(),
             //ground_collision_calc_system: Ground_Collision_Calculation_System::new(),
             //pixel_collision_system: Pixel_Collision_System::default(),
-            cursor_entity: None,
+            //cursor_entity: None,
             #[cfg(debug_assertions)]
             debug_data: Debug_Data::default(),
             camera_on_player: Cfg_Var::default(),
@@ -282,6 +285,7 @@ impl Gameplay_System {
         let phys_settings = &engine_state.systems.physics_settings;
         let particle_mgrs = &mut engine_state.systems.particle_mgrs;
         let test_emitter_handle = self.test_particle_emitter;
+        let ai_system = &mut self.ai_system;
 
         levels.foreach_active_level(|level| {
             let world = &mut level.world;
@@ -294,6 +298,8 @@ impl Gameplay_System {
 
             // @Incomplete: level-specific gameplay update
             update_demo_entites(world, &dt);
+
+            ai_system.update(world, &level.phys_world, &dt);
 
             //ground_collision_calc_system.update(world, &mut level.phys_world, &mut level.chunks);
 
