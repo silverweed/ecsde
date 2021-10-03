@@ -44,8 +44,7 @@ pub struct Game_State<'a> {
     pub fps_debug: inle_debug::fps::Fps_Counter,
 
     #[cfg(debug_assertions)]
-    // needed to prevent hotload from duplicating fn name hints
-    pub already_added_fn_hints: bool,
+    pub update_trace_hints_countdown: u32,
 }
 
 pub struct CVars {
@@ -262,7 +261,7 @@ fn create_game_state<'a>(
         app::init_engine_debug(&mut engine_state, &mut game_resources.gfx, cfg)?;
 
         if inle_debug::console::load_console_hist(
-            &mut engine_state.debug_systems.console,
+            &mut engine_state.debug_systems.console.lock().unwrap(),
             &engine_state.env,
         )
         .is_ok()
@@ -310,7 +309,7 @@ fn create_game_state<'a>(
             #[cfg(debug_assertions)]
             fps_debug: inle_debug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(2)),
             #[cfg(debug_assertions)]
-            already_added_fn_hints: false,
+            update_trace_hints_countdown: 0,
         }),
         parsed_cmdline_args,
     ))
@@ -526,7 +525,12 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
     overlay.position = Vec2f::new(0.0, win_h as f32 - 40. * ui_scale);
 
     // Console hints
-    let console = &mut game_state.engine_state.debug_systems.console;
+    let console = &mut game_state
+        .engine_state
+        .debug_systems
+        .console
+        .lock()
+        .unwrap();
     console.add_hints(
         "",
         crate::debug::console_executor::ALL_CMD_STRINGS

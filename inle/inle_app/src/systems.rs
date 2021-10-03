@@ -1,7 +1,9 @@
 use inle_audio::audio_system;
 use inle_common::stringid::String_Id;
+use inle_core::tasks::Long_Task_Manager;
 use inle_events::evt_register;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 #[cfg(debug_assertions)]
 use {
@@ -19,6 +21,7 @@ pub struct Core_Systems<'r> {
     pub physics_settings: inle_physics::physics::Physics_Settings,
     // One particle manager per level
     pub particle_mgrs: HashMap<String_Id, inle_gfx::particles::Particle_Manager>,
+    pub long_task_mgr: Long_Task_Manager,
 }
 
 #[cfg(debug_assertions)]
@@ -29,7 +32,7 @@ pub struct Debug_Systems {
     // Note: we have one painter per level
     pub painters: HashMap<String_Id, Debug_Painter>,
     pub global_painter: Debug_Painter,
-    pub console: console::Console,
+    pub console: Arc<Mutex<console::Console>>,
     pub log: log::Debug_Log,
     pub calipers: calipers::Debug_Calipers,
 
@@ -48,6 +51,7 @@ impl Core_Systems<'_> {
             ui: inle_ui::Ui_Context::default(),
             physics_settings: inle_physics::physics::Physics_Settings::default(),
             particle_mgrs: HashMap::new(),
+            long_task_mgr: Long_Task_Manager::default(),
         }
     }
 }
@@ -72,7 +76,7 @@ impl Debug_Systems {
             global_painter: Debug_Painter::default(),
             show_trace_overlay: false,
             trace_overlay_update_t: 0.0,
-            console: console::Console::new(),
+            console: Arc::new(Mutex::new(console::Console::new())),
             log: log::Debug_Log::with_hist_len((debug_log_size * fps) as _),
             calipers: calipers::Debug_Calipers::default(),
             traced_fn: String::default(),
