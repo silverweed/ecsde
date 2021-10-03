@@ -716,6 +716,7 @@ fn update_physics(
             &mut level.phys_world,
             phys_settings,
             evt_register,
+            frame_alloc,
             #[cfg(debug_assertions)]
             coll_debug,
         );

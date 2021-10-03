@@ -146,6 +146,7 @@ impl Persistent_Game_State for Debug_Base_State {
                             &mut level.phys_world,
                             &engine_state.systems.physics_settings,
                             &mut engine_state.systems.evt_register,
+                            &mut engine_state.frame_alloc,
                             &mut _ignored,
                         );
                         let mut moved =
