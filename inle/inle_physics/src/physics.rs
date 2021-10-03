@@ -449,8 +449,6 @@ pub fn update_collisions<T_Spatial_Accelerator>(
         evt_register.raise::<Evt_Collision_Happened>((info.cld1, info.cld2));
     });
 
-    // Note: this can be parallel because we're not actually using pointers; they're just
-    // innocent usizes used as keys.
     let rb_infos = infos
         .par_iter()
         .filter(|info| objects.contains_key(&info.cld1) && objects.contains_key(&info.cld2))
@@ -495,35 +493,40 @@ fn prepare_colliders_and_gather_rigidbodies(
     // @Speed: try to use an array rather than a HashMap
     let mut objects = HashMap::new();
 
-    for collider in &mut phys_world.colliders {
-        let mut spatial = world
-            .get_component_mut::<C_Spatial2D>(collider.entity)
-            .unwrap();
-        let pos = spatial.transform.position();
-        spatial.frame_starting_pos = pos;
+    {
+        trace!("update_colliders_spatial");
 
-        collider.position = pos + collider.offset;
+        if let Some(mut spatials) = world.write_component_storage::<C_Spatial2D>() {
+            for collider in &mut phys_world.colliders {
+                let mut spatial = spatials.must_get_mut(collider.entity);
+                let pos = spatial.transform.position();
+                spatial.frame_starting_pos = pos;
+
+                collider.position = pos + collider.offset;
+                collider.velocity = spatial.velocity;
+            }
+        }
     }
 
-    for body in &phys_world.bodies {
-        // @Incomplete :MultipleRigidbodies: handle multiple rigidbody colliders
-        if let Some(&(cld_handle, phys_data)) = body.rigidbody_colliders.get(0) {
-            if let Some(rb_cld) = phys_world.get_collider(cld_handle) {
-                let spatial = world.get_component::<C_Spatial2D>(rb_cld.entity).unwrap();
-                let velocity = spatial.velocity;
-                sanity_check_v(velocity);
+    {
+        trace!("insert_rb_objects");
 
-                objects.insert(
-                    cld_handle,
-                    Rigidbody {
-                        entity: rb_cld.entity,
-                        position: rb_cld.position,
-                        offset: rb_cld.offset,
-                        velocity,
-                        shape: rb_cld.shape,
-                        phys_data,
-                    },
-                );
+        for body in &phys_world.bodies {
+            // @Incomplete :MultipleRigidbodies: handle multiple rigidbody colliders
+            if let Some(&(cld_handle, phys_data)) = body.rigidbody_colliders.get(0) {
+                if let Some(rb_cld) = phys_world.get_collider(cld_handle) {
+                    objects.insert(
+                        cld_handle,
+                        Rigidbody {
+                            entity: rb_cld.entity,
+                            position: rb_cld.position,
+                            offset: rb_cld.offset,
+                            velocity: rb_cld.velocity,
+                            shape: rb_cld.shape,
+                            phys_data,
+                        },
+                    );
+                }
             }
         }
     }
