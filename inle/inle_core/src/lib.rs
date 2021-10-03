@@ -4,7 +4,11 @@
 #![allow(non_camel_case_types)]
 #![cfg_attr(debug_assertions, allow(dead_code))]
 
+#[macro_use]
+extern crate inle_diagnostics;
+
 pub mod env;
 pub mod rand;
 pub mod sleep;
+pub mod tasks;
 pub mod time;

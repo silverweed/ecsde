@@ -71,8 +71,8 @@ where
 
         #[cfg(debug_assertions)]
         {
-            process_game_actions =
-                debug_systems.console.status != inle_debug::console::Console_Status::Open;
+            process_game_actions = debug_systems.console.lock().unwrap().status
+                != inle_debug::console::Console_Status::Open;
         }
         #[cfg(not(debug_assertions))]
         {
@@ -125,27 +125,33 @@ where
         use crate::debug::console_executor;
 
         trace!("console::update");
-        if debug_systems.console.status == inle_debug::console::Console_Status::Open {
-            debug_systems
-                .console
-                .update(&game_state.engine_state.input_state);
+        let mut console = game_state
+            .engine_state
+            .debug_systems
+            .console
+            .lock()
+            .unwrap();
+        if console.status == inle_debug::console::Console_Status::Open {
+            console.update(&game_state.engine_state.input_state);
 
             let mut output = vec![];
-            while let Some(cmd) = game_state
-                .engine_state
-                .debug_systems
-                .console
-                .pop_enqueued_cmd()
-            {
+            let mut commands = vec![];
+            while let Some(cmd) = console.pop_enqueued_cmd() {
                 if !cmd.is_empty() {
-                    let maybe_output = console_executor::execute(
-                        &cmd,
-                        &mut game_state.engine_state,
-                        &mut game_state.gameplay_system,
-                    );
-                    if let Some(out) = maybe_output {
-                        output.push(out);
-                    }
+                    commands.push(cmd);
+                }
+            }
+
+            drop(console);
+
+            for cmd in commands {
+                let maybe_output = console_executor::execute(
+                    &cmd,
+                    &mut game_state.engine_state,
+                    &mut game_state.gameplay_system,
+                );
+                if let Some(out) = maybe_output {
+                    output.push(out);
                 }
             }
 
@@ -154,6 +160,8 @@ where
                     .engine_state
                     .debug_systems
                     .console
+                    .lock()
+                    .unwrap()
                     .output_line(format!(">> {}", out), color);
             }
         }
@@ -266,7 +274,13 @@ where
             let actions = &game_state.engine_state.input_state.processed.game_actions;
 
             if actions.contains(&(sid!("toggle_console"), Action_Kind::Pressed)) {
-                game_state.engine_state.debug_systems.console.toggle();
+                game_state
+                    .engine_state
+                    .debug_systems
+                    .console
+                    .lock()
+                    .unwrap()
+                    .toggle();
             }
 
             if actions.contains(&(sid!("calipers"), Action_Kind::Pressed)) {
@@ -291,7 +305,14 @@ where
 
             window::set_key_repeat_enabled(
                 &mut game_state.window,
-                game_state.engine_state.debug_systems.console.status == Console_Status::Open,
+                game_state
+                    .engine_state
+                    .debug_systems
+                    .console
+                    .lock()
+                    .unwrap()
+                    .status
+                    == Console_Status::Open,
             );
         }
 
@@ -680,11 +701,17 @@ fn update_debug_graphics<'a, 's, 'r>(
     // Draw console
     {
         trace!("console::draw");
-        game_state.engine_state.debug_systems.console.draw(
-            &mut game_state.window,
-            gres,
-            &game_state.engine_state.config,
-        );
+        game_state
+            .engine_state
+            .debug_systems
+            .console
+            .lock()
+            .unwrap()
+            .draw(
+                &mut game_state.window,
+                gres,
+                &game_state.engine_state.config,
+            );
     }
 }
 

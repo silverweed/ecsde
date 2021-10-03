@@ -136,6 +136,7 @@ pub fn init_engine_systems(
         &mut engine_state.input_state.raw.joy_state,
     );
     inle_ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
+    engine_state.systems.long_task_mgr.start(1);
 
     linfo!("Number of Rayon threads: {}", rayon::current_num_threads());
 
@@ -398,7 +399,7 @@ pub fn init_engine_debug(
     {
         use inle_input::bindings::{Input_Action, Input_Action_Simple};
 
-        let console = &mut engine_state.debug_systems.console;
+        let console = &mut engine_state.debug_systems.console.lock().unwrap();
         console.size = Vec2u::new(win_w as _, win_h as u32 / 2);
         console.toggle_console_keys = engine_state
             .input_state

@@ -60,7 +60,7 @@ pub struct Console {
 
     // { cur_cmd => hints relative to it } (empty string => all commands)
     // @Speed: we should avoid having more copies of the same hint set if more commands share it.
-    hints: HashMap<String, Vec<String>>,
+    pub hints: HashMap<String, Vec<String>>,
     hints_displayed: Vec<usize>,
     selected_hint: usize,
 }

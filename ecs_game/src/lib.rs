@@ -168,21 +168,42 @@ where
     {
         // Initialize the hints for the `trace` command. Do this after the first
         // frame so the tracer contains all the function names.
-        static mut INIT_CONSOLE_FN_NAME_HINTS: std::sync::Once = std::sync::Once::new();
-        if !game_state.already_added_fn_hints {
-            INIT_CONSOLE_FN_NAME_HINTS.call_once(|| {
-                let console = &mut game_state.engine_state.debug_systems.console;
-                let fn_names: std::collections::HashSet<_> = {
-                    let tracer = inle_diagnostics::prelude::DEBUG_TRACER.lock().unwrap();
-                    tracer
-                        .saved_traces
+        // We also add hints every X frames to catch also all functions
+        // that weren't added during the very first frame.
+        // This is done asynchronously since it's a quite heavy operation (needs a sort + dedup)
+        if game_state.update_trace_hints_countdown == 0 {
+            let console = game_state.engine_state.debug_systems.console.clone();
+            let saved_traces = {
+                let tracer = inle_diagnostics::prelude::DEBUG_TRACER.lock().unwrap();
+                tracer.saved_traces.to_vec()
+            };
+            game_state
+                .engine_state
+                .systems
+                .long_task_mgr
+                .create_task(move || {
+                    use std::collections::HashSet;
+
+                    let fn_names: HashSet<_> = saved_traces
                         .iter()
-                        .map(|trace| trace.info.tag)
-                        .collect()
-                };
-                console.add_hints("trace", fn_names.into_iter().map(String::from));
-            });
-            game_state.already_added_fn_hints = true;
+                        .map(|trace| String::from(trace.info.tag))
+                        .collect();
+                    // Note: we do the heavy work in the task and not in add_hints so we can lock the console
+                    // for as little as possible.
+                    let cur_hints = console
+                        .lock()
+                        .unwrap()
+                        .hints
+                        .get("trace")
+                        .map(|v| v.clone())
+                        .unwrap_or_else(Vec::default);
+                    let cur_hints: HashSet<String> = cur_hints.into_iter().collect();
+                    let fn_names = fn_names.difference(&cur_hints).cloned();
+                    console.lock().unwrap().add_hints("trace", fn_names);
+                });
+            game_state.update_trace_hints_countdown = 60;
+        } else {
+            game_state.update_trace_hints_countdown -= 1;
         }
 
         app::update_traces(
@@ -255,8 +276,11 @@ pub unsafe extern "C" fn game_shutdown(
     {
         use inle_debug::console::save_console_hist;
         let engine_state = &(*game_state).engine_state;
-        save_console_hist(&engine_state.debug_systems.console, &engine_state.env)
-            .unwrap_or_else(|err| lwarn!("Failed to save console history: {}", err));
+        save_console_hist(
+            &engine_state.debug_systems.console.lock().unwrap(),
+            &engine_state.env,
+        )
+        .unwrap_or_else(|err| lwarn!("Failed to save console history: {}", err));
     }
 
     inle_gfx::render_window::shutdown(&mut (*game_state).window);

@@ -429,6 +429,8 @@ pub fn update_collisions<T_Spatial_Accelerator>(
 ) where
     T_Spatial_Accelerator: Spatial_Accelerator<Collider_Handle>,
 {
+    trace!("update_collisions");
+
     phys_world.clear_collisions();
 
     let mut objects = prepare_colliders_and_gather_rigidbodies(ecs_world, phys_world);
@@ -488,6 +490,8 @@ fn prepare_colliders_and_gather_rigidbodies(
     world: &mut Ecs_World,
     phys_world: &mut Physics_World,
 ) -> Rigidbodies {
+    trace!("prepare_colliders_and_gather_rigidbodies");
+
     // @Speed: try to use an array rather than a HashMap
     let mut objects = HashMap::new();
 
