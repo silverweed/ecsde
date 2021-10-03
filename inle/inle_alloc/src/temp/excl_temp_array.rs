@@ -226,6 +226,20 @@ where
     }
 }
 
+impl<'a, T> Extend<T> for Exclusive_Temp_Array<'a, T>
+where
+    T: 'a,
+{
+    fn extend<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = T>,
+    {
+        for x in iter {
+            self.push(x);
+        }
+    }
+}
+
 pub struct Read_Only_Temp_Array<T> {
     ptr: Thread_Safe_Ptr<T>,
     n_elems: usize,

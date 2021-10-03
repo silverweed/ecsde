@@ -4,6 +4,7 @@ use super::layers::Collision_Matrix;
 use super::phys_world::{Collider_Handle, Collision_Info, Phys_Data, Physics_World};
 use super::spatial::Spatial_Accelerator;
 use crate::collider::{Collider, Collision_Shape};
+use inle_alloc::temp::{excl_temp_array, Temp_Allocator};
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_events::evt_register::{Event, Event_Register};
@@ -249,6 +250,7 @@ fn detect_collisions<T_Spatial_Accelerator>(
     phys_world: &Physics_World,
     accelerator: &T_Spatial_Accelerator,
     collision_matrix: &Collision_Matrix,
+    temp_alloc: &mut Temp_Allocator,
     #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
 ) -> Vec<Collision_Info_Internal>
 where
@@ -268,13 +270,13 @@ where
     for a in phys_world.colliders.iter().filter(|cld| !cld.is_static) {
         let a_extent = a.shape.extent();
         let a_shape = collision_shape_type_index(&a.shape);
-        let a_part_cb = COLLISION_CB_TABLE[a_shape];
+        let a_partial_cb = COLLISION_CB_TABLE[a_shape];
         let ent_a = a.entity;
 
-        let mut neighbours = vec![];
+        let mut neighbours = excl_temp_array(temp_alloc);
         accelerator.get_neighbours(a.position, a_extent, &mut neighbours);
 
-        for b_handle in neighbours {
+        for &b_handle in &neighbours {
             let b = phys_world.get_collider(b_handle).unwrap();
             let ent_b = b.entity;
             if ent_a == ent_b {
@@ -287,7 +289,7 @@ where
                 continue;
             }
 
-            let info = a_part_cb[b_shape](a, b);
+            let info = a_partial_cb[b_shape](a, b);
 
             #[cfg(debug_assertions)]
             {
@@ -422,6 +424,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
     phys_world: &mut Physics_World,
     settings: &Physics_Settings,
     evt_register: &mut Event_Register,
+    temp_alloc: &mut Temp_Allocator,
     #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
 ) where
     T_Spatial_Accelerator: Spatial_Accelerator<Collider_Handle>,
@@ -434,6 +437,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
         phys_world,
         accelerator,
         &settings.collision_matrix,
+        temp_alloc,
         #[cfg(debug_assertions)]
         debug_data,
     );
