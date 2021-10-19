@@ -20,7 +20,7 @@ pub use self::null as backend;
 #[cfg(feature = "gfx-gl")]
 pub use self::gl as backend;
 
-pub type Text<'a> = backend::Text<'a>;
+pub type Text = backend::Text;
 pub type Font<'a> = backend::Font<'a>;
 pub type Font_Metadata = backend::Font_Metadata;
 pub type Texture<'a> = backend::Texture<'a>;

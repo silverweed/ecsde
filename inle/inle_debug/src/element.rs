@@ -5,11 +5,12 @@ use inle_input::input_state::Input_State;
 use inle_resources::gfx::Gfx_Resources;
 use std::time::Duration;
 
-pub struct Update_Args<'a> {
+pub struct Update_Args<'a, 'r> {
     pub dt: &'a Duration,
-    pub window: &'a Render_Window_Handle,
+    pub window: &'a mut Render_Window_Handle,
     pub input_state: &'a Input_State,
     pub config: &'a Config,
+    pub gres: &'a mut Gfx_Resources<'r>,
 }
 
 pub struct Draw_Args<'a, 'r> {

@@ -189,6 +189,7 @@ macro_rules! update_and_draw_elems {
                 window: $window,
                 input_state: $input_state,
                 config: $config,
+                gres: $gres,
             });
 
             if res == Update_Res::Disable_Self {

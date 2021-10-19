@@ -370,9 +370,9 @@ impl Glyph_Bounds {
     }
 }
 
-pub struct Text<'font> {
+pub struct Text {
     string: String,
-    font: &'font Font<'font>,
+    font_atlas_id: GLuint,
     vertices: Vertex_Buffer,
     font_size: u16,
     size: Vec2f,
@@ -666,19 +666,19 @@ fn render_text_internal(window: &mut Render_Window_Handle, text: &Text) {
         trace!("draw_text_vbuf");
 
         glcheck!(gl::ActiveTexture(gl::TEXTURE0));
-        glcheck!(gl::BindTexture(gl::TEXTURE_2D, text.font.atlas.id));
+        glcheck!(gl::BindTexture(gl::TEXTURE_2D, text.font_atlas_id));
 
         render_vbuf_internal(window, &text.vertices);
     }
 }
 
-fn fill_text_vbuf(text: &mut Text) {
+fn fill_text_vbuf(text: &mut Text, font: &Font) {
     use inle_common::colors;
 
     trace!("fill_text_vbuf");
 
     let mut pos_x = 0.;
-    let scale_factor = text.font.metadata.scale_factor(text.font_size as f32);
+    let scale_factor = font.metadata.scale_factor(text.font_size as f32);
     for chr in text.string.chars() {
         if chr > '\u{256}' {
             lerr_once!(
@@ -689,7 +689,7 @@ fn fill_text_vbuf(text: &mut Text) {
             );
             continue;
         }
-        if let Some(glyph_data) = text.font.metadata.get_glyph_data(chr) {
+        if let Some(glyph_data) = font.metadata.get_glyph_data(chr) {
             let atlas_bounds = &glyph_data.normalized_atlas_bounds;
             let pb = &glyph_data.plane_bounds;
             let rect = Rect::new(
@@ -993,16 +993,16 @@ pub fn render_vbuf_with_shader(
 }
 
 #[inline]
-pub fn create_text<'a>(window: &mut Render_Window_Handle, string: &str, font: &'a Font, size: u16) -> Text<'a> {
+pub fn create_text(window: &mut Render_Window_Handle, string: &str, font: &Font, size: u16) -> Text {
     let vertices = new_vbuf(window, Primitive_Type::Triangles, 6 * string.len() as u32);
     let mut text = Text {
         string: String::from(string),
         vertices,
-        font,
+        font_atlas_id: font.atlas.id,
         font_size: size,
         size: v2!(0., 0.),
     };
-    fill_text_vbuf(&mut text);
+    fill_text_vbuf(&mut text, font);
     text
 }
 

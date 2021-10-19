@@ -5,7 +5,7 @@ use inle_common::colors::{self, Color};
 use inle_common::stringid::String_Id;
 use inle_common::variant::Variant;
 use inle_common::vis_align::Align;
-use inle_gfx::render;
+use inle_gfx::render::{self, Text};
 use inle_math::rect::{Rect, Rectf};
 use inle_math::vector::Vec2f;
 use inle_resources::gfx::Font_Handle;
@@ -13,9 +13,20 @@ use std::collections::{HashMap, VecDeque};
 use std::convert::TryFrom;
 use std::time::Duration;
 
+enum Lazy_Text {
+    String(String),
+    Text(Text)
+}
+
+impl Default for Lazy_Text {
+    fn default() -> Self {
+        Self::String(String::default())
+    }
+}
+
 #[derive(Default)]
 pub struct Debug_Line {
-    pub text: String,
+    text: Lazy_Text,
     pub color: Color,
     // Contains (fill_color, horizontal_fill_ratio 0-1)
     pub bg_rect_fill: Option<(Color, f32)>,
@@ -111,7 +122,6 @@ impl Debug_Element for Debug_Overlay {
         &self,
         Draw_Args {
             window,
-            gres,
             frame_alloc,
             config,
             ..
@@ -124,8 +134,6 @@ impl Debug_Element for Debug_Overlay {
         }
 
         let Debug_Overlay_Config {
-            font,
-            font_size,
             pad_x,
             pad_y,
             row_spacing,
@@ -137,7 +145,6 @@ impl Debug_Element for Debug_Overlay {
         } = self.cfg;
 
         let ui_scale = ui_scale.read(config);
-        let font_size = u16::try_from((font_size.read(config) as f32 * ui_scale) as u32).unwrap();
         let pad_x = pad_x.read(config) * ui_scale;
         let pad_y = pad_y.read(config) * ui_scale;
         let row_spacing = row_spacing.read(config) * ui_scale;
@@ -147,25 +154,27 @@ impl Debug_Element for Debug_Overlay {
         let mut max_row_width = 0f32;
         let mut max_row_height = 0f32;
 
-        let font = gres.get_font(font);
         let fadeout_time = self.get_fadeout_time(config);
         for line in self.lines.iter() {
             let Debug_Line {
                 text, mut color, ..
             } = line;
-            let text = render::create_text(window, text, font, font_size);
+            match text {
+                Lazy_Text::Text(text) => {
+                    let txt_size = render::get_text_size(&text);
+                    max_row_width = max_row_width.max(txt_size.x);
+                    max_row_height = max_row_height.max(txt_size.y);
 
-            let txt_size = render::get_text_size(&text);
-            max_row_width = max_row_width.max(txt_size.x);
-            max_row_height = max_row_height.max(txt_size.y);
+                    if let Some(fadeout_time) = fadeout_time {
+                        let d = inle_core::time::duration_ratio(&line.fadeout_t, &fadeout_time);
+                        let alpha = 255 - (d * d * 255.0) as u8;
+                        color.a = alpha;
+                    }
 
-            if let Some(fadeout_time) = fadeout_time {
-                let d = inle_core::time::duration_ratio(&line.fadeout_t, &fadeout_time);
-                let alpha = 255 - (d * d * 255.0) as u8;
-                color.a = alpha;
+                    texts.push((color, txt_size));
+                }
+                _ => unreachable!()
             }
-
-            texts.push((text, color, txt_size));
         }
 
         let position = self.position;
@@ -202,7 +211,7 @@ impl Debug_Element for Debug_Overlay {
         }
 
         // Draw texts
-        for (i, (text, color, text_size)) in texts.iter_mut().enumerate() {
+        for (i, (color, text_size)) in texts.iter_mut().enumerate() {
             let pos = Vec2f::new(
                 horiz_align.aligned_pos(pad_x, text_size.x),
                 vert_align.aligned_pos(pad_y, tot_height)
@@ -215,7 +224,10 @@ impl Debug_Element for Debug_Overlay {
                 }
             }
 
-            render::render_text(window, text, *color, position + pos);
+            match &self.lines[i].text {
+                Lazy_Text::Text(text) => render::render_text(window, &text, *color, position + pos),
+                _ => unreachable!()
+            }
         }
     }
 
@@ -226,6 +238,7 @@ impl Debug_Element for Debug_Overlay {
             input_state,
             config,
             dt,
+            gres,
             ..
         }: Update_Args,
     ) -> Update_Res {
@@ -245,6 +258,16 @@ impl Debug_Element for Debug_Overlay {
             }
             for _ in 0..n_drained {
                 self.lines.pop_front();
+            }
+        }
+
+        // Transform all Lazy_Texts into Text
+        let ui_scale = self.cfg.ui_scale.read(config);
+        let font_size = u16::try_from((self.cfg.font_size.read(config) as f32 * ui_scale) as u32).unwrap();
+        let font = gres.get_font(self.cfg.font);
+        for line in &mut self.lines {
+            if let Lazy_Text::String(text) = &line.text {
+                line.text = Lazy_Text::Text(render::create_text(window, &text, font, font_size));
             }
         }
 
@@ -310,7 +333,7 @@ impl Debug_Overlay {
             self.lines.pop_front();
         }
         self.lines.push_back(Debug_Line {
-            text: String::from(line),
+            text: Lazy_Text::String(String::from(line)),
             color: colors::WHITE,
             ..Default::default()
         });

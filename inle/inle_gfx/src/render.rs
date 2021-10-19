@@ -16,7 +16,7 @@ pub type Z_Index = i8;
 pub type Font<'a> = backend::Font<'a>;
 pub type Image = backend::Image;
 pub type Shader<'a> = backend::Shader<'a>;
-pub type Text<'a> = backend::Text<'a>;
+pub type Text = backend::Text;
 pub type Texture<'a> = backend::Texture<'a>;
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
@@ -92,7 +92,7 @@ pub fn render_texture_ws(
 
 pub fn render_text<P>(
     window: &mut Render_Window_Handle,
-    text: &mut Text<'_>,
+    text: &Text,
     paint_props: P,
     screen_pos: Vec2f,
 ) where
@@ -104,7 +104,7 @@ pub fn render_text<P>(
 
 pub fn render_text_ws<P>(
     window: &mut Render_Window_Handle,
-    text: &mut Text<'_>,
+    text: &mut Text,
     paint_props: P,
     world_transform: &Transform2D,
     camera: &Transform2D,
@@ -185,11 +185,11 @@ pub fn get_image_pixels(image: &Image) -> &[Color] {
     backend::get_image_pixels(image)
 }
 
-pub fn get_text_size(text: &Text<'_>) -> Vec2f {
+pub fn get_text_size(text: &Text) -> Vec2f {
     backend::get_text_size(text)
 }
 
-pub fn get_text_string<'a>(text: &'a Text) -> &'a str {
+pub fn get_text_string(text: &Text) -> &str {
     backend::get_text_string(text)
 }
 
@@ -212,7 +212,7 @@ pub fn vbuf_max_vertices(vbuf: &Vertex_Buffer) -> u32 {
 ///////////////////////////////// CREATING ///////////////////////////////////
 
 #[inline]
-pub fn create_text<'a>(window: &mut Render_Window_Handle, string: &str, font: &'a Font<'a>, font_size: u16) -> Text<'a> {
+pub fn create_text(window: &mut Render_Window_Handle, string: &str, font: &Font, font_size: u16) -> Text {
     trace!("create_text");
     backend::create_text(window, string, font, font_size)
 }

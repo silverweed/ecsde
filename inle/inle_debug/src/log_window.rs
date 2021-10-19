@@ -129,13 +129,13 @@ fn get_tag_color(tag: &str) -> colors::Color {
 const ELLIPSIS: &str = "-";
 
 // @Temporary: this function should be common
-fn create_wrapped_text<'a>(
+fn create_wrapped_text(
     window: &mut inle_gfx::render_window::Render_Window_Handle,
     txt: &str,
-    font: &'a render::Font<'a>,
+    font: &render::Font,
     font_size: u16,
     line_width: f32,
-) -> Vec<render::Text<'a>> {
+) -> Vec<render::Text> {
     trace!("create_wrapped_text");
 
     // @Speed: this algorithm could probably be improved
