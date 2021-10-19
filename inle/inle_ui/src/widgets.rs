@@ -110,6 +110,7 @@ pub fn button(
 
     // draw stuff
     let cmds = draw_button(
+        window,
         gres,
         ui,
         text,

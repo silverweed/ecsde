@@ -211,9 +211,10 @@ pub fn vbuf_max_vertices(vbuf: &Vertex_Buffer) -> u32 {
 
 ///////////////////////////////// CREATING ///////////////////////////////////
 
-pub fn create_text<'a>(string: &str, font: &'a Font<'a>, font_size: u16) -> Text<'a> {
+#[inline]
+pub fn create_text<'a>(window: &mut Render_Window_Handle, string: &str, font: &'a Font<'a>, font_size: u16) -> Text<'a> {
     trace!("create_text");
-    backend::create_text(string, font, font_size)
+    backend::create_text(window, string, font, font_size)
 }
 
 macro_rules! simple_wrap {

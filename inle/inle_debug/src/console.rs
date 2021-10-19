@@ -523,7 +523,7 @@ impl Console {
 
         // Draw cur line
         let font = gres.get_font(self.cfg.font);
-        let mut text = render::create_text(&self.cur_line, font, font_size);
+        let mut text = render::create_text(window, &self.cur_line, font, font_size);
         let mut pos = v2!(x as f32 + pad_x, (y + h) as f32 - linesep);
         let Vec2f { x: line_w, .. } = render::get_text_size(&text);
         render::render_text(window, &mut text, colors::WHITE, pos);
@@ -541,7 +541,7 @@ impl Console {
         {
             let mut pos = pos - Vec2f::new(0.0, linesep as f32);
             for (line, color) in self.output.iter().rev() {
-                let mut text = render::create_text(line, font, font_size);
+                let mut text = render::create_text(window, line, font, font_size);
                 render::render_text(window, &mut text, *color, pos);
                 pos.y -= linesep;
                 if pos.y < -linesep {
@@ -556,7 +556,7 @@ impl Console {
             if let Some(hints) = &self.hints.get(cmd) {
                 for (i, idx) in self.hints_displayed.iter().enumerate() {
                     let text =
-                        render::create_text(&hints[*idx], font, (font_size as f32 * 0.9) as _);
+                        render::create_text(window, &hints[*idx], font, (font_size as f32 * 0.9) as _);
                     let color = if i == self.selected_hint {
                         colors::YELLOW
                     } else {

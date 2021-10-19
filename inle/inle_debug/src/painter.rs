@@ -340,7 +340,7 @@ fn draw_text(
     };
     let aa_adj_inv_scale = 1. / (aa_adj_scale as f32);
 
-    let mut txt = render::create_text(text, font, aa_adj_scale * font_size);
+    let mut txt = render::create_text(window, text, font, aa_adj_scale * font_size);
     let transform = Transform2D::from_pos_rot_scale(
         world_pos,
         rad(0.),

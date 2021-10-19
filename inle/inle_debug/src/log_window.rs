@@ -130,6 +130,7 @@ const ELLIPSIS: &str = "-";
 
 // @Temporary: this function should be common
 fn create_wrapped_text<'a>(
+    window: &mut inle_gfx::render_window::Render_Window_Handle,
     txt: &str,
     font: &'a render::Font<'a>,
     font_size: u16,
@@ -140,10 +141,10 @@ fn create_wrapped_text<'a>(
     // @Speed: this algorithm could probably be improved
     let mut texts = Vec::default();
 
-    let ellipsis_text = render::create_text(ELLIPSIS, font, font_size);
+    let ellipsis_text = render::create_text(window, ELLIPSIS, font, font_size);
     let ellipsis_text_width = render::get_text_size(&ellipsis_text).x;
 
-    let text = render::create_text(txt, font, font_size);
+    let text = render::create_text(window, txt, font, font_size);
     let mut candidate_texts = vec![text];
 
     let true_line_width = line_width - ellipsis_text_width;
@@ -160,8 +161,8 @@ fn create_wrapped_text<'a>(
         let estimate_wrap_idx = estimate_wrap_idx.saturating_sub(1);
         let (s1, s2) = string.split_at(estimate_wrap_idx);
 
-        let t1 = render::create_text(&format!("{}{}", s1, ELLIPSIS), font, font_size);
-        let t2 = render::create_text(s2, font, font_size);
+        let t1 = render::create_text(window, &format!("{}{}", s1, ELLIPSIS), font, font_size);
+        let t2 = render::create_text(window, s2, font, font_size);
 
         candidate_texts.push(t2);
         candidate_texts.push(t1);
@@ -291,7 +292,7 @@ impl Debug_Element for Log_Window {
             colors::rgb(40, 40, 40),
         );
         {
-            let mut text = render::create_text(self.cfg.title.borrow(), font, title_font_size);
+            let mut text = render::create_text(window, self.cfg.title.borrow(), font, title_font_size);
             let text_height = render::get_text_size(&text).y;
             render::render_text(
                 window,
@@ -324,7 +325,7 @@ impl Debug_Element for Log_Window {
             }
 
             // @Speed: we're recomputing the wrapping everytime just to keep the code a bit simpler.
-            let texts = create_wrapped_text(&line.msg, font, font_size, self.size.x as f32 - pad_x);
+            let texts = create_wrapped_text(window, &line.msg, font, font_size, self.size.x as f32 - pad_x);
             debug_assert!(texts.len() < u16::MAX as usize);
             line.required_lines.set(texts.len() as u16);
 

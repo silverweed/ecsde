@@ -116,6 +116,10 @@ pub struct Buffer_Handle {
     inner: Buffer_Handle_Inner,
 }
 
+pub const EMPTY_BUFFER_HANDLE: Buffer_Handle = Buffer_Handle {
+    inner: Buffer_Handle_Inner::Empty
+};
+
 #[derive(Debug)]
 enum Buffer_Handle_Inner {
     Empty,

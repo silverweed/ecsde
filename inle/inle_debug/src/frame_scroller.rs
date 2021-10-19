@@ -346,7 +346,7 @@ impl Debug_Frame_Scroller {
                 let very_first_frame = self.real_cur_frame - self.tot_scroller_filled_frames as u64;
                 let row_first_frame = (self.n_frames as u64 * i as u64) + very_first_frame;
                 let mut text =
-                    render::create_text(&(row_first_frame + 1).to_string(), font, font_size);
+                    render::create_text(window, &(row_first_frame + 1).to_string(), font, font_size);
                 render::render_text(window, &mut text, text_col, Vec2f::new(x, y));
             }
         }

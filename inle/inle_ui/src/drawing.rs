@@ -49,7 +49,7 @@ pub fn draw_all_ui(window: &mut Render_Window_Handle, gres: &Gfx_Resources, ui: 
                 font_size,
                 props,
             } => {
-                let mut text = render::create_text(text, gres.get_font(ui.font), *font_size);
+                let mut text = render::create_text(window, text, gres.get_font(ui.font), *font_size);
                 render::render_text(window, &mut text, *props, *pos);
             }
         }
@@ -58,6 +58,7 @@ pub fn draw_all_ui(window: &mut Render_Window_Handle, gres: &Gfx_Resources, ui: 
 }
 
 pub fn draw_button(
+    window: &mut Render_Window_Handle,
     gres: &Gfx_Resources,
     ui: &Ui_Context,
     text: &str,
@@ -80,7 +81,7 @@ pub fn draw_button(
     });
 
     // @Speed: we're creating a Text just to get its size.
-    let txt = render::create_text(text, gres.get_font(ui.font), props.font_size);
+    let txt = render::create_text(window, text, gres.get_font(ui.font), props.font_size);
     let text_size = render::get_text_size(&txt);
     // @Incomplete: consider Align
     let pos = v2!(rect.x, rect.y) + v2!(rect.width * 0.5, rect.height * 0.5) - text_size * 0.5;

@@ -1,5 +1,5 @@
 use super::{Primitive_Type, Uniform_Value};
-use crate::backend_common::alloc::{Buffer_Allocator_Id, Buffer_Allocator_Ptr, Buffer_Handle};
+use crate::backend_common::alloc::{Buffer_Allocator_Id, Buffer_Allocator_Ptr, Buffer_Handle, EMPTY_BUFFER_HANDLE};
 use crate::backend_common::misc::check_gl_err;
 use crate::backend_common::types::*;
 use crate::render::get_mvp_matrix;
@@ -96,6 +96,14 @@ impl Vertex_Buffer {
             vertices: Vec::with_capacity(max_vertices as usize),
             needs_transfer_to_gpu: Cell::new(false),
         }
+    }
+}
+
+impl Drop for Vertex_Buffer {
+    fn drop(&mut self) {
+        let mut handle = EMPTY_BUFFER_HANDLE;
+        std::mem::swap(&mut self.buf, &mut handle);
+        self.parent_alloc.borrow_mut().deallocate(handle);
     }
 }
 
@@ -365,7 +373,9 @@ impl Glyph_Bounds {
 pub struct Text<'font> {
     string: String,
     font: &'font Font<'font>,
-    size: u16,
+    vertices: Vertex_Buffer,
+    font_size: u16,
+    size: Vec2f,
 }
 
 #[inline]
@@ -619,7 +629,7 @@ pub fn fill_color_circle_ws(
 #[inline]
 pub fn render_text(
     window: &mut Render_Window_Handle,
-    text: &mut Text,
+    text: &Text,
     paint_props: &Paint_Properties,
     screen_pos: Vec2f,
 ) {
@@ -636,7 +646,7 @@ pub fn render_text(
 #[inline]
 pub fn render_text_ws(
     window: &mut Render_Window_Handle,
-    text: &mut Text,
+    text: &Text,
     paint_props: &Paint_Properties,
     transform: &Transform2D,
     camera: &Transform2D,
@@ -651,87 +661,76 @@ pub fn render_text_ws(
     render_text_internal(window, text);
 }
 
-#[inline]
-fn render_text_internal(window: &mut Render_Window_Handle, text: &mut Text) {
-    use inle_common::colors;
-
-    let mut vbuf = new_vbuf_temp(
-        window,
-        Primitive_Type::Triangles,
-        6 * text.string.len() as u32,
-    );
-
-    {
-        trace!("fill_text_vbuf");
-
-        let mut vertices = inle_alloc::temp::excl_temp_array(&mut window.temp_allocator);
-        let mut pos_x = 0.;
-        let scale_factor = text.font.metadata.scale_factor(text.size as f32);
-        for chr in text.string.chars() {
-            if chr > '\u{256}' {
-                lerr_once!(
-                    &format!("skip_{}", chr),
-                    "WE ARE NOT SUPPORTING NON-ASCII BUT WE SHOULD! Skipping character {} (0x{:X})",
-                    chr,
-                    (chr as usize)
-                );
-                continue;
-            }
-            if let Some(glyph_data) = text.font.metadata.get_glyph_data(chr) {
-                let atlas_bounds = &glyph_data.normalized_atlas_bounds;
-                let pb = &glyph_data.plane_bounds;
-                let rect = Rect::new(
-                    pos_x + pb.left * scale_factor,
-                    // Offsetting the y so the text pivot is top-left rather than bottom-left
-                    (1.0 - pb.top) * scale_factor,
-                    (pb.right - pb.left) * scale_factor,
-                    (pb.top - pb.bot) * scale_factor,
-                );
-
-                pos_x += scale_factor * glyph_data.advance;
-
-                let v1 = new_vertex(
-                    v2!(rect.x, rect.y),
-                    colors::WHITE,
-                    v2!(atlas_bounds.left, atlas_bounds.top),
-                );
-                let v2 = new_vertex(
-                    v2!(rect.x + rect.width, rect.y),
-                    colors::WHITE,
-                    v2!(atlas_bounds.right, atlas_bounds.top),
-                );
-                let v3 = new_vertex(
-                    v2!(rect.x + rect.width, rect.y + rect.height),
-                    colors::WHITE,
-                    v2!(atlas_bounds.right, atlas_bounds.bot),
-                );
-                let v4 = new_vertex(
-                    v2!(rect.x, rect.y + rect.height),
-                    colors::WHITE,
-                    v2!(atlas_bounds.left, atlas_bounds.bot),
-                );
-                vertices.push(v1);
-                vertices.push(v2);
-                vertices.push(v3);
-                vertices.push(v3);
-                vertices.push(v4);
-                vertices.push(v1);
-            }
-        }
-
-        let vertices = unsafe { vertices.into_read_only() };
-        update_vbuf(&mut vbuf, &vertices, 0);
-    }
-
+fn render_text_internal(window: &mut Render_Window_Handle, text: &Text) {
     unsafe {
         trace!("draw_text_vbuf");
 
         glcheck!(gl::ActiveTexture(gl::TEXTURE0));
         glcheck!(gl::BindTexture(gl::TEXTURE_2D, text.font.atlas.id));
 
-        render_vbuf_internal(window, &vbuf);
+        render_vbuf_internal(window, &text.vertices);
     }
 }
+
+fn fill_text_vbuf(text: &mut Text) {
+    use inle_common::colors;
+
+    trace!("fill_text_vbuf");
+
+    let mut pos_x = 0.;
+    let scale_factor = text.font.metadata.scale_factor(text.font_size as f32);
+    for chr in text.string.chars() {
+        if chr > '\u{256}' {
+            lerr_once!(
+                &format!("skip_{}", chr),
+                "WE ARE NOT SUPPORTING NON-ASCII BUT WE SHOULD! Skipping character {} (0x{:X})",
+                chr,
+                (chr as usize)
+            );
+            continue;
+        }
+        if let Some(glyph_data) = text.font.metadata.get_glyph_data(chr) {
+            let atlas_bounds = &glyph_data.normalized_atlas_bounds;
+            let pb = &glyph_data.plane_bounds;
+            let rect = Rect::new(
+                pos_x + pb.left * scale_factor,
+                // Offsetting the y so the text pivot is top-left rather than bottom-left
+                (1.0 - pb.top) * scale_factor,
+                (pb.right - pb.left) * scale_factor,
+                (pb.top - pb.bot) * scale_factor,
+            );
+
+            pos_x += scale_factor * glyph_data.advance;
+
+            let v1 = new_vertex(
+                v2!(rect.x, rect.y),
+                colors::WHITE,
+                v2!(atlas_bounds.left, atlas_bounds.top),
+            );
+            let v2 = new_vertex(
+                v2!(rect.x + rect.width, rect.y),
+                colors::WHITE,
+                v2!(atlas_bounds.right, atlas_bounds.top),
+            );
+            let v3 = new_vertex(
+                v2!(rect.x + rect.width, rect.y + rect.height),
+                colors::WHITE,
+                v2!(atlas_bounds.right, atlas_bounds.bot),
+            );
+            let v4 = new_vertex(
+                v2!(rect.x, rect.y + rect.height),
+                colors::WHITE,
+                v2!(atlas_bounds.left, atlas_bounds.bot),
+            );
+
+            text.size.x = text.size.x.max(rect.x + rect.width);
+            text.size.y = text.size.y.max(rect.y + rect.height);
+
+            add_vertices(&mut text.vertices, &[v1, v2, v3, v3, v4, v1]);
+        }
+    }
+}
+
 
 #[inline]
 pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
@@ -748,26 +747,9 @@ pub fn get_text_string<'a>(text: &'a Text) -> &'a str {
     &text.string
 }
 
+#[inline]
 pub fn get_text_size(text: &Text) -> Vec2f {
-    let font = &text.font;
-    let scale_factor = text.font.metadata.scale_factor(text.size as f32);
-    let (width, height) = text
-        .string
-        .chars()
-        .map(|chr| {
-            if let Some(data) = font.metadata.get_glyph_data(chr) {
-                (
-                    scale_factor * data.advance,
-                    scale_factor * data.plane_bounds.height(),
-                )
-            } else {
-                (0., 0.)
-            }
-        })
-        .fold((0_f32, 0_f32), |(acc_w, acc_h), (w, h)| {
-            (acc_w + w, acc_h.max(h))
-        });
-    v2!(width, height)
+    text.size
 }
 
 #[inline]
@@ -1011,12 +993,17 @@ pub fn render_vbuf_with_shader(
 }
 
 #[inline]
-pub fn create_text<'a>(string: &str, font: &'a Font, size: u16) -> Text<'a> {
-    Text {
+pub fn create_text<'a>(window: &mut Render_Window_Handle, string: &str, font: &'a Font, size: u16) -> Text<'a> {
+    let vertices = new_vbuf(window, Primitive_Type::Triangles, 6 * string.len() as u32);
+    let mut text = Text {
         string: String::from(string),
+        vertices,
         font,
-        size,
-    }
+        font_size: size,
+        size: v2!(0., 0.),
+    };
+    fill_text_vbuf(&mut text);
+    text
 }
 
 #[inline]

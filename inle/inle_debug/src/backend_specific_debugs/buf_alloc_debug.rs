@@ -20,19 +20,26 @@ pub fn debug_draw_buffer_allocators(allocators: &Buffer_Allocators, painter: &mu
         ..free_paint_props
     };
 
+    let pos = -v2!(700., 400.); // @Temporary!
+    painter.add_text("Temporary", pos, 12, colors::rgb(0, 0, 200));
+
     let temp_alloc = allocators.get_alloc_mut(
         inle_gfx_backend::backend_common::alloc::Buffer_Allocator_Id::Array_Temporary,
     );
     debug_draw_buffer_allocator(
         &temp_alloc.borrow(),
         painter,
-        0.,
+        14.,
         free_paint_props,
         occupied_paint_props,
     );
 
     free_paint_props.color = colors::rgb(0, 180, 100);
     occupied_paint_props.color = colors::rgb(150, 80, 0);
+
+    let y = (temp_alloc.borrow().get_buckets().len() + 2) as f32 * HEIGHT;
+    let pos = v2!(pos.x, pos.y + y);
+    painter.add_text("Permanent", pos, 12, colors::rgb(0, 0, 200));
 
     debug_draw_buffer_allocator(
         &allocators
@@ -41,7 +48,7 @@ pub fn debug_draw_buffer_allocators(allocators: &Buffer_Allocators, painter: &mu
             )
             .borrow(),
         painter,
-        (temp_alloc.borrow().get_buckets().len() + 2) as f32 * HEIGHT,
+        14. + y,
         free_paint_props,
         occupied_paint_props,
     );

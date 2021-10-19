@@ -153,7 +153,7 @@ impl Debug_Element for Debug_Overlay {
             let Debug_Line {
                 text, mut color, ..
             } = line;
-            let text = render::create_text(text, font, font_size);
+            let text = render::create_text(window, text, font, font_size);
 
             let txt_size = render::get_text_size(&text);
             max_row_width = max_row_width.max(txt_size.x);
