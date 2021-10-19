@@ -51,10 +51,15 @@ impl Vertex_Buffer_Holder {
 
         let mut new_vbuf =
             render::new_vbuf(window, render::vbuf_primitive_type(&self.vbuf), new_cap);
-        let _res = render::swap_vbuf(&mut new_vbuf, &mut self.vbuf);
-        #[cfg(debug_assertions)]
-        {
-            debug_assert!(_res, "Vertex Buffer copying failed ({})!", self.id);
-        }
+        let res = render::swap_vbuf(&mut new_vbuf, &mut self.vbuf);
+        assert!(res, "Vertex Buffer copying failed ({})!", self.id);
+
+        render::dealloc_vbuf(&mut new_vbuf);
+    }
+}
+
+impl Drop for Vertex_Buffer_Holder {
+    fn drop(&mut self) {
+        render::dealloc_vbuf(&mut self.vbuf);
     }
 }

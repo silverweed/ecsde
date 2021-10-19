@@ -26,7 +26,9 @@ const MIN_BUCKET_SIZE: usize = units::kilobytes(32);
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(debug_assertions, derive(Hash))]
 pub enum Buffer_Allocator_Id {
+    /// These buffers are supposed to be deallocated manually
     Array_Permanent = 0,
+    /// These buffers are emptied every frame
     Array_Temporary = 1,
 }
 
@@ -111,7 +113,7 @@ impl Buffer_Allocator {
 // of the buffer only to the vbuf that allocated it.
 pub type Buffer_Allocator_Ptr = Rc<RefCell<Buffer_Allocator>>;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Buffer_Handle {
     inner: Buffer_Handle_Inner,
 }
@@ -120,7 +122,7 @@ pub const EMPTY_BUFFER_HANDLE: Buffer_Handle = Buffer_Handle {
     inner: Buffer_Handle_Inner::Empty
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum Buffer_Handle_Inner {
     Empty,
     Non_Empty(Non_Empty_Buffer_Handle),

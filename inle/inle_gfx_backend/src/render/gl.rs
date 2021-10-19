@@ -1,5 +1,7 @@
 use super::{Primitive_Type, Uniform_Value};
-use crate::backend_common::alloc::{Buffer_Allocator_Id, Buffer_Allocator_Ptr, Buffer_Handle, EMPTY_BUFFER_HANDLE};
+use crate::backend_common::alloc::{
+    Buffer_Allocator_Id, Buffer_Allocator_Ptr, Buffer_Handle, EMPTY_BUFFER_HANDLE,
+};
 use crate::backend_common::misc::check_gl_err;
 use crate::backend_common::types::*;
 use crate::render::get_mvp_matrix;
@@ -73,6 +75,9 @@ pub struct Vertex_Buffer {
     parent_alloc: Buffer_Allocator_Ptr,
     vertices: Vec<Vertex>,
     needs_transfer_to_gpu: Cell<bool>,
+
+    #[cfg(debug_assertions)]
+    buf_alloc_id: Buffer_Allocator_Id,
 }
 
 impl Vertex_Buffer {
@@ -80,6 +85,7 @@ impl Vertex_Buffer {
         buf_allocator_ptr: Buffer_Allocator_Ptr,
         primitive_type: Primitive_Type,
         max_vertices: u32,
+        #[cfg(debug_assertions)] buf_alloc_id: Buffer_Allocator_Id,
     ) -> Self {
         let mut buffer_allocator = buf_allocator_ptr.borrow_mut();
         let buf = buffer_allocator.allocate(max_vertices as usize * mem::size_of::<Vertex>());
@@ -95,16 +101,30 @@ impl Vertex_Buffer {
             parent_alloc: buf_allocator_ptr.clone(),
             vertices: Vec::with_capacity(max_vertices as usize),
             needs_transfer_to_gpu: Cell::new(false),
+            #[cfg(debug_assertions)]
+            buf_alloc_id,
         }
     }
 }
 
+#[cfg(debug_assertions)]
 impl Drop for Vertex_Buffer {
     fn drop(&mut self) {
-        let mut handle = EMPTY_BUFFER_HANDLE;
-        std::mem::swap(&mut self.buf, &mut handle);
-        self.parent_alloc.borrow_mut().deallocate(handle);
+        assert!(
+            self.buf == EMPTY_BUFFER_HANDLE
+                || self.buf_alloc_id == Buffer_Allocator_Id::Array_Temporary,
+            "A manual lifetime vertex buffer was not deallocated before being dropped!"
+        );
     }
+}
+
+#[track_caller]
+#[inline(always)]
+fn check_vbuf_valid(vbuf: &Vertex_Buffer) {
+    debug_assert!(
+        vbuf.buf != EMPTY_BUFFER_HANDLE,
+        "Vertex Buffer was invalid!"
+    );
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -376,6 +396,12 @@ pub struct Text {
     vertices: Vertex_Buffer,
     font_size: u16,
     size: Vec2f,
+}
+
+impl Drop for Text {
+    fn drop(&mut self) {
+        dealloc_vbuf(&mut self.vertices);
+    }
 }
 
 #[inline]
@@ -731,7 +757,6 @@ fn fill_text_vbuf(text: &mut Text, font: &Font) {
     }
 }
 
-
 #[inline]
 pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
     (texture.width, texture.height)
@@ -782,22 +807,23 @@ pub fn new_image_with_data(
 
 #[inline(always)]
 pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
+    check_vbuf_valid(vbuf);
     vbuf.primitive_type
 }
 
 #[inline(always)]
-pub fn new_vbuf(
+fn new_vbuf_internal(
     window: &mut Render_Window_Handle,
     primitive: Primitive_Type,
     n_vertices: u32,
+    buf_alloc_id: Buffer_Allocator_Id,
 ) -> Vertex_Buffer {
     Vertex_Buffer::new(
-        window
-            .gl
-            .buffer_allocators
-            .get_alloc_mut(Buffer_Allocator_Id::Array_Permanent),
+        window.gl.buffer_allocators.get_alloc_mut(buf_alloc_id),
         primitive,
         n_vertices,
+        #[cfg(debug_assertions)]
+        buf_alloc_id,
     )
 }
 
@@ -807,14 +833,44 @@ pub fn new_vbuf_temp(
     primitive: Primitive_Type,
     n_vertices: u32,
 ) -> Vertex_Buffer {
-    Vertex_Buffer::new(
-        window
-            .gl
-            .buffer_allocators
-            .get_alloc_mut(Buffer_Allocator_Id::Array_Temporary),
+    new_vbuf_internal(
+        window,
         primitive,
         n_vertices,
+        Buffer_Allocator_Id::Array_Temporary,
     )
+}
+
+#[inline]
+pub fn new_vbuf(
+    window: &mut Render_Window_Handle,
+    primitive: Primitive_Type,
+    n_vertices: u32,
+) -> Vertex_Buffer {
+    new_vbuf_internal(
+        window,
+        primitive,
+        n_vertices,
+        Buffer_Allocator_Id::Array_Permanent,
+    )
+}
+
+#[inline]
+pub fn dealloc_vbuf(vbuf: &mut Vertex_Buffer) {
+    #[cfg(debug_assertions)]
+    {
+        assert!(vbuf.buf_alloc_id != Buffer_Allocator_Id::Array_Temporary);
+    }
+
+    if vbuf.buf == EMPTY_BUFFER_HANDLE {
+        lwarn!("Tried to deallocate an already-empty vertex buffer");
+        return;
+    }
+    let mut handle = EMPTY_BUFFER_HANDLE;
+    std::mem::swap(&mut vbuf.buf, &mut handle);
+    vbuf.parent_alloc.borrow_mut().deallocate(handle);
+    vbuf.max_vertices = 0;
+    vbuf.vertices.clear();
 }
 
 #[inline]
@@ -831,6 +887,8 @@ pub fn add_vertices(vbuf: &mut Vertex_Buffer, vertices: &[Vertex]) {
 #[inline]
 pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
     trace!("update_vbuf");
+
+    check_vbuf_valid(vbuf);
 
     #[cfg(debug_assertions)]
     let prev_vertices = vbuf.vertices.len();
@@ -889,6 +947,7 @@ pub fn vbuf_max_vertices(vbuf: &Vertex_Buffer) -> u32 {
 
 #[inline(always)]
 pub fn set_vbuf_cur_vertices(vbuf: &mut Vertex_Buffer, cur_vertices: u32) {
+    check_vbuf_valid(vbuf);
     vbuf.vertices
         .resize(cur_vertices as usize, Vertex::default());
     vbuf.needs_transfer_to_gpu.set(true);
@@ -904,6 +963,7 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
 }
 
 fn render_vbuf_internal(window: &mut Render_Window_Handle, vbuf: &Vertex_Buffer) {
+    check_vbuf_valid(vbuf);
     if vbuf.needs_transfer_to_gpu.get() {
         vbuf_transfer_to_gpu(vbuf);
     }
@@ -993,7 +1053,12 @@ pub fn render_vbuf_with_shader(
 }
 
 #[inline]
-pub fn create_text(window: &mut Render_Window_Handle, string: &str, font: &Font, size: u16) -> Text {
+pub fn create_text(
+    window: &mut Render_Window_Handle,
+    string: &str,
+    font: &Font,
+    size: u16,
+) -> Text {
     let vertices = new_vbuf(window, Primitive_Type::Triangles, 6 * string.len() as u32);
     let mut text = Text {
         string: String::from(string),
@@ -1167,6 +1232,9 @@ pub fn get_image_pixels(image: &Image) -> &[Color] {
 
 #[inline]
 pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
+    check_vbuf_valid(a);
+    check_vbuf_valid(b);
+
     mem::swap(a, b);
     true
 }

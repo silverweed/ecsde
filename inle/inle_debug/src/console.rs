@@ -555,8 +555,12 @@ impl Console {
         if let Some((cmd, _)) = self.get_hint_key_and_rest() {
             if let Some(hints) = &self.hints.get(cmd) {
                 for (i, idx) in self.hints_displayed.iter().enumerate() {
-                    let text =
-                        render::create_text(window, &hints[*idx], font, (font_size as f32 * 0.9) as _);
+                    let text = render::create_text(
+                        window,
+                        &hints[*idx],
+                        font,
+                        (font_size as f32 * 0.9) as _,
+                    );
                     let color = if i == self.selected_hint {
                         colors::YELLOW
                     } else {

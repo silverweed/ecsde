@@ -15,7 +15,7 @@ use std::time::Duration;
 
 enum Lazy_Text {
     String(String),
-    Text(Text)
+    Text(Text),
 }
 
 impl Default for Lazy_Text {
@@ -173,7 +173,7 @@ impl Debug_Element for Debug_Overlay {
 
                     texts.push((color, txt_size));
                 }
-                _ => unreachable!()
+                _ => unreachable!(),
             }
         }
 
@@ -226,7 +226,7 @@ impl Debug_Element for Debug_Overlay {
 
             match &self.lines[i].text {
                 Lazy_Text::Text(text) => render::render_text(window, &text, *color, position + pos),
-                _ => unreachable!()
+                _ => unreachable!(),
             }
         }
     }
@@ -263,7 +263,8 @@ impl Debug_Element for Debug_Overlay {
 
         // Transform all Lazy_Texts into Text
         let ui_scale = self.cfg.ui_scale.read(config);
-        let font_size = u16::try_from((self.cfg.font_size.read(config) as f32 * ui_scale) as u32).unwrap();
+        let font_size =
+            u16::try_from((self.cfg.font_size.read(config) as f32 * ui_scale) as u32).unwrap();
         let font = gres.get_font(self.cfg.font);
         for line in &mut self.lines {
             if let Lazy_Text::String(text) = &line.text {

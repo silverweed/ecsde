@@ -212,7 +212,12 @@ pub fn vbuf_max_vertices(vbuf: &Vertex_Buffer) -> u32 {
 ///////////////////////////////// CREATING ///////////////////////////////////
 
 #[inline]
-pub fn create_text(window: &mut Render_Window_Handle, string: &str, font: &Font, font_size: u16) -> Text {
+pub fn create_text(
+    window: &mut Render_Window_Handle,
+    string: &str,
+    font: &Font,
+    font_size: u16,
+) -> Text {
     trace!("create_text");
     backend::create_text(window, string, font, font_size)
 }
@@ -247,6 +252,7 @@ pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {
     backend::new_image(width, height, color_type)
 }
 
+#[inline]
 pub fn new_vbuf(
     window: &mut Render_Window_Handle,
     primitive: Primitive_Type,
@@ -257,6 +263,7 @@ pub fn new_vbuf(
 }
 
 /// Creates a Vertex_Buffer that gets deallocated automatically at the end of the frame
+#[inline]
 pub fn new_vbuf_temp(
     window: &mut Render_Window_Handle,
     primitive: Primitive_Type,
@@ -264,6 +271,12 @@ pub fn new_vbuf_temp(
 ) -> Vertex_Buffer {
     trace!("new_vbuf_temp");
     backend::new_vbuf_temp(window, primitive, n_vertices)
+}
+
+#[inline]
+pub fn dealloc_vbuf(vbuf: &mut Vertex_Buffer) {
+    trace!("dealloc_vbuf");
+    backend::dealloc_vbuf(vbuf);
 }
 
 pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {

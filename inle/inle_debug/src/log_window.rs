@@ -292,7 +292,8 @@ impl Debug_Element for Log_Window {
             colors::rgb(40, 40, 40),
         );
         {
-            let mut text = render::create_text(window, self.cfg.title.borrow(), font, title_font_size);
+            let mut text =
+                render::create_text(window, self.cfg.title.borrow(), font, title_font_size);
             let text_height = render::get_text_size(&text).y;
             render::render_text(
                 window,
@@ -325,7 +326,13 @@ impl Debug_Element for Log_Window {
             }
 
             // @Speed: we're recomputing the wrapping everytime just to keep the code a bit simpler.
-            let texts = create_wrapped_text(window, &line.msg, font, font_size, self.size.x as f32 - pad_x);
+            let texts = create_wrapped_text(
+                window,
+                &line.msg,
+                font,
+                font_size,
+                self.size.x as f32 - pad_x,
+            );
             debug_assert!(texts.len() < u16::MAX as usize);
             line.required_lines.set(texts.len() as u16);
 

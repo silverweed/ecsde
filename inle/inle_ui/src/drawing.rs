@@ -49,7 +49,8 @@ pub fn draw_all_ui(window: &mut Render_Window_Handle, gres: &Gfx_Resources, ui: 
                 font_size,
                 props,
             } => {
-                let mut text = render::create_text(window, text, gres.get_font(ui.font), *font_size);
+                let mut text =
+                    render::create_text(window, text, gres.get_font(ui.font), *font_size);
                 render::render_text(window, &mut text, *props, *pos);
             }
         }

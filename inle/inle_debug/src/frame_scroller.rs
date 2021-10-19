@@ -29,12 +29,14 @@ pub struct Debug_Frame_Scroller_Config {
 
 #[derive(Default)]
 pub struct Debug_Frame_Scroller {
-    pub hidden: bool, // @Cleanup: we may want to treat the scroller more like the other debug elements
     pub cfg: Debug_Frame_Scroller_Config,
+
     pub pos: Vec2u,
     pub size: Vec2u,
+
     /// How many frames are currently filled, in terms of n_frames * cur_second + cur_frame
     pub tot_scroller_filled_frames: u32,
+
     /// The current frame according to Debug_Log.
     real_cur_frame: u64,
     /// The currently latest filled frame in the Frame row.
@@ -44,6 +46,7 @@ pub struct Debug_Frame_Scroller {
     /// The currently latest filled second in the Seconds row.
     /// Like cur_frame, it belongs to [0, n_seconds)
     pub cur_second: u16,
+
     /// The number of subdivisions of the 'Frame' row.
     pub n_frames: u16,
     /// The number of subdivisions of the 'Seconds' row.
@@ -52,6 +55,8 @@ pub struct Debug_Frame_Scroller {
     pub n_filled_frames: u16,
     /// How many subdivs in the 'Seconds' row are currently filled.
     pub n_filled_seconds: u16,
+
+    pub hidden: bool, // @Cleanup: we may want to treat the scroller more like the other debug elements
     pub manually_selected: bool,
     hovered: Option<(Row, u16)>,
 }
@@ -345,9 +350,17 @@ impl Debug_Frame_Scroller {
                 // It can also change simply due to the scroller filling up.
                 let very_first_frame = self.real_cur_frame - self.tot_scroller_filled_frames as u64;
                 let row_first_frame = (self.n_frames as u64 * i as u64) + very_first_frame;
-                let mut text =
-                    render::create_text(window, &(row_first_frame + 1).to_string(), font, font_size);
-                render::render_text(window, &mut text, text_col, Vec2f::new(x, y));
+                // NOTE: we're recreating texts every frame even though we could avoid it.
+                // The reason is that keeps the code slightly simpler and doing otherwise wouldn't save
+                // much time since we'd still have to recreate texts every frame as soon as the scroller
+                // fills up.
+                let text = render::create_text(
+                    window,
+                    &(row_first_frame + 1).to_string(),
+                    font,
+                    font_size,
+                );
+                render::render_text(window, &text, text_col, Vec2f::new(x, y));
             }
         }
     }
