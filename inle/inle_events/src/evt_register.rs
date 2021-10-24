@@ -68,10 +68,28 @@ impl Event_Register {
         fatal!("Tried to unsubscribe with invalid handle {:?}", handle);
     }
 
-    pub fn raise<E: 'static + Event>(&mut self, args: E::Args) {
+    pub fn raise<E: 'static + Event>(&mut self, args: &E::Args) {
+        trace!("Event_Register::raise");
+
         if let Some(obs) = self.observers.get_mut::<Observers<E>>() {
             for (cb, cb_data) in obs {
                 cb(args.clone(), cb_data.as_mut());
+            }
+        }
+    }
+
+    pub fn raise_batch<E: 'static + Event>(&mut self, args_batch: &[&E::Args]) {
+        trace!("Event_Register::raise_batch");
+
+        if args_batch.is_empty() {
+            return;
+        }
+
+        if let Some(obs) = self.observers.get_mut::<Observers<E>>() {
+            for (cb, cb_data) in obs {
+                for args in args_batch {
+                    cb((*args).clone(), cb_data.as_mut());
+                }
             }
         }
     }
@@ -121,7 +139,7 @@ mod tests {
             None,
         );
 
-        reg.raise::<Evt_Test>((0, 0));
+        reg.raise::<Evt_Test>(&(0, 0));
     }
 
     #[test]
@@ -143,12 +161,12 @@ mod tests {
             Some(res.clone()),
         );
 
-        reg.raise::<Evt_Test>((42, -48));
-        reg.raise::<Evt_Test>((48, -42));
+        reg.raise::<Evt_Test>(&(42, -48));
+        reg.raise::<Evt_Test>(&(48, -42));
 
         reg.unsubscribe(evt_h);
 
-        reg.raise::<Evt_Test>((42, -48));
+        reg.raise::<Evt_Test>(&(42, -48));
 
         assert_eq!(res.lock().unwrap().len(), 2);
     }
@@ -165,7 +183,7 @@ mod tests {
             Some(wrap_cb_data(String::from("Test"))),
         );
 
-        reg.raise::<Evt_Test>((0, 0));
+        reg.raise::<Evt_Test>(&(0, 0));
     }
 
     #[test]
@@ -181,6 +199,31 @@ mod tests {
             Some(wrap_cb_data(42)),
         );
 
-        reg.raise::<Evt_Test>((0, 0));
+        reg.raise::<Evt_Test>(&(0, 0));
+    }
+
+    #[test]
+    fn raise_batch() {
+        let mut reg = Event_Register::new();
+        let res: Arc<Mutex<Vec<()>>> = Arc::new(Mutex::new(vec![]));
+
+        let evt_h = reg.subscribe::<Evt_Test>(
+            Box::new(|(uns, sgn), res| {
+                let mut res = res.unwrap().lock().unwrap();
+                let res = res.downcast_mut::<Vec<()>>().unwrap();
+                if uns == 42 {
+                    res.push(());
+                }
+                if sgn == -48 {
+                    res.push(());
+                }
+            }),
+            Some(res.clone()),
+        );
+
+        let data = vec![&(42, -1), &(33, -48), &(42, -48), &(42, 42), &(0, 0)];
+        reg.raise_batch::<Evt_Test>(&data);
+
+        assert_eq!(res.lock().unwrap().len(), 5);
     }
 }

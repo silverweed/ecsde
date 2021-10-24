@@ -79,7 +79,7 @@ pub struct Physics_World {
     pub(super) bodies: Vec<Physics_Body>,
 
     /// Contains all collisions for this frame.
-    collisions: HashMap<Collider_Handle, SmallVec<[Collision_Data; 4]>>,
+    pub(super) collisions: HashMap<Collider_Handle, SmallVec<[Collision_Data; 4]>>,
 }
 
 impl Physics_World {

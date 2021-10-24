@@ -50,9 +50,8 @@ impl Ecs_World {
     }
 
     pub fn notify_destroyed(&self, evt_register: &mut evt_register::Event_Register) {
-        for &entity in &self.entities_pending_destroy_notify {
-            evt_register.raise::<Evt_Entity_Destroyed>(entity);
-        }
+        let data: Vec<&Entity> = self.entities_pending_destroy_notify.iter().collect();
+        evt_register.raise_batch::<Evt_Entity_Destroyed>(&data);
     }
 
     pub fn destroy_pending(&mut self) -> Vec<Entity> {

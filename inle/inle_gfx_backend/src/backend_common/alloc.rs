@@ -122,7 +122,7 @@ pub struct Buffer_Handle {
 }
 
 pub const EMPTY_BUFFER_HANDLE: Buffer_Handle = Buffer_Handle {
-    inner: Buffer_Handle_Inner::Empty
+    inner: Buffer_Handle_Inner::Empty,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -691,8 +691,8 @@ mod tests {
     #[serial]
     fn allocate_from_buffer_allocators() {
         let (_win, _glfw) = load_gl_pointers();
-        let mut allocators = Buffer_Allocators::default();
-        let alloc = allocators.get_alloc_mut(Buffer_Allocator_Id::Array_Permanent);
+        let allocators = Buffer_Allocators::default();
+        let alloc = allocators.get_alloc(Buffer_Allocator_Id::Array_Permanent);
         let mut alloc = alloc.borrow_mut();
 
         let buf = alloc.allocate(200);

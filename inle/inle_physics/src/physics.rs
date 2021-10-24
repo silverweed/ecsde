@@ -1,7 +1,9 @@
 // reference: https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331
 
 use super::layers::Collision_Matrix;
-use super::phys_world::{Collider_Handle, Collision_Info, Phys_Data, Physics_World};
+use super::phys_world::{
+    Collider_Handle, Collision_Data, Collision_Info, Phys_Data, Physics_World,
+};
 use super::spatial::Spatial_Accelerator;
 use crate::collider::{Collider, Collision_Shape};
 use inle_alloc::temp::{excl_temp_array, Temp_Allocator};
@@ -18,7 +20,7 @@ type Rigidbodies = HashMap<Collider_Handle, Rigidbody>;
 pub struct Evt_Collision_Happened;
 
 impl Event for Evt_Collision_Happened {
-    type Args = (Collider_Handle, Collider_Handle);
+    type Args = Collision_Data;
 }
 
 #[derive(Default)]
@@ -306,14 +308,13 @@ where
     collision_infos
 }
 
-// "roughly" because it doesn't do the positional correction
-fn solve_collision_roughly(
+fn solve_collision_velocities(
     objects: &mut Rigidbodies,
     a_idx: Collider_Handle,
     b_idx: Collider_Handle,
     normal: Vec2f,
 ) {
-    trace!("physics::solve_collisions_roughly");
+    trace!("physics::solve_collisions_velocities");
 
     let a = objects[&a_idx].clone();
     let b = objects[&b_idx].clone();
@@ -413,7 +414,7 @@ fn solve_collisions(objects: &mut Rigidbodies, infos: &[&Collision_Info_Internal
                 },
         } = **info;
 
-        solve_collision_roughly(objects, cld1, cld2, normal);
+        solve_collision_velocities(objects, cld1, cld2, normal);
         positional_correction(objects, cld1, cld2, normal, penetration);
     }
 }
@@ -433,7 +434,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
 
     phys_world.clear_collisions();
 
-    let mut objects = prepare_colliders_and_gather_rigidbodies(ecs_world, phys_world);
+    update_colliders_spatial(ecs_world, phys_world);
 
     let infos = detect_collisions(
         phys_world,
@@ -444,10 +445,14 @@ pub fn update_collisions<T_Spatial_Accelerator>(
         debug_data,
     );
 
-    infos.iter().for_each(|info| {
-        phys_world.add_collision(info.cld1, info.cld2, &info.info);
-        evt_register.raise::<Evt_Collision_Happened>((info.cld1, info.cld2));
-    });
+    {
+        trace!("add_collisions_to_phys_world");
+        infos.iter().for_each(|info| {
+            phys_world.add_collision(info.cld1, info.cld2, &info.info);
+        });
+    }
+
+    let mut objects = prepare_colliders_and_gather_rigidbodies(ecs_world, phys_world);
 
     let rb_infos = infos
         .par_iter()
@@ -479,6 +484,31 @@ pub fn update_collisions<T_Spatial_Accelerator>(
             }
         }
     }
+
+    // Note: we do this last to avoid polluting the cache (we don't know how many observers are
+    // subscribed to this event).
+    let data: Vec<&Collision_Data> = phys_world
+        .collisions
+        .values()
+        .map(|v| v.as_slice())
+        .flatten()
+        .collect();
+    evt_register.raise_batch::<Evt_Collision_Happened>(&data);
+}
+
+fn update_colliders_spatial(ecs_world: &mut Ecs_World, phys_world: &mut Physics_World) {
+    trace!("update_colliders_spatial");
+
+    if let Some(mut spatials) = ecs_world.write_component_storage::<C_Spatial2D>() {
+        for collider in &mut phys_world.colliders {
+            let mut spatial = spatials.must_get_mut(collider.entity);
+            let pos = spatial.transform.position();
+            spatial.frame_starting_pos = pos;
+
+            collider.position = pos + collider.offset;
+            collider.velocity = spatial.velocity;
+        }
+    }
 }
 
 /// Returns { collider => rigidbody }
@@ -493,40 +523,21 @@ fn prepare_colliders_and_gather_rigidbodies(
     // @Speed: try to use an array rather than a HashMap
     let mut objects = HashMap::new();
 
-    {
-        trace!("update_colliders_spatial");
-
-        if let Some(mut spatials) = world.write_component_storage::<C_Spatial2D>() {
-            for collider in &mut phys_world.colliders {
-                let mut spatial = spatials.must_get_mut(collider.entity);
-                let pos = spatial.transform.position();
-                spatial.frame_starting_pos = pos;
-
-                collider.position = pos + collider.offset;
-                collider.velocity = spatial.velocity;
-            }
-        }
-    }
-
-    {
-        trace!("insert_rb_objects");
-
-        for body in &phys_world.bodies {
-            // @Incomplete :MultipleRigidbodies: handle multiple rigidbody colliders
-            if let Some(&(cld_handle, phys_data)) = body.rigidbody_colliders.get(0) {
-                if let Some(rb_cld) = phys_world.get_collider(cld_handle) {
-                    objects.insert(
-                        cld_handle,
-                        Rigidbody {
-                            entity: rb_cld.entity,
-                            position: rb_cld.position,
-                            offset: rb_cld.offset,
-                            velocity: rb_cld.velocity,
-                            shape: rb_cld.shape,
-                            phys_data,
-                        },
-                    );
-                }
+    for body in &phys_world.bodies {
+        // @Incomplete :MultipleRigidbodies: handle multiple rigidbody colliders
+        if let Some(&(cld_handle, phys_data)) = body.rigidbody_colliders.get(0) {
+            if let Some(rb_cld) = phys_world.get_collider(cld_handle) {
+                objects.insert(
+                    cld_handle,
+                    Rigidbody {
+                        entity: rb_cld.entity,
+                        position: rb_cld.position,
+                        offset: rb_cld.offset,
+                        velocity: rb_cld.velocity,
+                        shape: rb_cld.shape,
+                        phys_data,
+                    },
+                );
             }
         }
     }
