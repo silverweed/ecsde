@@ -13,7 +13,7 @@ use inle_events::evt_register::{Event, Event_Register};
 use inle_math::math::clamp;
 use inle_math::vector::{sanity_check_v, Vec2f};
 use rayon::prelude::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 type Rigidbodies = HashMap<Collider_Handle, Rigidbody>;
 
@@ -266,7 +266,7 @@ where
     }
 
     let mut collision_infos = vec![];
-    let mut stored = std::collections::HashSet::new();
+    let mut storage: HashSet<(*const Collider, *const Collider)> = HashSet::default();
 
     // @Speed: maybe we should iterate on the chunks? Can we do that in parallel?
     for a in phys_world.colliders.iter().filter(|cld| !cld.is_static) {
@@ -285,9 +285,11 @@ where
                 continue;
             }
             let b_shape = collision_shape_type_index(&b.shape);
-            if !collision_matrix.layers_collide(a.layer, b.layer)
-                || stored.contains(&(&b as *const _, &a as *const _))
-            {
+
+            let pa: *const Collider = a as *const _;
+            let pb: *const Collider = b as *const _;
+
+            if !collision_matrix.layers_collide(a.layer, b.layer) || storage.contains(&(pa, pb)) {
                 continue;
             }
 
@@ -300,7 +302,7 @@ where
 
             if let Some(info) = info {
                 collision_infos.push(info);
-                stored.insert((&a as *const _, &b as *const _));
+                storage.insert((pa, pb));
             }
         }
     }
