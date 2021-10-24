@@ -204,6 +204,11 @@ impl Persistent_Game_State for Debug_Base_State {
                         .config
                         .write_cfg(sid!("game/camera/on_player"), Cfg_Value::from(!cur))
                         .unwrap();
+                    if cur {
+                        add_msg!(engine_state, "Camera is now free.");
+                    } else {
+                        add_msg!(engine_state, "Camera is now following player.");
+                    }
                 }
                 _ => {}
             }

@@ -111,6 +111,11 @@ impl Rect<f32> {
 }
 
 impl<T: Copy> Rect<T> {
+    // @WaitForStable: mark this const
+    pub fn pos(&self) -> Vector2<T> {
+        Vector2::new(self.x, self.y)
+    }
+
     #[inline]
     // @WaitForStable: mark this const
     pub fn size(&self) -> Vector2<T> {

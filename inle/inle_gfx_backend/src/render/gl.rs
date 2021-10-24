@@ -72,7 +72,7 @@ pub struct Vertex_Buffer {
     max_vertices: u32,
     primitive_type: Primitive_Type,
     buf: Buffer_Handle,
-    parent_alloc: Buffer_Allocator_Ptr,
+    parent_alloc: Option<Buffer_Allocator_Ptr>,
     vertices: Vec<Vertex>,
     needs_transfer_to_gpu: Cell<bool>,
 
@@ -81,8 +81,21 @@ pub struct Vertex_Buffer {
 }
 
 impl Vertex_Buffer {
+    fn empty() -> Self {
+        Self {
+            max_vertices: 0,
+            primitive_type: Primitive_Type::Points,
+            buf: EMPTY_BUFFER_HANDLE,
+            parent_alloc: None,
+            vertices: Vec::default(),
+            needs_transfer_to_gpu: Cell::default(),
+            #[cfg(debug_assertions)]
+            buf_alloc_id: Buffer_Allocator_Id::Invalid,
+        }
+    }
+
     fn new(
-        buf_allocator_ptr: Buffer_Allocator_Ptr,
+        buf_allocator_ptr: &Buffer_Allocator_Ptr,
         primitive_type: Primitive_Type,
         max_vertices: u32,
         #[cfg(debug_assertions)] buf_alloc_id: Buffer_Allocator_Id,
@@ -98,7 +111,7 @@ impl Vertex_Buffer {
             buf,
             max_vertices,
             primitive_type,
-            parent_alloc: buf_allocator_ptr.clone(),
+            parent_alloc: Some(buf_allocator_ptr.clone()),
             vertices: Vec::with_capacity(max_vertices as usize),
             needs_transfer_to_gpu: Cell::new(false),
             #[cfg(debug_assertions)]
@@ -818,13 +831,17 @@ fn new_vbuf_internal(
     n_vertices: u32,
     buf_alloc_id: Buffer_Allocator_Id,
 ) -> Vertex_Buffer {
-    Vertex_Buffer::new(
-        window.gl.buffer_allocators.get_alloc_mut(buf_alloc_id),
-        primitive,
-        n_vertices,
-        #[cfg(debug_assertions)]
-        buf_alloc_id,
-    )
+    if n_vertices > 0 {
+        Vertex_Buffer::new(
+            window.gl.buffer_allocators.get_alloc(buf_alloc_id),
+            primitive,
+            n_vertices,
+            #[cfg(debug_assertions)]
+            buf_alloc_id,
+        )
+    } else {
+        Vertex_Buffer::empty()
+    }
 }
 
 #[inline]
@@ -863,12 +880,16 @@ pub fn dealloc_vbuf(vbuf: &mut Vertex_Buffer) {
     }
 
     if vbuf.buf == EMPTY_BUFFER_HANDLE {
-        lwarn!("Tried to deallocate an already-empty vertex buffer");
         return;
     }
+
     let mut handle = EMPTY_BUFFER_HANDLE;
     std::mem::swap(&mut vbuf.buf, &mut handle);
-    vbuf.parent_alloc.borrow_mut().deallocate(handle);
+    vbuf.parent_alloc
+        .as_ref()
+        .expect("Since this Vertex_Buffer is not empty it should have a parent allocator!")
+        .borrow_mut()
+        .deallocate(handle);
     vbuf.max_vertices = 0;
     vbuf.vertices.clear();
 }
@@ -924,7 +945,13 @@ pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
 fn vbuf_transfer_to_gpu(vbuf: &Vertex_Buffer) {
     trace!("vbuf_transfer_to_gpu");
 
-    let mut alloc = vbuf.parent_alloc.borrow_mut();
+    check_vbuf_valid(vbuf);
+
+    let mut alloc = vbuf
+        .parent_alloc
+        .as_ref()
+        .expect("Since this Vertex_Buffer is not empty it should have a parent allocator!")
+        .borrow_mut();
     alloc.update_buffer(
         &vbuf.buf,
         0,

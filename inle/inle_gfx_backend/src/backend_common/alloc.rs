@@ -25,7 +25,10 @@ const MIN_BUCKET_SIZE: usize = units::kilobytes(32);
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(debug_assertions, derive(Hash))]
+#[non_exhaustive]
 pub enum Buffer_Allocator_Id {
+    Invalid = 0xFF,
+
     /// These buffers are supposed to be deallocated manually
     Array_Permanent = 0,
     /// These buffers are emptied every frame
@@ -66,8 +69,8 @@ impl Buffer_Allocators {
             .dealloc_all();
     }
 
-    pub fn get_alloc_mut(&self, id: Buffer_Allocator_Id) -> Buffer_Allocator_Ptr {
-        self.allocs[id as usize].clone()
+    pub fn get_alloc(&self, id: Buffer_Allocator_Id) -> &Buffer_Allocator_Ptr {
+        &self.allocs[id as usize]
     }
 }
 

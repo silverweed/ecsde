@@ -329,3 +329,41 @@ fn insert_debug_element<T: Debug_Element>(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::overlay::Debug_Overlay_Config;
+
+    #[test]
+    fn debug_ui_set_enabled() {
+        let mut debug_ui = Debug_Ui_System::default();
+        debug_ui.create_overlay(sid!("test"), &Debug_Overlay_Config::default());
+
+        assert!(debug_ui.is_overlay_enabled(sid!("test")));
+
+        debug_ui.set_overlay_enabled(sid!("test"), false);
+        assert!(!debug_ui.is_overlay_enabled(sid!("test")));
+
+        debug_ui.create_overlay(sid!("foo"), &Debug_Overlay_Config::default());
+        assert!(debug_ui.is_overlay_enabled(sid!("foo")));
+        assert!(!debug_ui.is_overlay_enabled(sid!("test")));
+
+        debug_ui.set_overlay_enabled(sid!("foo"), false);
+        assert!(!debug_ui.is_overlay_enabled(sid!("foo")));
+        assert!(!debug_ui.is_overlay_enabled(sid!("test")));
+
+        debug_ui.set_overlay_enabled(sid!("test"), true);
+        assert!(!debug_ui.is_overlay_enabled(sid!("foo")));
+        assert!(debug_ui.is_overlay_enabled(sid!("test")));
+
+        debug_ui.set_overlay_enabled(sid!("test"), false);
+        assert!(!debug_ui.is_overlay_enabled(sid!("foo")));
+        assert!(!debug_ui.is_overlay_enabled(sid!("test")));
+
+        debug_ui.set_overlay_enabled(sid!("foo"), true);
+        debug_ui.set_overlay_enabled(sid!("test"), true);
+        assert!(debug_ui.is_overlay_enabled(sid!("foo")));
+        assert!(debug_ui.is_overlay_enabled(sid!("test")));
+    }
+}

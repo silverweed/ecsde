@@ -177,16 +177,17 @@ impl Debug_Element for Debug_Overlay {
             }
         }
 
-        let position = self.position;
+        let base_position = self.position;
         let n_texts_f = texts.len() as f32;
         let tot_height = 2.0 * pad_y + max_row_height * n_texts_f + row_spacing * (n_texts_f - 1.0);
+        let tot_width = 2.0 * pad_x + max_row_width;
 
         // Draw background
         let bg_rect = Rect::new(
-            position.x + horiz_align.aligned_pos(0.0, 2.0 * pad_x + max_row_width),
-            position.y + vert_align.aligned_pos(0.0, 2.0 * pad_y + tot_height),
-            2.0 * pad_x + max_row_width,
-            2.0 * pad_y + tot_height,
+            base_position.x + horiz_align.aligned_pos(0.0, tot_width),
+            base_position.y + vert_align.aligned_pos(0.0, tot_height),
+            tot_width,
+            tot_height,
         );
         render::render_rect(window, bg_rect, background);
 
@@ -200,7 +201,7 @@ impl Debug_Element for Debug_Overlay {
             .enumerate()
             .filter_map(|(i, line)| Some((i, line.bg_rect_fill?)))
         {
-            let pos = position
+            let pos = base_position
                 + Vec2f::new(
                     horiz_align.aligned_pos(pad_x, max_row_width),
                     vert_align.aligned_pos(pad_y, tot_height)
@@ -211,12 +212,15 @@ impl Debug_Element for Debug_Overlay {
         }
 
         // Draw texts
+        let tot_text_height = max_row_height * n_texts_f + row_spacing * (texts.len() - 1) as f32;
         for (i, (color, text_size)) in texts.iter_mut().enumerate() {
-            let pos = Vec2f::new(
-                horiz_align.aligned_pos(pad_x, text_size.x),
-                vert_align.aligned_pos(pad_y, tot_height)
-                    + (i as f32) * (max_row_height + row_spacing),
-            );
+            let text_pos = bg_rect.pos()
+                + v2!(
+                    pad_x,
+                    (bg_rect.height - tot_text_height) * 0.5
+                        + (i as f32) * (max_row_height + row_spacing)
+                );
+
             // @Incomplete
             if let Some(line) = self.hover_data.hovered_line {
                 if line == i {
@@ -225,7 +229,7 @@ impl Debug_Element for Debug_Overlay {
             }
 
             match &self.lines[i].text {
-                Lazy_Text::Text(text) => render::render_text(window, &text, *color, position + pos),
+                Lazy_Text::Text(text) => render::render_text(window, &text, *color, text_pos),
                 _ => unreachable!(),
             }
         }

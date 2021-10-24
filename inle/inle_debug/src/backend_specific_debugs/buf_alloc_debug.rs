@@ -23,9 +23,8 @@ pub fn debug_draw_buffer_allocators(allocators: &Buffer_Allocators, painter: &mu
     let pos = -v2!(700., 400.); // @Temporary!
     painter.add_text("Temporary", pos, 12, colors::rgb(0, 0, 200));
 
-    let temp_alloc = allocators.get_alloc_mut(
-        inle_gfx_backend::backend_common::alloc::Buffer_Allocator_Id::Array_Temporary,
-    );
+    let temp_alloc = allocators
+        .get_alloc(inle_gfx_backend::backend_common::alloc::Buffer_Allocator_Id::Array_Temporary);
     debug_draw_buffer_allocator(
         &temp_alloc.borrow(),
         painter,
@@ -43,7 +42,7 @@ pub fn debug_draw_buffer_allocators(allocators: &Buffer_Allocators, painter: &mu
 
     debug_draw_buffer_allocator(
         &allocators
-            .get_alloc_mut(
+            .get_alloc(
                 inle_gfx_backend::backend_common::alloc::Buffer_Allocator_Id::Array_Permanent,
             )
             .borrow(),

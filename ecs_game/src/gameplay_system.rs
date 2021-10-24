@@ -286,13 +286,16 @@ impl Gameplay_System {
         let particle_mgrs = &mut engine_state.systems.particle_mgrs;
         let test_emitter_handle = self.test_particle_emitter;
         let ai_system = &mut self.ai_system;
+        let camera_on_player = self.camera_on_player.read(cfg);
 
         levels.foreach_active_level(|level| {
             let world = &mut level.world;
 
             ground_detection_system::update(world, &level.phys_world, phys_settings);
             inle_app::animation_system::update(&dt, world);
-            controllable_system::update(&dt, actions, axes, world, input_cfg, cfg);
+            if camera_on_player {
+                controllable_system::update(&dt, actions, axes, world, input_cfg, cfg);
+            }
 
             let world = &mut level.world;
 
