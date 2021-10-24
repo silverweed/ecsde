@@ -12,6 +12,7 @@ use crate::systems::gravity_system::C_Gravity;
 use inle_cfg::Config;
 use inle_math::vector::{Vec2f, Vec2u};
 //use crate::systems::ground_collision_calculation_system::C_Ground;
+use crate::collisions::Game_Collision_Layer;
 use crate::systems::ground_detection_system::C_Ground_Detection;
 use crate::Game_Resources;
 use inle_app::app::Engine_State;
@@ -26,7 +27,7 @@ use inle_gfx::components::{C_Animated_Sprite, C_Camera2D, C_Multi_Renderable, C_
 use inle_gfx::light::{Light_Command, Lights, Point_Light, Rect_Light};
 use inle_math::rect::Rect;
 use inle_math::transform::Transform2D;
-use inle_physics::collider::C_Collider;
+use inle_physics::collider::{C_Collider, Collider, Collision_Shape};
 use inle_physics::phys_world::Physics_World;
 use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
 
@@ -102,7 +103,41 @@ pub fn generate_enemies(
         false,
     );
 
-    level.world.add_component(enemy, C_Test_Ai::default());
+    let phys_body_handle = level
+        .world
+        .get_component::<C_Collider>(enemy)
+        .unwrap()
+        .handle;
+    let right_cld = Collider {
+        shape: Collision_Shape::Rect {
+            width: 4.0,
+            height: 6.0,
+        },
+        offset: v2!(6., 8.),
+        is_static: false,
+        layer: Game_Collision_Layer::Ground_Check as _,
+        entity: enemy,
+        ..Default::default()
+    };
+    let right_cld_handle = level.phys_world.add_collider(right_cld.clone());
+    let left_cld = Collider {
+        offset: v2!(-6., 8.),
+        ..right_cld
+    };
+    let left_cld_handle = level.phys_world.add_collider(left_cld);
+
+    let phys_body = level
+        .phys_world
+        .get_physics_body_mut(phys_body_handle)
+        .unwrap();
+
+    phys_body.trigger_colliders.push(right_cld_handle);
+    phys_body.trigger_colliders.push(left_cld_handle);
+
+    level
+        .world
+        .add_component(enemy, C_Test_Ai::new(left_cld_handle, right_cld_handle));
+
     /*
     for spawn_point in &level.data.ai_spawn_points {
         entities::create_jelly(

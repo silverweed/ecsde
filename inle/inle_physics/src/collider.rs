@@ -32,6 +32,8 @@ pub struct Collider {
     pub is_static: bool,
     pub layer: Collision_Layer,
     pub entity: Entity,
+
+    // This is written by the Physics_World when the collider is added
     pub handle: Collider_Handle,
 
     // These should not be written except by the physics system.

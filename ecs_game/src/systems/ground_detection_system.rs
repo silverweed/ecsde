@@ -24,7 +24,8 @@ pub fn update(
         write: C_Ground_Detection;
         |_e, (collider,): (&C_Collider,), (ground_detect,): (&mut C_Ground_Detection,)| {
         let cld_handle = collider.handle;
-        let touching_ground = if let Some(collisions) = phys_world.get_collisions(cld_handle) {
+        let touching_ground = {
+            let collisions = phys_world.get_collisions(cld_handle);
             let cld = phys_world.get_collider(cld_handle).unwrap();
              collisions.iter().any(|cls_data| {
                 debug_assert!(cls_data.info.normal.is_normalized(),
@@ -40,8 +41,6 @@ pub fn update(
                     false
                 }
             })
-        } else {
-            false
         };
 
         ground_detect.just_touched_ground = touching_ground &&  ground_detect.touching_ground != touching_ground;

@@ -337,8 +337,13 @@ impl Physics_World {
     }
 
     #[inline]
-    pub fn get_collisions(&self, cld: Collider_Handle) -> Option<&[Collision_Data]> {
-        self.collisions.get(&cld).map(|v| v.as_slice())
+    pub fn get_collisions(&self, cld: Collider_Handle) -> &[Collision_Data] {
+        static EMPTY_COLLISIONS: [Collision_Data; 0] = [];
+        if let Some(cls) = self.collisions.get(&cld) {
+            &cls
+        } else {
+            &EMPTY_COLLISIONS
+        }
     }
 }
 

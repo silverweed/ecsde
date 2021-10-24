@@ -13,6 +13,7 @@ pub enum Game_Collision_Layer {
     Entities,
     Ground,
     Sky,
+    Ground_Check,
     _Count,
 }
 
@@ -34,6 +35,7 @@ pub fn init_collision_layers(matrix: &mut Collision_Matrix) {
     matrix.set_layers_collide(L::Entities as _, L::Entities as _);
     matrix.set_layers_collide(L::Entities as _, L::Ground as _);
     matrix.set_layers_collide(L::Entities as _, L::Sky as _);
+    matrix.set_layers_collide(L::Ground as _, L::Ground_Check as _);
 }
 
 //pub fn collision_is_solid(a: Collision_Mask, b: Collision_Mask) -> bool {

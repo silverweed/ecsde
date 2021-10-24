@@ -1232,26 +1232,25 @@ fn debug_draw_colliders(
 
             let mut cld_color = colors::rgba(255, 255, 0, 100);
 
-            if let Some(colliding_with) = phys_world.get_collisions(collider.handle) {
-                if !colliding_with.is_empty() {
-                    cld_color = colors::rgba(255, 0, 0, 100);
-                }
+            let colliding_with = phys_world.get_collisions(collider.handle);
+            if !colliding_with.is_empty() {
+                cld_color = colors::rgba(255, 0, 0, 100);
+            }
 
-                for cls_data in colliding_with {
-                    let oth_cld = phys_world.get_collider(cls_data.other_collider).unwrap();
-                    debug_painter.add_arrow(Arrow {
-                        center: collider.position,
-                        direction: oth_cld.position - collider.position,
-                        thickness: 1.,
-                        arrow_size: 10.,
-                    }, colors::GREEN);
-                    debug_painter.add_arrow(Arrow {
-                        center: collider.position, // @Incomplete: it'd be nice to have the exact collision position
-                        direction: cls_data.info.normal * 20.0,
-                        thickness: 1.,
-                        arrow_size: 10.,
-                    }, colors::PINK);
-                }
+            for cls_data in colliding_with {
+                let oth_cld = phys_world.get_collider(cls_data.other_collider).unwrap();
+                debug_painter.add_arrow(Arrow {
+                    center: collider.position,
+                    direction: oth_cld.position - collider.position,
+                    thickness: 1.,
+                    arrow_size: 10.,
+                }, colors::GREEN);
+                debug_painter.add_arrow(Arrow {
+                    center: collider.position, // @Incomplete: it'd be nice to have the exact collision position
+                    direction: cls_data.info.normal * 20.0,
+                    thickness: 1.,
+                    arrow_size: 10.,
+                }, colors::PINK);
             }
 
             match collider.shape {
