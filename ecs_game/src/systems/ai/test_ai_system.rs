@@ -31,7 +31,7 @@ pub fn update(ecs_world: &mut Ecs_World, phys_world: &Physics_World) {
         // Check wall impact
         ai.frames_since_latest_impact += 1;
         if ai.frames_since_latest_impact > 1 {
-            let collisions = phys_world.get_collisions(cld.handle);
+            let collisions = phys_world.get_collisions(dbg!(cld.handle));
             for collision in collisions {
                 let other_cld = phys_world.get_collider(collision.other_collider).unwrap();
                 // @Incomplete: solid check

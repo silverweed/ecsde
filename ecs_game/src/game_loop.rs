@@ -1227,7 +1227,7 @@ fn debug_draw_colliders(
                     |gcl| format!("{:?}", gcl),
                 ),
                 collider.position,
-                8,
+                5,
                 colors::BLACK);
 
             let mut cld_color = colors::rgba(255, 255, 0, 100);
@@ -1243,13 +1243,13 @@ fn debug_draw_colliders(
                     center: collider.position,
                     direction: oth_cld.position - collider.position,
                     thickness: 1.,
-                    arrow_size: 10.,
+                    arrow_size: 5.,
                 }, colors::GREEN);
                 debug_painter.add_arrow(Arrow {
                     center: collider.position, // @Incomplete: it'd be nice to have the exact collision position
                     direction: cls_data.info.normal * 20.0,
                     thickness: 1.,
-                    arrow_size: 10.,
+                    arrow_size: 5.,
                 }, colors::PINK);
             }
 
@@ -1277,6 +1277,11 @@ fn debug_draw_colliders(
                     radius: 2.,
                 },
                 colors::ORANGE);
+
+            debug_painter.add_text(
+                &format!("{},{}", collider.handle.gen, collider.handle.index),
+                collider.position + v2!(2., -3.),
+                5, colors::ORANGE);
         }
     });
 }

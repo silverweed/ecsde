@@ -131,7 +131,7 @@ fn init_demo_entities(
     );
 
     // Create AI
-    proc_gen::generate_enemies(gres, shader_cache, env, rng, cfg, level, gs_cfg);
+    proc_gen::generate_enemies(gres, shader_cache, env, cfg, level);
 }
 
 fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World, phys_world: &Physics_World) {

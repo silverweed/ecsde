@@ -84,30 +84,46 @@ pub fn generate_enemies(
     gres: &mut Gfx_Resources,
     shader_cache: &mut Shader_Cache,
     env: &Env_Info,
-    rng: &mut rand::Default_Rng,
     cfg: &Config,
     level: &mut Level,
-    gs_cfg: Gameplay_System_Config,
+) {
+    // This is @Temporary
+    for spawn_point in &level.data.ai_spawn_points {
+        create_enemy(
+            gres,
+            shader_cache,
+            env,
+            cfg,
+            &mut level.world,
+            &mut level.phys_world,
+            spawn_point.position,
+        );
+    }
+}
+
+fn create_enemy(
+    gres: &mut Gfx_Resources,
+    shader_cache: &mut Shader_Cache,
+    env: &Env_Info,
+    cfg: &Config,
+    world: &mut Ecs_World,
+    phys_world: &mut Physics_World,
+    position: Vec2f,
 ) {
     use crate::systems::ai::test_ai_system::C_Test_Ai;
 
-    // This is @Temporary
     let enemy = entities::create_jelly(
-        &mut level.world,
-        &mut level.phys_world,
+        world,
+        phys_world,
         gres,
         shader_cache,
         env,
         cfg,
-        &Transform2D::from_pos(v2!(100., 20.)),
+        &Transform2D::from_pos(position),
         false,
     );
 
-    let phys_body_handle = level
-        .world
-        .get_component::<C_Collider>(enemy)
-        .unwrap()
-        .handle;
+    let phys_body_handle = world.get_component::<C_Collider>(enemy).unwrap().handle;
     let right_cld = Collider {
         shape: Collision_Shape::Rect {
             width: 4.0,
@@ -119,39 +135,19 @@ pub fn generate_enemies(
         entity: enemy,
         ..Default::default()
     };
-    let right_cld_handle = level.phys_world.add_collider(right_cld.clone());
+    let right_cld_handle = phys_world.add_collider(right_cld.clone());
     let left_cld = Collider {
         offset: v2!(-6., 8.),
         ..right_cld
     };
-    let left_cld_handle = level.phys_world.add_collider(left_cld);
+    let left_cld_handle = phys_world.add_collider(left_cld);
 
-    let phys_body = level
-        .phys_world
-        .get_physics_body_mut(phys_body_handle)
-        .unwrap();
+    let phys_body = phys_world.get_physics_body_mut(phys_body_handle).unwrap();
 
     phys_body.trigger_colliders.push(right_cld_handle);
     phys_body.trigger_colliders.push(left_cld_handle);
 
-    level
-        .world
-        .add_component(enemy, C_Test_Ai::new(left_cld_handle, right_cld_handle));
-
-    /*
-    for spawn_point in &level.data.ai_spawn_points {
-        entities::create_jelly(
-            &mut level.world,
-            &mut level.phys_world,
-            gres,
-            shader_cache,
-            env,
-            cfg,
-            &Transform2D::from_pos(spawn_point.position),
-            false,
-        );
-    }
-    */
+    world.add_component(enemy, C_Test_Ai::new(left_cld_handle, right_cld_handle));
 }
 
 fn create_room_grid(
