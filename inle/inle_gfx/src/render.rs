@@ -104,7 +104,7 @@ pub fn render_text<P>(
 
 pub fn render_text_ws<P>(
     window: &mut Render_Window_Handle,
-    text: &mut Text,
+    text: &Text,
     paint_props: P,
     world_transform: &Transform2D,
     camera: &Transform2D,

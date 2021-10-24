@@ -331,6 +331,13 @@ fn draw_text(
     // @Speed: batch the texts!
     trace!("painter::draw_text");
 
+    // Poor man's frustum culling, since if we only cull after creating the text we don't save much
+    // time (most of the time is spent in create_text itself).
+    // This may be acceptable for the debug I guess?
+    if !visible_viewport.contains(world_pos) {
+        return;
+    }
+
     let aa_adj_scale = if font_size < 10 {
         4
     } else if font_size < 20 {
@@ -340,18 +347,19 @@ fn draw_text(
     };
     let aa_adj_inv_scale = 1. / (aa_adj_scale as f32);
 
-    let mut txt = render::create_text(window, text, font, aa_adj_scale * font_size);
+    let txt = render::create_text(window, text, font, aa_adj_scale * font_size);
     let transform = Transform2D::from_pos_rot_scale(
         world_pos,
         rad(0.),
         v2!(aa_adj_inv_scale, aa_adj_inv_scale),
     );
 
-    let text_size = render::get_text_size(&txt);
-    let text_aabb = Rect::from_topleft_size(transform.position(), text_size);
-    if inle_math::rect::rects_intersection(visible_viewport, &text_aabb).is_none() {
-        return;
-    }
+    // No frustum culling here since we already do the poor man's version above.
+    //let text_size = render::get_text_size(&txt);
+    //let text_aabb = Rect::from_topleft_size(transform.position(), text_size);
+    //if inle_math::rect::rects_intersection(visible_viewport, &text_aabb).is_none() {
+    //return;
+    //}
 
-    render::render_text_ws(window, &mut txt, *props, &transform, camera);
+    render::render_text_ws(window, &txt, *props, &transform, camera);
 }

@@ -213,7 +213,7 @@ impl Debug_Element for Debug_Overlay {
 
         // Draw texts
         let tot_text_height = max_row_height * n_texts_f + row_spacing * (texts.len() - 1) as f32;
-        for (i, (color, text_size)) in texts.iter_mut().enumerate() {
+        for (i, (color, _text_size)) in texts.iter_mut().enumerate() {
             let text_pos = bg_rect.pos()
                 + v2!(
                     pad_x,
