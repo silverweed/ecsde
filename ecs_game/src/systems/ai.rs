@@ -2,7 +2,7 @@ use inle_ecs::ecs_world::Ecs_World;
 use inle_physics::phys_world::Physics_World;
 use std::time::Duration;
 
-mod test_ai_system;
+pub mod test_ai_system;
 
 #[derive(Default)]
 pub struct Ai_System {}

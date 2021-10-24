@@ -17,6 +17,8 @@ pub struct Level {
     pub active_camera: usize, // index inside 'cameras'
     pub lights: Lights,
     pub phys_world: Physics_World,
+
+    pub data: Level_Data,
 }
 
 impl Level {
@@ -59,4 +61,16 @@ impl Levels {
             f(&mut *level);
         }
     }
+}
+
+#[derive(Default)]
+pub struct Level_Data {
+    pub player_spawn_point: Spawn_Point,
+    // @Temporary: probably we'll want something less generic
+    pub ai_spawn_points: Vec<Spawn_Point>,
+}
+
+#[derive(Default)]
+pub struct Spawn_Point {
+    pub position: Vec2f,
 }

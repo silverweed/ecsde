@@ -14,7 +14,7 @@ pub struct Moved_Collider {
     pub extent: Vec2f,
 }
 
-const MIN_SPEED: f32 = 0.01;
+const MIN_SPEED: f32 = 3.0;
 
 pub fn update(
     dt: &Duration,

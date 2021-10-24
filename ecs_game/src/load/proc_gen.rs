@@ -4,7 +4,7 @@
 use crate::entities;
 use crate::gameplay_system::Gameplay_System_Config;
 use crate::gfx::multi_sprite_animation_system::C_Multi_Renderable_Animation;
-use crate::levels::Level;
+use crate::levels::{Level, Spawn_Point};
 use crate::spatial::World_Chunks;
 use crate::systems::camera_system::{C_Camera_Follow, Camera_Follow_Target};
 use crate::systems::controllable_system::C_Controllable;
@@ -46,11 +46,8 @@ pub fn generate_random_level(
     level: &mut Level,
     gs_cfg: Gameplay_System_Config,
 ) {
-    #![allow(warnings)]
     use inle_math::angle;
     use inle_resources::gfx::shader_path;
-
-    let camera = create_camera(level, cfg);
 
     entities::create_background(&mut level.world, gres, shader_cache, env, cfg);
 
@@ -63,57 +60,63 @@ pub fn generate_random_level(
 
     create_room_grid(GRID, level, gres, shader_cache, env, cfg);
 
-    for i in 0..gs_cfg.n_entities_to_spawn {
+    level.data.player_spawn_point = Spawn_Point {
+        position: v2!(20., 20.),
+    };
+
+    level
+        .data
+        .ai_spawn_points
+        .reserve(gs_cfg.n_entities_to_spawn - 1);
+    for i in 0..gs_cfg.n_entities_to_spawn - 1 {
         let x = rand::rand_01(rng);
         let y = rand::rand_01(rng);
-        let pos = if i > 0 {
-            v2!(x * 500., 1. * y * 500.)
-        } else {
-            v2!(20., 20.)
-        };
+        let pos = v2!(x * 500., 1. * y * 500.);
+        level
+            .data
+            .ai_spawn_points
+            .push(Spawn_Point { position: pos });
+    }
+}
 
-        let player = entities::create_jelly(
+pub fn generate_enemies(
+    gres: &mut Gfx_Resources,
+    shader_cache: &mut Shader_Cache,
+    env: &Env_Info,
+    rng: &mut rand::Default_Rng,
+    cfg: &Config,
+    level: &mut Level,
+    gs_cfg: Gameplay_System_Config,
+) {
+    use crate::systems::ai::test_ai_system::C_Test_Ai;
+
+    // This is @Temporary
+    let enemy = entities::create_jelly(
+        &mut level.world,
+        &mut level.phys_world,
+        gres,
+        shader_cache,
+        env,
+        cfg,
+        &Transform2D::from_pos(v2!(100., 20.)),
+        false,
+    );
+
+    level.world.add_component(enemy, C_Test_Ai::default());
+    /*
+    for spawn_point in &level.data.ai_spawn_points {
+        entities::create_jelly(
             &mut level.world,
             &mut level.phys_world,
             gres,
             shader_cache,
             env,
             cfg,
-            &Transform2D::from_pos(pos),
-            i == 0,
+            &Transform2D::from_pos(spawn_point.position),
+            false,
         );
-
-        if i == 0 {
-            level.world.add_component(
-                camera,
-                C_Camera_Follow {
-                    target: Camera_Follow_Target::Entity(player),
-                    lerp_factor: Cfg_Var::new("game/camera/lerp_factor", cfg),
-                },
-            );
-        }
     }
-}
-
-fn create_camera(level: &mut Level, cfg: &Config) -> Entity {
-    let camera = level.world.new_entity();
-    {
-        let mut cam = C_Camera2D::default();
-        let scale = Cfg_Var::<f32>::new("game/camera/initial_scale", cfg).read(cfg);
-        cam.transform.set_scale(scale, scale);
-        let cam = level.world.add_component(camera, cam);
-    }
-    {
-        let ctrl = C_Controllable {
-            speed: Cfg_Var::new("game/camera/speed", cfg),
-            ..Default::default()
-        };
-        level.world.add_component(camera, ctrl);
-    }
-
-    level.cameras.push(camera);
-
-    camera
+    */
 }
 
 fn create_room_grid(
