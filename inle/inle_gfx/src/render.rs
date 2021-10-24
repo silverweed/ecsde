@@ -154,6 +154,16 @@ pub fn render_vbuf_with_shader(
     backend::render_vbuf_with_shader(window, vbuf, shader);
 }
 
+pub fn render_vbuf_with_shader_instanced(
+    window: &mut Render_Window_Handle,
+    vbuf: &Vertex_Buffer,
+    shader: &Shader,
+    instances: usize,
+) {
+    trace!("render_vbuf_with_shader_instanced");
+    backend::render_vbuf_with_shader_instanced(window, vbuf, shader, instances);
+}
+
 // Note: this always renders a line with thickness = 1px
 pub fn render_line(window: &mut Render_Window_Handle, start: &Vertex, end: &Vertex) {
     trace!("render_line");

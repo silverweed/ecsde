@@ -921,6 +921,7 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     }
 }
 
+#[inline]
 fn render_vbuf_internal(window: &mut Render_Window_Handle, vbuf: &Vertex_Buffer) {
     if vbuf.needs_transfer_to_gpu.get() {
         vbuf_transfer_to_gpu(vbuf);
@@ -932,6 +933,22 @@ fn render_vbuf_internal(window: &mut Render_Window_Handle, vbuf: &Vertex_Buffer)
             to_gl_primitive_type(vbuf.primitive_type),
             (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
             vbuf_cur_vertices(vbuf) as _,
+        );
+    }
+}
+
+fn render_vbuf_internal_instanced(window: &mut Render_Window_Handle, vbuf: &Vertex_Buffer, instances: usize) {
+    if vbuf.needs_transfer_to_gpu.get() {
+        vbuf_transfer_to_gpu(vbuf);
+    }
+    unsafe {
+        glcheck!(gl::BindVertexArray(vbuf.buf.vao()));
+
+        window.gl.draw_arrays_instanced(
+            to_gl_primitive_type(vbuf.primitive_type),
+            (vbuf.buf.offset_bytes() / mem::size_of::<Vertex>()) as _,
+            vbuf_cur_vertices(vbuf) as _,
+            instances as _,
         );
     }
 }
@@ -1008,6 +1025,30 @@ pub fn render_vbuf_with_shader(
     }
 
     render_vbuf_internal(window, vbuf);
+}
+
+#[inline]
+pub fn render_vbuf_with_shader_instanced(
+    window: &mut Render_Window_Handle,
+    vbuf: &Vertex_Buffer,
+    shader: &Shader,
+    instances: usize,
+) {
+    if vbuf_cur_vertices(vbuf) == 0 {
+        return;
+    }
+
+    unsafe {
+        glcheck!(gl::UseProgram(shader.id));
+
+        for (i, (loc, tex)) in shader.textures.iter().enumerate() {
+            glcheck!(gl::Uniform1i(*loc, i as i32));
+            glcheck!(gl::ActiveTexture(gl::TEXTURE0 + i as u32));
+            glcheck!(gl::BindTexture(gl::TEXTURE_2D, *tex));
+        }
+    }
+
+    render_vbuf_internal_instanced(window, vbuf, instances);
 }
 
 #[inline]

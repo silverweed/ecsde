@@ -216,15 +216,23 @@ pub fn render_particles(
     let color = emitter.props.color;
 
     let mut vertices = temp::excl_temp_array(frame_alloc);
+    vertices.push(new_vertex(v2!(-1.0, -1.0), color, v2!(0., 0.)));
+    vertices.push(new_vertex(v2!(1.0, -1.0), color, v2!(1., 0.)));
+    vertices.push(new_vertex(v2!(-1.0, 1.0), color, v2!(0., 1.)));
+    vertices.push(new_vertex(v2!(-1.0, 1.0), color, v2!(0., 1.)));
+    vertices.push(new_vertex(v2!(1.0, -1.0), color, v2!(1., 0.)));
+    vertices.push(new_vertex(v2!(1.0, 1.0), color, v2!(1., 1.)));
+
     for &transf in &emitter.particles.transforms {
         let pos = transf.position();
         let s = transf.scale();
-        vertices.push(new_vertex(pos + s * v2!(-1.0, -1.0), color, v2!(0., 0.)));
-        vertices.push(new_vertex(pos + s * v2!(1.0, -1.0), color, v2!(1., 0.)));
-        vertices.push(new_vertex(pos + s * v2!(-1.0, 1.0), color, v2!(0., 1.)));
-        vertices.push(new_vertex(pos + s * v2!(-1.0, 1.0), color, v2!(0., 1.)));
-        vertices.push(new_vertex(pos + s * v2!(1.0, -1.0), color, v2!(1., 0.)));
-        vertices.push(new_vertex(pos + s * v2!(1.0, 1.0), color, v2!(1., 1.)));
+
+        //vertices.push(new_vertex(pos + s * v2!(-1.0, -1.0), color, v2!(0., 0.)));
+        //vertices.push(new_vertex(pos + s * v2!(1.0, -1.0), color, v2!(1., 0.)));
+        //vertices.push(new_vertex(pos + s * v2!(-1.0, 1.0), color, v2!(0., 1.)));
+        //vertices.push(new_vertex(pos + s * v2!(-1.0, 1.0), color, v2!(0., 1.)));
+        //vertices.push(new_vertex(pos + s * v2!(1.0, -1.0), color, v2!(1., 0.)));
+        //vertices.push(new_vertex(pos + s * v2!(1.0, 1.0), color, v2!(1., 1.)));
     }
 
     let vert_count = vertices.len() as u32;
@@ -234,8 +242,8 @@ pub fn render_particles(
         render::set_uniform(shader, c_str!("tex"), texture);
     }
     let mvp = inle_gfx_backend::render::get_mvp_matrix(window, &emitter.transform, camera);
-    render::set_uniform(shader, c_str!("mvp"), &mvp);
-    render::render_vbuf_with_shader(window, &vbuf.vbuf, shader);
+    render::set_uniform(shader, c_str!("emitter_mvp"), &mvp);
+    render::render_vbuf_with_shader_instanced(window, &vbuf.vbuf, shader, emitter.particles.transforms.len());
 }
 
 fn random_pos_in(shape: &Emission_Shape, rng: &Precomputed_Rand_Pool) -> Vec2f {

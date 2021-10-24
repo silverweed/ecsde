@@ -119,6 +119,17 @@ impl Gl {
             self.n_draw_calls_this_frame += 1;
         }
     }
+
+    pub fn draw_arrays_instanced(&mut self, primitive: GLenum, first: GLint, count: GLsizei, instances: GLsizei) {
+        unsafe {
+            glcheck!(gl::DrawArraysInstanced(primitive, first, count, instances));
+        }
+
+        #[cfg(debug_assertions)]
+        {
+            self.n_draw_calls_this_frame += 1;
+        }
+    }
 }
 
 macro_rules! create_shader_from {
