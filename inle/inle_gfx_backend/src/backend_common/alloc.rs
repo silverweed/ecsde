@@ -131,8 +131,8 @@ enum Buffer_Handle_Inner {
     Non_Empty(Non_Empty_Buffer_Handle),
 }
 
-#[derive(Debug)]
-#[cfg_attr(debug_assertions, derive(PartialEq, Eq, Hash, Clone))]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(debug_assertions, derive(Hash, Clone))]
 pub struct Non_Empty_Buffer_Handle {
     vao: GLuint,
     vbo: GLuint,
