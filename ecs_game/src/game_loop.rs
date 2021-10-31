@@ -1302,7 +1302,7 @@ fn debug_draw_transforms(
 ) {
     use inle_ecs::ecs_world::Entity;
 
-    let mpos = render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, &camera);
+    let mpos = render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, camera);
     let mut entity_overlapped = (Entity::INVALID, 0.);
     foreach_entity!(ecs_world,
         read: C_Spatial2D;

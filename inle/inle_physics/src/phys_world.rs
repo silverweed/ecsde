@@ -363,7 +363,7 @@ impl Physics_World {
     pub fn get_collisions(&self, cld: Collider_Handle) -> &[Collision_Data] {
         static EMPTY_COLLISIONS: [Collision_Data; 0] = [];
         if let Some(cls) = self.collisions.get(&cld) {
-            &cls
+            cls
         } else {
             &EMPTY_COLLISIONS
         }

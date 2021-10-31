@@ -195,7 +195,7 @@ where
                         .unwrap()
                         .hints
                         .get("trace")
-                        .map(|v| v.clone())
+                        .cloned()
                         .unwrap_or_else(Vec::default);
                     let cur_hints: HashSet<String> = cur_hints.into_iter().collect();
                     let fn_names = fn_names.difference(&cur_hints).cloned();

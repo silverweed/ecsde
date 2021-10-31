@@ -161,7 +161,7 @@ impl Debug_Element for Debug_Overlay {
             } = line;
             match text {
                 Lazy_Text::Text(text) => {
-                    let txt_size = render::get_text_size(&text);
+                    let txt_size = render::get_text_size(text);
                     max_row_width = max_row_width.max(txt_size.x);
                     max_row_height = max_row_height.max(txt_size.y);
 
@@ -229,7 +229,7 @@ impl Debug_Element for Debug_Overlay {
             }
 
             match &self.lines[i].text {
-                Lazy_Text::Text(text) => render::render_text(window, &text, *color, text_pos),
+                Lazy_Text::Text(text) => render::render_text(window, text, *color, text_pos),
                 _ => unreachable!(),
             }
         }
@@ -272,7 +272,7 @@ impl Debug_Element for Debug_Overlay {
         let font = gres.get_font(self.cfg.font);
         for line in &mut self.lines {
             if let Lazy_Text::String(text) = &line.text {
-                line.text = Lazy_Text::Text(render::create_text(window, &text, font, font_size));
+                line.text = Lazy_Text::Text(render::create_text(window, text, font, font_size));
             }
         }
 

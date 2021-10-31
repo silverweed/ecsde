@@ -158,18 +158,12 @@ impl Debug_Element for Debug_Graph_View {
                 let v2 =
                     render::new_vertex(pos2, colors::rgba(180, 180, 180, 200), Vec2f::default());
 
-                let mut text =
-                    render::create_text(window, &format!("{:.1}", x), font, label_font_size);
+                let text = render::create_text(window, &format!("{:.1}", x), font, label_font_size);
 
                 render::render_line(window, &v1, &v2);
                 // Skip first x label, or it overlaps with first y label
                 if iters > 0 {
-                    render::render_text(
-                        window,
-                        &mut text,
-                        colors::WHITE,
-                        pos2 + Vec2f::new(2., 0.),
-                    );
+                    render::render_text(window, &text, colors::WHITE, pos2 + Vec2f::new(2., 0.));
                 }
 
                 x += xstep;
@@ -191,11 +185,10 @@ impl Debug_Element for Debug_Graph_View {
                 let v2 =
                     render::new_vertex(pos2, colors::rgba(180, 180, 180, 200), Vec2f::default());
 
-                let mut text =
-                    render::create_text(window, &format!("{:.2}", y), font, label_font_size);
+                let text = render::create_text(window, &format!("{:.2}", y), font, label_font_size);
 
                 render::render_line(window, &v1, &v2);
-                render::render_text(window, &mut text, colors::WHITE, pos1 + Vec2f::new(0., -2.));
+                render::render_text(window, &text, colors::WHITE, pos1 + Vec2f::new(0., -2.));
 
                 y += ystep;
                 iters += 1;
@@ -209,10 +202,10 @@ impl Debug_Element for Debug_Graph_View {
                     as u32,
             )
             .unwrap();
-            let mut text = render::create_text(window, title, font, title_font_size);
+            let text = render::create_text(window, title, font, title_font_size);
             let size = render::get_text_size(&text);
             let pos = Vec2f::from(self.pos) + Vec2f::new(self.size.x as f32 - size.x - 2., 0.0);
-            render::render_text(window, &mut text, colors::WHITE, pos);
+            render::render_text(window, &text, colors::WHITE, pos);
         }
 
         // Draw line
@@ -278,18 +271,13 @@ impl Debug_Element for Debug_Graph_View {
                         },
                         circle_col,
                     );
-                    let mut text = render::create_text(
+                    let text = render::create_text(
                         window,
                         &format!("{:.2}", self.data.points[x].y),
                         font,
                         (1.5 * label_font_size as f32) as _,
                     );
-                    render::render_text(
-                        window,
-                        &mut text,
-                        circle_col,
-                        pos + vpos + v2!(30.0, -30.0),
-                    );
+                    render::render_text(window, &text, circle_col, pos + vpos + v2!(30.0, -30.0));
                 }
             }
         }
@@ -309,7 +297,7 @@ impl Debug_Element for Debug_Graph_View {
                 v2!(0.0, 0.0),
             );
             render::render_line(window, &start, &end);
-            let mut text = render::create_text(
+            let text = render::create_text(
                 window,
                 &format!("{:.2}", avg),
                 font,
@@ -317,7 +305,7 @@ impl Debug_Element for Debug_Graph_View {
             );
             render::render_text(
                 window,
-                &mut text,
+                &text,
                 avg_line_col,
                 pos + self.get_coords_for(v2!(self.data.x_range.start, avg)) + v2!(40.0, -25.0),
             );

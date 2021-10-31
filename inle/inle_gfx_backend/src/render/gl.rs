@@ -781,7 +781,7 @@ pub fn get_image_size(image: &Image) -> (u32, u32) {
 }
 
 #[inline]
-pub fn get_text_string<'a>(text: &'a Text) -> &'a str {
+pub fn get_text_string(text: &Text) -> &str {
     &text.string
 }
 

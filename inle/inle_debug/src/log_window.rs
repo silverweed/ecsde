@@ -292,12 +292,11 @@ impl Debug_Element for Log_Window {
             colors::rgb(40, 40, 40),
         );
         {
-            let mut text =
-                render::create_text(window, self.cfg.title.borrow(), font, title_font_size);
+            let text = render::create_text(window, self.cfg.title.borrow(), font, title_font_size);
             let text_height = render::get_text_size(&text).y;
             render::render_text(
                 window,
-                &mut text,
+                &text,
                 colors::WHITE,
                 Vec2f::from(self.pos) + v2!(pad_x, 0.5 * (header_height as f32 - text_height)),
             );
@@ -354,7 +353,7 @@ impl Debug_Element for Log_Window {
 
             // Draw every text in the wrapped line
             let texts_to_skip = if i == 0 { first_subline } else { 0 };
-            for mut text in texts.into_iter().skip(texts_to_skip.into()) {
+            for text in texts.into_iter().skip(texts_to_skip.into()) {
                 if y + line_height > self.size.y as f32 - pad_y {
                     debug_assert!(i < u16::MAX as usize);
                     if self.max_lines.get().is_none() {
@@ -364,7 +363,7 @@ impl Debug_Element for Log_Window {
                 }
 
                 let pos = base_pos + v2!(0., y);
-                render::render_text(window, &mut text, color, pos);
+                render::render_text(window, &text, color, pos);
 
                 y += line_height + linesep;
                 tot_lines_drawn += 1;

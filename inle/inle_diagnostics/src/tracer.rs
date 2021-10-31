@@ -227,13 +227,19 @@ struct Passthrough_Hasher(u64);
 
 impl std::hash::Hasher for Passthrough_Hasher {
     #[cold]
-    fn write(&mut self, _: &[u8]) { unimplemented!(); }
+    fn write(&mut self, _: &[u8]) {
+        unimplemented!();
+    }
 
     #[inline(always)]
-    fn write_u32(&mut self, n: u32) { self.0 = u64::from(n); }
+    fn write_u32(&mut self, n: u32) {
+        self.0 = u64::from(n);
+    }
 
     #[inline(always)]
-    fn finish(&self) -> u64 { self.0 }
+    fn finish(&self) -> u64 {
+        self.0
+    }
 }
 
 #[derive(Default)]
@@ -242,7 +248,9 @@ struct Passthrough_Build_Hasher;
 impl std::hash::BuildHasher for Passthrough_Build_Hasher {
     type Hasher = Passthrough_Hasher;
 
-    fn build_hasher(&self) -> Self::Hasher { Passthrough_Hasher(0) }
+    fn build_hasher(&self) -> Self::Hasher {
+        Passthrough_Hasher(0)
+    }
 }
 
 /// Deduplicates tracer nodes and returns the final traces.
@@ -260,7 +268,8 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
 
     // Note: `hash` is computed from the entire call stack (we can't just use the tag,
     // or the trace will only show the call under the first caller).
-    let mut tag_map = HashMap::with_capacity_and_hasher(saved_traces.len(), Passthrough_Build_Hasher::default());
+    let mut tag_map =
+        HashMap::with_capacity_and_hasher(saved_traces.len(), Passthrough_Build_Hasher::default());
 
     #[inline(always)]
     fn hash_node(nodes: &[Tracer_Node], node: &Tracer_Node) -> u32 {
@@ -297,7 +306,8 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
 
     // Used to iterate the tag_map in insertion order
     let mut tags_ordered = Vec::with_capacity(saved_traces.len());
-    let mut idx_map = HashMap::with_capacity_and_hasher(saved_traces.len(), Passthrough_Build_Hasher::default());
+    let mut idx_map =
+        HashMap::with_capacity_and_hasher(saved_traces.len(), Passthrough_Build_Hasher::default());
     for (i, node) in saved_traces.iter().enumerate() {
         let hash = hashes[i];
         let entry = tag_map.entry(hash).or_insert_with(|| Tag_Map_Info {

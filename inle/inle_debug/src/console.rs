@@ -523,10 +523,10 @@ impl Console {
 
         // Draw cur line
         let font = gres.get_font(self.cfg.font);
-        let mut text = render::create_text(window, &self.cur_line, font, font_size);
+        let text = render::create_text(window, &self.cur_line, font, font_size);
         let mut pos = v2!(x as f32 + pad_x, (y + h) as f32 - linesep);
         let Vec2f { x: line_w, .. } = render::get_text_size(&text);
-        render::render_text(window, &mut text, colors::WHITE, pos);
+        render::render_text(window, &text, colors::WHITE, pos);
 
         // Draw cursor
         let cursor = Rect::new(
@@ -541,8 +541,8 @@ impl Console {
         {
             let mut pos = pos - Vec2f::new(0.0, linesep as f32);
             for (line, color) in self.output.iter().rev() {
-                let mut text = render::create_text(window, line, font, font_size);
-                render::render_text(window, &mut text, *color, pos);
+                let text = render::create_text(window, line, font, font_size);
+                render::render_text(window, &text, *color, pos);
                 pos.y -= linesep;
                 if pos.y < -linesep {
                     break;
@@ -582,9 +582,9 @@ impl Console {
             );
         }
 
-        for (mut text, color) in texts {
+        for (text, color) in texts {
             pos.y -= linesep;
-            render::render_text(window, &mut text, color, pos);
+            render::render_text(window, &text, color, pos);
         }
     }
 }
