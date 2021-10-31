@@ -43,5 +43,5 @@ pub struct Collider {
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct C_Collider {
-    pub handle: Physics_Body_Handle,
+    pub phys_body_handle: Physics_Body_Handle,
 }

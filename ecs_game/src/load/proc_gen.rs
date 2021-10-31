@@ -123,7 +123,10 @@ fn create_enemy(
         false,
     );
 
-    let phys_body_handle = world.get_component::<C_Collider>(enemy).unwrap().handle;
+    let phys_body_handle = world
+        .get_component::<C_Collider>(enemy)
+        .unwrap()
+        .phys_body_handle;
     let right_cld = Collider {
         shape: Collision_Shape::Rect {
             width: 4.0,
@@ -132,15 +135,14 @@ fn create_enemy(
         offset: v2!(6., 8.),
         is_static: false,
         layer: Game_Collision_Layer::Ground_Check as _,
-        entity: enemy,
         ..Default::default()
     };
-    let right_cld_handle = phys_world.add_collider(right_cld.clone());
+    let right_cld_handle = phys_world.add_collider(right_cld.clone(), enemy);
     let left_cld = Collider {
         offset: v2!(-6., 8.),
         ..right_cld
     };
-    let left_cld_handle = phys_world.add_collider(left_cld);
+    let left_cld_handle = phys_world.add_collider(left_cld, enemy);
 
     let phys_body = phys_world.get_physics_body_mut(phys_body_handle).unwrap();
 

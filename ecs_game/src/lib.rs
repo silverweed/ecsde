@@ -211,7 +211,11 @@ where
             game_state.debug_cvars.trace_overlay_refresh_rate,
         );
 
-        if game_state.engine_state.cur_frame % 100 == 0 {
+        let print_draw_stats = game_state
+            .debug_cvars
+            .print_draw_stats
+            .read(&game_state.engine_state.config);
+        if print_draw_stats && game_state.engine_state.cur_frame % 100 == 0 {
             ldebug!(
                 "Draw calls this frame: {}. Time taken: {:?}",
                 game_state.window.gl.n_draw_calls_this_frame,

@@ -23,10 +23,11 @@ pub fn update(
         read: C_Collider;
         write: C_Ground_Detection;
         |_e, (collider,): (&C_Collider,), (ground_detect,): (&mut C_Ground_Detection,)| {
-        let cld_handle = collider.handle;
         let touching_ground = {
-            let collisions = phys_world.get_collisions(cld_handle);
-            let cld = phys_world.get_collider(cld_handle).unwrap();
+            let phys_body = phys_world.get_physics_body(collider.phys_body_handle).unwrap();
+            let rb_handle = phys_body.rigidbody_colliders[0].0;
+            let collisions = phys_world.get_collisions(rb_handle);
+            let cld = phys_world.get_collider(rb_handle).unwrap();
              collisions.iter().any(|cls_data| {
                 debug_assert!(cls_data.info.normal.is_normalized(),
                     "normal is not normalized: magnitude is {}",

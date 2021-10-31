@@ -132,9 +132,14 @@ pub fn create_jelly(
         static_friction: 0.5,
         dyn_friction: 0.3,
     };
-    let phys_body = phys_world.new_physics_body_with_rigidbody(cld, phys_data);
+    let phys_body = phys_world.new_physics_body_with_rigidbody(cld, entity, phys_data);
 
-    world.add_component(entity, C_Collider { handle: phys_body });
+    world.add_component(
+        entity,
+        C_Collider {
+            phys_body_handle: phys_body,
+        },
+    );
     world.add_component(entity, C_Ground_Detection::default());
 
     world.add_component(
@@ -263,13 +268,16 @@ pub fn create_drill(
             Collision_Shape::Rect { width, height }
         },
         layer: Game_Collision_Layer::Entities as _,
-        entity,
         ..Default::default()
     };
     world.add_component(
         entity,
         C_Collider {
-            handle: phys_world.new_physics_body_with_rigidbody(cld, Phys_Data::default()),
+            phys_body_handle: phys_world.new_physics_body_with_rigidbody(
+                cld,
+                entity,
+                Phys_Data::default(),
+            ),
         },
     );
 
@@ -313,15 +321,15 @@ pub fn create_sky(
             height: sh as f32,
         },
         layer: Game_Collision_Layer::Sky as _,
-        entity: sky,
         ..Default::default()
     };
 
     world.add_component(
         sky,
         C_Collider {
-            handle: phys_world.new_physics_body_with_rigidbody(
+            phys_body_handle: phys_world.new_physics_body_with_rigidbody(
                 cld,
+                sky,
                 Phys_Data {
                     inv_mass: 0.,
                     ..Default::default()
@@ -488,7 +496,6 @@ pub fn create_wall(
             height: transform.scale().y * wall_size.y,
         },
         layer: Game_Collision_Layer::Ground as _,
-        entity: wall,
         // NOTE: the wall's pivot, for convenience, is top-left.
         offset: wall_size * 0.5,
         ..Default::default()
@@ -497,8 +504,9 @@ pub fn create_wall(
     world.add_component(
         wall,
         C_Collider {
-            handle: phys_world.new_physics_body_with_rigidbody(
+            phys_body_handle: phys_world.new_physics_body_with_rigidbody(
                 cld,
+                wall,
                 Phys_Data {
                     inv_mass: 0.,
                     ..Default::default()

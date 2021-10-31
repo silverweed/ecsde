@@ -91,7 +91,8 @@ impl World_Chunks {
         with_cb_data(&mut self.to_destroy, |to_destroy: &mut Vec<Entity>| {
             for &entity in to_destroy.iter() {
                 if let Some(collider) = ecs_world.get_component::<C_Collider>(entity) {
-                    for (cld, handle) in phys_world.get_all_colliders_with_handles(collider.handle)
+                    for (cld, handle) in
+                        phys_world.get_all_colliders_with_handles(collider.phys_body_handle)
                     {
                         to_remove.push((handle, cld.position, cld.shape.extent()));
                     }

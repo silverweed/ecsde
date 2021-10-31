@@ -32,17 +32,17 @@ pub fn update(ecs_world: &mut Ecs_World, phys_world: &Physics_World, config: &in
     foreach_entity!(ecs_world,
         read: C_Collider;
         write: C_Spatial2D, C_Test_Ai;
-    |entity, (cld,): (&C_Collider,), (spatial, ai): (&mut C_Spatial2D, &mut C_Test_Ai)| {
+    |_entity, (cld,): (&C_Collider,), (spatial, ai): (&mut C_Spatial2D, &mut C_Test_Ai)| {
         // Check wall impact
         ai.frames_since_latest_impact += 1;
         if ai.frames_since_latest_impact > 1 {
-            let collisions = phys_world.get_collisions(cld.handle);
+            let phys_body = phys_world.get_physics_body(cld.phys_body_handle).unwrap();
+            let collisions = phys_world.get_collisions(phys_body.rigidbody_colliders[0].0);
             for collision in collisions {
                 let other_cld = phys_world.get_collider(collision.other_collider).unwrap();
                 // @Incomplete: solid check
                 if collision.info.normal.x.abs() > 0.8 {
                     ai.going_left = !ai.going_left;
-                    ldebug!("{:?} inverting due to impact vs {:?}", entity, other_cld.entity);
                     ai.frames_since_latest_impact = 0;
                     break;
                 }

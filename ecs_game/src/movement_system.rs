@@ -38,7 +38,7 @@ pub fn update(
         let starting_pos = spatial.frame_starting_pos;
         if (pos - starting_pos).magnitude2() > std::f32::EPSILON {
             if let Some(collider) = ecs_world.get_component::<C_Collider>(entity) {
-                for (collider, handle) in phys_world.get_all_colliders_with_handles(collider.handle) {
+                for (collider, handle) in phys_world.get_all_colliders_with_handles(collider.phys_body_handle) {
                     moved.push(Moved_Collider {
                         handle,
                         prev_pos: starting_pos,

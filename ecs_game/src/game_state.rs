@@ -102,6 +102,8 @@ pub struct Debug_CVars {
     pub display_overlays: Cfg_Var<bool>,
 
     pub update_physics: Cfg_Var<bool>,
+
+    pub print_draw_stats: Cfg_Var<bool>,
 }
 
 #[repr(C)]
@@ -364,6 +366,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     let display_log_window = Cfg_Var::new("engine/debug/log_window/display", cfg);
     let display_overlays = Cfg_Var::new("engine/debug/overlay/display", cfg);
     let update_physics = Cfg_Var::new("engine/debug/physics/update", cfg);
+    let print_draw_stats = Cfg_Var::new("debug/rendering/print_draw_stats", cfg);
 
     Debug_CVars {
         render_debug_visualization,
@@ -389,6 +392,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
         display_log_window,
         display_overlays,
         update_physics,
+        print_draw_stats,
     }
 }
 

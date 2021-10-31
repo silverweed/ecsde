@@ -1,11 +1,31 @@
 use super::collider::Collider;
 use inle_alloc::gen_alloc::{Generational_Allocator, Generational_Index};
+use inle_ecs::ecs_world::Entity;
 use inle_math::vector::Vec2f;
 use smallvec::SmallVec;
 use std::collections::HashMap;
 
-pub type Collider_Handle = Generational_Index;
-pub type Physics_Body_Handle = Generational_Index;
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Default)]
+pub struct Collider_Handle(Generational_Index);
+
+impl std::ops::Deref for Collider_Handle {
+    type Target = Generational_Index;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Default)]
+pub struct Physics_Body_Handle(Generational_Index);
+
+impl std::ops::Deref for Physics_Body_Handle {
+    type Target = Generational_Index;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 const INITIAL_SIZE: usize = 64;
 
@@ -96,7 +116,7 @@ impl Physics_World {
 
     #[inline]
     pub fn is_valid_collider_handle(&self, handle: Collider_Handle) -> bool {
-        self.cld_alloc.is_valid(handle)
+        self.cld_alloc.is_valid(*handle)
     }
 
     pub fn new_physics_body(&mut self) -> Physics_Body_Handle {
@@ -108,15 +128,16 @@ impl Physics_World {
             self.bodies
                 .insert(handle.index as usize, Physics_Body::default());
         }
-        handle
+        Physics_Body_Handle(handle)
     }
 
     pub fn new_physics_body_with_rigidbody(
         &mut self,
         cld: Collider,
+        entity: Entity,
         phys_data: Phys_Data,
     ) -> Physics_Body_Handle {
-        let cld_handle = self.add_collider(cld);
+        let cld_handle = self.add_collider(cld, entity);
         let handle = self.new_physics_body();
         let body = self.get_physics_body_mut(handle).unwrap();
         body.rigidbody_colliders.push((cld_handle, phys_data));
@@ -125,7 +146,7 @@ impl Physics_World {
 
     #[inline]
     pub fn get_physics_body(&self, handle: Physics_Body_Handle) -> Option<&Physics_Body> {
-        if !self.bodies_alloc.is_valid(handle) {
+        if !self.bodies_alloc.is_valid(*handle) {
             return None;
         }
 
@@ -144,7 +165,7 @@ impl Physics_World {
         &mut self,
         handle: Physics_Body_Handle,
     ) -> Option<&mut Physics_Body> {
-        if !self.bodies_alloc.is_valid(handle) {
+        if !self.bodies_alloc.is_valid(*handle) {
             return None;
         }
 
@@ -159,11 +180,13 @@ impl Physics_World {
     }
 
     #[inline]
-    pub fn add_collider(&mut self, mut cld: Collider) -> Collider_Handle {
+    pub fn add_collider(&mut self, mut cld: Collider, entity: Entity) -> Collider_Handle {
         let handle = self.cld_alloc.allocate();
         debug_assert!((handle.index as usize) < std::u32::MAX as usize);
         let index = self.colliders.len();
+        let handle = Collider_Handle(handle);
         cld.handle = handle;
+        cld.entity = entity;
         self.colliders.push(cld);
         self.cld_index_table.push(index);
         handle
@@ -171,7 +194,7 @@ impl Physics_World {
 
     /// Note: this is a O(n) operation, so use sparingly.
     pub fn remove_collider(&mut self, handle: Collider_Handle) {
-        if !self.cld_alloc.is_valid(handle) {
+        if !self.cld_alloc.is_valid(*handle) {
             lwarn!("Tried to remove invalid collider {:?}", handle);
             return;
         }
@@ -194,12 +217,12 @@ impl Physics_World {
             .find(|idx| **idx == swapped_index)
             .unwrap() = index;
 
-        self.cld_alloc.deallocate(handle);
+        self.cld_alloc.deallocate(*handle);
     }
 
     #[inline]
     pub fn get_collider(&self, handle: Collider_Handle) -> Option<&Collider> {
-        if !self.cld_alloc.is_valid(handle) {
+        if !self.cld_alloc.is_valid(*handle) {
             return None;
         }
 
@@ -217,7 +240,7 @@ impl Physics_World {
 
     #[inline]
     pub fn get_collider_mut(&mut self, handle: Collider_Handle) -> Option<&mut Collider> {
-        if !self.cld_alloc.is_valid(handle) {
+        if !self.cld_alloc.is_valid(*handle) {
             return None;
         }
 
@@ -359,7 +382,8 @@ mod tests {
             shape: Collision_Shape::Circle { radius: 24. },
             ..Default::default()
         };
-        let h1 = phys_world.add_collider(c);
+        let e = Entity::INVALID;
+        let h1 = phys_world.add_collider(c, e);
         let c = Collider {
             shape: Collision_Shape::Rect {
                 width: 2.,
@@ -367,7 +391,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let h2 = phys_world.add_collider(c);
+        let h2 = phys_world.add_collider(c, e);
 
         assert_eq!(
             phys_world.get_collider(h1).unwrap().shape,
@@ -394,7 +418,8 @@ mod tests {
             shape: Collision_Shape::Circle { radius: 24. },
             ..Default::default()
         };
-        let h1 = phys_world.add_collider(c);
+        let e = Entity::INVALID;
+        let h1 = phys_world.add_collider(c, e);
         let c = Collider {
             shape: Collision_Shape::Rect {
                 width: 2.,
@@ -402,14 +427,14 @@ mod tests {
             },
             ..Default::default()
         };
-        let h2 = phys_world.add_collider(c.clone());
+        let h2 = phys_world.add_collider(c.clone(), e);
 
         phys_world.remove_collider(h1);
 
         assert!(phys_world.get_collider(h1).is_none());
         assert!(phys_world.get_collider(h2).is_some());
 
-        let h3 = phys_world.add_collider(c);
+        let h3 = phys_world.add_collider(c, e);
         assert!(phys_world.get_collider(h1).is_none());
         assert!(phys_world.get_collider(h3).is_some());
     }
