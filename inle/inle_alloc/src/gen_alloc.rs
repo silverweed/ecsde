@@ -4,7 +4,7 @@ use std::vec::Vec;
 pub type Index_Type = u32;
 pub type Gen_Type = u32;
 
-#[derive(Default, Copy, Clone, Debug, PartialEq, Hash, Eq)]
+#[derive(Default, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct Generational_Index {
     pub index: Index_Type,
     pub gen: Gen_Type,
@@ -12,6 +12,12 @@ pub struct Generational_Index {
 
 impl Generational_Index {
     pub const INVALID: Generational_Index = Generational_Index { index: 0, gen: 0 };
+}
+
+impl std::fmt::Debug for Generational_Index {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "(idx: {}, gen: {})", self.index, self.gen)
+    }
 }
 
 /// Generational_Allocator allows to allocate/deallocate

@@ -937,7 +937,13 @@ fn update_debug(
             }
 
             if draw_entities {
-                debug_draw_transforms(debug_painter, &level.world);
+                debug_draw_transforms(
+                    debug_painter,
+                    &level.world,
+                    window,
+                    input_state,
+                    &level.get_camera_transform(),
+                );
             }
 
             if draw_velocities {
@@ -1287,19 +1293,38 @@ fn debug_draw_colliders(
 }
 
 #[cfg(debug_assertions)]
-fn debug_draw_transforms(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
+fn debug_draw_transforms(
+    debug_painter: &mut Debug_Painter,
+    ecs_world: &Ecs_World,
+    window: &Render_Window_Handle,
+    input_state: &Input_State,
+    camera: &Transform2D,
+) {
+    use inle_ecs::ecs_world::Entity;
+
+    let mpos = render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, &camera);
+    let mut entity_overlapped = (Entity::INVALID, 0.);
     foreach_entity!(ecs_world,
         read: C_Spatial2D;
         write: ;
-        |_e, (spatial, ): (&C_Spatial2D,), () | {
+        |entity, (spatial, ): (&C_Spatial2D,), ()| {
         let transform = &spatial.transform;
+        let center = transform.position();
+        let radius = 5.0;
         debug_painter.add_circle(
             Circle {
-                radius: 5.,
-                center: transform.position(),
+                radius,
+                center,
             },
             colors::rgb(50, 100, 200),
         );
+
+        let overlap_radius = 8.0 * radius;
+        let dist2 = (center - mpos).magnitude2();
+        let overlaps = dist2 < overlap_radius * overlap_radius;
+        if overlaps && (entity_overlapped.0 == Entity::INVALID || dist2 < entity_overlapped.1) {
+            entity_overlapped = (entity, dist2);
+        }
 
         debug_painter.add_text(
             &format!(
@@ -1308,7 +1333,7 @@ fn debug_draw_transforms(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
                 transform.position().y
             ),
             transform.position(),
-            10,
+            7,
             Paint_Properties {
                 color: colors::WHITE,
                 border_thick: 1.,
@@ -1317,6 +1342,23 @@ fn debug_draw_transforms(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_Worl
             },
         );
     });
+
+    if entity_overlapped.0 != Entity::INVALID {
+        let spatial = ecs_world
+            .get_component::<C_Spatial2D>(entity_overlapped.0)
+            .unwrap();
+        debug_painter.add_text(
+            &format!("{:?}", entity_overlapped.0),
+            spatial.transform.position() - v2!(0., 10.),
+            7,
+            Paint_Properties {
+                color: colors::WHITE,
+                border_thick: 1.,
+                border_color: colors::BLACK,
+                ..Default::default()
+            },
+        );
+    }
 }
 
 #[cfg(debug_assertions)]

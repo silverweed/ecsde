@@ -22,19 +22,26 @@ pub struct Line {
 }
 
 impl Circle {
+    #[inline]
     pub fn intersects(&self, other: &Circle) -> bool {
         let cdist2 = self.center.distance2(other.center);
-        let rdist2 = (self.radius + other.radius).powf(2.);
+        let rdist2 = (self.radius + other.radius).powi(2);
         cdist2 < rdist2
     }
 
     /// Returns the amount by which this circle is inside the other.
     /// Returns a negative number (the opposite of the 'surface distance')
     /// if the two circles are not overlapping.
+    #[inline]
     pub fn penetration_distance(&self, other: &Circle) -> f32 {
         let cdist = self.center.distance(other.center);
         let rdist = self.radius + other.radius;
         rdist - cdist
+    }
+
+    #[inline]
+    pub fn contains(&self, point: Vec2f) -> bool {
+        (self.center - point).magnitude2() < self.radius * self.radius
     }
 }
 

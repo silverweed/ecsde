@@ -454,7 +454,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
         });
     }
 
-    let mut objects = prepare_colliders_and_gather_rigidbodies(ecs_world, phys_world);
+    let mut objects = gather_rigidbodies(phys_world);
 
     let rb_infos = infos
         .par_iter()
@@ -516,11 +516,8 @@ fn update_colliders_spatial(ecs_world: &mut Ecs_World, phys_world: &mut Physics_
 /// Returns { collider => rigidbody }
 /// Note that some entities may have non-physical colliders (i.e. trigger colliders),
 /// but each entity must have at most 1 physical collider. // :MultipleRigidbodies: lift this restriction!
-fn prepare_colliders_and_gather_rigidbodies(
-    world: &mut Ecs_World,
-    phys_world: &mut Physics_World,
-) -> Rigidbodies {
-    trace!("prepare_colliders_and_gather_rigidbodies");
+fn gather_rigidbodies(phys_world: &mut Physics_World) -> Rigidbodies {
+    trace!("gather_rigidbodies");
 
     // @Speed: try to use an array rather than a HashMap
     let mut objects = HashMap::new();

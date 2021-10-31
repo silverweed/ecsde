@@ -302,7 +302,7 @@ impl Gameplay_System {
             // @Incomplete: level-specific gameplay update
             update_demo_entites(world, &dt);
 
-            ai_system.update(world, &level.phys_world, &dt);
+            ai_system.update(world, &level.phys_world, cfg, &dt);
 
             //ground_collision_calc_system.update(world, &mut level.phys_world, &mut level.chunks);
 

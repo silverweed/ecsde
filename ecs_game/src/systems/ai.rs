@@ -12,8 +12,9 @@ impl Ai_System {
         &mut self,
         ecs_world: &mut Ecs_World,
         phys_world: &Physics_World,
+        cfg: &inle_cfg::Config,
         _dt: &Duration,
     ) {
-        test_ai_system::update(ecs_world, phys_world);
+        test_ai_system::update(ecs_world, phys_world, cfg);
     }
 }

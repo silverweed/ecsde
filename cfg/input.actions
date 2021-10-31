@@ -28,7 +28,7 @@ move_camera_to_origin: O
 toggle_console: Tilde
 calipers: Mouse_Middle, CTRL+Mouse_Left
 debug_dig: LControl
-toggle_camera_on_player: Home
+toggle_camera_on_player: Home, Delete
 
 # Game
 place_entity: Mouse_Left

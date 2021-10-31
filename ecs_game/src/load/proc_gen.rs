@@ -147,7 +147,11 @@ fn create_enemy(
     phys_body.trigger_colliders.push(right_cld_handle);
     phys_body.trigger_colliders.push(left_cld_handle);
 
-    world.add_component(enemy, C_Test_Ai::new(left_cld_handle, right_cld_handle));
+    let speed = Cfg_Var::new("game/gameplay/ai/test/speed", cfg);
+    world.add_component(
+        enemy,
+        C_Test_Ai::new(left_cld_handle, right_cld_handle, speed),
+    );
 }
 
 fn create_room_grid(
