@@ -87,6 +87,8 @@ impl World_Chunks {
     }
 
     pub fn update(&mut self, ecs_world: &Ecs_World, phys_world: &Physics_World) {
+        trace!("world_chunks::update");
+
         let mut to_remove = vec![];
         with_cb_data(&mut self.to_destroy, |to_destroy: &mut Vec<Entity>| {
             for &entity in to_destroy.iter() {
@@ -110,7 +112,9 @@ impl World_Chunks {
     }
 
     pub fn add_collider(&mut self, cld_handle: Collider_Handle, pos: Vec2f, extent: Vec2f) {
-        for coords in self.get_all_chunks_containing(pos, extent) {
+        let mut chunks = vec![];
+        self.get_all_chunks_containing(pos, extent, &mut chunks);
+        for coords in chunks {
             self.add_collider_coords(cld_handle, coords);
         }
     }
@@ -130,7 +134,9 @@ impl World_Chunks {
     }
 
     pub fn remove_collider(&mut self, cld_handle: Collider_Handle, pos: Vec2f, extent: Vec2f) {
-        for coords in self.get_all_chunks_containing(pos, extent) {
+        let mut chunks = vec![];
+        self.get_all_chunks_containing(pos, extent, &mut chunks);
+        for coords in chunks {
             self.remove_collider_coords(cld_handle, coords);
         }
     }
@@ -168,8 +174,12 @@ impl World_Chunks {
     ) {
         trace!("world_chunks::update_collider");
 
-        let prev_coords = self.get_all_chunks_containing(prev_pos, extent);
-        let new_coords = self.get_all_chunks_containing(new_pos, extent);
+        let mut prev_coords = excl_temp_array(frame_alloc);
+        self.get_all_chunks_containing(prev_pos, extent, &mut prev_coords);
+        let prev_coords = unsafe { prev_coords.into_read_only() };
+        let mut new_coords = excl_temp_array(frame_alloc);
+        self.get_all_chunks_containing(new_pos, extent, &mut new_coords);
+        let new_coords = unsafe { new_coords.into_read_only() };
 
         let mut all_chunks = excl_temp_array(frame_alloc);
         // Pre-allocate enough memory to hold all the chunks; then `chunks_to_add` starts at index 0,
@@ -258,13 +268,22 @@ impl World_Chunks {
         }
     }
 
-    fn get_all_chunks_containing(&self, pos: Vec2f, extent: Vec2f) -> Vec<Chunk_Coords> {
-        let mut coords = vec![];
+    fn get_all_chunks_containing<T>(&self, pos: Vec2f, extent: Vec2f, coords: &mut T)
+    where
+        T: Extend<Chunk_Coords>,
+    {
+        trace!("get_all_chunks_containing");
+
+        #[cfg(debug_assertions)]
+        let mut chk_coords = vec![];
 
         // We need to @Cleanup the -extent*0.5 offset we need to apply and make it consistent throughout the game!
         let pos = pos - extent * 0.5;
         let coords_topleft = Chunk_Coords::from_pos(pos);
-        coords.push(coords_topleft);
+        coords.extend(Some(coords_topleft));
+
+        #[cfg(debug_assertions)]
+        chk_coords.push(coords_topleft);
 
         let coords_botright = Chunk_Coords::from_pos(pos + extent);
 
@@ -274,7 +293,12 @@ impl World_Chunks {
                 if x == 0 && y == 0 {
                     continue;
                 }
-                coords.push(Chunk_Coords::from_pos(
+                coords.extend(Some(Chunk_Coords::from_pos(
+                    pos + v2!(x as f32 * CHUNK_WIDTH, y as f32 * CHUNK_HEIGHT),
+                )));
+
+                #[cfg(debug_assertions)]
+                chk_coords.push(Chunk_Coords::from_pos(
                     pos + v2!(x as f32 * CHUNK_WIDTH, y as f32 * CHUNK_HEIGHT),
                 ));
             }
@@ -282,18 +306,18 @@ impl World_Chunks {
 
         #[cfg(debug_assertions)]
         {
+            // Result should be sorted and deduped
+
             // @WaitForStable
             //debug_assert!(coords.iter().is_sorted());
-            for i in 1..coords.len() {
-                debug_assert!(coords[i] > coords[i - 1]);
+            for i in 1..chk_coords.len() {
+                debug_assert!(chk_coords[i] > chk_coords[i - 1]);
             }
 
-            let mut deduped = coords.clone();
+            let mut deduped = chk_coords.clone();
             deduped.dedup();
-            debug_assert_eq!(coords.len(), deduped.len());
+            debug_assert!(chk_coords.len() == deduped.len());
         }
-
-        coords
     }
 }
 
@@ -302,7 +326,9 @@ impl Spatial_Accelerator<Collider_Handle> for World_Chunks {
     where
         R: Extend<Collider_Handle>,
     {
-        for coords in self.get_all_chunks_containing(pos, extent) {
+        let mut chunks = vec![];
+        self.get_all_chunks_containing(pos, extent, &mut chunks);
+        for coords in chunks {
             if let Some(chunk) = self.chunks.get(&coords) {
                 result.extend(chunk.colliders.iter().copied());
             }
