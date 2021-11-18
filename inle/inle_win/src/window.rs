@@ -107,6 +107,11 @@ pub fn correct_mouse_pos_in_window<W: AsRef<Window_Handle>>(window: &W, raw_pos:
     debug_assert!(!target_ratio.is_nan());
 
     let rs: Vec2u = get_window_real_size(window).into();
+    if rs.x == 0 {
+        // This can happen if the window is minimized.
+        return Vec2i::default();
+    }
+
     let real_ratio = rs.y as f32 / rs.x as f32;
     debug_assert!(!real_ratio.is_nan());
 
