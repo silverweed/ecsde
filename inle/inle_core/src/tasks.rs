@@ -1,5 +1,4 @@
-use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 
 #[derive(Default)]
@@ -34,19 +33,23 @@ impl Long_Task_Manager {
         lok!("Started Long_Task_Manager with {} threads.", n_threads);
     }
 
-    pub fn shutdown_blocking(&mut self) {
+    pub fn begin_shutdown(&mut self) {
         linfo!("Starting Long_Task_Manager shutdown...");
-
-        let time_taken = std::time::Instant::now();
 
         let sender = self
             .task_sender
             .as_mut()
-            .expect("Called shutdown_blocking on non-started Long_Task_Manager!");
+            .expect("Called begin_shutdown on non-started Long_Task_Manager!");
         for _ in 0..self.executors.len() {
             // Each executor will process Terminate exactly once, so we send one per executor.
-            sender.send(Long_Task_Executor_Msg::Terminate);
+            sender.send(Long_Task_Executor_Msg::Terminate).unwrap();
         }
+    }
+
+    pub fn block_until_shutdown_complete(&mut self) {
+        linfo!("Waiting Long_Task_Manager shutdown...");
+
+        let time_taken = std::time::Instant::now();
 
         for exec in self.executors.drain(..) {
             exec.thread
@@ -55,7 +58,7 @@ impl Long_Task_Manager {
         }
 
         linfo!(
-            "Long_Task_Manager shutdown completed in {:?}.",
+            "Long_Task_Manager shutdown completed (blocked for {:?}).",
             time_taken.elapsed()
         );
     }

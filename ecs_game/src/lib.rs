@@ -276,6 +276,8 @@ pub unsafe extern "C" fn game_shutdown(
         fatal!("game_shutdown: game state and/or resources are null!");
     }
 
+    (*game_state).engine_state.systems.long_task_mgr.begin_shutdown();
+
     #[cfg(debug_assertions)]
     {
         use inle_debug::console::save_console_hist;
@@ -288,6 +290,7 @@ pub unsafe extern "C" fn game_shutdown(
     }
 
     inle_gfx::render_window::shutdown(&mut (*game_state).window);
+    (*game_state).engine_state.systems.long_task_mgr.block_until_shutdown_complete();
 
     std::ptr::drop_in_place(game_state);
     dealloc(game_state as *mut u8, Layout::new::<Game_State>());
