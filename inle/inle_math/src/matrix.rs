@@ -144,17 +144,9 @@ impl<T> PartialEq for Matrix3<T>
 where
     T: PartialEq,
 {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
-        let a = &self.columns;
-        let b = &other.columns;
-        for i in 0..3 {
-            for j in 0..3 {
-                if a[i][j] != b[i][j] {
-                    return false;
-                }
-            }
-        }
-        true
+        self.columns == other.columns
     }
 }
 
@@ -163,6 +155,7 @@ impl<T> Eq for Matrix3<T> where T: Eq {}
 impl<T> Index<usize> for Matrix3<T> {
     type Output = [T; 3];
 
+    #[inline]
     fn index(&self, col: usize) -> &Self::Output {
         &self.columns[col]
     }
@@ -171,12 +164,14 @@ impl<T> Index<usize> for Matrix3<T> {
 impl<T> Index<(usize, usize)> for Matrix3<T> {
     type Output = T;
 
+    #[inline]
     fn index(&self, (row, col): (usize, usize)) -> &Self::Output {
         &self.columns[col][row]
     }
 }
 
 impl<T> IndexMut<(usize, usize)> for Matrix3<T> {
+    #[inline]
     fn index_mut(&mut self, (row, col): (usize, usize)) -> &mut Self::Output {
         &mut self.columns[col][row]
     }
