@@ -126,10 +126,13 @@ where
 
     #[cfg(debug_assertions)]
     {
-        inle_diagnostics::prelude::DEBUG_TRACER
+        let mut tracers = inle_diagnostics::prelude::DEBUG_TRACERS
             .lock()
-            .unwrap()
-            .start_frame();
+            .unwrap();
+        println!("{} threads", tracers.len());
+        tracers.values_mut()
+            .for_each(|t| std::sync::Arc::get_mut(t).unwrap().start_frame());
+        drop(tracers);
 
         let log = &mut game_state.engine_state.debug_systems.log;
 
@@ -174,7 +177,8 @@ where
         if game_state.update_trace_hints_countdown == 0 {
             let console = game_state.engine_state.debug_systems.console.clone();
             let saved_traces = {
-                let tracer = inle_diagnostics::prelude::DEBUG_TRACER.lock().unwrap();
+                let tracers = inle_diagnostics::prelude::DEBUG_TRACERS.lock().unwrap();
+                let tracer = tracers.get(&std::thread::current().id()).unwrap().as_ref();
                 tracer.saved_traces.to_vec()
             };
             game_state

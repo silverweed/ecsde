@@ -480,11 +480,15 @@ pub fn set_replay_data(engine_state: &mut Engine_State, replay_data: Replay_Data
 pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
     use inle_diagnostics::prelude;
 
+    // @Speed: do a pass on this
+    
     let debug_log = &mut engine_state.debug_systems.log;
     let traces = {
         // Note: we unlock the tracer asap to prevent deadlocks.
         // We're not keeping any reference to it anyway.
-        let mut tracer = prelude::DEBUG_TRACER.lock().unwrap();
+        let mut tracers = prelude::DEBUG_TRACERS.lock().unwrap();
+        let tracer = tracers.get_mut(&std::thread::current().id()).unwrap();
+        let tracer = std::sync::Arc::get_mut(tracer).unwrap();
         std::mem::take(&mut tracer.saved_traces)
     };
     let final_traces = tracer::collate_traces(&traces);

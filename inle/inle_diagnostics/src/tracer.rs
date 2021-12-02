@@ -1,9 +1,14 @@
-use crate::prelude::Debug_Tracer;
+use crate::prelude::Debug_Tracers;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fmt::Debug;
 use std::time::{Duration, Instant};
+use std::thread::ThreadId;
+use std::sync::Arc;
+
+// @Speed: Arc should be superfluous!
+pub type Tracers = HashMap<ThreadId, Arc<Tracer>>;
 
 pub struct Tracer {
     // Tree of Tracer_Nodes representing the call tree.
@@ -52,21 +57,21 @@ impl Debug for Scope_Trace_Info {
 
 /// This is used to automatically add a Trace_Info to the Tracer via RAII.
 pub struct Scope_Trace {
-    tracer: Debug_Tracer,
+    tracer: *mut Tracer,
 }
 
 impl Scope_Trace {
     #[inline(always)]
-    pub fn new(tracer: Debug_Tracer, tag: &'static str) -> Self {
-        tracer.lock().unwrap().push_scope_trace(tag);
-        Self { tracer }
+    pub fn new(tracer: &mut Tracer, tag: &'static str) -> Self {
+        tracer.push_scope_trace(tag);
+        Self { tracer: tracer as *mut _ }
     }
 }
 
 impl Drop for Scope_Trace {
     #[inline(always)]
     fn drop(&mut self) {
-        self.tracer.lock().unwrap().pop_scope_trace();
+        unsafe { (*self.tracer).pop_scope_trace(); }
     }
 }
 
@@ -118,8 +123,16 @@ impl Scope_Trace_Info_Final {
 }
 
 #[inline(always)]
-pub fn debug_trace(tag: &'static str, tracer: Debug_Tracer) -> Scope_Trace {
+pub fn debug_trace(tag: &'static str, tracer: &mut Tracer) -> Scope_Trace {
     Scope_Trace::new(tracer, tag)
+}
+
+#[inline(always)]
+pub fn debug_trace_on_thread(tag: &'static str, tracers: Debug_Tracers, thread_id: ThreadId) -> Scope_Trace {
+    let mut tracers = tracers.lock().unwrap();
+    let tracer: &mut Arc<Tracer> = tracers.entry(thread_id).or_insert_with(|| Arc::new(Tracer::new()));
+    let tracer: &mut Tracer = Arc::get_mut(tracer).unwrap();
+    debug_trace(tag, tracer)
 }
 
 #[derive(Clone, Debug)]
