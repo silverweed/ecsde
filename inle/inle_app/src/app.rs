@@ -482,20 +482,33 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
 
     // @Speed: do a pass on this
     
-    let debug_log = &mut engine_state.debug_systems.log;
     let traces = {
         // Note: we unlock the tracer asap to prevent deadlocks.
         // We're not keeping any reference to it anyway.
         let mut tracers = prelude::DEBUG_TRACERS.lock().unwrap();
-        let tracer = tracers.get_mut(&std::thread::current().id()).unwrap();
-        let tracer = std::sync::Arc::get_mut(tracer).unwrap();
-        std::mem::take(&mut tracer.saved_traces)
+        tracers.iter_mut().map(|(&thread_id, tracer)| {
+            let tracer = std::sync::Arc::get_mut(tracer).expect("This Arc should never be shared here!");
+            let traces = std::mem::take(&mut tracer.saved_traces);
+            (thread_id, traces)
+        }).collect::<Vec<_>>()
     };
-    let final_traces = tracer::collate_traces(&traces);
+    // Collate after to release the lock faster
+    let final_traces = traces.iter().map(|(id, traces)| (id, tracer::collate_traces(&traces))).collect::<Vec<_>>();
 
+    // TODO: when we merge the different threads' traces we must fix the parent idx of the nodes so that it's correct!
+    // Otherwise we'll have several nodes having the same parent_idx because every thread has its own local tree and
+    // the merged traces will be all messed up.
+
+    // @Temporary
+    //let final_traces = &final_traces.iter().find(|(_, t)| t.len() > 0).unwrap().1;
+    //let final_traces = &final_traces.iter().filter(|(_, t)| t.len() > 0).min_by(|(_, t1), (_, t2)| t1.len().cmp(&t2.len())).unwrap().1;
+
+    let debug_log = &mut engine_state.debug_systems.log;
     let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
     if !scroller.manually_selected {
-        debug_log.push_trace(&final_traces);
+        for (_, traces) in &final_traces {
+            debug_log.push_trace(&traces);
+        }
     }
     let trace_realtime = Cfg_Var::<bool>::new("engine/debug/trace/realtime", &engine_state.config)
         .read(&engine_state.config);
@@ -556,7 +569,8 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
 
             let graph = debug_systems.debug_ui.get_graph(sid!("fn_profile"));
 
-            let flattened_traces = tracer::flatten_traces(&final_traces);
+            let all_traces = final_traces.into_iter().map(|(_, traces)| traces).flatten().collect::<Vec<_>>();
+            let flattened_traces = tracer::flatten_traces(&all_traces);
             tracer_drawing::update_graph_traced_fn(
                 flattened_traces,
                 graph,

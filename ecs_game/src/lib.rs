@@ -126,13 +126,11 @@ where
 
     #[cfg(debug_assertions)]
     {
-        let mut tracers = inle_diagnostics::prelude::DEBUG_TRACERS
+        inle_diagnostics::prelude::DEBUG_TRACERS
             .lock()
-            .unwrap();
-        println!("{} threads", tracers.len());
-        tracers.values_mut()
+            .unwrap()
+            .values_mut()
             .for_each(|t| std::sync::Arc::get_mut(t).unwrap().start_frame());
-        drop(tracers);
 
         let log = &mut game_state.engine_state.debug_systems.log;
 
@@ -187,6 +185,10 @@ where
                 .long_task_mgr
                 .create_task(move || {
                     use std::collections::HashSet;
+
+                    trace!("add_trace_hints");
+                    {trace!("foo");
+                    }
 
                     let fn_names: HashSet<_> = saved_traces
                         .iter()

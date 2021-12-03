@@ -55,7 +55,7 @@ impl Debug_Log {
 
     pub fn push_trace(&mut self, trace: &[Tracer_Node_Final]) {
         self.mem_used += trace.len() * std::mem::size_of::<Tracer_Node_Final>();
-        self.frames.back_mut().unwrap().traces = trace.to_vec();
+        self.frames.back_mut().unwrap().traces.extend(trace);
     }
 }
 

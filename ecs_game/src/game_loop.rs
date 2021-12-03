@@ -120,6 +120,17 @@ where
         );
     }
 
+    // @DEBUG
+     let foo = [0; 10];
+    use rayon::prelude::*;
+    foo.par_iter().for_each(|_| {
+            trace!("parallel");
+            for _ in 0..10 {
+            trace!("parallel2");
+            std::thread::sleep(std::time::Duration::from_micros(1));
+            }
+    });
+
     #[cfg(debug_assertions)]
     {
         use crate::debug::console_executor;

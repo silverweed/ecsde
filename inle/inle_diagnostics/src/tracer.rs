@@ -15,6 +15,7 @@ pub struct Tracer {
     pub saved_traces: Vec<Tracer_Node>,
     // Latest pushed (and not-yet-popped) node index
     cur_active: Option<usize>,
+    thread_id: ThreadId,
 }
 
 /// Represents a traced scope with its info and a link to its parent.
@@ -130,8 +131,11 @@ pub fn debug_trace(tag: &'static str, tracer: &mut Tracer) -> Scope_Trace {
 #[inline(always)]
 pub fn debug_trace_on_thread(tag: &'static str, tracers: Debug_Tracers, thread_id: ThreadId) -> Scope_Trace {
     let mut tracers = tracers.lock().unwrap();
-    let tracer: &mut Arc<Tracer> = tracers.entry(thread_id).or_insert_with(|| Arc::new(Tracer::new()));
+    let tracer: &mut Arc<Tracer> = tracers.entry(thread_id).or_insert_with(|| Arc::new(Tracer::new(thread_id)));
     let tracer: &mut Tracer = Arc::get_mut(tracer).unwrap();
+    if tag == "add_trace_hints" {
+    println!("saving {} on {:?}", tag, thread_id);
+    }
     debug_trace(tag, tracer)
 }
 
@@ -152,10 +156,11 @@ impl Trace_Tree<'_> {
 }
 
 impl Tracer {
-    pub fn new() -> Tracer {
+    pub fn new(thread_id: ThreadId) -> Tracer {
         Tracer {
             saved_traces: Vec::with_capacity(16_000),
             cur_active: None,
+            thread_id
         }
     }
 
@@ -189,6 +194,19 @@ impl Tracer {
     }
 
     pub fn start_frame(&mut self) {
+        if let Some(cur_active) = self.cur_active {
+            let active = &self.saved_traces[cur_active].info;
+            // If start_t == end_t we've been called by another thread while we had a Scope_Trace
+            // open. In this case keep the current node, otherwise we'd lose its data before we
+            // close that scope.
+            // @Audit: is this the proper solution?
+            if active.start_t == active.end_t {
+                self.saved_traces.swap(0, cur_active);
+                self.saved_traces.truncate(1);
+                self.cur_active = Some(0);
+                return;
+            }
+        }
         self.saved_traces.clear();
         self.cur_active = None;
     }
@@ -382,7 +400,6 @@ pub fn flatten_traces(
 }
 
 /// Construct a forest of Trace_Trees from the saved_traces array.
-// @Audit @Soundness: verify this function is actually working, after the collate_traces change.
 pub fn build_trace_trees(traces: &[Tracer_Node_Final]) -> Vec<Trace_Tree<'_>> {
     let mut forest = vec![];
 

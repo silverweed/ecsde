@@ -123,7 +123,6 @@ fn create_particles(props: &Particle_Props, rng: &mut Default_Rng) -> Particles 
     particles
         .par_iter_mut()
         .for_each(|((position, velocity), remaining_life)| {
-            //trace!("particle_init");
             let (pos, vel, life) = init_particle(props, &precomp_rng);
             *position = pos;
             *velocity = vel;
