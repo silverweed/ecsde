@@ -3,9 +3,9 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fmt::Debug;
-use std::time::{Duration, Instant};
-use std::thread::ThreadId;
 use std::sync::Arc;
+use std::thread::ThreadId;
+use std::time::{Duration, Instant};
 
 // @Speed: Arc should be superfluous!
 pub type Tracers = HashMap<ThreadId, Arc<Tracer>>;
@@ -13,8 +13,10 @@ pub type Tracers = HashMap<ThreadId, Arc<Tracer>>;
 pub struct Tracer {
     // Tree of Tracer_Nodes representing the call tree.
     pub saved_traces: Vec<Tracer_Node>,
+
     // Latest pushed (and not-yet-popped) node index
     cur_active: Option<usize>,
+
     thread_id: ThreadId,
 }
 
@@ -65,14 +67,18 @@ impl Scope_Trace {
     #[inline(always)]
     pub fn new(tracer: &mut Tracer, tag: &'static str) -> Self {
         tracer.push_scope_trace(tag);
-        Self { tracer: tracer as *mut _ }
+        Self {
+            tracer: tracer as *mut _,
+        }
     }
 }
 
 impl Drop for Scope_Trace {
     #[inline(always)]
     fn drop(&mut self) {
-        unsafe { (*self.tracer).pop_scope_trace(); }
+        unsafe {
+            (*self.tracer).pop_scope_trace();
+        }
     }
 }
 
@@ -87,8 +93,8 @@ pub struct Tracer_Node_Final {
 pub struct Scope_Trace_Info_Final {
     pub tag: &'static str,
 
-    // High 24 bytes: n_calls
-    // Low 40 bytes: duration_nanos
+    // High 24 bytes: n_calls (max value = 16'777'215)
+    // Low 40 bytes: duration_nanos (max value = 1'099'511'627'775 =~ 1099 s)
     pub n_calls_and_tot_duration: u64,
 }
 
@@ -129,13 +135,17 @@ pub fn debug_trace(tag: &'static str, tracer: &mut Tracer) -> Scope_Trace {
 }
 
 #[inline(always)]
-pub fn debug_trace_on_thread(tag: &'static str, tracers: Debug_Tracers, thread_id: ThreadId) -> Scope_Trace {
+pub fn debug_trace_on_thread(
+    tag: &'static str,
+    tracers: Debug_Tracers,
+    thread_id: ThreadId,
+) -> Scope_Trace {
     let mut tracers = tracers.lock().unwrap();
-    let tracer: &mut Arc<Tracer> = tracers.entry(thread_id).or_insert_with(|| Arc::new(Tracer::new(thread_id)));
+    let tracer: &mut Arc<Tracer> = tracers
+        .entry(thread_id)
+        .or_insert_with(|| Arc::new(Tracer::new(thread_id)));
     let tracer: &mut Tracer = Arc::get_mut(tracer).unwrap();
-    if tag == "add_trace_hints" {
-    println!("saving {} on {:?}", tag, thread_id);
-    }
+
     debug_trace(tag, tracer)
 }
 
@@ -158,9 +168,9 @@ impl Trace_Tree<'_> {
 impl Tracer {
     pub fn new(thread_id: ThreadId) -> Tracer {
         Tracer {
-            saved_traces: Vec::with_capacity(16_000),
+            saved_traces: Vec::with_capacity(2_048),
             cur_active: None,
-            thread_id
+            thread_id,
         }
     }
 

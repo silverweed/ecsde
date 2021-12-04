@@ -22,6 +22,7 @@ move_right: D, Joy_Dpad_Right
 print_em_debug_info: M
 sound_test: CTRL+K
 toggle_trace_overlay: Tab
+toggle_threads_overlay: T
 camera_zoom_up: CTRL+Wheel_Up, Add
 camera_zoom_down: CTRL+Wheel_Down, Subtract
 move_camera_to_origin: O

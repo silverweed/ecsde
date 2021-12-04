@@ -44,7 +44,7 @@ impl Debug_Log {
     }
 
     pub fn get_frame(&self, frame_number: u64) -> Option<&Debug_Log_Frame> {
-        if (self.cur_frame - self.hist_len as u64 + 1..=self.cur_frame).contains(&frame_number) {
+        if ((self.cur_frame - self.hist_len as u64 + 1)..=self.cur_frame).contains(&frame_number) {
             let idx = self.cur_frame - frame_number;
             let idx = self.hist_len as u64 - idx - 1;
             Some(&self.frames[idx as usize])

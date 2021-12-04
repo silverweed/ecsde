@@ -173,12 +173,34 @@ impl Persistent_Game_State for Debug_Base_State {
                     //gs.print_debug_info();
                 }
                 (name, Action_Kind::Pressed) if *name == sid!("toggle_trace_overlay") => {
-                    let show_trace = &mut engine_state.debug_systems.show_trace_overlay;
-                    *show_trace = !*show_trace;
+                    let show_trace = engine_state.debug_systems.show_overlay;
+                    let show_trace = show_trace != inle_app::systems::Overlay_Shown::Trace;
+                    if show_trace {
+                        engine_state.debug_systems.show_overlay =
+                            inle_app::systems::Overlay_Shown::Trace;
+                    } else {
+                        engine_state.debug_systems.show_overlay =
+                            inle_app::systems::Overlay_Shown::None;
+                    }
                     engine_state
                         .debug_systems
                         .debug_ui
-                        .set_overlay_enabled(sid!("trace"), *show_trace);
+                        .set_overlay_enabled(sid!("trace"), show_trace);
+                }
+                (name, Action_Kind::Pressed) if *name == sid!("toggle_threads_overlay") => {
+                    let show_threads = engine_state.debug_systems.show_overlay;
+                    let show_threads = show_threads != inle_app::systems::Overlay_Shown::Threads;
+                    if show_threads {
+                        engine_state
+                            .debug_systems
+                            .debug_ui
+                            .set_overlay_enabled(sid!("trace"), false);
+                        engine_state.debug_systems.show_overlay =
+                            inle_app::systems::Overlay_Shown::Threads;
+                    } else {
+                        engine_state.debug_systems.show_overlay =
+                            inle_app::systems::Overlay_Shown::None;
+                    }
                 }
                 (name, Action_Kind::Pressed) if *name == sid!("move_camera_to_origin") => {
                     gs.levels

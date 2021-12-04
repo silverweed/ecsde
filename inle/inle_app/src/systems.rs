@@ -24,6 +24,13 @@ pub struct Core_Systems<'r> {
     pub long_task_mgr: Long_Task_Manager,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum Overlay_Shown {
+    None,
+    Trace,
+    Threads,
+}
+
 #[cfg(debug_assertions)]
 pub struct Debug_Systems {
     pub debug_ui: debug_ui::Debug_Ui_System,
@@ -36,7 +43,7 @@ pub struct Debug_Systems {
     pub log: log::Debug_Log,
     pub calipers: calipers::Debug_Calipers,
 
-    pub show_trace_overlay: bool,
+    pub show_overlay: Overlay_Shown,
     pub trace_overlay_update_t: f32,
     pub traced_fn: String,
 }
@@ -74,7 +81,7 @@ impl Debug_Systems {
             ),
             painters: HashMap::default(),
             global_painter: Debug_Painter::default(),
-            show_trace_overlay: false,
+            show_overlay: Overlay_Shown::None,
             trace_overlay_update_t: 0.0,
             console: Arc::new(Mutex::new(console::Console::new())),
             log: log::Debug_Log::with_hist_len((debug_log_size * fps) as _),

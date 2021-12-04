@@ -479,21 +479,41 @@ pub fn set_replay_data(engine_state: &mut Engine_State, replay_data: Replay_Data
 #[cfg(debug_assertions)]
 pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
     use inle_diagnostics::prelude;
+    use std::sync::Arc;
 
     // @Speed: do a pass on this
-    
+
     let traces = {
         // Note: we unlock the tracer asap to prevent deadlocks.
         // We're not keeping any reference to it anyway.
         let mut tracers = prelude::DEBUG_TRACERS.lock().unwrap();
-        tracers.iter_mut().map(|(&thread_id, tracer)| {
-            let tracer = std::sync::Arc::get_mut(tracer).expect("This Arc should never be shared here!");
-            let traces = std::mem::take(&mut tracer.saved_traces);
-            (thread_id, traces)
-        }).collect::<Vec<_>>()
+        tracers
+            .iter_mut()
+            .map(|(&thread_id, tracer)| {
+                let tracer = Arc::get_mut(tracer).expect("This Arc should never be shared here!");
+                let traces = std::mem::take(&mut tracer.saved_traces);
+                (thread_id, traces)
+            })
+            .collect::<Vec<_>>()
     };
-    // Collate after to release the lock faster
-    let final_traces = traces.iter().map(|(id, traces)| (id, tracer::collate_traces(&traces))).collect::<Vec<_>>();
+    // Collate is a separate step to allow the collecting above to release the lock faster
+    // Vec<(tid, Vec<Node>)> => Vec<(tid, Node)>
+    let mut merged_traces = vec![];
+    for (tid, nodes) in traces {
+        for node in nodes {
+            merged_traces.push((tid, node));
+        }
+    }
+    let trace_roots = merged_traces
+        .iter()
+        .filter(|(_, t)| t.parent_idx.is_none())
+        .cloned()
+        .collect::<Vec<_>>();
+    let merged_traces = merged_traces
+        .into_iter()
+        .map(|(_, t)| t)
+        .collect::<Vec<_>>();
+    let final_traces = tracer::collate_traces(&merged_traces);
 
     // TODO: when we merge the different threads' traces we must fix the parent idx of the nodes so that it's correct!
     // Otherwise we'll have several nodes having the same parent_idx because every thread has its own local tree and
@@ -506,36 +526,55 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
     let debug_log = &mut engine_state.debug_systems.log;
     let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
     if !scroller.manually_selected {
-        for (_, traces) in &final_traces {
-            debug_log.push_trace(&traces);
-        }
+        debug_log.push_trace(&final_traces);
     }
     let trace_realtime = Cfg_Var::<bool>::new("engine/debug/trace/realtime", &engine_state.config)
         .read(&engine_state.config);
 
-    if engine_state.debug_systems.show_trace_overlay {
-        let t = &mut engine_state.debug_systems.trace_overlay_update_t;
-        if trace_realtime || !engine_state.time.paused {
-            *t -= engine_state.time.real_dt().as_secs_f32();
-        }
-
-        if *t <= 0. {
-            let trace_view_flat =
-                Cfg_Var::<bool>::new("engine/debug/trace/view_flat", &engine_state.config)
-                    .read(&engine_state.config);
-            if trace_view_flat {
-                tracer_drawing::update_trace_flat_overlay(engine_state);
-            } else {
-                tracer_drawing::update_trace_tree_overlay(engine_state);
+    match engine_state.debug_systems.show_overlay {
+        crate::systems::Overlay_Shown::Trace => {
+            let t = &mut engine_state.debug_systems.trace_overlay_update_t;
+            if trace_realtime || !engine_state.time.paused {
+                *t -= engine_state.time.real_dt().as_secs_f32();
             }
+
+            if *t <= 0. {
+                let trace_view_flat =
+                    Cfg_Var::<bool>::new("engine/debug/trace/view_flat", &engine_state.config)
+                        .read(&engine_state.config);
+                if trace_view_flat {
+                    tracer_drawing::update_trace_flat_overlay(engine_state);
+                } else {
+                    tracer_drawing::update_trace_tree_overlay(engine_state);
+                }
+                engine_state.debug_systems.trace_overlay_update_t =
+                    refresh_rate.read(&engine_state.config);
+
+                if !trace_realtime && engine_state.time.paused {
+                    // Don't bother refreshing this the next frame: we're paused.
+                    engine_state.debug_systems.trace_overlay_update_t = 0.1;
+                }
+            }
+        }
+        crate::systems::Overlay_Shown::Threads => {
+            // @Incomplete: use variables dedicated to threads overlay
+            //let t = &mut engine_state.debug_systems.trace_overlay_update_t;
+            //if trace_realtime || !engine_state.time.paused {
+            //*t -= engine_state.time.real_dt().as_secs_f32();
+            //}
+
+            //if *t <= 0. {
+            tracer_drawing::update_thread_overlay(engine_state, &trace_roots);
             engine_state.debug_systems.trace_overlay_update_t =
                 refresh_rate.read(&engine_state.config);
 
-            if !trace_realtime && engine_state.time.paused {
-                // Don't bother refreshing this the next frame: we're paused.
-                engine_state.debug_systems.trace_overlay_update_t = 0.1;
-            }
+            //if !trace_realtime && engine_state.time.paused {
+            //// Don't bother refreshing this the next frame: we're paused.
+            //engine_state.debug_systems.trace_overlay_update_t = 0.1;
+            //}
+            //}
         }
+        _ => {}
     }
 
     // Function trace graph
@@ -569,8 +608,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
 
             let graph = debug_systems.debug_ui.get_graph(sid!("fn_profile"));
 
-            let all_traces = final_traces.into_iter().map(|(_, traces)| traces).flatten().collect::<Vec<_>>();
-            let flattened_traces = tracer::flatten_traces(&all_traces);
+            let flattened_traces = tracer::flatten_traces(&final_traces);
             tracer_drawing::update_graph_traced_fn(
                 flattened_traces,
                 graph,

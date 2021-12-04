@@ -6,7 +6,9 @@ use inle_core::time;
 use inle_debug::graph;
 use inle_debug::overlay::Debug_Overlay;
 use inle_diagnostics::tracer::{self, Trace_Tree, Tracer_Node_Final};
+use inle_math::transform::Transform2D;
 use std::borrow::Cow;
+use std::thread::ThreadId;
 use std::time::Duration;
 
 fn add_tracer_node_line(
@@ -163,6 +165,93 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
         .filter(|n| n.info.tot_duration() > prune_duration)
     {
         add_tracer_node_line(node, &total_traced_time, 0, overlay);
+    }
+}
+
+pub fn update_thread_overlay(
+    engine_state: &mut Engine_State,
+    trace_roots: &[(ThreadId, tracer::Tracer_Node)],
+) {
+    // @Copypaste from update_trace_tree_overlay
+    let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
+    let debug_log = &mut engine_state.debug_systems.log;
+    let frame = scroller.get_real_selected_frame();
+    let debug_frame = debug_log.get_frame(frame);
+    if debug_frame.is_none() {
+        // This can happen if the frame scroller is never updated.
+        return;
+    }
+    let traces = &debug_frame.unwrap().traces;
+
+    let painter = &mut engine_state.debug_systems.global_painter;
+    let (win_w, win_h) = (
+        engine_state.app_config.target_win_size.0 as f32,
+        engine_state.app_config.target_win_size.1 as f32,
+    );
+    let outer_width = win_w * 0.5;
+    let outer_height = win_h * 0.5;
+    let outer_rect_pos = -v2!(outer_width, outer_height) * 0.5;
+    painter.add_rect(
+        v2!(outer_width, outer_height),
+        &Transform2D::from_pos(outer_rect_pos),
+        colors::rgba(30, 30, 60, 220),
+    );
+
+    if trace_roots.is_empty() {
+        return;
+    }
+
+    let first_t = trace_roots
+        .iter()
+        .min_by_key(|(_, t)| t.info.start_t)
+        .unwrap()
+        .1
+        .info
+        .start_t;
+    let last_t = trace_roots
+        .iter()
+        .max_by_key(|(_, t)| t.info.end_t)
+        .unwrap()
+        .1
+        .info
+        .end_t;
+    let tot_duration = last_t.duration_since(first_t);
+    let colors = [colors::WHITE, colors::RED, colors::GREEN]; // @Temporary
+    let mut col_idx = 0;
+    use std::collections::HashMap;
+    let mut thread_y_offsets: HashMap<ThreadId, f32> = HashMap::default();
+    let mut next_y_offset = 0.0;
+    for (tid, root) in trace_roots {
+        let offset = if first_t == root.info.start_t {
+            0.
+        } else {
+            inle_core::time::duration_ratio(
+                &root.info.start_t.duration_since(first_t),
+                &tot_duration,
+            )
+        };
+        let length = inle_core::time::duration_ratio(
+            &root.info.end_t.duration_since(root.info.start_t),
+            &tot_duration,
+        );
+        debug_assert!((0. ..=1.).contains(&offset));
+        debug_assert!((0. ..=1.).contains(&length));
+
+        let abs_width = v2!(length * outer_width, 10.);
+        let yoff = *thread_y_offsets.entry(*tid).or_insert_with(|| {
+            let off = next_y_offset;
+            next_y_offset += 12.;
+            off
+        });
+
+        let abs_offset = v2!(offset * outer_width, yoff);
+
+        painter.add_rect(
+            abs_width,
+            &Transform2D::from_pos(outer_rect_pos + abs_offset),
+            colors[col_idx],
+        );
+        col_idx = (col_idx + 1) % colors.len();
     }
 }
 
