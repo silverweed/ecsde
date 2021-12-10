@@ -1,5 +1,6 @@
 [workspace]
 members = ["ecs_runner", "ecs_game"]
 
-#[profile.dev]
-#opt-level = 3
+[profile.profile]
+inherits = "dev"
+opt-level = 3

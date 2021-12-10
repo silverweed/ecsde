@@ -35,7 +35,7 @@ impl Env_Info {
             .and_then(Path::file_name)
             .map(OsStr::to_str)
             .flatten();
-        if matches!(cur_dir, Some("debug" | "release")) && matches!(parent_dir, Some("target")) {
+        if matches!(cur_dir, Some("debug" | "release" | "profile")) && matches!(parent_dir, Some("target")) {
             working_dir.pop();
             working_dir.pop();
         }
