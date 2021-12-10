@@ -30,15 +30,10 @@ macro_rules! pub_in_debug {
     };
 }
 
-// Taken from `static_assertions` crate
 #[macro_export]
 macro_rules! const_assert {
     ($x:expr $(,)?) => {
-        #[allow(unknown_lints)]
-        const _: [(); 0 - !{
-            const ASSERT: bool = $x;
-            ASSERT
-        } as usize] = [];
+        const _: () = assert!($x);
     };
 }
 
