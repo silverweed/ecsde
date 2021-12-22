@@ -38,9 +38,7 @@ fn recording_loop(recv: Receiver<Replay_Data_Point>, cfg: Recording_Thread_Confi
         match recv.recv_timeout(timeout) {
             Ok(point) => {
                 replay_data_buffer.push(point);
-                timeout = timeout
-                    .checked_sub(start_t.elapsed())
-                    .unwrap_or_else(Duration::default);
+                timeout = timeout.checked_sub(start_t.elapsed()).unwrap_or_default();
             }
             Err(RecvTimeoutError::Timeout) => {
                 write_record_data(&mut file, &replay_data_buffer)?;

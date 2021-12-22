@@ -18,7 +18,7 @@ const JOY_COUNT: usize = joystick::JOY_COUNT as usize;
 /// Contains the replay data for a single frame. It consists in time information (a frame number)
 /// plus the diff from the previous saved point.
 /// Note that raw events and real axes, rather than processed game actions or virtual axes, are saved.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Default, Clone, Debug, PartialEq)]
 pub struct Replay_Data_Point {
     pub frame_number: u64,
     pub events: Vec<Input_Raw_Event>,
@@ -37,17 +37,6 @@ pub struct Replay_Joystick_Data {
     /// This is done for optimizing the disk space taken by serialized replay data:
     /// we don't serialize unchanged axes values.
     pub axes_mask: u8,
-}
-
-impl std::default::Default for Replay_Data_Point {
-    fn default() -> Replay_Data_Point {
-        Replay_Data_Point {
-            frame_number: 0,
-            events: vec![],
-            joy_data: Default::default(),
-            joy_mask: 0u8,
-        }
-    }
 }
 
 impl Replay_Data_Point {

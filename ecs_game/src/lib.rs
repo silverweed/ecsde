@@ -199,7 +199,7 @@ where
                         .hints
                         .get("trace")
                         .cloned()
-                        .unwrap_or_else(Vec::default);
+                        .unwrap_or_default();
                     let cur_hints: HashSet<String> = cur_hints.into_iter().collect();
                     let fn_names = fn_names.difference(&cur_hints).cloned();
                     console.lock().unwrap().add_hints("trace", fn_names);

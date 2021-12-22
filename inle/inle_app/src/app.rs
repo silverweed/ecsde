@@ -480,7 +480,6 @@ pub fn set_replay_data(engine_state: &mut Engine_State, replay_data: Replay_Data
 pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
     use crate::systems::Overlay_Shown;
     use inle_diagnostics::{prelude, tracer::Tracer_Node};
-    use std::sync::Arc;
     use std::thread::ThreadId;
 
     // @Speed: do a pass on this
@@ -586,7 +585,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
                     .get(&sid!("full_tag"))
                     .map(|x| x.clone().try_into().ok())
                     .flatten()
-                    .unwrap_or_else(String::default);
+                    .unwrap_or_default();
                 set_traced_fn(debug_systems, fn_name);
             } else {
                 set_traced_fn(debug_systems, String::default());

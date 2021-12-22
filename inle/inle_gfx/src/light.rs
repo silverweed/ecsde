@@ -60,24 +60,13 @@ pub enum Light_Command {
     Change_Rect_Light(usize, Rect_Light),
 }
 
+#[derive(Default)]
 pub struct Lights {
     point_lights: Vec<Point_Light>,
     rect_lights: Vec<Rect_Light>,
     ambient_light: Ambient_Light,
 
     cmd_queue: Vec<Light_Command>,
-}
-
-impl Default for Lights {
-    fn default() -> Self {
-        Self {
-            point_lights: vec![],
-            rect_lights: vec![],
-            ambient_light: Ambient_Light::default(),
-
-            cmd_queue: vec![],
-        }
-    }
 }
 
 impl Lights {

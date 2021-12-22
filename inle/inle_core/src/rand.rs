@@ -136,18 +136,10 @@ fn get_entropy_from_os(buf: &mut [u8]) -> std::io::Result<()> {
 
 /// Recycles a pool of precomputed random numbers with internal mutability.
 /// Used to generate random numbers where immutability is needed.
+#[derive(Default)]
 pub struct Precomputed_Rand_Pool {
     pool: Vec<u64>,
     cur_idx: AtomicUsize,
-}
-
-impl Default for Precomputed_Rand_Pool {
-    fn default() -> Self {
-        Self {
-            pool: vec![],
-            cur_idx: AtomicUsize::default(),
-        }
-    }
 }
 
 impl Precomputed_Rand_Pool {

@@ -246,6 +246,7 @@ pub fn aabb_of_points<'a, T: IntoIterator<Item = &'a Vec2f>>(points: T) -> Rectf
 }
 
 #[inline]
+#[allow(clippy::collapsible_else_if)]
 pub fn aabb_of_transformed_rect(rect: &Rectf, transform: &Transform2D) -> Rectf {
     let (s, c) = transform.rotation().as_rad().sin_cos();
     let Vec2f { x: tx, y: ty } = transform.position();

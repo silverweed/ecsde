@@ -1,7 +1,4 @@
-use {
-    crate::tracer::{Tracer, Tracers},
-    std::sync::Mutex,
-};
+use {crate::tracer::Tracers, std::sync::Mutex};
 
 pub type Debug_Tracers = Mutex<Tracers>;
 
