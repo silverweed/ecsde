@@ -478,50 +478,55 @@ pub fn set_replay_data(engine_state: &mut Engine_State, replay_data: Replay_Data
 
 #[cfg(debug_assertions)]
 pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
-    use inle_diagnostics::prelude;
+    use crate::systems::Overlay_Shown;
+    use inle_diagnostics::{prelude, tracer::Tracer_Node};
     use std::sync::Arc;
+    use std::thread::ThreadId;
 
     // @Speed: do a pass on this
 
-    let traces = {
+    let traces: Vec<(ThreadId, Vec<Tracer_Node>)> = {
         // Note: we unlock the tracer asap to prevent deadlocks.
         // We're not keeping any reference to it anyway.
         let mut tracers = prelude::DEBUG_TRACERS.lock().unwrap();
         tracers
             .iter_mut()
             .map(|(&thread_id, tracer)| {
-                let tracer = Arc::get_mut(tracer).expect("This Arc should never be shared here!");
+                let mut tracer = tracer.lock().unwrap();
                 let traces = std::mem::take(&mut tracer.saved_traces);
                 (thread_id, traces)
             })
-            .collect::<Vec<_>>()
+            .collect()
     };
-    // Collate is a separate step to allow the collecting above to release the lock faster
-    // Vec<(tid, Vec<Node>)> => Vec<(tid, Node)>
+
+    // Merge the individual threads' traces into a single array. This is used to generate the unified profile view.
+    // If necessary we also collect all tree root nodes that will be used by the thread view
+    // Vec<(tid, Vec<Node>)> => Vec<Node>
+    let is_threads_view = matches!(
+        engine_state.debug_systems.show_overlay,
+        Overlay_Shown::Threads
+    );
     let mut merged_traces = vec![];
+    let mut trace_roots = vec![];
+    let mut patch_offset = 0;
     for (tid, nodes) in traces {
-        for node in nodes {
-            merged_traces.push((tid, node));
+        let nodes_len = nodes.len();
+        merged_traces.reserve(nodes_len);
+        for mut node in nodes {
+            // When we merge the different threads' traces we must fix the parent idx of the nodes,
+            // otherwise we'll have several nodes having the same parent_idx because every thread
+            // has its own local tree and the merged traces will be all messed up.
+            if let Some(idx) = node.parent_idx {
+                node.parent_idx = Some(idx + patch_offset);
+            } else if is_threads_view {
+                trace_roots.push((tid, node.clone()));
+            }
+            merged_traces.push(node);
         }
+        patch_offset += nodes_len;
     }
-    let trace_roots = merged_traces
-        .iter()
-        .filter(|(_, t)| t.parent_idx.is_none())
-        .cloned()
-        .collect::<Vec<_>>();
-    let merged_traces = merged_traces
-        .into_iter()
-        .map(|(_, t)| t)
-        .collect::<Vec<_>>();
+
     let final_traces = tracer::collate_traces(&merged_traces);
-
-    // TODO: when we merge the different threads' traces we must fix the parent idx of the nodes so that it's correct!
-    // Otherwise we'll have several nodes having the same parent_idx because every thread has its own local tree and
-    // the merged traces will be all messed up.
-
-    // @Temporary
-    //let final_traces = &final_traces.iter().find(|(_, t)| t.len() > 0).unwrap().1;
-    //let final_traces = &final_traces.iter().filter(|(_, t)| t.len() > 0).min_by(|(_, t1), (_, t2)| t1.len().cmp(&t2.len())).unwrap().1;
 
     let debug_log = &mut engine_state.debug_systems.log;
     let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
@@ -532,7 +537,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
         .read(&engine_state.config);
 
     match engine_state.debug_systems.show_overlay {
-        crate::systems::Overlay_Shown::Trace => {
+        Overlay_Shown::Trace => {
             let t = &mut engine_state.debug_systems.trace_overlay_update_t;
             if trace_realtime || !engine_state.time.paused {
                 *t -= engine_state.time.real_dt().as_secs_f32();
@@ -556,24 +561,11 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
                 }
             }
         }
-        crate::systems::Overlay_Shown::Threads => {
-            // @Incomplete: use variables dedicated to threads overlay
-            //let t = &mut engine_state.debug_systems.trace_overlay_update_t;
-            //if trace_realtime || !engine_state.time.paused {
-            //*t -= engine_state.time.real_dt().as_secs_f32();
-            //}
 
-            //if *t <= 0. {
+        Overlay_Shown::Threads => {
             tracer_drawing::update_thread_overlay(engine_state, &trace_roots);
-            engine_state.debug_systems.trace_overlay_update_t =
-                refresh_rate.read(&engine_state.config);
-
-            //if !trace_realtime && engine_state.time.paused {
-            //// Don't bother refreshing this the next frame: we're paused.
-            //engine_state.debug_systems.trace_overlay_update_t = 0.1;
-            //}
-            //}
         }
+
         _ => {}
     }
 

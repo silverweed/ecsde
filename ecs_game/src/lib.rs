@@ -130,7 +130,7 @@ where
             .lock()
             .unwrap()
             .values_mut()
-            .for_each(|t| std::sync::Arc::get_mut(t).unwrap().start_frame());
+            .for_each(|t| t.lock().unwrap().start_frame());
 
         let log = &mut game_state.engine_state.debug_systems.log;
 
@@ -174,11 +174,12 @@ where
         // This is done asynchronously since it's a quite heavy operation (needs a sort + dedup)
         if game_state.update_trace_hints_countdown == 0 {
             let console = game_state.engine_state.debug_systems.console.clone();
-            let saved_traces = {
-                let tracers = inle_diagnostics::prelude::DEBUG_TRACERS.lock().unwrap();
-                let tracer = tracers.get(&std::thread::current().id()).unwrap().as_ref();
-                tracer.saved_traces.to_vec()
-            };
+            let tracers = inle_diagnostics::prelude::DEBUG_TRACERS.lock().unwrap();
+            let saved_traces = tracers
+                .iter()
+                .map(|(_, tracer)| tracer.lock().unwrap().saved_traces.to_vec())
+                .flatten()
+                .collect::<Vec<_>>();
             game_state
                 .engine_state
                 .systems
@@ -186,12 +187,8 @@ where
                 .create_task(move || {
                     use std::collections::HashSet;
 
-                    trace!("add_trace_hints");
-                    {trace!("foo");
-                    }
-
                     let fn_names: HashSet<_> = saved_traces
-                        .iter()
+                        .into_iter()
                         .map(|trace| String::from(trace.info.tag))
                         .collect();
                     // Note: we do the heavy work in the task and not in add_hints so we can lock the console
@@ -282,7 +279,11 @@ pub unsafe extern "C" fn game_shutdown(
         fatal!("game_shutdown: game state and/or resources are null!");
     }
 
-    (*game_state).engine_state.systems.long_task_mgr.begin_shutdown();
+    (*game_state)
+        .engine_state
+        .systems
+        .long_task_mgr
+        .begin_shutdown();
 
     #[cfg(debug_assertions)]
     {
@@ -296,7 +297,11 @@ pub unsafe extern "C" fn game_shutdown(
     }
 
     inle_gfx::render_window::shutdown(&mut (*game_state).window);
-    (*game_state).engine_state.systems.long_task_mgr.block_until_shutdown_complete();
+    (*game_state)
+        .engine_state
+        .systems
+        .long_task_mgr
+        .block_until_shutdown_complete();
 
     std::ptr::drop_in_place(game_state);
     dealloc(game_state as *mut u8, Layout::new::<Game_State>());

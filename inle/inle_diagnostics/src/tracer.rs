@@ -3,12 +3,22 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fmt::Debug;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread::ThreadId;
 use std::time::{Duration, Instant};
 
-// @Speed: Arc should be superfluous!
-pub type Tracers = HashMap<ThreadId, Arc<Tracer>>;
+// @Speed: currently I don't think we can do better than having a mutex wrapping the
+// per-thread tracers, since:
+//    a) they can be accessed by multiple threads (their own thread + the main thread
+//       when it collects the results or adds hints to the console)
+//    b) the Tracers map can be modified while a Scope_Trace is active, so we cannot
+//       safely save just the naked pointer into it, as it could change.
+// We could do better (e.g. pre-spawning ALL threads, using a short task system and
+// ensuring all tracers are created in that moment and then access them without locking,
+// e.g. putting them in an array indexed by number of thread or something) but it'd
+// still not be trivial to aggregate their results; moreover, hopefully these mutexes
+// are very rarely contended (but that's probably not true for the _outer_ mutex that guards DEBUG_TRACERS...)
+pub type Tracers = HashMap<ThreadId, Arc<Mutex<Tracer>>>;
 
 pub struct Tracer {
     // Tree of Tracer_Nodes representing the call tree.
@@ -60,15 +70,15 @@ impl Debug for Scope_Trace_Info {
 
 /// This is used to automatically add a Trace_Info to the Tracer via RAII.
 pub struct Scope_Trace {
-    tracer: *mut Tracer,
+    tracer: Arc<Mutex<Tracer>>,
 }
 
 impl Scope_Trace {
     #[inline(always)]
-    pub fn new(tracer: &mut Tracer, tag: &'static str) -> Self {
-        tracer.push_scope_trace(tag);
+    pub fn new(tracer: &Arc<Mutex<Tracer>>, tag: &'static str) -> Self {
+        tracer.lock().unwrap().push_scope_trace(tag);
         Self {
-            tracer: tracer as *mut _,
+            tracer: tracer.clone(),
         }
     }
 }
@@ -76,9 +86,7 @@ impl Scope_Trace {
 impl Drop for Scope_Trace {
     #[inline(always)]
     fn drop(&mut self) {
-        unsafe {
-            (*self.tracer).pop_scope_trace();
-        }
+        self.tracer.lock().unwrap().pop_scope_trace();
     }
 }
 
@@ -130,21 +138,20 @@ impl Scope_Trace_Info_Final {
 }
 
 #[inline(always)]
-pub fn debug_trace(tag: &'static str, tracer: &mut Tracer) -> Scope_Trace {
+pub fn debug_trace(tag: &'static str, tracer: &Arc<Mutex<Tracer>>) -> Scope_Trace {
     Scope_Trace::new(tracer, tag)
 }
 
 #[inline(always)]
 pub fn debug_trace_on_thread(
     tag: &'static str,
-    tracers: Debug_Tracers,
+    tracers: &Debug_Tracers,
     thread_id: ThreadId,
 ) -> Scope_Trace {
     let mut tracers = tracers.lock().unwrap();
-    let tracer: &mut Arc<Tracer> = tracers
+    let tracer = tracers
         .entry(thread_id)
-        .or_insert_with(|| Arc::new(Tracer::new(thread_id)));
-    let tracer: &mut Tracer = Arc::get_mut(tracer).unwrap();
+        .or_insert_with(|| Arc::new(Mutex::new(Tracer::new(thread_id))));
 
     debug_trace(tag, tracer)
 }

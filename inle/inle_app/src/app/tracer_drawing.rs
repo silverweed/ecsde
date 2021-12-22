@@ -8,6 +8,7 @@ use inle_debug::overlay::Debug_Overlay;
 use inle_diagnostics::tracer::{self, Trace_Tree, Tracer_Node_Final};
 use inle_math::transform::Transform2D;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::thread::ThreadId;
 use std::time::Duration;
 
@@ -168,20 +169,25 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
     }
 }
 
+// @Incomplete: currently we're passing trace_roots calculated for the latest frame,
+// but we should actually be using the frame selected from the scroller and saved in Debug_Log,
+// to allow revisiting old frames.
+// To do that, we must first save the relevant data in Debug_Log, which currently does not
+// contain the start/end times.
 pub fn update_thread_overlay(
     engine_state: &mut Engine_State,
     trace_roots: &[(ThreadId, tracer::Tracer_Node)],
 ) {
     // @Copypaste from update_trace_tree_overlay
-    let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
-    let debug_log = &mut engine_state.debug_systems.log;
-    let frame = scroller.get_real_selected_frame();
-    let debug_frame = debug_log.get_frame(frame);
-    if debug_frame.is_none() {
-        // This can happen if the frame scroller is never updated.
-        return;
-    }
-    let traces = &debug_frame.unwrap().traces;
+    //let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
+    //let debug_log = &mut engine_state.debug_systems.log;
+    //let frame = scroller.get_real_selected_frame();
+    //let debug_frame = debug_log.get_frame(frame);
+    //if debug_frame.is_none() {
+    //// This can happen if the frame scroller is never updated.
+    //return;
+    //}
+    //let traces = &debug_frame.unwrap().traces;
 
     let painter = &mut engine_state.debug_systems.global_painter;
     let (win_w, win_h) = (
@@ -201,24 +207,11 @@ pub fn update_thread_overlay(
         return;
     }
 
-    let first_t = trace_roots
-        .iter()
-        .min_by_key(|(_, t)| t.info.start_t)
-        .unwrap()
-        .1
-        .info
-        .start_t;
-    let last_t = trace_roots
-        .iter()
-        .max_by_key(|(_, t)| t.info.end_t)
-        .unwrap()
-        .1
-        .info
-        .end_t;
+    let (first_t, last_t) =
+        min_max_by_key(trace_roots.iter(), |(_, t)| (t.info.start_t, t.info.end_t)).unwrap();
     let tot_duration = last_t.duration_since(first_t);
     let colors = [colors::WHITE, colors::RED, colors::GREEN]; // @Temporary
     let mut col_idx = 0;
-    use std::collections::HashMap;
     let mut thread_y_offsets: HashMap<ThreadId, f32> = HashMap::default();
     let mut next_y_offset = 0.0;
     for (tid, root) in trace_roots {
@@ -283,4 +276,34 @@ pub fn update_graph_traced_fn(
         fn_tot_time,
         &[(sid!("real_frame"), (cur_frame as u32).into())],
     );
+}
+
+fn min_max_by_key<T, I, F>(iter: I, mut f: F) -> Option<(T, T)>
+where
+    T: Ord + Clone,
+    I: Iterator,
+    F: FnMut(&I::Item) -> (T, T),
+{
+    let mut min_a = None;
+    let mut max_b = None;
+    for item in iter {
+        let (a, b) = f(&item);
+        if let Some(cur_a) = min_a.clone() {
+            if a < cur_a {
+                min_a = Some(a);
+            }
+        } else {
+            min_a = Some(a);
+        }
+
+        if let Some(cur_b) = max_b.clone() {
+            if b > cur_b {
+                max_b = Some(b);
+            }
+        } else {
+            max_b = Some(b);
+        }
+    }
+
+    Some((min_a?, max_b?))
 }

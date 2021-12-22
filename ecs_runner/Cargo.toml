@@ -6,8 +6,8 @@ authors = ["silverweed <silverweed1991@gmail.com>"]
 
 [features]
 hotload = ["notify"]
-#default = ["hotload"]
-default = []
+default = ["hotload"]
+#default = []
 
 [dependencies]
 libloading = "0.5"
