@@ -32,7 +32,7 @@ impl Level {
 
     // @Temporary
     pub fn move_camera_to(&mut self, pos: Vec2f) {
-        let query = Ecs_Query::new(&self.world).read::<C_Camera2D>();
+        let query = Ecs_Query::new(&self.world).write::<C_Camera2D>();
         let cam_entity = query.entities()[0];
         let mut cams = query.storages().begin_write::<C_Camera2D>();
         cams.must_get_mut(cam_entity).transform.set_position_v(pos);

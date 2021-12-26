@@ -38,6 +38,7 @@ pub struct Storages<'a> {
 }
 
 impl Storages<'_> {
+    #[track_caller]
     pub fn begin_read<T: 'static>(&self) -> Component_Storage_Read<T> {
         trace!("ecs_query::storages::begin_read");
 
@@ -59,6 +60,7 @@ impl Storages<'_> {
         storage.lock_for_read()
     }
 
+    #[track_caller]
     pub fn begin_write<T: 'static>(&self) -> Component_Storage_Write<T> {
         trace!("ecs_query::storages::begin_write");
 
