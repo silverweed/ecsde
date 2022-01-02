@@ -2,7 +2,7 @@ use inle_common::colors::{self, Color};
 use inle_math::rect::Rectf;
 use inle_math::vector::Vec2f;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Point_Light {
     pub color: Color,
     pub position: Vec2f,
@@ -39,7 +39,7 @@ impl Default for Ambient_Light {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Rect_Light {
     pub color: Color,
     pub intensity: f32,
@@ -135,7 +135,6 @@ impl Lights {
         nearest
     }
 
-    #[inline]
     pub fn get_all_point_lights_sorted_by_distance_within<E: Extend<Point_Light>>(
         &self,
         pos: Vec2f,
@@ -145,20 +144,69 @@ impl Lights {
     ) {
         trace!("get_all_point_lights_sorted_by_distance_within");
 
-        let radius2 = radius * radius;
-        // @Speed
-        let mut lights = self
-            .point_lights
-            .iter()
-            .filter(|pl| pl.position.distance2(pos) < radius2)
-            .copied()
-            .collect::<Vec<_>>();
-        lights.sort_by(|a, b| {
-            a.position
-                .distance2(pos)
-                .partial_cmp(&b.position.distance2(pos))
-                .unwrap()
-        });
-        result.extend(lights.into_iter().take(at_most));
+        get_all_lights_sorted_by_distance_within(
+            pos,
+            radius,
+            result,
+            at_most,
+            &self.point_lights,
+            |pl| pl.position,
+        );
     }
+
+    #[inline]
+    pub fn get_all_rect_lights_sorted_by_distance_within<E: Extend<Rect_Light>>(
+        &self,
+        pos: Vec2f,
+        radius: f32,
+        result: &mut E,
+        at_most: usize,
+    ) {
+        trace!("get_all_rect_lights_sorted_by_distance_within");
+
+        get_all_lights_sorted_by_distance_within(
+            pos,
+            radius,
+            result,
+            at_most,
+            &self.rect_lights,
+            |pl| pl.rect.pos_center(),
+        );
+    }
+}
+
+#[inline]
+fn get_all_lights_sorted_by_distance_within<L: Copy, E: Extend<L>>(
+    pos: Vec2f,
+    radius: f32,
+    result: &mut E,
+    at_most: usize,
+    lights: &[L],
+    get_pos_fn: fn(&L) -> Vec2f,
+) {
+    let radius2 = radius * radius;
+
+    let mut nearest_sorted = Vec::with_capacity(at_most + 1);
+    let mut nearest_dist_sorted = Vec::with_capacity(at_most + 1);
+
+    for light in lights {
+        debug_assert_eq!(nearest_sorted.len(), nearest_dist_sorted.len());
+
+        let new_dist2 = get_pos_fn(light).distance2(pos);
+        if new_dist2 > radius2 {
+            continue;
+        }
+
+        let insert_pos = nearest_dist_sorted.partition_point(|&dist2| dist2 < new_dist2);
+        if insert_pos < at_most {
+            nearest_sorted.insert(insert_pos, *light);
+            nearest_dist_sorted.insert(insert_pos, new_dist2);
+            if nearest_sorted.len() > at_most {
+                nearest_sorted.pop();
+                nearest_dist_sorted.pop();
+            }
+        }
+    }
+
+    result.extend(nearest_sorted);
 }

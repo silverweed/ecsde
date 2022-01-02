@@ -1,4 +1,4 @@
-use crate::light::{Lights, Point_Light};
+use crate::light::{Lights, Point_Light, Rect_Light};
 use crate::material::Material;
 use crate::render::{self, Primitive_Type};
 use crate::vbuf_holder::Vertex_Buffer_Holder;
@@ -22,6 +22,8 @@ use std::convert::TryFrom;
 
 const SHADOWS_PER_ENTITY: usize = 4;
 const VERTICES_PER_SPRITE: usize = 6;
+const MAX_POINT_LIGHTS: usize = 4;
+const MAX_RECT_LIGHTS: usize = 4;
 
 struct Sprite_Batch {
     pub vbuffer: Vertex_Buffer_Holder,
@@ -32,6 +34,8 @@ struct Sprite_Batch {
 #[derive(Default)]
 pub struct Batches {
     textures_ws: BTreeMap<super::Z_Index, HashMap<Material, Sprite_Batch>>,
+    point_lights_near_camera: SmallVec<[Point_Light; MAX_POINT_LIGHTS]>,
+    rect_lights_near_camera: SmallVec<[Rect_Light; MAX_RECT_LIGHTS]>,
 }
 
 fn null_vertex() -> Vertex {
@@ -140,7 +144,14 @@ fn encode_rot_and_alpha_as_color(rot: Angle, alpha: u8) -> Color {
     }
 }
 
-fn update_light_uniforms(ubo: &mut render::Uniform_Buffer, lights: &Lights) {
+fn update_light_uniforms(
+    ubo: &mut render::Uniform_Buffer,
+    lights: &Lights,
+    point_lights_near_camera: &[Point_Light],
+    rect_lights_near_camera: &[Rect_Light],
+) {
+    trace!("update_light_uniforms");
+
     // Assuming this layout in GLSL:
     //
     // layout (std140) uniform LightsBlock {
@@ -187,11 +198,8 @@ fn update_light_uniforms(ubo: &mut render::Uniform_Buffer, lights: &Lights) {
         }
         unsafe impl render::Std140 for Point_Light {}
 
-        const MAX_POINT_LIGHTS: usize = 4;
-
         let mut point_lights = [Point_Light::default(); MAX_POINT_LIGHTS];
-        for (i, pl) in lights
-            .point_lights()
+        for (i, pl) in point_lights_near_camera
             .iter()
             .take(MAX_POINT_LIGHTS)
             .enumerate()
@@ -228,11 +236,8 @@ fn update_light_uniforms(ubo: &mut render::Uniform_Buffer, lights: &Lights) {
         }
         unsafe impl render::Std140 for Rect_Light {}
 
-        const MAX_RECT_LIGHTS: usize = 4;
-
         let mut rect_lights = [Rect_Light::default(); MAX_RECT_LIGHTS];
-        for (i, rl) in lights
-            .rect_lights()
+        for (i, rl) in rect_lights_near_camera
             .iter()
             .take(MAX_RECT_LIGHTS)
             .enumerate()
@@ -262,6 +267,8 @@ fn set_shader_uniforms(
     material: &Material,
     gres: &Gfx_Resources,
     lights: &Lights,
+    point_lights_near_camera: &[Point_Light],
+    rect_lights_near_camera: &[Rect_Light],
     lights_ubo_needs_update: bool,
     texture: &Texture,
     view_projection: &Matrix3<f32>,
@@ -296,7 +303,12 @@ fn set_shader_uniforms(
     let lights_ubo = render::create_or_get_uniform_buffer(window, shader, c_str!("LightsBlock"));
     // Note: we only update the light uniforms if lights have changed AND we didn't update this particular UBO yet.
     if lights_ubo_needs_update && !render::uniform_buffer_needs_transfer_to_gpu(lights_ubo) {
-        update_light_uniforms(lights_ubo, lights);
+        update_light_uniforms(
+            lights_ubo,
+            lights,
+            point_lights_near_camera,
+            rect_lights_near_camera,
+        );
     }
     render::bind_uniform_buffer(lights_ubo);
 }
@@ -332,7 +344,48 @@ pub fn draw_batches(
     let view_projection = get_vp_matrix(window, camera);
     let visible_viewport = inle_win::window::get_camera_viewport(window, camera);
 
-    let lights_ubo_needs_update = lights.process_commands();
+    let mut lights_ubo_needs_update = lights.process_commands();
+
+    {
+        let mut old_point_lights_near_camera = SmallVec::<[Point_Light; MAX_POINT_LIGHTS]>::new();
+        std::mem::swap(
+            &mut old_point_lights_near_camera,
+            &mut batches.point_lights_near_camera,
+        );
+        // @Speed: should lights be spatially accelerated?
+        lights.get_all_point_lights_sorted_by_distance_within(
+            camera.position(),
+            visible_viewport.width * 2.0,
+            &mut batches.point_lights_near_camera,
+            MAX_POINT_LIGHTS,
+        );
+        batches
+            .point_lights_near_camera
+            .resize(MAX_POINT_LIGHTS, Point_Light::default());
+        lights_ubo_needs_update = lights_ubo_needs_update
+            || batches.point_lights_near_camera != old_point_lights_near_camera;
+
+        let mut old_rect_lights_near_camera = SmallVec::<[Rect_Light; MAX_RECT_LIGHTS]>::new();
+        std::mem::swap(
+            &mut old_rect_lights_near_camera,
+            &mut batches.rect_lights_near_camera,
+        );
+        // @Speed: should lights be spatially accelerated?
+        lights.get_all_rect_lights_sorted_by_distance_within(
+            camera.position(),
+            visible_viewport.width * 2.0,
+            &mut batches.rect_lights_near_camera,
+            MAX_POINT_LIGHTS,
+        );
+        batches
+            .rect_lights_near_camera
+            .resize(MAX_POINT_LIGHTS, Rect_Light::default());
+        lights_ubo_needs_update = lights_ubo_needs_update
+            || batches.rect_lights_near_camera != old_rect_lights_near_camera;
+    }
+
+    let point_lights_near_camera = &batches.point_lights_near_camera;
+    let rect_lights_near_camera = &batches.rect_lights_near_camera;
 
     // for each Z-index...
     for sprite_map in batches.textures_ws.values_mut() {
@@ -359,6 +412,8 @@ pub fn draw_batches(
                         material,
                         gres,
                         lights,
+                        point_lights_near_camera,
+                        rect_lights_near_camera,
                         lights_ubo_needs_update,
                         texture,
                         &view_projection,
