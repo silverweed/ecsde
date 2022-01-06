@@ -29,6 +29,15 @@ use {
     std::sync::Mutex,
 };
 
+mod z_indices {
+    use inle_gfx::render::Z_Index;
+
+    pub const BG: Z_Index = -5;
+    pub const TORCH: Z_Index = 0;
+    pub const WALL: Z_Index = 5;
+    pub const JELLY: Z_Index = 10;
+}
+
 #[cfg(debug_assertions)]
 fn next_name(name: &'static str) -> String {
     lazy_static! {
@@ -73,6 +82,7 @@ pub fn create_jelly(
 
     let entity = world.new_entity();
     let renderable = C_Renderable::new_with_diffuse(gres, env, "jelly.png")
+        .with_z_index(z_indices::JELLY)
         .with_normals(gres, env, "jelly_n.png")
         .with_cast_shadows(true)
         .with_shininess(10.0)
@@ -296,7 +306,7 @@ pub fn create_sky(
     shader_cache: &mut Shader_Cache,
     env: &Env_Info,
     _cfg: &Config,
-) {
+) -> Entity {
     let sky = world.new_entity();
 
     {
@@ -342,6 +352,8 @@ pub fn create_sky(
     {
         add_debug_data(world, sky, "Sky");
     }
+
+    sky
 }
 
 pub fn create_terrain(
@@ -350,7 +362,7 @@ pub fn create_terrain(
     shader_cache: &mut Shader_Cache,
     env: &Env_Info,
     _cfg: &Config,
-) {
+) -> Entity {
     let gnd = world.new_entity();
 
     {
@@ -381,6 +393,8 @@ pub fn create_terrain(
     {
         add_debug_data(world, gnd, "Terrain");
     }
+
+    gnd
 }
 
 pub fn create_background(
@@ -389,11 +403,11 @@ pub fn create_background(
     shader_cache: &mut Shader_Cache,
     env: &Env_Info,
     _cfg: &Config,
-) {
+) -> Entity {
     let ground = world.new_entity();
     let mut rend = C_Renderable::new_with_diffuse(gres, env, "ground.png")
         .with_shader(shader_cache, env, SHD_SPRITE_FLAT)
-        .with_z_index(-1);
+        .with_z_index(z_indices::BG);
     let texture = gres.get_texture_mut(rend.material.texture);
     let (sw, sh) = render::get_texture_size(texture);
     rend.rect = Rect::new(0, 0, sw as i32 * 100, sh as i32 * 100);
@@ -406,6 +420,8 @@ pub fn create_background(
     {
         add_debug_data(world, ground, "Background");
     }
+
+    ground
 }
 
 pub fn create_room(
@@ -415,47 +431,49 @@ pub fn create_room(
     shader_cache: &mut Shader_Cache,
     env: &Env_Info,
     cfg: &Config,
-) {
-    create_wall(
-        world,
-        phys_world,
-        gres,
-        shader_cache,
-        env,
-        &Transform2D::from_pos(v2!(0.0, 400.)),
-        v2!(1600., 400.),
-        cfg,
-    );
-    create_wall(
-        world,
-        phys_world,
-        gres,
-        shader_cache,
-        env,
-        &Transform2D::from_pos(v2!(0.0, -400.)),
-        v2!(1600., 400.),
-        cfg,
-    );
-    create_wall(
-        world,
-        phys_world,
-        gres,
-        shader_cache,
-        env,
-        &Transform2D::from_pos(v2!(-550.0, 0.0)),
-        v2!(500., 400.),
-        cfg,
-    );
-    create_wall(
-        world,
-        phys_world,
-        gres,
-        shader_cache,
-        env,
-        &Transform2D::from_pos(v2!(550.0, 0.0)),
-        v2!(500., 400.),
-        cfg,
-    );
+) -> [Entity; 4] {
+    [
+        create_wall(
+            world,
+            phys_world,
+            gres,
+            shader_cache,
+            env,
+            &Transform2D::from_pos(v2!(0.0, 400.)),
+            v2!(1600., 400.),
+            cfg,
+        ),
+        create_wall(
+            world,
+            phys_world,
+            gres,
+            shader_cache,
+            env,
+            &Transform2D::from_pos(v2!(0.0, -400.)),
+            v2!(1600., 400.),
+            cfg,
+        ),
+        create_wall(
+            world,
+            phys_world,
+            gres,
+            shader_cache,
+            env,
+            &Transform2D::from_pos(v2!(-550.0, 0.0)),
+            v2!(500., 400.),
+            cfg,
+        ),
+        create_wall(
+            world,
+            phys_world,
+            gres,
+            shader_cache,
+            env,
+            &Transform2D::from_pos(v2!(550.0, 0.0)),
+            v2!(500., 400.),
+            cfg,
+        ),
+    ]
 }
 
 pub fn create_wall(
@@ -467,7 +485,7 @@ pub fn create_wall(
     transform: &Transform2D,
     wall_size: Vec2f,
     _cfg: &Config,
-) {
+) -> Entity {
     let wall = world.new_entity();
 
     let mut renderable = C_Renderable::new_with_diffuse(gres, env, "wall.png")
@@ -525,4 +543,57 @@ pub fn create_wall(
         spatial.transform = *transform;
         world.add_component(wall, spatial);
     }
+
+    wall
+}
+
+pub fn create_torch(
+    world: &mut Ecs_World,
+    phys_world: &mut Physics_World,
+    gres: &mut Gfx_Resources,
+    shader_cache: &mut Shader_Cache,
+    env: &Env_Info,
+    _cfg: &Config,
+    transform: &Transform2D,
+) -> Entity {
+    const N_ANIM_FRAMES: i32 = 4;
+
+    let entity = world.new_entity();
+    let renderable = C_Renderable::new_with_diffuse(gres, env, "torch.png")
+        .with_z_index(z_indices::TORCH)
+        .with_cast_shadows(false)
+        .with_shininess(2.0)
+        .with_shader(shader_cache, env, SHD_SPRITE_FLAT)
+        .with_n_frames(N_ANIM_FRAMES);
+    world.add_component(entity, renderable);
+
+    let tex = renderable.material.texture;
+    let tex = gres.get_texture_mut(tex);
+    //render::set_texture_smooth(tex, false);
+
+    world.add_component(
+        entity,
+        C_Spatial2D {
+            transform: *transform,
+            ..Default::default()
+        },
+    );
+
+    let (sw, sh) = render::get_texture_size(gres.get_texture(renderable.material.texture));
+
+    world.add_component(
+        entity,
+        C_Animated_Sprite {
+            n_frames: N_ANIM_FRAMES as _,
+            frame_time: 0.1,
+            ..Default::default()
+        },
+    );
+
+    #[cfg(debug_assertions)]
+    {
+        add_debug_data(world, entity, "Torch");
+    }
+
+    entity
 }

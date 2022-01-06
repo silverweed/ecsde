@@ -1,0 +1,19 @@
+BEGIN
+w w w w w w w w w w w w w w w w w w w       w w w w
+w                                                 w
+w                                   t       t     w
+w                                                 w
+w                                 w w w w w w     w
+w                                                 w
+w                         t                       w
+w                     w w w w                     w
+w                                                 w
+w           t                                      
+w                                                  
+w       w w w w w w                                
+w                                                  
+w                       w w                       w
+w                                                 w
+w   t                                         t   w
+w w w w w w w w w w w w w w w w w w w w     w w w w
+END

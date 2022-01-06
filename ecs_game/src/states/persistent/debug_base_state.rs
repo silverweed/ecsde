@@ -41,47 +41,7 @@ impl Persistent_Game_State for Debug_Base_State {
     fn update(&mut self, args: &mut Game_State_Args, dt: &Duration, _real_dt: &Duration) {
         self.t += *dt;
 
-        if self.t > Duration::from_secs(1) {
-            self.t = Duration::default();
-
-            let rng = &mut args.engine_state.rng;
-            args.gameplay_system.levels.foreach_active_level(|lv| {
-                let mut pls = vec![];
-                for pl in lv.lights.point_lights() {
-                    pls.push(inle_gfx::light::Point_Light {
-                        color: inle_common::colors::color_from_hex(inle_core::rand::rand_range(
-                            rng,
-                            0.0,
-                            0xffffffffu32 as f32,
-                        )
-                            as u32),
-                        ..*pl
-                    });
-                }
-
-                let mut rls = vec![];
-                for rl in lv.lights.rect_lights() {
-                    rls.push(inle_gfx::light::Rect_Light {
-                        color: inle_common::colors::color_from_hex(inle_core::rand::rand_range(
-                            rng,
-                            0.0,
-                            0xffffffffu32 as f32,
-                        )
-                            as u32),
-                        ..*rl
-                    });
-                }
-
-                for (i, pl) in pls.iter().enumerate() {
-                    lv.lights
-                        .queue_command(inle_gfx::light::Light_Command::Change_Point_Light(i, *pl));
-                }
-                for (i, rl) in rls.iter().enumerate() {
-                    lv.lights
-                        .queue_command(inle_gfx::light::Light_Command::Change_Rect_Light(i, *rl));
-                }
-            });
-        }
+        // self.blink_lights(args);
     }
 
     fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Game_State_Args) {
@@ -331,5 +291,51 @@ impl Debug_Base_State {
             }
         }
     }
+
+    // DEBUG
+    fn blink_lights(&mut self, args: &mut Game_State_Args) {
+        if self.t > Duration::from_secs(1) {
+            self.t = Duration::default();
+
+            let rng = &mut args.engine_state.rng;
+            args.gameplay_system.levels.foreach_active_level(|lv| {
+                let mut pls = vec![];
+                for pl in lv.lights.point_lights() {
+                    pls.push(inle_gfx::light::Point_Light {
+                        color: inle_common::colors::color_from_hex(inle_core::rand::rand_range(
+                            rng,
+                            0.0,
+                            0xffffffffu32 as f32,
+                        )
+                            as u32),
+                        ..*pl
+                    });
+                }
+
+                let mut rls = vec![];
+                for rl in lv.lights.rect_lights() {
+                    rls.push(inle_gfx::light::Rect_Light {
+                        color: inle_common::colors::color_from_hex(inle_core::rand::rand_range(
+                            rng,
+                            0.0,
+                            0xffffffffu32 as f32,
+                        )
+                            as u32),
+                        ..*rl
+                    });
+                }
+
+                for (i, pl) in pls.iter().enumerate() {
+                    lv.lights
+                        .queue_command(inle_gfx::light::Light_Command::Change_Point_Light(i, *pl));
+                }
+                for (i, rl) in rls.iter().enumerate() {
+                    lv.lights
+                        .queue_command(inle_gfx::light::Light_Command::Change_Rect_Light(i, *rl));
+                }
+            });
+        }
+    }
+
 }
 */
