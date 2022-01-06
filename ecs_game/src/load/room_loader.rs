@@ -50,6 +50,7 @@ pub struct Load_Args<'r, 's, 'a> {
     pub cfg: &'a Config,
 }
 
+#[allow(clippy::collapsible_else_if)]
 pub fn load_room_from_file(
     filepath: &Path,
     room_setup: &Room_Setup,
@@ -101,7 +102,7 @@ pub fn load_room_from_file(
     for (room_lineno, line) in room_lines.iter().enumerate() {
         parse_room_line(
             room_lineno as u32, // y coords go downward!
-            &line,
+            line,
             &mut room,
             room_setup,
             &mut load_args,
