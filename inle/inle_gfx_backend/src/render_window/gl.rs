@@ -82,6 +82,8 @@ pub struct Gl {
 
     #[cfg(debug_assertions)]
     pub n_draw_calls_this_frame: u32,
+    #[cfg(debug_assertions)]
+    pub n_draw_calls_prev_frame: u32,
 }
 
 impl Gl {
@@ -303,7 +305,20 @@ pub fn start_new_frame(window: &mut Render_Window_Handle) {
 
     #[cfg(debug_assertions)]
     {
+        window.gl.n_draw_calls_prev_frame = window.gl.n_draw_calls_this_frame;
         window.gl.n_draw_calls_this_frame = 0;
+    }
+}
+
+#[inline(always)]
+pub fn n_draw_calls_prev_frame(window: &Render_Window_Handle) -> u32 {
+    #[cfg(debug_assertions)]
+    {
+        window.gl.n_draw_calls_prev_frame
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        0
     }
 }
 

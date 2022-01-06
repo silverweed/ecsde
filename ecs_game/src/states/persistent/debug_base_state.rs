@@ -38,11 +38,11 @@ macro_rules! add_msg {
 }
 
 impl Persistent_Game_State for Debug_Base_State {
-    fn update(&mut self, args: &mut Game_State_Args, dt: &Duration, _real_dt: &Duration) {
-        self.t += *dt;
+    //fn update(&mut self, args: &mut Game_State_Args, dt: &Duration, _real_dt: &Duration) {
+    //self.t += *dt;
 
-        // self.blink_lights(args);
-    }
+    // self.blink_lights(args);
+    //}
 
     fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Game_State_Args) {
         let Game_State_Args {

@@ -510,7 +510,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         .unwrap();
     overlay.cfg.vert_align = Align::End;
     overlay.cfg.horiz_align = Align::Begin;
-    overlay.position = Vec2f::new(0.0, win_h as f32 - 22. * ui_scale);
+    overlay.position = Vec2f::new(0.0, win_h as f32 - 24. * ui_scale);
 
     // Camera overlay
     let overlay = debug_ui
@@ -526,7 +526,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
         .unwrap();
     overlay.cfg.vert_align = Align::End;
     overlay.cfg.horiz_align = Align::Begin;
-    overlay.position = Vec2f::new(0.0, win_h as f32 - 40. * ui_scale);
+    overlay.position = Vec2f::new(0.0, win_h as f32 - 46. * ui_scale);
 
     // Console hints
     let console = &mut game_state

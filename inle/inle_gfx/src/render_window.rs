@@ -95,3 +95,8 @@ pub fn start_new_frame(window: &mut Render_Window_Handle) {
 pub fn shutdown(window: &mut Render_Window_Handle) {
     backend::shutdown(window);
 }
+
+#[inline]
+pub fn n_draw_calls_prev_frame(window: &Render_Window_Handle) -> u32 {
+    backend::n_draw_calls_prev_frame(window)
+}

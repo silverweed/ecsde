@@ -219,7 +219,8 @@ impl Debug_Frame_Scroller {
     ) {
         trace!("frame_scroller::draw");
 
-        let mut vbuf = render::start_draw_quads_temp(window, (self.n_frames + self.n_seconds) as _);
+        let mut vbuf =
+            render::start_draw_quads_temp(window, 2 * (self.n_frames + self.n_seconds) as u32);
 
         self.draw_row(window, &mut vbuf, gres, Row::Seconds, debug_log, config);
         self.draw_row(window, &mut vbuf, gres, Row::Frames, debug_log, config);
@@ -257,13 +258,14 @@ impl Debug_Frame_Scroller {
         };
         {
             // Draw outline
-            let paint_props = Paint_Properties {
-                color: colors::TRANSPARENT,
-                border_thick: 1.0,
-                border_color: colors::rgba(200, 200, 200, if row_hovered { 250 } else { 0 }),
-                ..Default::default()
-            };
-            render::render_rect(window, row_r, paint_props);
+            let color = colors::rgba(200, 200, 200, if row_hovered { 250 } else { 0 });
+            render::add_quad(
+                vbuf,
+                &render::new_vertex(row_r.pos_min(), color, v2!(0., 0.)),
+                &render::new_vertex(row_r.pos_min() + v2!(row_r.width, 0.), color, v2!(0., 0.)),
+                &render::new_vertex(row_r.pos_max(), color, v2!(0., 0.)),
+                &render::new_vertex(row_r.pos_min() + v2!(0., row_r.height), color, v2!(0., 0.)),
+            );
         }
 
         if subdivs == 0 {

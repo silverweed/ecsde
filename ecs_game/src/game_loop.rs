@@ -922,11 +922,16 @@ fn update_debug(
                 .unwrap_or_else(|| fatal!("Debug painter not found for level {:?}", level.id));
 
             if display_overlays {
-                update_entities_debug_overlay(debug_ui.get_overlay(sid!("entities")), &level.world);
+                update_entities_and_draw_calls_debug_overlay(
+                    debug_ui.get_overlay(sid!("entities")),
+                    &level.world,
+                    window,
+                );
                 update_camera_debug_overlay(
                     debug_ui.get_overlay(sid!("camera")),
                     &level.get_camera_transform(),
                 );
+
                 if let Some(cls_debug_data) = collision_debug_data.get(&level.id) {
                     update_physics_debug_overlay(
                         debug_ui.get_overlay(sid!("physics")),
@@ -1148,13 +1153,18 @@ fn update_win_debug_overlay(
 }
 
 #[cfg(debug_assertions)]
-fn update_entities_debug_overlay(
+fn update_entities_and_draw_calls_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     ecs_world: &Ecs_World,
+    window: &Render_Window_Handle,
 ) {
     debug_overlay.clear();
     debug_overlay
-        .add_line(&format!("Entities: {}", ecs_world.entities().len()))
+        .add_line(&format!(
+            "Entities: {} | draw calls: {}",
+            ecs_world.entities().len(),
+            inle_gfx::render_window::n_draw_calls_prev_frame(window)
+        ))
         .with_color(colors::rgba(220, 100, 180, 220));
 }
 
@@ -1455,7 +1465,7 @@ fn debug_draw_lights(
                 radius: pl.radius,
             },
             Paint_Properties {
-                color: colors::TRANSPARENT,
+                color: pl.color, // @Incomplete: make this transparent when we can render borders
                 border_color: pl.color,
                 border_thick: 2.,
                 ..Default::default()
