@@ -658,18 +658,16 @@ fn fill_shadow_vertices(
                 diff[2].magnitude2(),
                 diff[3].magnitude2(),
             ];
-            let min_d_sqr = dist2
-                .iter()
-                .min_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap();
 
             const SHADOW_MAX_VALUE: f32 = 50.0;
+            const SHADOW_MAX_DIST: f32 = 100.0;
 
-            for v_idx in 0..4 {
-                v[v_idx].set_position(
-                    v[v_idx].position()
-                        - lerp_clamped(0.0, 1.0, dist2[v_idx] / min_d_sqr - 1.0) * diff[v_idx],
-                );
+            for v_idx in 0..v.len() {
+                if v_idx <= 1 {
+                    let offset =
+                        lerp_clamped(0., SHADOW_MAX_DIST, 1.0 / (dist2[v_idx].powf(0.6) + 0.1));
+                    v[v_idx].set_position(v[v_idx].position() - offset * diff[v_idx]);
+                }
 
                 let t = (1.0 - dist2[v_idx] * recp_radius2).max(0.0);
                 v[v_idx].set_color(colors::rgba(
@@ -678,11 +676,32 @@ fn fill_shadow_vertices(
                     0,
                     lerp(0.0, SHADOW_MAX_VALUE, t * t) as u8,
                 ));
+                //match v_idx {
+                //0 => v[v_idx].set_color(colors::rgba(255, 0, 0, 100)),
+                //1 => v[v_idx].set_color(colors::rgba(0, 255, 0, 100)),
+                //2 => v[v_idx].set_color(colors::rgba(0, 0, 255, 100)),
+                //3 => v[v_idx].set_color(colors::rgba(255, 255, 0, 100)),
+                //_ => unreachable!(),
+                //}
             }
-            let ps = [v1.position(), v2.position(), v3.position(), v4.position()];
+            let ps = [
+                v[0].position(),
+                v[1].position(),
+                v[2].position(),
+                v[3].position(),
+            ];
             let shadow_aabb = rect::aabb_of_points(&ps);
             if rect::rects_intersection(visible_viewport, &shadow_aabb).is_none() {
                 continue;
+            }
+
+            // Fix vertex winding, since it may now be wrong  after moving them
+            let a = ps[1] - ps[0];
+            let b = ps[2] - ps[0];
+            let a_wedge_b = a.x * b.y - a.y * b.x;
+            if a_wedge_b.signum() < 0.0 {
+                v.swap(0, 1);
+                v.swap(2, 3);
             }
 
             out_vertices.push(v[0]);
