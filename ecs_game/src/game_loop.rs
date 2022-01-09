@@ -1676,8 +1676,8 @@ fn debug_draw_grid(
     let col_gray = colors::rgba(200, 200, 200, grid_opacity);
     let col_white = colors::rgba(255, 255, 255, grid_opacity);
     let sq_coord = Vec2f::new(
-        ((cx * cam_sx - sw * 0.5) / square_size).floor() * square_size,
-        ((cy * cam_sy - sh * 0.5) / square_size).floor() * square_size,
+        ((cx - sw * 0.5) / square_size).floor() * square_size,
+        ((cy - sh * 0.5) / square_size).floor() * square_size,
     );
 
     let draw_text = n_vert * n_horiz < 1000;

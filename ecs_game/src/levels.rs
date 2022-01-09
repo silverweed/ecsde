@@ -37,6 +37,19 @@ impl Level {
         let mut cams = query.storages().begin_write::<C_Camera2D>();
         cams.must_get_mut(cam_entity).transform.set_position_v(pos);
     }
+
+    // @Temporary
+    pub fn zoom_camera(&mut self, amt: Vec2f, is_absolute: bool) {
+        let query = Ecs_Query::new(&self.world).write::<C_Camera2D>();
+        let cam_entity = query.entities()[0];
+        let mut cams = query.storages().begin_write::<C_Camera2D>();
+        if is_absolute {
+            cams.must_get_mut(cam_entity).transform.set_scale_v(amt);
+        } else {
+            let transform = &mut cams.must_get_mut(cam_entity).transform;
+            transform.set_scale_v(transform.scale() * amt);
+        }
+    }
 }
 
 #[derive(Default)]

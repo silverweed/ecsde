@@ -11,6 +11,7 @@ use std::fmt;
 pub enum Console_Cmd {
     Quit,
     Move_Camera { to: Vec2f },
+    Zoom_Camera { amt: Vec2f, is_absolute: bool },
     Get_Cfg_Var { name: String },
     Set_Cfg_Var { name: String, value: Cfg_Value },
     Toggle_Cfg_Var { name: String },
@@ -21,8 +22,9 @@ pub enum Console_Cmd {
 // the parse_cmd below *and* the enum declaration above!
 // We can @WaitForStable until we can do a const match on the enum, but maybe
 // there is a better way.
-pub const ALL_CMD_STRINGS: [&str; 8] =
-    ["quit", "cam", "var", "toggle", "fps", "trace", "log", "hud"];
+pub const ALL_CMD_STRINGS: [&str; 9] = [
+    "quit", "cam", "var", "toggle", "fps", "trace", "log", "hud", "zoom",
+];
 
 // Parses and executes 'cmdline'. May return a string to output to the console.
 pub fn execute(
@@ -54,6 +56,14 @@ fn parse_cmd(cmdline: &str) -> Result<Console_Cmd, Console_Error> {
             }),
             ["cam"] => Ok(Console_Cmd::Move_Camera {
                 to: Vec2f::default(),
+            }),
+            ["zoom", x, y] => Ok(Console_Cmd::Zoom_Camera {
+                amt: Vec2f::new(x.parse()?, y.parse()?),
+                is_absolute: true,
+            }),
+            ["zoom"] => Ok(Console_Cmd::Zoom_Camera {
+                amt: Vec2f::new(1., 1.),
+                is_absolute: true,
             }),
             ["var", name] => Ok(Console_Cmd::Get_Cfg_Var {
                 name: (*name).to_string(),
@@ -98,6 +108,11 @@ fn execute_command(
         Console_Cmd::Move_Camera { to } => {
             gs.levels
                 .foreach_active_level(|level| level.move_camera_to(to));
+            None
+        }
+        Console_Cmd::Zoom_Camera { amt, is_absolute } => {
+            gs.levels
+                .foreach_active_level(|level| level.zoom_camera(amt, is_absolute));
             None
         }
         Console_Cmd::Get_Cfg_Var { name } => Some((
