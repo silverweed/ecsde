@@ -551,16 +551,20 @@ fn update_graphics<'a, 's, 'r>(
         let gameplay_system = &mut game_state.gameplay_system;
         let batches = &mut game_state.level_batches;
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
+        #[cfg(debug_assertions)]
+        let painters = &mut game_state.engine_state.debug_systems.painters;
         gameplay_system.levels.foreach_active_level(|level| {
             let render_args = render_system::Render_System_Update_Args {
                 batches: batches.get_mut(&level.id).unwrap(),
                 ecs_world: &level.world,
                 frame_alloc,
-                cfg: render_cfg,
+                render_cfg,
                 window,
                 camera: &level.get_camera_transform(),
                 gres,
                 shader_cache,
+                #[cfg(debug_assertions)]
+                painter: painters.get_mut(&level.id).unwrap(),
             };
 
             render_system::update(render_args);

@@ -163,7 +163,7 @@ pub fn init_engine_debug(
 
     let font = gfx_resources.load_font(&inle_resources::gfx::font_path(
         &engine_state.env,
-        cfg.font.read(&engine_state.config),
+        cfg.font_name.read(&engine_state.config),
     ));
 
     engine_state
@@ -177,6 +177,7 @@ pub fn init_engine_debug(
     );
 
     let debug_ui = &mut engine_state.debug_systems.debug_ui;
+    debug_ui.set_font(font);
 
     // Frame scroller
     {

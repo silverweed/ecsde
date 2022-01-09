@@ -252,11 +252,11 @@ fn create_game_state<'a>(
         app::start_config_watch(&engine_state.env, &mut engine_state.config)?;
 
         let ui_scale = Cfg_Var::<f32>::new("engine/debug/ui/ui_scale", &engine_state.config);
-        let font = Cfg_Var::<String>::new("engine/debug/ui/font", &engine_state.config);
+        let font_name = Cfg_Var::<String>::new("engine/debug/ui/font", &engine_state.config);
         let cfg = inle_debug::debug_ui::Debug_Ui_System_Config {
             target_win_size: engine_state.app_config.target_win_size,
             ui_scale,
-            font,
+            font_name,
             font_size: Cfg_Var::new("engine/debug/ui/font_size", &engine_state.config),
         };
 
@@ -469,7 +469,7 @@ fn init_game_debug(game_state: &mut Game_State, game_resources: &mut Game_Resour
     let debug_ui = &mut game_state.engine_state.debug_systems.debug_ui;
     let cfg = &game_state.engine_state.config;
 
-    let font_name = debug_ui.cfg.font.read(cfg);
+    let font_name = debug_ui.cfg.font_name.read(cfg);
     let font = game_resources
         .gfx
         .load_font(&inle_resources::gfx::font_path(

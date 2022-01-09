@@ -12,7 +12,10 @@ use inle_math::transform::Transform2D;
 use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
 
 #[cfg(debug_assertions)]
-use {inle_common::colors, inle_math::rect::Rect};
+use {
+    inle_common::colors, inle_debug::painter::Debug_Painter, inle_math::rect::Rect,
+    inle_math::shapes::Circle,
+};
 
 #[derive(Copy, Clone)]
 pub struct Render_System_Config {
@@ -37,20 +40,25 @@ pub struct Render_System_Update_Args<'a> {
     pub batches: &'a mut Batches,
     pub ecs_world: &'a Ecs_World,
     pub frame_alloc: &'a mut temp::Temp_Allocator,
-    pub cfg: Render_System_Config,
+    pub render_cfg: Render_System_Config,
     pub camera: &'a Transform2D,
     pub gres: &'a Gfx_Resources<'a>,
     pub shader_cache: &'a Shader_Cache<'a>,
+
+    #[cfg(debug_assertions)]
+    pub painter: &'a mut Debug_Painter,
 }
 
 pub fn update(args: Render_System_Update_Args) {
     let Render_System_Update_Args {
         batches,
         ecs_world,
-        cfg,
+        render_cfg,
         window,
         gres,
         shader_cache,
+        #[cfg(debug_assertions)]
+        painter,
         ..
     } = args;
 
@@ -89,31 +97,36 @@ pub fn update(args: Render_System_Update_Args) {
                 let mut_in_debug!(material) = *material;
 
                 #[cfg(debug_assertions)]
-                {
-                    display_debug_visualization(
-                        window,
-                        batches,
-                        gres,
-                        shader_cache,
-                        spatial,
-                        &mut material,
-                        src_rect,
-                        *z_index,
-                        min_z,
-                        max_z,
-                        cfg.debug_visualization,
-                    );
-                }
-
-                render::render_texture_ws(
+                let do_render = display_debug_visualization(
                     window,
                     batches,
-                    &material,
-                    src_rect,
-                    *modulate,
+                    gres,
+                    shader_cache,
+                    &spatial.transform,
                     &visual_transform,
+                    &mut material,
+                    src_rect,
                     *z_index,
+                    min_z,
+                    max_z,
+                    render_cfg.debug_visualization,
+                    painter,
                 );
+
+                #[cfg(not(debug_assertions))]
+                let do_render = true;
+
+                if do_render {
+                    render::render_texture_ws(
+                        window,
+                        batches,
+                        &material,
+                        src_rect,
+                        *modulate,
+                        &visual_transform,
+                        *z_index,
+                    );
+                }
             }
         }
     }
@@ -155,7 +168,7 @@ pub fn update(args: Render_System_Update_Args) {
                         sprite_local_transform,
                     } = &renderables[i as usize];
 
-                    let transform = spatial.transform.combine(sprite_local_transform);
+                    let visual_transform = spatial.transform.combine(sprite_local_transform);
                     let mut_in_debug!(material) = *material;
 
                     #[cfg(debug_assertions)]
@@ -165,18 +178,26 @@ pub fn update(args: Render_System_Update_Args) {
                             batches,
                             gres,
                             shader_cache,
-                            spatial,
+                            &spatial.transform,
+                            &visual_transform,
                             &mut material,
                             src_rect,
                             *z_index,
                             min_z,
                             max_z,
-                            cfg.debug_visualization,
+                            render_cfg.debug_visualization,
+                            painter,
                         );
                     }
 
                     render::render_texture_ws(
-                        window, batches, &material, src_rect, *modulate, &transform, *z_index,
+                        window,
+                        batches,
+                        &material,
+                        src_rect,
+                        *modulate,
+                        &visual_transform,
+                        *z_index,
                     );
                 }
             }
@@ -239,24 +260,27 @@ fn get_min_max_z_multi(
 }
 
 #[cfg(debug_assertions)]
+// Returns true if we should also draw the sprite normally after this
 fn display_debug_visualization(
     window: &mut Render_Window_Handle,
     batches: &mut Batches,
     gres: &Gfx_Resources,
     shader_cache: &Shader_Cache,
-    spatial: &C_Spatial2D,
+    entity_transform: &Transform2D,
+    visual_transform: &Transform2D,
     material: &mut Material,
     src_rect: &Rect<i32>,
     z_index: Z_Index,
     min_z: Z_Index,
     max_z: Z_Index,
     debug_visualization: Debug_Visualization,
-) {
+    painter: &mut Debug_Painter,
+) -> bool {
     match debug_visualization {
         Debug_Visualization::Sprites_Boundaries => {
             let mat = Material::with_texture(gres.get_white_texture_handle());
             let color = colors::lerp_col(
-                colors::RED,
+                colors::DARK_GRAY,
                 colors::AQUA,
                 (z_index - min_z) as f32 / (max_z - min_z) as f32,
             );
@@ -266,9 +290,23 @@ fn display_debug_visualization(
                 &mat,
                 src_rect,
                 color,
-                &spatial.transform,
+                visual_transform,
                 z_index,
             );
+            painter.add_circle(
+                Circle {
+                    center: entity_transform.position(),
+                    radius: 2.,
+                },
+                colors::rgb(28, 54, 208),
+            );
+            painter.add_text(
+                &format!("z{}", z_index),
+                visual_transform.position(),
+                7,
+                colors::DARK_ORANGE,
+            );
+            return false;
         }
         Debug_Visualization::Normals => {
             let mut mat = Material::with_texture(if material.normals.is_some() {
@@ -282,4 +320,6 @@ fn display_debug_visualization(
         }
         _ => {}
     }
+
+    true
 }

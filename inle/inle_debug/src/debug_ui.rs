@@ -9,7 +9,7 @@ use inle_cfg::{Cfg_Var, Config};
 use inle_common::stringid::String_Id;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input::input_state::Input_State;
-use inle_resources::gfx::Gfx_Resources;
+use inle_resources::gfx::{Font_Handle, Gfx_Resources};
 use std::any::type_name;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -19,7 +19,7 @@ use std::time::Duration;
 pub struct Debug_Ui_System_Config {
     pub ui_scale: Cfg_Var<f32>,
     pub target_win_size: (u32, u32),
-    pub font: Cfg_Var<String>,
+    pub font_name: Cfg_Var<String>,
     pub font_size: Cfg_Var<u32>,
 }
 
@@ -29,7 +29,7 @@ impl Default for Debug_Ui_System_Config {
             ui_scale: Cfg_Var::new_from_val(1.),
             font_size: Cfg_Var::new_from_val(10),
             target_win_size: (800, 600),
-            font: Cfg_Var::default(),
+            font_name: Cfg_Var::default(),
         }
     }
 }
@@ -154,6 +154,8 @@ pub struct Debug_Ui_System {
     overlays: Debug_Element_Container<overlay::Debug_Overlay>,
     graphs: Debug_Element_Container<graph::Debug_Graph_View>,
     log_windows: Debug_Element_Container<log_window::Log_Window>,
+    font: Font_Handle,
+
     pub frame_scroller: Debug_Frame_Scroller,
     pub cfg: Debug_Ui_System_Config,
 }
@@ -217,16 +219,6 @@ macro_rules! update_and_draw_elems {
 }
 
 impl Debug_Ui_System {
-    pub fn new() -> Debug_Ui_System {
-        Debug_Ui_System {
-            overlays: Debug_Element_Container::new(),
-            graphs: Debug_Element_Container::new(),
-            log_windows: Debug_Element_Container::new(),
-            frame_scroller: Debug_Frame_Scroller::default(),
-            cfg: Debug_Ui_System_Config::default(),
-        }
-    }
-
     add_debug_elem!(
         overlay::Debug_Overlay,
         overlay::Debug_Overlay_Config,
@@ -256,6 +248,19 @@ impl Debug_Ui_System {
         set_log_window_enabled,
         is_log_window_enabled
     );
+
+    #[inline(always)]
+    pub fn get_font(&self) -> Font_Handle {
+        self.font
+    }
+
+    // Note: we have getter/setter for the font because we may want to make the font
+    // dynamically changeable, in which case this function should also set the font
+    // for all child debug elements.
+    #[inline]
+    pub fn set_font(&mut self, font: Font_Handle) {
+        self.font = font;
+    }
 
     pub fn update_and_draw(
         &mut self,

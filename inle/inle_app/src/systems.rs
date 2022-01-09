@@ -72,7 +72,7 @@ impl Debug_Systems {
             inle_cfg::Cfg_Var::<i32>::new("engine/debug/log/hist_size_seconds", cfg).read(cfg);
         let fps = (1000. / ms_per_frame + 0.5) as i32;
         Debug_Systems {
-            debug_ui: debug_ui::Debug_Ui_System::new(),
+            debug_ui: debug_ui::Debug_Ui_System::default(),
             replay_recording_system: recording_system::Replay_Recording_System::new(
                 recording_system::Replay_Recording_System_Config {
                     ms_per_frame,
