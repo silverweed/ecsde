@@ -1,3 +1,4 @@
+use crate::directions::{Square_Direction, Square_Directions};
 use crate::entities;
 use inle_cfg::config::Config;
 use inle_common::colors;
@@ -19,6 +20,7 @@ pub struct Room {
     pub size: Vec2u,
 
     pub entities: Vec<Entity>,
+    pub exits: Square_Directions,
 }
 
 #[derive(Debug)]
@@ -97,8 +99,6 @@ pub fn load_room_from_file(
     // w w w w w -> line len = 9, room width = 5
     room.size.x = room_lines[0].len() as u32 / 2 + 1;
 
-    ldebug!("Room size = {:?}", room.size);
-
     for (room_lineno, line) in room_lines.iter().enumerate() {
         parse_room_line(
             room_lineno as u32, // y coords go downward!
@@ -108,6 +108,7 @@ pub fn load_room_from_file(
             &mut load_args,
         )?;
     }
+    ldebug!("Room size = {:?}, exits = {:?}", room.size, room.exits);
 
     Ok(room)
 }
@@ -119,6 +120,8 @@ fn parse_room_line(
     room_setup: &Room_Setup,
     load_args: &mut Load_Args,
 ) -> Result<(), Room_Load_Err> {
+    let is_top_row = room_y == 0;
+    let is_bottom_row = room_y == room.size.y - 1;
     for (room_x, entity_chr) in line.chars().step_by(2).enumerate() {
         let coords = v2!(room_x as _, room_y);
         let entity = load_entity_from_chr(entity_chr, coords, room_setup, load_args).ok_or(
@@ -127,14 +130,25 @@ fn parse_room_line(
             },
         )?;
 
+        let is_left_column = room_x == 0;
+        let is_right_column = room_x == room.size.x as usize - 1;
         if entity != Entity::INVALID {
             room.entities.push(entity);
+        } else if is_top_row {
+            room.exits |= Square_Direction::Up;
+        } else if is_bottom_row {
+            room.exits |= Square_Direction::Down;
+        } else if is_left_column {
+            room.exits |= Square_Direction::Left;
+        } else if is_right_column {
+            room.exits |= Square_Direction::Right;
         }
     }
 
     Ok(())
 }
 
+// Note: Some(INVALID) means 'empty tile', None means error.
 fn load_entity_from_chr(
     entity_chr: char,
     grid_coords: Vec2u,

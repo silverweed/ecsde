@@ -411,7 +411,7 @@ mod tests {
         let mut phys_world = Physics_World::new();
 
         assert!(phys_world
-            .get_collider(Collider_Handle { index: 0, gen: 0 })
+            .get_collider(Collider_Handle(Generational_Index { index: 0, gen: 0 }))
             .is_none());
 
         let c = Collider {

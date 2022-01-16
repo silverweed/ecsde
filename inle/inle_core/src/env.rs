@@ -40,6 +40,12 @@ impl Env_Info {
         {
             working_dir.pop();
             working_dir.pop();
+        } else if matches!(cur_dir, Some("deps"))
+            && matches!(parent_dir, Some("debug" | "release" | "profile"))
+        {
+            working_dir.pop();
+            working_dir.pop();
+            working_dir.pop();
         }
 
         let assets_root = {
