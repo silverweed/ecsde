@@ -12,7 +12,6 @@ pub fn get_movement_from_input(
     input_cfg: Input_Config,
     cfg: &Config,
 ) -> Vec2f {
-    // @Speed @WaitForStable: compute these StringIds at compile-time
     let deadzone = input_cfg.joy_deadzone.read(cfg).abs();
     let x = axes.get_axis_value(sid!("horizontal"));
     let y = axes.get_axis_value(sid!("vertical"));

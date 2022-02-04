@@ -15,7 +15,6 @@ use crate::debug::systems::Game_Debug_Systems;
 
 pub type Level_Batches = HashMap<String_Id, inle_gfx::render::batcher::Batches>;
 
-#[repr(C)]
 pub struct Game_State<'a> {
     pub window: Render_Window_Handle,
     pub engine_state: app::Engine_State<'a>,
@@ -106,7 +105,6 @@ pub struct Debug_CVars {
     pub print_draw_stats: Cfg_Var<bool>,
 }
 
-#[repr(C)]
 pub struct Game_Resources<'a> {
     pub gfx: inle_resources::gfx::Gfx_Resources<'a>,
     pub audio: inle_resources::audio::Audio_Resources<'a>,
