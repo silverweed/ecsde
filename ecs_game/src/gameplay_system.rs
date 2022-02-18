@@ -329,13 +329,13 @@ impl Gameplay_System {
         });
     }
 
-    pub fn realtime_update(&mut self, real_dt: &Duration, engine_state: &Engine_State) {
+    pub fn realtime_update(&mut self, real_dt: &Duration, window: &Render_Window_Handle, engine_state: &Engine_State) {
         trace!("gameplay_system::realtime_update");
 
         if self.camera_on_player.read(&engine_state.config) {
             self.update_camera(real_dt, engine_state);
         } else {
-            self.update_free_camera(real_dt, &engine_state.input_state, &engine_state.config);
+            self.update_free_camera(real_dt, window, &engine_state.input_state, &engine_state.config);
         }
     }
 
@@ -350,13 +350,15 @@ impl Gameplay_System {
     fn update_free_camera(
         &mut self,
         dt: &Duration,
+        window: &Render_Window_Handle,
         input_state: &Input_State,
         cfg: &inle_cfg::Config,
     ) {
         self.levels.foreach_active_level(|level| {
             let movement =
                 get_movement_from_input(&input_state.processed.virtual_axes, self.input_cfg, cfg);
-            let v = {
+
+            let cam_translation = {
                 let camera_ctrl = level
                     .world
                     .get_component_mut::<C_Controllable>(level.cameras[level.active_camera]);
@@ -368,9 +370,9 @@ impl Gameplay_System {
                 let mut camera_ctrl = camera_ctrl.unwrap();
                 let speed = camera_ctrl.speed.read(cfg);
                 let velocity = movement * speed;
-                let v = velocity * dt_secs;
-                camera_ctrl.translation_this_frame = v;
-                v
+                let cam_translation = velocity * dt_secs;
+                camera_ctrl.translation_this_frame = cam_translation;
+                cam_translation
             };
 
             let mut camera = level
@@ -379,19 +381,20 @@ impl Gameplay_System {
                 .unwrap();
 
             let sx = camera.transform.scale().x;
-            let mut v = v * sx;
+            let mut cam_translation = cam_translation * sx;
 
             let mut add_scale = Vec2f::new(0., 0.);
             const BASE_CAM_DELTA_ZOOM_PER_SCROLL: f32 = 0.2;
+            let base_delta_zoom_per_scroll = Cfg_Var::<f32>::new("game/camera/free/base_delta_zoom_per_scroll", cfg).read(cfg);
 
             for action in &input_state.processed.game_actions {
                 match action {
                     (name, Action_Kind::Pressed) if *name == sid!("camera_zoom_up") => {
-                        add_scale.x -= BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
+                        add_scale.x -= base_delta_zoom_per_scroll * sx;
                         add_scale.y = add_scale.x;
                     }
                     (name, Action_Kind::Pressed) if *name == sid!("camera_zoom_down") => {
-                        add_scale.x += BASE_CAM_DELTA_ZOOM_PER_SCROLL * sx;
+                        add_scale.x += base_delta_zoom_per_scroll * sx;
                         add_scale.y = add_scale.x;
                     }
                     _ => (),
@@ -399,16 +402,21 @@ impl Gameplay_System {
             }
 
             if add_scale.magnitude2() > 0. {
-                camera.transform.add_scale_v(add_scale);
+                // Preserve mouse world position
+                let cur_mouse_wpos = inle_gfx::render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, &camera.transform);
 
-                // Keep viewport centered
-                let win_w = Cfg_Var::<i32>::new("engine/window/width", cfg).read(cfg);
-                let win_h = Cfg_Var::<i32>::new("engine/window/height", cfg).read(cfg);
-                v -= add_scale * 0.5 * v2!(win_w as f32, win_h as f32);
+                camera.transform.add_scale_v(add_scale);
+                let mut new_scale = camera.transform.scale();
+                new_scale.x = new_scale.x.max(0.001);
+                new_scale.y = new_scale.y.max(0.001);
+                camera.transform.set_scale_v(new_scale);
+
+                let new_mouse_wpos = inle_gfx::render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, &camera.transform);
+
+                cam_translation += cur_mouse_wpos - new_mouse_wpos;
             }
 
-            //return;
-            camera.transform.translate_v(v);
+            camera.transform.translate_v(cam_translation);
         });
     }
 

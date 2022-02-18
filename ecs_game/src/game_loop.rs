@@ -322,7 +322,7 @@ where
 
             game_state
                 .gameplay_system
-                .realtime_update(&real_dt, &game_state.engine_state);
+                .realtime_update(&real_dt, &game_state.window, &game_state.engine_state);
 
             // @Cleanup: where do we put this? Do we want this inside gameplay_system?
             {
