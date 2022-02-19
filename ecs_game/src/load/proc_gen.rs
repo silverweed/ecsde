@@ -166,7 +166,7 @@ fn create_room_grid(
 ) {
     use super::room_loader;
 
-    let room_file = inle_core::env::asset_path(env, "rooms", "rm_test.txt");
+    let room_dir = inle_core::env::asset_dir_path(env, "rooms");
     // @Incomplete: room_halfsize is not really necessarily the actual room
     // half size, because right now a room's size is decided entirely by
     // the text file it's loaded from. We should probably decide a fixed
@@ -175,10 +175,13 @@ fn create_room_grid(
         room_offset: grid.first_room_center - grid.room_halfsize,
         tile_size: 32.0,
     };
-    room_loader::load_room_from_file(
-        &room_file,
+    let room_pool = room_loader::load_room_pool(&room_dir);
+    assert!(!room_pool.rooms.is_empty());
+
+    room_loader::instantiate_room(
+        &room_pool.rooms[0],
         &room_setup,
-        super::room_loader::Load_Args {
+        super::room_loader::Room_Instantiate_Args {
             ecs_world: &mut level.world,
             phys_world: &mut level.phys_world,
             gres,
@@ -187,8 +190,7 @@ fn create_room_grid(
             env,
             cfg,
         },
-    )
-    .unwrap_or_else(|err| panic!("{}", err));
+    );
 
     return;
     for x in 0..grid.size.x {
