@@ -22,7 +22,7 @@ inle_win = { path = "../inle_win" }
 
 [dependencies.smallvec]
 default-features = false
-version = "1.4"
+version = "1.8"
 
 [dependencies.sfml]
 version = "0.15.1"

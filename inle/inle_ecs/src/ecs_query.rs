@@ -4,6 +4,7 @@ use crate::comp_mgr::{
 };
 use crate::ecs_world::{Ecs_World, Entity};
 use anymap::any::UncheckedAnyExt;
+use smallvec::SmallVec;
 use std::any::{type_name, TypeId};
 use std::collections::HashMap;
 
@@ -20,15 +21,15 @@ impl<'m, 's> Ecs_Query<'m, 's> {
     }
 
     #[inline]
-    pub fn storages(&self) -> &Storages {
+    pub fn storages(&self) -> &Storages<'s> {
         &self.storages
     }
 }
 
 #[derive(Default)]
 pub struct Storages<'a> {
-    reads: Vec<&'a dyn Component_Storage_Interface>,
-    writes: Vec<&'a dyn Component_Storage_Interface>,
+    reads: SmallVec<[&'a dyn Component_Storage_Interface; 4]>,
+    writes: SmallVec<[&'a dyn Component_Storage_Interface; 4]>,
 
     read_indices: HashMap<TypeId, usize>,
     write_indices: HashMap<TypeId, usize>,
@@ -88,9 +89,17 @@ where
     'mgr: 'str,
 {
     pub fn new(ecs_world: &'mgr Ecs_World) -> Self {
+        trace!("Ecs_Query::new");
+
         Self {
             comp_mgr: &ecs_world.component_manager,
             storages: Storages::default(),
+            // @Speed: cloning the entire entity vector! This is not a good idea, find a better way.
+            // Since Ecs_Query never outlives the component manager, we may make it just an iterator
+            // over the ecs world's entities (a bit like the old version).
+            // However, for it to be efficient we'd need a fast way to determine if an entity has
+            // a specific set of component.
+            // Also, we may hinder our possibility to parallelize the iteration in the future...
             entities: ecs_world.entities().to_vec(),
         }
     }
