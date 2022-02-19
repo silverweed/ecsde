@@ -270,6 +270,8 @@ where
 
     // @Speed: maybe we should iterate on the chunks? Can we do that in parallel?
     for a in phys_world.colliders.iter().filter(|cld| !cld.is_static) {
+        trace!("iterate_colliders");
+
         let a_extent = a.shape.extent();
         let a_shape = collision_shape_type_index(&a.shape);
         let a_partial_cb = COLLISION_CB_TABLE[a_shape];

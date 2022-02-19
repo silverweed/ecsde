@@ -516,6 +516,7 @@ pub fn create_wall(
         layer: Game_Collision_Layer::Ground as _,
         // NOTE: the wall's pivot, for convenience, is top-left.
         offset: wall_size * 0.5,
+        is_static: true,
         ..Default::default()
     };
 

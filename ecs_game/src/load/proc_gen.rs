@@ -33,8 +33,6 @@ use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
 
 struct Room_Grid {
     size: Vec2u, // number of rooms in both directions
-    spacing: f32,
-    room_halfsize: Vec2f,
     first_room_center: Vec2f,
 }
 
@@ -54,8 +52,6 @@ pub fn generate_random_level(
 
     const GRID: Room_Grid = Room_Grid {
         size: v2!(3, 3),
-        spacing: 32.0,
-        room_halfsize: v2!(300., 200.),
         first_room_center: v2!(0., 0.),
     };
 
@@ -167,44 +163,39 @@ fn create_room_grid(
     use super::room_loader;
 
     let room_dir = inle_core::env::asset_dir_path(env, "rooms");
-    // @Incomplete: room_halfsize is not really necessarily the actual room
-    // half size, because right now a room's size is decided entirely by
-    // the text file it's loaded from. We should probably decide a fixed
-    // room size (or at least make all rooms a multiple of that size).
-    let room_setup = room_loader::Room_Setup {
-        room_offset: grid.first_room_center - grid.room_halfsize,
-        tile_size: 32.0,
-    };
     let room_pool = room_loader::load_room_pool(&room_dir);
     assert!(!room_pool.rooms.is_empty());
 
-    room_loader::instantiate_room(
-        &room_pool.rooms[0],
-        &room_setup,
-        super::room_loader::Room_Instantiate_Args {
-            ecs_world: &mut level.world,
-            phys_world: &mut level.phys_world,
-            gres,
-            shader_cache,
-            lights: &mut level.lights,
-            env,
-            cfg,
-        },
-    );
+    let mut instantiate_args = super::room_loader::Room_Instantiate_Args {
+        ecs_world: &mut level.world,
+        phys_world: &mut level.phys_world,
+        gres,
+        shader_cache,
+        lights: &mut level.lights,
+        env,
+        cfg,
+    };
 
-    return;
+    // @Temporary
+    const TILE_SIZE: f32 = 32.0;
+    let room_size = room_pool.rooms[0].size;
+
     for x in 0..grid.size.x {
         for y in 0..grid.size.y {
-            create_room(
-                grid.first_room_center + 2.0 * grid.room_halfsize * v2!(x as f32, y as f32),
-                grid.room_halfsize,
-                grid.spacing,
-                level,
-                gres,
-                shader_cache,
-                env,
-                cfg,
+            // @Incomplete: room_halfsize is not really necessarily the actual room
+            // half size, because right now a room's size is decided entirely by
+            // the text file it's loaded from. We should probably decide a fixed
+            // room size (or at least make all rooms a multiple of that size).
+            let offset = v2!(
+                x as f32 * (room_size.x as f32 * TILE_SIZE),
+                y as f32 * (room_size.y as f32 * TILE_SIZE)
             );
+            let room_setup = room_loader::Room_Setup {
+                room_offset: grid.first_room_center - Vec2f::from(room_size) * TILE_SIZE * 0.5
+                    + offset,
+                tile_size: TILE_SIZE,
+            };
+            room_loader::instantiate_room(&room_pool.rooms[0], &room_setup, &mut instantiate_args);
         }
     }
 }

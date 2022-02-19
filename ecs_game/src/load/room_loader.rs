@@ -202,14 +202,14 @@ fn parse_room_line(room_y: u32, line: &str, room: &mut Room) -> Result<(), Room_
 pub fn instantiate_room(
     room: &Room,
     room_setup: &Room_Setup,
-    mut instantiate_args: Room_Instantiate_Args,
+    instantiate_args: &mut Room_Instantiate_Args,
 ) {
     for ent_info in &room.entities {
         if load_entity_from_chr(
             ent_info.ent_type,
             ent_info.tile,
             room_setup,
-            &mut instantiate_args,
+            instantiate_args,
         )
         .is_none()
         {
