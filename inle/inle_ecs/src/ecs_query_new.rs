@@ -4,10 +4,10 @@ use std::any::TypeId;
 use std::collections::HashSet;
 
 pub struct Ecs_Query {
-    pub entities: Vec<Entity>,
+    entities: Vec<Entity>,
 
-    pub comp_read: HashSet<Component_Type>,
-    pub comp_write: HashSet<Component_Type>,
+    comp_read: HashSet<Component_Type>,
+    comp_write: HashSet<Component_Type>,
 }
 
 impl Ecs_Query {
@@ -19,12 +19,14 @@ impl Ecs_Query {
         }
     }
 
-    pub fn read<T: 'static>(&mut self) {
+    pub fn read<T: 'static>(mut self) -> Self {
         self.comp_read.insert(TypeId::of::<T>());
+        self
     }
 
-    pub fn write<T: 'static>(&mut self) {
+    pub fn write<T: 'static>(mut self) -> Self {
         self.comp_write.insert(TypeId::of::<T>());
+        self
     }
 
     pub fn update(
@@ -47,14 +49,22 @@ impl Ecs_Query {
                     return;
                 }
             }
-        } else if self
-            .comp_read
+        } else if comp_added
             .iter()
-            .chain(self.comp_write.iter())
-            .all(|comp| comp_mgr.has_component_dyn(entity, comp))
+            .any(|comp| self.comp_read.contains(comp) || self.comp_write.contains(comp))
+            && self
+                .comp_read
+                .iter()
+                .chain(self.comp_write.iter())
+                .all(|comp| comp_mgr.has_component_dyn(entity, comp))
         {
             self.entities.push(entity);
         }
+    }
+
+    #[inline]
+    pub fn entities(&self) -> &[Entity] {
+        &self.entities
     }
 }
 

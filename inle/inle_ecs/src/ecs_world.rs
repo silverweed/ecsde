@@ -1,8 +1,8 @@
-use super::comp_mgr::{self, Component_Manager};
+use super::comp_mgr::{self, Component_Manager, Component_Type};
 use inle_alloc::gen_alloc::{Generational_Allocator, Generational_Index};
 use inle_events::evt_register;
-use std::any::type_name;
-use std::collections::HashSet;
+use std::any::{type_name, TypeId};
+use std::collections::{HashMap, HashSet};
 
 pub type Entity = Generational_Index;
 
@@ -18,14 +18,23 @@ impl evt_register::Event for Evt_Entity_Destroyed {
     type Args = Entity;
 }
 
+#[derive(Default)]
+pub struct Component_Updates {
+    pub added: Vec<Component_Type>,
+    pub removed: Vec<Component_Type>,
+}
+
 pub struct Ecs_World {
     entity_manager: Entity_Manager,
 
     // Note: must be visible to entity_stream
-    pub(super) component_manager: Component_Manager,
+    pub component_manager: Component_Manager,
 
     entities_pending_destroy_notify: HashSet<Entity>,
     entities_pending_destroy: Vec<Entity>,
+
+    system_manager: System_Manager,
+    pending_component_updates_for_systems: HashMap<Entity, Component_Updates>,
 }
 
 impl Ecs_World {
@@ -35,7 +44,17 @@ impl Ecs_World {
             component_manager: Component_Manager::new(),
             entities_pending_destroy_notify: HashSet::new(),
             entities_pending_destroy: vec![],
+            system_manager: System_Manager::default(),
+            pending_component_updates_for_systems: HashMap::default(),
         }
+    }
+
+    pub fn get_and_flush_pending_component_updates_for_systems(
+        &mut self,
+    ) -> HashMap<Entity, Component_Updates> {
+        let mut result = HashMap::new();
+        std::mem::swap(&mut result, &mut self.pending_component_updates_for_systems);
+        result
     }
 
     pub fn new_entity(&mut self) -> Entity {
@@ -71,8 +90,17 @@ impl Ecs_World {
             && !self.entities_pending_destroy.contains(&entity)
     }
 
+    pub fn register_system(&mut self, system: Box<dyn System>) -> System_Handle {
+        self.system_manager.register_system(system)
+    }
+
     pub fn add_component<T: 'static>(&mut self, entity: Entity, data: T) {
         self.component_manager.add_component::<T>(entity, data);
+        self.pending_component_updates_for_systems
+            .entry(entity)
+            .or_insert_with(Component_Updates::default)
+            .added
+            .push(TypeId::of::<T>());
     }
 
     #[inline]
@@ -117,6 +145,11 @@ impl Ecs_World {
         }
 
         self.component_manager.remove_component::<T>(entity);
+        self.pending_component_updates_for_systems
+            .entry(entity)
+            .or_insert_with(Component_Updates::default)
+            .removed
+            .push(TypeId::of::<T>());
     }
 
     #[inline]
@@ -198,22 +231,23 @@ impl Ecs_World {
     }
 }
 
-//pub trait System {
-//fn get_queries_mut(&mut self) -> &mut [crate::ecs_query_new::Ecs_Query];
-//}
+pub trait System {
+    fn get_queries_mut(&mut self) -> Vec<&mut crate::ecs_query_new::Ecs_Query>;
+}
 
-//pub struct System_Handle(usize);
+pub struct System_Handle(usize);
 
-//struct System_Manager {
-//systems: Vec<Box<dyn System>>,
-//}
+#[derive(Default)]
+struct System_Manager {
+    systems: Vec<Box<dyn System>>,
+}
 
-//impl System_Manager {
-//fn register_system(&mut self, system: Box<dyn System>) -> System_Handle {
-//self.systems.push(system);
-//System_Handle(self.systems.len() - 1)
-//}
-//}
+impl System_Manager {
+    fn register_system(&mut self, system: Box<dyn System>) -> System_Handle {
+        self.systems.push(system);
+        System_Handle(self.systems.len() - 1)
+    }
+}
 
 #[cfg(tests)]
 include!("./ecs_world_tests.rs");

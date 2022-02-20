@@ -64,6 +64,9 @@ pub struct Gameplay_System {
 
     // @Temporary: we should create a C_Particle_Emitter to treat emitters like entities
     test_particle_emitter: inle_gfx::particles::Particle_Emitter_Handle,
+
+    // @Temporary
+    test_system: crate::systems::test_system::Test_System,
 }
 
 #[cfg(debug_assertions)]
@@ -87,6 +90,7 @@ impl Gameplay_System {
             debug_data: Debug_Data::default(),
             camera_on_player: Cfg_Var::default(),
             test_particle_emitter: inle_gfx::particles::Particle_Emitter_Handle::default(),
+            test_system: crate::systems::test_system::Test_System::new(),
         }
     }
 
@@ -287,6 +291,25 @@ impl Gameplay_System {
         let test_emitter_handle = self.test_particle_emitter;
         let ai_system = &mut self.ai_system;
         let camera_on_player = self.camera_on_player.read(cfg);
+        let test_system = &mut self.test_system;
+
+        levels.foreach_active_level(|level| {
+            let pending_updates = level
+                .world
+                .get_and_flush_pending_component_updates_for_systems();
+            for (entity, comp_updates) in pending_updates {
+                // @Incomplete: put all systems in a list and update them all
+                use inle_ecs::ecs_world::System;
+                for query in test_system.get_queries_mut() {
+                    query.update(
+                        &level.world.component_manager,
+                        entity,
+                        &comp_updates.added,
+                        &comp_updates.removed,
+                    );
+                }
+            }
+        });
 
         levels.foreach_active_level(|level| {
             let world = &mut level.world;
@@ -309,7 +332,7 @@ impl Gameplay_System {
             gravity_system::update(&dt, world, cfg);
 
             gfx::multi_sprite_animation_system::update(&dt, world, frame_alloc);
-            level.chunks.update(&mut level.world, &level.phys_world);
+            level.chunks.update(world, &level.phys_world);
 
             // @Temporary DEBUG (this only works if we only have 1 test level)
             //let particle_mgr = particle_mgrs.get_mut(&level.id).unwrap();
@@ -317,6 +340,8 @@ impl Gameplay_System {
             //.get_emitter_mut(test_emitter_handle)
             //.transform
             //.rotate(inle_math::angle::deg(dt.as_secs_f32() * 30.0));
+
+            test_system.update(world);
         });
     }
 
@@ -329,13 +354,23 @@ impl Gameplay_System {
         });
     }
 
-    pub fn realtime_update(&mut self, real_dt: &Duration, window: &Render_Window_Handle, engine_state: &Engine_State) {
+    pub fn realtime_update(
+        &mut self,
+        real_dt: &Duration,
+        window: &Render_Window_Handle,
+        engine_state: &Engine_State,
+    ) {
         trace!("gameplay_system::realtime_update");
 
         if self.camera_on_player.read(&engine_state.config) {
             self.update_camera(real_dt, engine_state);
         } else {
-            self.update_free_camera(real_dt, window, &engine_state.input_state, &engine_state.config);
+            self.update_free_camera(
+                real_dt,
+                window,
+                &engine_state.input_state,
+                &engine_state.config,
+            );
         }
     }
 
@@ -385,7 +420,8 @@ impl Gameplay_System {
 
             let mut add_scale = Vec2f::new(0., 0.);
             const BASE_CAM_DELTA_ZOOM_PER_SCROLL: f32 = 0.2;
-            let base_delta_zoom_per_scroll = Cfg_Var::<f32>::new("game/camera/free/base_delta_zoom_per_scroll", cfg).read(cfg);
+            let base_delta_zoom_per_scroll =
+                Cfg_Var::<f32>::new("game/camera/free/base_delta_zoom_per_scroll", cfg).read(cfg);
 
             for action in &input_state.processed.game_actions {
                 match action {
@@ -403,7 +439,11 @@ impl Gameplay_System {
 
             if add_scale.magnitude2() > 0. {
                 // Preserve mouse world position
-                let cur_mouse_wpos = inle_gfx::render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, &camera.transform);
+                let cur_mouse_wpos = inle_gfx::render_window::mouse_pos_in_world(
+                    window,
+                    &input_state.raw.mouse_state,
+                    &camera.transform,
+                );
 
                 camera.transform.add_scale_v(add_scale);
                 let mut new_scale = camera.transform.scale();
@@ -411,7 +451,11 @@ impl Gameplay_System {
                 new_scale.y = new_scale.y.max(0.001);
                 camera.transform.set_scale_v(new_scale);
 
-                let new_mouse_wpos = inle_gfx::render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, &camera.transform);
+                let new_mouse_wpos = inle_gfx::render_window::mouse_pos_in_world(
+                    window,
+                    &input_state.raw.mouse_state,
+                    &camera.transform,
+                );
 
                 cam_translation += cur_mouse_wpos - new_mouse_wpos;
             }
