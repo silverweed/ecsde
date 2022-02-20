@@ -54,4 +54,19 @@ macro_rules! foreach_entity {
             }
         }
     };
+
+    ($query: expr, $ecs_world: expr, read: $($read: ty),*; write: $($writ: ty),*; $fn: expr) => {
+        if !$query.entities().is_empty() {
+            let comp_reads = ($($ecs_world.get_component_storage::<$read>().unwrap().lock_for_read(),)*);
+            let mut comp_writs = ($($ecs_world.get_component_storage::<$writ>().unwrap().lock_for_write(),)*);
+            for &entity in $query.entities() {
+                macro_rules! tpl_map_get     { ($elem:expr) => { $elem.must_get(entity) } }
+                macro_rules! tpl_map_get_mut { ($elem:expr) => { $elem.must_get_mut(entity) } }
+
+                let reads = tpl_map!([$(std::mem::size_of::<$read>(),)*], comp_reads, tpl_map_get);
+                let writs = tpl_map!([$(std::mem::size_of::<$writ>(),)*], comp_writs, tpl_map_get_mut);
+                $fn(entity, reads, writs);
+            }
+        }
+    };
 }

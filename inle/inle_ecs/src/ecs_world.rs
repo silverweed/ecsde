@@ -33,7 +33,6 @@ pub struct Ecs_World {
     entities_pending_destroy_notify: HashSet<Entity>,
     entities_pending_destroy: Vec<Entity>,
 
-    system_manager: System_Manager,
     pending_component_updates_for_systems: HashMap<Entity, Component_Updates>,
 }
 
@@ -44,7 +43,6 @@ impl Ecs_World {
             component_manager: Component_Manager::new(),
             entities_pending_destroy_notify: HashSet::new(),
             entities_pending_destroy: vec![],
-            system_manager: System_Manager::default(),
             pending_component_updates_for_systems: HashMap::default(),
         }
     }
@@ -88,10 +86,6 @@ impl Ecs_World {
     pub fn is_valid_entity(&self, entity: Entity) -> bool {
         self.entity_manager.is_valid_entity(entity)
             && !self.entities_pending_destroy.contains(&entity)
-    }
-
-    pub fn register_system(&mut self, system: Box<dyn System>) -> System_Handle {
-        self.system_manager.register_system(system)
     }
 
     pub fn add_component<T: 'static>(&mut self, entity: Entity, data: T) {
@@ -228,24 +222,6 @@ impl Entity_Manager {
 impl Ecs_World {
     pub fn get_comp_name_list_for_entity(&self, entity: Entity) -> Vec<&'static str> {
         self.component_manager.get_comp_name_list_for_entity(entity)
-    }
-}
-
-pub trait System {
-    fn get_queries_mut(&mut self) -> Vec<&mut crate::ecs_query_new::Ecs_Query>;
-}
-
-pub struct System_Handle(usize);
-
-#[derive(Default)]
-struct System_Manager {
-    systems: Vec<Box<dyn System>>,
-}
-
-impl System_Manager {
-    fn register_system(&mut self, system: Box<dyn System>) -> System_Handle {
-        self.systems.push(system);
-        System_Handle(self.systems.len() - 1)
     }
 }
 

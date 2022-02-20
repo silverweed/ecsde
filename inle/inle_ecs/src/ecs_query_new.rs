@@ -37,10 +37,11 @@ impl Ecs_Query {
         comp_removed: &[Component_Type],
     ) {
         #[cfg(debug_assertions)]
-        use std::iter::FromIterator;
-
-        debug_assert!(HashSet::<&Component_Type>::from_iter(comp_added.iter())
-            .is_disjoint(&HashSet::from_iter(comp_removed.iter())));
+        {
+            use std::iter::FromIterator;
+            debug_assert!(HashSet::<&Component_Type>::from_iter(comp_added.iter())
+                .is_disjoint(&HashSet::from_iter(comp_removed.iter())));
+        }
 
         if let Some(idx) = self.entities.iter().position(|&e| e == entity) {
             for comp in comp_removed {

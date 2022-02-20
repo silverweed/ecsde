@@ -1,36 +1,56 @@
-use inle_ecs::ecs_world::Ecs_World;
+use super::interface::{Game_System, Update_Args};
+use inle_ecs::ecs_query_new::Ecs_Query;
 use inle_gfx::components::{C_Animated_Sprite, C_Renderable};
-use std::time::Duration;
 
-pub fn update(dt: &Duration, ecs_world: &mut Ecs_World) {
-    let dt_secs = dt.as_secs_f32();
+pub struct Animation_System {
+    query: Ecs_Query,
+}
 
-    foreach_entity!(ecs_world,
-        read: ;
-        write: C_Renderable, C_Animated_Sprite;
-        |_e, (), (renderable, sprite): (&mut C_Renderable, &mut C_Animated_Sprite)| {
-        if sprite.frame_time <= 0.0 || sprite.n_frames <= 1 {
-            return;
+impl Animation_System {
+    pub fn new() -> Self {
+        Self {
+            query: Ecs_Query::new()
+                .write::<C_Renderable>()
+                .write::<C_Animated_Sprite>(),
         }
-        sprite.frame_time_elapsed += dt_secs;
+    }
+}
 
-        let C_Animated_Sprite {
-            frame_time,
-            frame_time_elapsed,
-            n_frames,
-            ..
-        } = *sprite;
+impl Game_System for Animation_System {
+    fn get_queries_mut(&mut self) -> Vec<&mut Ecs_Query> {
+        vec![&mut self.query]
+    }
 
-        if frame_time_elapsed >= frame_time {
-            sprite.frame_time_elapsed = 0.0;
+    fn update(&self, args: &mut Update_Args) {
+        let dt_secs = args.dt.as_secs_f32();
 
-            let rect = renderable.rect;
-            let width = rect.width;
-            let x = (rect.x + width) % (width * n_frames as i32).max(1);
+        foreach_entity!(self.query, args.ecs_world,
+            read: ;
+            write: C_Renderable, C_Animated_Sprite;
+            |_e, (), (renderable, sprite): (&mut C_Renderable, &mut C_Animated_Sprite)| {
+            if sprite.frame_time <= 0.0 || sprite.n_frames <= 1 {
+                return;
+            }
+            sprite.frame_time_elapsed += dt_secs;
 
-            renderable.rect.x = x;
-        }
-    });
+            let C_Animated_Sprite {
+                frame_time,
+                frame_time_elapsed,
+                n_frames,
+                ..
+            } = *sprite;
+
+            if frame_time_elapsed >= frame_time {
+                sprite.frame_time_elapsed = 0.0;
+
+                let rect = renderable.rect;
+                let width = rect.width;
+                let x = (rect.x + width) % (width * n_frames as i32).max(1);
+
+                renderable.rect.x = x;
+            }
+        });
+    }
 }
 
 #[cfg(test)]

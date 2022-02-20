@@ -288,6 +288,7 @@ fn create_game_state<'a>(
 
     #[cfg(debug_assertions)]
     let game_debug_systems = Game_Debug_Systems::new(&engine_state.config);
+    let gameplay_system = gameplay_system::Gameplay_System::new(&engine_state);
 
     Ok((
         Box::new(Game_State {
@@ -297,11 +298,10 @@ fn create_game_state<'a>(
             sleep_granularity: None,
             level_batches: HashMap::new(),
             execution_time: Duration::default(),
-            gameplay_system: gameplay_system::Gameplay_System::new(),
             state_mgr: states::state_manager::State_Manager::new(),
             cvars,
             n_updates_last_frame: 0,
-
+            gameplay_system,
             #[cfg(debug_assertions)]
             debug_cvars,
             #[cfg(debug_assertions)]

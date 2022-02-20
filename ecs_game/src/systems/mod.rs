@@ -6,6 +6,7 @@ pub mod controllable_system;
 pub mod gravity_system;
 //pub mod ground_collision_calculation_system;
 //pub mod pixel_collision_system;
+pub mod animation_system;
+pub mod free_camera_system;
 pub mod ground_detection_system;
-
-pub mod test_system;
+pub mod interface;

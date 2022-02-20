@@ -87,7 +87,7 @@ pub fn load_room_pool(directory: &Path) -> Room_Pool {
 
     let mut room_pool = Room_Pool::default();
 
-    for entry in dir.flat_map(|e| e).filter(|e| match e.file_type() {
+    for entry in dir.flatten().filter(|e| match e.file_type() {
         Ok(ft) => {
             ft.is_file() && e.path().extension() == Some(std::ffi::OsStr::new(ROOM_FILE_EXTENSION))
         }

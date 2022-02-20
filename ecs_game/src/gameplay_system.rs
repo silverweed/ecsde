@@ -1,8 +1,10 @@
 #![allow(warnings)] // @Temporary
 
 use super::levels::{Level, Levels};
+use super::systems::animation_system;
 use super::systems::camera_system;
 use super::systems::controllable_system::{self, C_Controllable};
+use super::systems::free_camera_system;
 use crate::systems::ai;
 use crate::systems::ground_detection_system;
 //use super::systems::dumb_movement_system;
@@ -10,10 +12,11 @@ use super::systems::gravity_system;
 //use super::systems::ground_collision_calculation_system::Ground_Collision_Calculation_System;
 //use super::systems::pixel_collision_system::Pixel_Collision_System;
 use crate::gfx;
-use crate::input_utils::{get_movement_from_input, Input_Config};
+use crate::input_utils::Input_Config;
 use crate::load::load_system;
 use crate::movement_system;
 use crate::spatial::World_Chunks;
+use crate::systems::interface::{Game_System, Realtime_Update_Args, Update_Args};
 use crate::Game_Resources;
 use inle_app::app::Engine_State;
 use inle_cfg::{self, Cfg_Var};
@@ -51,7 +54,10 @@ pub struct Gameplay_System {
     pub input_cfg: Input_Config,
     cfg: Gameplay_System_Config,
 
-    ai_system: ai::Ai_System,
+    //gravity_system: gravity_system::Gravity_System,
+    //ground_detection_system: ground_detection_system::Ground_Detection_System,
+    //ai_system: ai::Ai_System,
+    systems: Vec<Box<dyn Game_System>>,
 
     //ground_collision_calc_system: Ground_Collision_Calculation_System,
     //pub pixel_collision_system: Pixel_Collision_System,
@@ -59,14 +65,8 @@ pub struct Gameplay_System {
     #[cfg(debug_assertions)]
     debug_data: Debug_Data,
 
-    // @Cleanup: this is pretty ugly here
-    camera_on_player: Cfg_Var<bool>,
-
     // @Temporary: we should create a C_Particle_Emitter to treat emitters like entities
     test_particle_emitter: inle_gfx::particles::Particle_Emitter_Handle,
-
-    // @Temporary
-    test_system: crate::systems::test_system::Test_System,
 }
 
 #[cfg(debug_assertions)]
@@ -76,21 +76,38 @@ struct Debug_Data {
     pub latest_frame_axes: Virtual_Axes,
 }
 
+fn create_systems(engine_state: &Engine_State) -> Vec<Box<dyn Game_System>> {
+    vec![
+        Box::new(gravity_system::Gravity_System::new()),
+        Box::new(ground_detection_system::Ground_Detection_System::new()),
+        Box::new(ai::Ai_System::default()),
+        Box::new(controllable_system::Controllable_System::new(
+            &engine_state.config,
+        )),
+        Box::new(camera_system::Camera_System::new(&engine_state.config)),
+        Box::new(free_camera_system::Free_Camera_System::new(
+            &engine_state.config,
+        )),
+        Box::new(animation_system::Animation_System::new()),
+    ]
+}
+
 impl Gameplay_System {
-    pub fn new() -> Gameplay_System {
+    pub fn new(engine_state: &Engine_State) -> Gameplay_System {
         Gameplay_System {
             levels: Levels::default(),
             input_cfg: Input_Config::default(),
             cfg: Gameplay_System_Config::default(),
-            ai_system: ai::Ai_System::default(),
+            systems: create_systems(engine_state),
+            //gravity_system: gravity_system::Gravity_System::new(),
+            //ground_detection_system: ground_detection_system::Ground_Detection_System::new(),
+            //ai_system: ai::Ai_System::default(),
             //ground_collision_calc_system: Ground_Collision_Calculation_System::new(),
             //pixel_collision_system: Pixel_Collision_System::default(),
             //cursor_entity: None,
             #[cfg(debug_assertions)]
             debug_data: Debug_Data::default(),
-            camera_on_player: Cfg_Var::default(),
             test_particle_emitter: inle_gfx::particles::Particle_Emitter_Handle::default(),
-            test_system: crate::systems::test_system::Test_System::new(),
         }
     }
 
@@ -102,8 +119,6 @@ impl Gameplay_System {
     ) -> inle_common::Maybe_Error {
         self.input_cfg = read_input_cfg(&engine_state.config);
         self.cfg = gs_cfg;
-        //self.ground_collision_calc_system.init(engine_state);
-        self.camera_on_player = Cfg_Var::new("game/camera/on_player", &engine_state.config);
 
         Ok(())
     }
@@ -276,62 +291,39 @@ impl Gameplay_System {
         let rng = &mut engine_state.rng;
         let cfg = &engine_state.config;
 
+        self.update_system_queries();
+
         ///// Update all game systems in all worlds /////
         // Note: inlining foreach_active_levels because we don't want to borrow self.
         let levels = &self.levels;
         let input_cfg = self.input_cfg;
         //let ground_collision_calc_system = &mut self.ground_collision_calc_system;
-        let frame_alloc = &mut engine_state.frame_alloc;
         let gres = &mut rsrc.gfx;
-        let env = &engine_state.env;
         let shader_cache = &mut rsrc.shader_cache;
-        let input_state = &engine_state.input_state;
         let phys_settings = &engine_state.systems.physics_settings;
-        let particle_mgrs = &mut engine_state.systems.particle_mgrs;
         let test_emitter_handle = self.test_particle_emitter;
-        let ai_system = &mut self.ai_system;
-        let camera_on_player = self.camera_on_player.read(cfg);
-        let test_system = &mut self.test_system;
-
-        levels.foreach_active_level(|level| {
-            let pending_updates = level
-                .world
-                .get_and_flush_pending_component_updates_for_systems();
-            for (entity, comp_updates) in pending_updates {
-                // @Incomplete: put all systems in a list and update them all
-                use inle_ecs::ecs_world::System;
-                for query in test_system.get_queries_mut() {
-                    query.update(
-                        &level.world.component_manager,
-                        entity,
-                        &comp_updates.added,
-                        &comp_updates.removed,
-                    );
-                }
-            }
-        });
+        let systems = &mut self.systems;
 
         levels.foreach_active_level(|level| {
             let world = &mut level.world;
 
-            ground_detection_system::update(world, &level.phys_world, phys_settings);
-            inle_app::animation_system::update(&dt, world);
-            if camera_on_player {
-                controllable_system::update(&dt, actions, axes, world, input_cfg, cfg);
+            let mut update_args = Update_Args {
+                dt: *dt,
+                ecs_world: world,
+                phys_world: &mut level.phys_world,
+                phys_settings,
+                engine_state,
+                input_cfg: &input_cfg,
+            };
+            for system in systems.iter_mut() {
+                system.update(&mut update_args);
             }
 
             let world = &mut level.world;
-
-            // @Incomplete: level-specific gameplay update
-            update_demo_entites(world, &dt);
-
-            ai_system.update(world, &level.phys_world, cfg, &dt);
 
             //ground_collision_calc_system.update(world, &mut level.phys_world, &mut level.chunks);
 
-            gravity_system::update(&dt, world, cfg);
-
-            gfx::multi_sprite_animation_system::update(&dt, world, frame_alloc);
+            //gfx::multi_sprite_animation_system::update(&dt, world, &mut engine_state.frame_alloc);
             level.chunks.update(world, &level.phys_world);
 
             // @Temporary DEBUG (this only works if we only have 1 test level)
@@ -340,8 +332,6 @@ impl Gameplay_System {
             //.get_emitter_mut(test_emitter_handle)
             //.transform
             //.rotate(inle_math::angle::deg(dt.as_secs_f32() * 30.0));
-
-            test_system.update(world);
         });
     }
 
@@ -362,105 +352,22 @@ impl Gameplay_System {
     ) {
         trace!("gameplay_system::realtime_update");
 
-        if self.camera_on_player.read(&engine_state.config) {
-            self.update_camera(real_dt, engine_state);
-        } else {
-            self.update_free_camera(
-                real_dt,
+        let mut systems = &mut self.systems;
+        let input_cfg = &self.input_cfg;
+
+        self.levels.foreach_active_level(|level| {
+            let mut update_args = Realtime_Update_Args {
+                dt: *real_dt,
                 window,
-                &engine_state.input_state,
-                &engine_state.config,
-            );
-        }
-    }
-
-    fn update_camera(&mut self, dt: &Duration, engine_state: &Engine_State) {
-        self.levels.foreach_active_level(|level| {
-            let world = &mut level.world;
-
-            camera_system::update(dt, world, &engine_state.config);
-        });
-    }
-
-    fn update_free_camera(
-        &mut self,
-        dt: &Duration,
-        window: &Render_Window_Handle,
-        input_state: &Input_State,
-        cfg: &inle_cfg::Config,
-    ) {
-        self.levels.foreach_active_level(|level| {
-            let movement =
-                get_movement_from_input(&input_state.processed.virtual_axes, self.input_cfg, cfg);
-
-            let cam_translation = {
-                let camera_ctrl = level
-                    .world
-                    .get_component_mut::<C_Controllable>(level.cameras[level.active_camera]);
-                if camera_ctrl.is_none() {
-                    return;
-                }
-
-                let dt_secs = dt.as_secs_f32();
-                let mut camera_ctrl = camera_ctrl.unwrap();
-                let speed = camera_ctrl.speed.read(cfg);
-                let velocity = movement * speed;
-                let cam_translation = velocity * dt_secs;
-                camera_ctrl.translation_this_frame = cam_translation;
-                cam_translation
+                engine_state,
+                ecs_world: &mut level.world,
+                cameras: &mut level.cameras,
+                active_camera: level.active_camera,
+                input_cfg,
             };
-
-            let mut camera = level
-                .world
-                .get_component_mut::<C_Camera2D>(level.cameras[level.active_camera])
-                .unwrap();
-
-            let sx = camera.transform.scale().x;
-            let mut cam_translation = cam_translation * sx;
-
-            let mut add_scale = Vec2f::new(0., 0.);
-            const BASE_CAM_DELTA_ZOOM_PER_SCROLL: f32 = 0.2;
-            let base_delta_zoom_per_scroll =
-                Cfg_Var::<f32>::new("game/camera/free/base_delta_zoom_per_scroll", cfg).read(cfg);
-
-            for action in &input_state.processed.game_actions {
-                match action {
-                    (name, Action_Kind::Pressed) if *name == sid!("camera_zoom_up") => {
-                        add_scale.x -= base_delta_zoom_per_scroll * sx;
-                        add_scale.y = add_scale.x;
-                    }
-                    (name, Action_Kind::Pressed) if *name == sid!("camera_zoom_down") => {
-                        add_scale.x += base_delta_zoom_per_scroll * sx;
-                        add_scale.y = add_scale.x;
-                    }
-                    _ => (),
-                }
+            for system in systems.iter_mut() {
+                system.realtime_update(&mut update_args);
             }
-
-            if add_scale.magnitude2() > 0. {
-                // Preserve mouse world position
-                let cur_mouse_wpos = inle_gfx::render_window::mouse_pos_in_world(
-                    window,
-                    &input_state.raw.mouse_state,
-                    &camera.transform,
-                );
-
-                camera.transform.add_scale_v(add_scale);
-                let mut new_scale = camera.transform.scale();
-                new_scale.x = new_scale.x.max(0.001);
-                new_scale.y = new_scale.y.max(0.001);
-                camera.transform.set_scale_v(new_scale);
-
-                let new_mouse_wpos = inle_gfx::render_window::mouse_pos_in_world(
-                    window,
-                    &input_state.raw.mouse_state,
-                    &camera.transform,
-                );
-
-                cam_translation += cur_mouse_wpos - new_mouse_wpos;
-            }
-
-            camera.transform.translate_v(cam_translation);
         });
     }
 
@@ -583,52 +490,28 @@ impl Gameplay_System {
     }
 
     */
-}
 
-// @Temporary
-fn update_demo_entites(ecs_world: &mut Ecs_World, dt: &Duration) {
-    let dt_secs = dt.as_secs_f32();
-
-    //let mut stream = new_entity_stream(ecs_world)
-    //.require::<C_Controllable>()
-    //.require::<C_Spatial2D>()
-    //.build();
-    //loop {
-    //let entity = stream.next(ecs_world);
-    //if entity.is_none() {
-    //break;
-    //}
-    //let entity = entity.unwrap();
-    //let ctrl = ecs_world.get_component::<C_Controllable>(entity).unwrap();
-    //let transl = ctrl.translation_this_frame;
-    //let spat = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
-    //spat.local_transform.translate_v(transl);
-    //spat.velocity.x = transl.x;
-    //spat.velocity.y = transl.y;
-    //}
-
-    foreach_entity!(ecs_world,
-        read: C_Controllable;
-        write: C_Spatial2D;
-    |entity, (_, ): (&C_Controllable,), (_spatial,): (&mut C_Spatial2D,)| {
-        //if i == 1 {
-        //t.velocity = Vec2f::new(-50.0, 0.);
-        //}
-        {
-            use inle_math::angle::deg;
-            let speed = 90.0;
-            //if i == 1 {
-            //t.transform.rotate(deg(dt_secs * speed));
-            //}
-            //let prev_pos = t.local_transform.position();
-            //t.local_transform.set_position(
-            //(time::to_secs_frac(&time.get_game_time()) + i as f32 * 0.4).sin() * 100.,
-            //3.,
-            //);
-            //t.velocity = t.local_transform.position() - prev_pos;
-            //t.local_transform.set_rotation(deg(30.));
-        }
-    });
+    fn update_system_queries(&mut self) {
+        let mut systems = &mut self.systems;
+        self.levels.foreach_active_level(|level| {
+            let pending_updates = level
+                .world
+                .get_and_flush_pending_component_updates_for_systems();
+            for (entity, comp_updates) in pending_updates {
+                // @Incomplete: put all systems in a list and update them all
+                for system in systems.iter_mut() {
+                    for query in system.get_queries_mut() {
+                        query.update(
+                            &level.world.component_manager,
+                            entity,
+                            &comp_updates.added,
+                            &comp_updates.removed,
+                        );
+                    }
+                }
+            }
+        });
+    }
 }
 
 fn read_input_cfg(cfg: &inle_cfg::Config) -> Input_Config {
