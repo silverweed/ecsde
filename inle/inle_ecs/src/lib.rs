@@ -17,6 +17,7 @@ mod comp_mgr;
 
 pub mod components;
 pub mod ecs_query;
+pub mod ecs_query_new;
 pub mod ecs_world;
 
 pub use prelude::*;

@@ -1,17 +1,33 @@
 use crate::ecs_world::Entity;
 use anymap::any::UncheckedAnyExt;
 use anymap::Map;
-use std::any::type_name;
+use std::any::{type_name, TypeId};
+use std::collections::HashSet;
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+
+pub type Component_Type = TypeId;
 
 pub struct Component_Manager {
     storages: Map<dyn Component_Storage_Interface>,
+
+    // Indexed by entity index
+    components_per_entity: Vec<HashSet<Component_Type>>,
 }
 
 impl Component_Manager {
     pub fn new() -> Self {
         Self {
             storages: Map::new(),
+            components_per_entity: vec![],
+        }
+    }
+
+    #[inline]
+    pub fn has_component_dyn(&self, entity: Entity, comp_type: &Component_Type) -> bool {
+        if let Some(comps) = self.components_per_entity.get(entity.index as usize) {
+            comps.contains(comp_type)
+        } else {
+            false
         }
     }
 
@@ -86,12 +102,25 @@ impl Component_Manager {
         }
 
         components.push(data);
+
+        if self.components_per_entity.len() <= entity.index as usize {
+            self.components_per_entity
+                .resize(entity.index as usize + 1, HashSet::default());
+        }
+        self.components_per_entity[entity.index as usize].insert(TypeId::of::<T>());
     }
 
     #[inline]
     pub fn remove_component<T: 'static>(&mut self, entity: Entity) {
         if let Some(storage) = self.get_component_storage_mut::<T>() {
             storage.remove_component(entity);
+            let _ok = self.components_per_entity[entity.index as usize].remove(&TypeId::of::<T>());
+            debug_assert!(
+                _ok,
+                "Component {:?} of entity {:?} was removed from storage but not from components_per_entity!",
+                type_name::<T>(),
+                entity
+            );
         } else {
             lerr!(
                 "Tried to remove inexisting component {:?} from entity {:?}",
@@ -482,5 +511,43 @@ impl<T: 'static> anymap::any::IntoBox<dyn Component_Storage_Interface> for Compo
     #[inline]
     fn into_box(self) -> Box<dyn Component_Storage_Interface> {
         Box::new(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct C1 {}
+    struct C2 {
+        x: u32,
+    }
+    struct C3 {}
+
+    #[test]
+    fn comp_per_entity() {
+        let mut comp_mgr = Component_Manager::new();
+        let e = Entity { index: 1, gen: 1 };
+
+        comp_mgr.add_component(e, C1 {});
+        assert!(comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C1>()));
+        assert!(!comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C2>()));
+
+        comp_mgr.add_component(e, C2 { x: 1 });
+        assert!(comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C1>()));
+        assert!(comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C2>()));
+
+        comp_mgr.remove_component::<C2>(e);
+        assert!(comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C1>()));
+        assert!(!comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C2>()));
+
+        comp_mgr.remove_component::<C1>(e);
+        assert!(!comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C1>()));
+        assert!(!comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C2>()));
+
+        comp_mgr.add_component(e, C3 {});
+        assert!(!comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C1>()));
+        assert!(!comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C2>()));
+        assert!(comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C3>()));
     }
 }

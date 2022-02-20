@@ -20,8 +20,10 @@ impl evt_register::Event for Evt_Entity_Destroyed {
 
 pub struct Ecs_World {
     entity_manager: Entity_Manager,
+
     // Note: must be visible to entity_stream
     pub(super) component_manager: Component_Manager,
+
     entities_pending_destroy_notify: HashSet<Entity>,
     entities_pending_destroy: Vec<Entity>,
 }
@@ -177,7 +179,7 @@ impl Entity_Manager {
     pub fn destroy_entity(&mut self, entity: Entity) {
         self.alloc.deallocate(entity);
         let idx = self.entities.iter().position(|e| *e == entity).unwrap();
-        self.entities.remove(idx);
+        self.entities.swap_remove(idx);
     }
 
     pub fn is_valid_entity(&self, entity: Entity) -> bool {
@@ -195,6 +197,23 @@ impl Ecs_World {
         self.component_manager.get_comp_name_list_for_entity(entity)
     }
 }
+
+//pub trait System {
+//fn get_queries_mut(&mut self) -> &mut [crate::ecs_query_new::Ecs_Query];
+//}
+
+//pub struct System_Handle(usize);
+
+//struct System_Manager {
+//systems: Vec<Box<dyn System>>,
+//}
+
+//impl System_Manager {
+//fn register_system(&mut self, system: Box<dyn System>) -> System_Handle {
+//self.systems.push(system);
+//System_Handle(self.systems.len() - 1)
+//}
+//}
 
 #[cfg(tests)]
 include!("./ecs_world_tests.rs");
