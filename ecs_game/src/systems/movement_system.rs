@@ -25,7 +25,7 @@ pub struct Movement_System {
 impl Movement_System {
     pub fn new() -> Self {
         Self {
-            query: Ecs_Query::new().write::<C_Spatial2D>(),
+            query: Ecs_Query::default().require::<C_Spatial2D>(),
         }
     }
 

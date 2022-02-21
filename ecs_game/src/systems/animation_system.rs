@@ -9,9 +9,9 @@ pub struct Animation_System {
 impl Animation_System {
     pub fn new() -> Self {
         Self {
-            query: Ecs_Query::new()
-                .write::<C_Renderable>()
-                .write::<C_Animated_Sprite>(),
+            query: Ecs_Query::default()
+                .require::<C_Renderable>()
+                .require::<C_Animated_Sprite>(),
         }
     }
 }

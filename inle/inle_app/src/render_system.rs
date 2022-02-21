@@ -60,12 +60,12 @@ pub struct Render_System {
 impl Render_System {
     pub fn new() -> Self {
         Self {
-            renderables_query: Ecs_Query::new()
-                .read::<C_Spatial2D>()
-                .read::<C_Renderable>(),
-            multi_renderables_query: Ecs_Query::new()
-                .read::<C_Spatial2D>()
-                .read::<C_Multi_Renderable>(),
+            renderables_query: Ecs_Query::default()
+                .require::<C_Spatial2D>()
+                .require::<C_Renderable>(),
+            multi_renderables_query: Ecs_Query::default()
+                .require::<C_Spatial2D>()
+                .require::<C_Multi_Renderable>(),
         }
     }
 

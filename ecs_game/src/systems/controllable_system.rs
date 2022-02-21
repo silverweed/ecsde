@@ -31,10 +31,10 @@ pub struct Controllable_System {
 impl Controllable_System {
     pub fn new(cfg: &Config) -> Self {
         Self {
-            query: Ecs_Query::new()
-                .read::<C_Ground_Detection>()
-                .write::<C_Controllable>()
-                .write::<C_Spatial2D>(),
+            query: Ecs_Query::default()
+                .require::<C_Ground_Detection>()
+                .require::<C_Controllable>()
+                .require::<C_Spatial2D>(),
             camera_on_player: Cfg_Var::new("game/camera/on_player", cfg),
         }
     }

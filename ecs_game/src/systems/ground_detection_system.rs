@@ -18,9 +18,9 @@ pub struct Ground_Detection_System {
 impl Ground_Detection_System {
     pub fn new() -> Self {
         Self {
-            query: Ecs_Query::new()
-                .read::<C_Collider>()
-                .write::<C_Ground_Detection>(),
+            query: Ecs_Query::default()
+                .require::<C_Collider>()
+                .require::<C_Ground_Detection>(),
         }
     }
 }

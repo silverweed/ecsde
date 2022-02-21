@@ -3,29 +3,17 @@ use crate::ecs_world::Entity;
 use std::any::TypeId;
 use std::collections::HashSet;
 
+// A structure that keeps track of which entities have a specific set of components.
+#[derive(Default)]
 pub struct Ecs_Query {
     entities: Vec<Entity>,
 
-    comp_read: HashSet<Component_Type>,
-    comp_write: HashSet<Component_Type>,
+    components: HashSet<Component_Type>,
 }
 
 impl Ecs_Query {
-    pub fn new() -> Self {
-        Ecs_Query {
-            entities: vec![],
-            comp_read: HashSet::default(),
-            comp_write: HashSet::default(),
-        }
-    }
-
-    pub fn read<T: 'static>(mut self) -> Self {
-        self.comp_read.insert(TypeId::of::<T>());
-        self
-    }
-
-    pub fn write<T: 'static>(mut self) -> Self {
-        self.comp_write.insert(TypeId::of::<T>());
+    pub fn require<T: 'static>(mut self) -> Self {
+        self.components.insert(TypeId::of::<T>());
         self
     }
 
@@ -45,46 +33,24 @@ impl Ecs_Query {
 
         if let Some(idx) = self.entities.iter().position(|&e| e == entity) {
             for comp in comp_removed {
-                if self.comp_read.contains(comp) || self.comp_write.contains(comp) {
+                if self.components.contains(comp) {
                     self.entities.swap_remove(idx);
                     return;
                 }
             }
-        } else if comp_added
-            .iter()
-            .any(|comp| self.comp_read.contains(comp) || self.comp_write.contains(comp))
+        } else if comp_added.iter().any(|comp| self.components.contains(comp))
             && self
-                .comp_read
+                .components
                 .iter()
-                .chain(self.comp_write.iter())
+                .chain(self.components.iter())
                 .all(|comp| comp_mgr.has_component_dyn(entity, comp))
         {
             self.entities.push(entity);
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn entities(&self) -> &[Entity] {
         &self.entities
     }
 }
-
-/*
-
-A query contains the list of entities that have the required components.
-It gets updated every time a component is added to /removed from an entity.
-
-// create query
-let qry = Ecs_Query::new()
-    .read<C1>()
-    .write<C2>();
-
-// update query
-qry.update(entity, comp_added, comp_removed);
-
-// use query
-foreach_entity!(ecs_world, qry, |e, (c1: &C1,), (c2: &mut C2,)| {
-    ...
-});
-
-*/

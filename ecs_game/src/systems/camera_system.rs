@@ -33,9 +33,9 @@ pub struct Camera_System {
 impl Camera_System {
     pub fn new(cfg: &Config) -> Self {
         Self {
-            query: Ecs_Query::new()
-                .read::<C_Camera_Follow>()
-                .write::<C_Camera2D>(),
+            query: Ecs_Query::default()
+                .require::<C_Camera_Follow>()
+                .require::<C_Camera2D>(),
             camera_on_player: Cfg_Var::new("game/camera/on_player", cfg),
         }
     }

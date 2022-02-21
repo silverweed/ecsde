@@ -16,7 +16,9 @@ pub struct Gravity_System {
 impl Gravity_System {
     pub fn new() -> Self {
         Self {
-            query: Ecs_Query::new().read::<C_Gravity>().write::<C_Spatial2D>(),
+            query: Ecs_Query::default()
+                .require::<C_Gravity>()
+                .require::<C_Spatial2D>(),
         }
     }
 }
