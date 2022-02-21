@@ -10,3 +10,4 @@ pub mod animation_system;
 pub mod free_camera_system;
 pub mod ground_detection_system;
 pub mod interface;
+pub mod movement_system;

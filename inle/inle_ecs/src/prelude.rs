@@ -60,7 +60,9 @@ macro_rules! foreach_entity {
             let comp_reads = ($($ecs_world.get_component_storage::<$read>().unwrap().lock_for_read(),)*);
             let mut comp_writs = ($($ecs_world.get_component_storage::<$writ>().unwrap().lock_for_write(),)*);
             for &entity in $query.entities() {
+                #[allow(unused_macros)] // This warning shows up spuriously for some reason
                 macro_rules! tpl_map_get     { ($elem:expr) => { $elem.must_get(entity) } }
+                #[allow(unused_macros)]
                 macro_rules! tpl_map_get_mut { ($elem:expr) => { $elem.must_get_mut(entity) } }
 
                 let reads = tpl_map!([$(std::mem::size_of::<$read>(),)*], comp_reads, tpl_map_get);

@@ -109,25 +109,8 @@ impl Persistent_Game_State for Debug_Base_State {
                             &mut engine_state.frame_alloc,
                             &mut _ignored,
                         );
-                        let mut moved =
-                            inle_alloc::temp::excl_temp_array(&mut engine_state.frame_alloc);
-                        crate::movement_system::update(
-                            &step_delta,
-                            &mut level.world,
-                            &level.phys_world,
-                            &mut moved,
-                        );
-                        let moved = unsafe { moved.into_read_only() };
-                        for mov in &moved {
-                            level.chunks.update_collider(
-                                mov.handle,
-                                mov.prev_pos,
-                                mov.new_pos,
-                                mov.extent,
-                                &mut engine_state.frame_alloc,
-                            );
-                        }
                     });
+                    gs.update_physics(step_delta, &mut engine_state.frame_alloc);
                 }
                 (name, Action_Kind::Pressed) if *name == sid!("print_em_debug_info") => {
                     //gs.print_debug_info();

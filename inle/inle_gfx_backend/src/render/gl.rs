@@ -435,7 +435,7 @@ pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) 
 
         const INFO_LOG_CAP: GLint = 512;
         let mut info_log = Vec::with_capacity(INFO_LOG_CAP as usize);
-        info_log.set_len(INFO_LOG_CAP as usize - 1); // subtract 1 to skip the trailing null character
+        info_log.resize(INFO_LOG_CAP as usize - 1, 0); // subtract 1 to skip the trailing null character
 
         let mut success = gl::FALSE as GLint;
         glcheck!(gl::GetShaderiv(

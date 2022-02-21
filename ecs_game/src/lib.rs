@@ -30,7 +30,6 @@ mod gfx;
 mod input_utils;
 mod levels;
 mod load;
-mod movement_system;
 mod spatial;
 mod states;
 mod systems;

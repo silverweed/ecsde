@@ -1,6 +1,5 @@
 use super::{Game_Resources, Game_State};
 use crate::states::state::Game_State_Args;
-use inle_alloc::temp::*;
 use inle_app::{app, render_system};
 use inle_common::colors;
 use inle_core::time;
@@ -740,12 +739,11 @@ fn update_physics(
     trace!("update_physics");
 
     let gameplay_system = &mut game_state.gameplay_system;
-    let levels = &gameplay_system.levels;
     let frame_alloc = &mut game_state.engine_state.frame_alloc;
     let phys_settings = &game_state.engine_state.systems.physics_settings;
     let evt_register = &mut game_state.engine_state.systems.evt_register;
 
-    levels.foreach_active_level(|level| {
+    gameplay_system.levels.foreach_active_level(|level| {
         #[cfg(debug_assertions)]
         let coll_debug = collision_debug_data
             .entry(level.id)
@@ -761,28 +759,9 @@ fn update_physics(
             #[cfg(debug_assertions)]
             coll_debug,
         );
-
-        {
-            let mut moved = excl_temp_array(frame_alloc);
-            crate::movement_system::update(
-                &update_dt,
-                &mut level.world,
-                &level.phys_world,
-                &mut moved,
-            );
-
-            let moved = unsafe { moved.into_read_only() };
-            for mov in &moved {
-                level.chunks.update_collider(
-                    mov.handle,
-                    mov.prev_pos,
-                    mov.new_pos,
-                    mov.extent,
-                    frame_alloc,
-                );
-            }
-        }
     });
+
+    gameplay_system.update_physics(update_dt, frame_alloc);
 }
 
 #[cfg(debug_assertions)]

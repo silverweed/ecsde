@@ -5,8 +5,10 @@ use super::systems::animation_system;
 use super::systems::camera_system;
 use super::systems::controllable_system::{self, C_Controllable};
 use super::systems::free_camera_system;
+use super::systems::movement_system;
 use crate::systems::ai;
 use crate::systems::ground_detection_system;
+use inle_alloc::temp;
 //use super::systems::dumb_movement_system;
 use super::systems::gravity_system;
 //use super::systems::ground_collision_calculation_system::Ground_Collision_Calculation_System;
@@ -14,7 +16,6 @@ use super::systems::gravity_system;
 use crate::gfx;
 use crate::input_utils::Input_Config;
 use crate::load::load_system;
-use crate::movement_system;
 use crate::spatial::World_Chunks;
 use crate::systems::interface::{Game_System, Realtime_Update_Args, Update_Args};
 use crate::Game_Resources;
@@ -54,14 +55,12 @@ pub struct Gameplay_System {
     pub input_cfg: Input_Config,
     cfg: Gameplay_System_Config,
 
-    //gravity_system: gravity_system::Gravity_System,
-    //ground_detection_system: ground_detection_system::Ground_Detection_System,
-    //ai_system: ai::Ai_System,
     systems: Vec<Box<dyn Game_System>>,
 
-    //ground_collision_calc_system: Ground_Collision_Calculation_System,
-    //pub pixel_collision_system: Pixel_Collision_System,
-    //pub cursor_entity: Option<Entity>,
+    // This is a special system so we keep it separate (as it's a pain in the ass to downcast stuff
+    // in Rust)
+    movement_system: movement_system::Movement_System,
+
     #[cfg(debug_assertions)]
     debug_data: Debug_Data,
 
@@ -99,12 +98,7 @@ impl Gameplay_System {
             input_cfg: Input_Config::default(),
             cfg: Gameplay_System_Config::default(),
             systems: create_systems(engine_state),
-            //gravity_system: gravity_system::Gravity_System::new(),
-            //ground_detection_system: ground_detection_system::Ground_Detection_System::new(),
-            //ai_system: ai::Ai_System::default(),
-            //ground_collision_calc_system: Ground_Collision_Calculation_System::new(),
-            //pixel_collision_system: Pixel_Collision_System::default(),
-            //cursor_entity: None,
+            movement_system: movement_system::Movement_System::new(),
             #[cfg(debug_assertions)]
             debug_data: Debug_Data::default(),
             test_particle_emitter: inle_gfx::particles::Particle_Emitter_Handle::default(),
@@ -496,6 +490,7 @@ impl Gameplay_System {
         mut on_comp_update_cb: F,
     ) {
         let mut systems = &mut self.systems;
+        let movement_system = &mut self.movement_system;
         self.levels.foreach_active_level(|level| {
             let pending_updates = level
                 .world
@@ -504,7 +499,6 @@ impl Gameplay_System {
             on_comp_update_cb(&pending_updates, &level.world.component_manager);
 
             for (entity, comp_updates) in pending_updates {
-                // @Incomplete: put all systems in a list and update them all
                 for system in systems.iter_mut() {
                     for query in system.get_queries_mut() {
                         query.update(
@@ -515,6 +509,41 @@ impl Gameplay_System {
                         );
                     }
                 }
+
+                // Movement system
+                for query in movement_system.get_queries_mut() {
+                    query.update(
+                        &level.world.component_manager,
+                        entity,
+                        &comp_updates.added,
+                        &comp_updates.removed,
+                    );
+                }
+            }
+        });
+    }
+
+    pub fn update_physics(&mut self, update_dt: Duration, frame_alloc: &mut temp::Temp_Allocator) {
+        let movement_system = &mut self.movement_system;
+
+        self.levels.foreach_active_level(|level| {
+            let mut moved = temp::excl_temp_array(frame_alloc);
+            movement_system.update_physics(
+                &update_dt,
+                &mut level.world,
+                &level.phys_world,
+                &mut moved,
+            );
+
+            let moved = unsafe { moved.into_read_only() };
+            for mov in &moved {
+                level.chunks.update_collider(
+                    mov.handle,
+                    mov.prev_pos,
+                    mov.new_pos,
+                    mov.extent,
+                    frame_alloc,
+                );
             }
         });
     }

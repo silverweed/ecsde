@@ -121,7 +121,7 @@ impl Render_System {
             foreach_entity!(self.renderables_query, ecs_world,
                 read: C_Spatial2D, C_Renderable;
                 write: ;
-            |entity, (spatial, rend): (&C_Spatial2D, &C_Renderable), ()| {
+            |_e, (spatial, rend): (&C_Spatial2D, &C_Renderable), ()| {
                 let C_Renderable {
                     material,
                     rect: src_rect,
@@ -189,7 +189,7 @@ impl Render_System {
             foreach_entity!(self.multi_renderables_query, ecs_world,
                 read: C_Spatial2D, C_Multi_Renderable;
                 write: ;
-            |entity, (spatial, rend): (&C_Spatial2D, &C_Multi_Renderable), ()| {
+            |_e, (spatial, rend): (&C_Spatial2D, &C_Multi_Renderable), ()| {
                 let C_Multi_Renderable {
                     renderables,
                     n_renderables,
