@@ -1,3 +1,4 @@
+use crate::render_system;
 use inle_audio::audio_system;
 use inle_common::stringid::String_Id;
 use inle_core::tasks::Long_Task_Manager;
@@ -16,6 +17,7 @@ use {
 
 pub struct Core_Systems<'r> {
     pub audio_system: audio_system::Audio_System<'r>,
+    pub render_system: render_system::Render_System,
     pub evt_register: evt_register::Event_Register,
     pub ui: inle_ui::Ui_Context,
     pub physics_settings: inle_physics::physics::Physics_Settings,
@@ -54,6 +56,7 @@ impl Core_Systems<'_> {
             audio_system: audio_system::Audio_System::new(&audio_system::Audio_System_Config {
                 max_concurrent_sounds: 10,
             }),
+            render_system: render_system::Render_System::new(),
             evt_register: evt_register::Event_Register::new(),
             ui: inle_ui::Ui_Context::default(),
             physics_settings: inle_physics::physics::Physics_Settings::default(),

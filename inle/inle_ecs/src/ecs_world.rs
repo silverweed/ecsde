@@ -1,4 +1,4 @@
-use super::comp_mgr::{self, Component_Manager, Component_Type};
+use super::comp_mgr::{self, Component_Type};
 use inle_alloc::gen_alloc::{Generational_Allocator, Generational_Index};
 use inle_events::evt_register;
 use std::any::{type_name, TypeId};
@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 pub type Entity = Generational_Index;
 
+pub type Component_Manager = comp_mgr::Component_Manager;
 pub type Component_Storage<T> = comp_mgr::Component_Storage<T>;
 pub type Component_Storage_Read<'a, T> = comp_mgr::Component_Storage_Read<'a, T>;
 pub type Component_Storage_Write<'a, T> = comp_mgr::Component_Storage_Write<'a, T>;

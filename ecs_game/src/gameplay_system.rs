@@ -25,7 +25,7 @@ use inle_common::stringid::String_Id;
 use inle_core::env::Env_Info;
 use inle_core::{rand, time};
 use inle_ecs::components::base::C_Spatial2D;
-use inle_ecs::ecs_world::{Ecs_World, Entity};
+use inle_ecs::ecs_world::{Component_Manager, Component_Updates, Ecs_World, Entity};
 use inle_events::evt_register::Event_Register;
 use inle_gfx::components::{C_Animated_Sprite, C_Camera2D, C_Renderable};
 use inle_gfx::particles::Particle_Manager;
@@ -291,8 +291,6 @@ impl Gameplay_System {
         let rng = &mut engine_state.rng;
         let cfg = &engine_state.config;
 
-        self.update_system_queries();
-
         ///// Update all game systems in all worlds /////
         // Note: inlining foreach_active_levels because we don't want to borrow self.
         let levels = &self.levels;
@@ -491,12 +489,20 @@ impl Gameplay_System {
 
     */
 
-    fn update_system_queries(&mut self) {
+    pub fn update_pending_component_updates<
+        F: FnMut(&HashMap<Entity, Component_Updates>, &Component_Manager),
+    >(
+        &mut self,
+        mut on_comp_update_cb: F,
+    ) {
         let mut systems = &mut self.systems;
         self.levels.foreach_active_level(|level| {
             let pending_updates = level
                 .world
                 .get_and_flush_pending_component_updates_for_systems();
+
+            on_comp_update_cb(&pending_updates, &level.world.component_manager);
+
             for (entity, comp_updates) in pending_updates {
                 // @Incomplete: put all systems in a list and update them all
                 for system in systems.iter_mut() {

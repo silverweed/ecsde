@@ -202,7 +202,11 @@ fn draw_arrow(vbuf: &mut Vertex_Buffer_Triangles, arrow: &Arrow, props: &Paint_P
             props.color,
             Vec2f::default(),
         );
-        let v7 = render::new_vertex(m * Vec2f::new(magnitude + arrow.thickness * 0.67, 0.), props.color, Vec2f::default());
+        let v7 = render::new_vertex(
+            m * Vec2f::new(magnitude + arrow.thickness * 0.67, 0.),
+            props.color,
+            Vec2f::default(),
+        );
 
         render::add_triangle(vbuf, &v5, &v7, &v6);
     }

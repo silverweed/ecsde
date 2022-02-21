@@ -320,9 +320,11 @@ where
         {
             trace!("game_update");
 
-            game_state
-                .gameplay_system
-                .realtime_update(&real_dt, &game_state.window, &game_state.engine_state);
+            game_state.gameplay_system.realtime_update(
+                &real_dt,
+                &game_state.window,
+                &game_state.engine_state,
+            );
 
             // @Cleanup: where do we put this? Do we want this inside gameplay_system?
             {
@@ -372,6 +374,13 @@ where
 
                 while game_state.accumulated_update_time >= update_dt {
                     let update_start = std::time::Instant::now();
+
+                    let render_system = &mut game_state.engine_state.systems.render_system;
+                    game_state.gameplay_system.update_pending_component_updates(
+                        |pending_updates, comp_mgr| {
+                            render_system.update_queries(pending_updates, comp_mgr);
+                        },
+                    );
 
                     game_state.gameplay_system.update(
                         &update_dt,
@@ -549,6 +558,7 @@ fn update_graphics<'a, 's, 'r>(
 
     {
         let gameplay_system = &mut game_state.gameplay_system;
+        let render_system = &mut game_state.engine_state.systems.render_system;
         let batches = &mut game_state.level_batches;
         let frame_alloc = &mut game_state.engine_state.frame_alloc;
         #[cfg(debug_assertions)]
@@ -567,7 +577,7 @@ fn update_graphics<'a, 's, 'r>(
                 painter: painters.get_mut(&level.id).unwrap(),
             };
 
-            render_system::update(render_args);
+            render_system.update(render_args);
         });
     }
 
@@ -811,6 +821,7 @@ fn update_debug(
                     .gameplay_update_tick_ms
                     .read(&engine_state.config)) as u64,
             game_state.cvars.vsync.read(&engine_state.config),
+            &engine_state.prev_frame_time,
         );
 
         update_win_debug_overlay(
@@ -1078,14 +1089,16 @@ fn update_fps_debug_overlay(
     fps: &inle_debug::fps::Fps_Counter,
     target_fps: u64,
     vsync: bool,
+    prev_frame_t: &Duration,
 ) {
     debug_overlay.clear();
     debug_overlay
         .add_line(&format!(
-            "FPS: {} (target ~{}, vsync {})",
+            "FPS: {} (target ~{}, vsync {}) | {:.2} ms",
             fps.get_fps() as u32,
             target_fps,
             if vsync { "on" } else { "off" },
+            prev_frame_t.as_secs_f32() * 1000.,
         ))
         .with_color(colors::rgba(180, 180, 180, 200));
 }

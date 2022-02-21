@@ -1,8 +1,10 @@
 use inle_alloc::temp;
 use inle_common::colors::Color;
 use inle_ecs::components::base::C_Spatial2D;
-use inle_ecs::ecs_query::Ecs_Query;
-use inle_ecs::ecs_world::{Component_Storage_Read, Ecs_World, Entity};
+use inle_ecs::ecs_query_new::Ecs_Query;
+use inle_ecs::ecs_world::{
+    Component_Manager, Component_Storage_Read, Component_Updates, Ecs_World, Entity,
+};
 use inle_gfx::components::{C_Multi_Renderable, C_Renderable};
 use inle_gfx::material::Material;
 use inle_gfx::render::batcher::Batches;
@@ -10,6 +12,7 @@ use inle_gfx::render::{self, Z_Index};
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::transform::Transform2D;
 use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
+use std::collections::HashMap;
 
 #[cfg(debug_assertions)]
 use {
@@ -49,42 +52,76 @@ pub struct Render_System_Update_Args<'a> {
     pub painter: &'a mut Debug_Painter,
 }
 
-pub fn update(args: Render_System_Update_Args) {
-    let Render_System_Update_Args {
-        batches,
-        ecs_world,
-        render_cfg,
-        window,
-        gres,
-        shader_cache,
-        #[cfg(debug_assertions)]
-        painter,
-        ..
-    } = args;
+pub struct Render_System {
+    renderables_query: Ecs_Query,
+    multi_renderables_query: Ecs_Query,
+}
 
-    trace!("render_system::update");
+impl Render_System {
+    pub fn new() -> Self {
+        Self {
+            renderables_query: Ecs_Query::new()
+                .read::<C_Spatial2D>()
+                .read::<C_Renderable>(),
+            multi_renderables_query: Ecs_Query::new()
+                .read::<C_Spatial2D>()
+                .read::<C_Multi_Renderable>(),
+        }
+    }
 
-    ////
-    //// Renderables
-    ////
-    {
-        trace!("draw_renderables");
+    pub fn update_queries(
+        &mut self,
+        comp_updates: &HashMap<Entity, Component_Updates>,
+        comp_mgr: &Component_Manager,
+    ) {
+        for (entity, updates) in comp_updates {
+            self.renderables_query
+                .update(comp_mgr, *entity, &updates.added, &updates.removed);
+            self.multi_renderables_query.update(
+                comp_mgr,
+                *entity,
+                &updates.added,
+                &updates.removed,
+            );
+        }
+    }
 
-        let query = Ecs_Query::new(ecs_world)
-            .read::<C_Spatial2D>()
-            .read::<C_Renderable>();
-        let storages = query.storages();
-        if !query.entities().is_empty() {
-            let spatials = storages.begin_read::<C_Spatial2D>();
-            let renderables = storages.begin_read::<C_Renderable>();
+    pub fn update(&self, args: Render_System_Update_Args) {
+        let Render_System_Update_Args {
+            batches,
+            ecs_world,
+            render_cfg,
+            window,
+            gres,
+            shader_cache,
+            #[cfg(debug_assertions)]
+            painter,
+            ..
+        } = args;
+
+        trace!("render_system::update");
+
+        ////
+        //// Renderables
+        ////
+        {
+            trace!("draw_renderables");
 
             #[cfg(debug_assertions)]
-            let (min_z, max_z) = get_min_max_z(query.entities(), &renderables);
+            let (min_z, max_z) =
+                if let Some(renderables) = ecs_world.get_component_storage::<C_Renderable>() {
+                    get_min_max_z(
+                        self.renderables_query.entities(),
+                        &renderables.lock_for_read(),
+                    )
+                } else {
+                    (0, 0)
+                };
 
-            for &entity in query.entities() {
-                let rend = renderables.must_get(entity);
-                let spatial = spatials.must_get(entity);
-
+            foreach_entity!(self.renderables_query, ecs_world,
+                read: C_Spatial2D, C_Renderable;
+                write: ;
+            |entity, (spatial, rend): (&C_Spatial2D, &C_Renderable), ()| {
                 let C_Renderable {
                     material,
                     rect: src_rect,
@@ -127,33 +164,32 @@ pub fn update(args: Render_System_Update_Args) {
                         *z_index,
                     );
                 }
-            }
+            });
         }
-    }
 
-    ////
-    //// Multi_Renderables
-    ////
+        ////
+        //// Multi_Renderables
+        ////
 
-    {
-        trace!("draw_multi_renderables");
-
-        let query = Ecs_Query::new(ecs_world)
-            .read::<C_Spatial2D>()
-            .read::<C_Multi_Renderable>();
-        let storages = query.storages();
-
-        if !query.entities().is_empty() {
-            let spatials = storages.begin_read::<C_Spatial2D>();
-            let multi_renderables = storages.begin_read::<C_Multi_Renderable>();
+        {
+            trace!("draw_multi_renderables");
 
             #[cfg(debug_assertions)]
-            let (min_z, max_z) = get_min_max_z_multi(query.entities(), &multi_renderables);
+            let (min_z, max_z) = if let Some(multi_renderables) =
+                ecs_world.get_component_storage::<C_Multi_Renderable>()
+            {
+                get_min_max_z_multi(
+                    self.multi_renderables_query.entities(),
+                    &multi_renderables.lock_for_read(),
+                )
+            } else {
+                (0, 0)
+            };
 
-            for &entity in query.entities() {
-                let rend = multi_renderables.must_get(entity);
-                let spatial = spatials.must_get(entity);
-
+            foreach_entity!(self.multi_renderables_query, ecs_world,
+                read: C_Spatial2D, C_Multi_Renderable;
+                write: ;
+            |entity, (spatial, rend): (&C_Spatial2D, &C_Multi_Renderable), ()| {
                 let C_Multi_Renderable {
                     renderables,
                     n_renderables,
@@ -200,7 +236,7 @@ pub fn update(args: Render_System_Update_Args) {
                         *z_index,
                     );
                 }
-            }
+            });
         }
     }
 }
