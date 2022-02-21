@@ -38,7 +38,7 @@ impl Game_System for Free_Camera_System {
         let input_state = &engine_state.input_state;
         let cfg = &engine_state.config;
 
-        if !self.camera_on_player.read(cfg) {
+        if self.camera_on_player.read(cfg) {
             return;
         }
 
