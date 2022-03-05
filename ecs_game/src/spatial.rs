@@ -377,7 +377,7 @@ impl Spatial_Accelerator<Collider_Handle> for World_Chunks {
 
 #[cfg(debug_assertions)]
 impl World_Chunks {
-    pub fn debug_draw(&self, painter: &mut Debug_Painter) {
+    pub fn debug_draw(&self, painter: &mut Debug_Painter, _phys_world: &Physics_World) {
         use inle_common::colors;
         use inle_common::paint_props::Paint_Properties;
         use inle_math::transform::Transform2D;
@@ -416,6 +416,19 @@ impl World_Chunks {
                 (CHUNK_WIDTH as u16 / 10).max(20),
                 colors::rgba(50, 220, 0, 250),
             );
+
+            // TODO: make this toggleable via a cfg var
+            //for cld in &chunk.colliders {
+            //let cld = phys_world.get_collider(*cld).unwrap();
+            //painter.add_line(
+            //inle_math::shapes::Line {
+            //from: coords.to_world_pos(),
+            //to: cld.position,
+            //thickness: 1.,
+            //},
+            //colors::BLACK,
+            //);
+            //}
         }
     }
 }

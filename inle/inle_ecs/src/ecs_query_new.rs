@@ -44,7 +44,9 @@ impl Ecs_Query {
                     return Update_Result::Removed;
                 }
             }
-        } else if comp_added.iter().any(|comp| self.components.contains(comp))
+        } else if comp_added
+            .iter()
+            .any(|comp| self.components.is_empty() || self.components.contains(comp))
             && self
                 .components
                 .iter()

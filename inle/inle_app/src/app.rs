@@ -526,7 +526,10 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
         patch_offset += nodes_len;
     }
 
+    // @Speed: with ~900 entities this can take like 16+ms!!!
+    let t = std::time::Instant::now();
     let final_traces = tracer::collate_traces(&merged_traces);
+    ldebug!("{:?}", t.elapsed());
 
     let debug_log = &mut engine_state.debug_systems.log;
     let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;

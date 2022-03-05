@@ -208,21 +208,33 @@ where
             game_state.update_trace_hints_countdown -= 1;
         }
 
+        let t_before_traces = Instant::now();
         app::update_traces(
             &mut game_state.engine_state,
             game_state.debug_cvars.trace_overlay_refresh_rate,
         );
+        let t_update_traces = t_before_traces.elapsed();
 
-        let print_draw_stats = game_state
-            .debug_cvars
-            .print_draw_stats
-            .read(&game_state.engine_state.config);
-        if print_draw_stats && game_state.engine_state.cur_frame % 100 == 0 {
-            ldebug!(
-                "Draw calls this frame: {}. Time taken: {:?}",
-                game_state.window.gl.n_draw_calls_this_frame,
-                t_before_work.elapsed()
-            );
+        if game_state.engine_state.cur_frame % 100 == 0 {
+            let print_trace_stats = game_state
+                .debug_cvars
+                .print_trace_stats
+                .read(&game_state.engine_state.config);
+            if print_trace_stats {
+                ldebug!("Updating traces took {:?}", t_update_traces);
+            }
+
+            let print_draw_stats = game_state
+                .debug_cvars
+                .print_draw_stats
+                .read(&game_state.engine_state.config);
+            if print_draw_stats {
+                ldebug!(
+                    "Draw calls this frame: {}. Time taken: {:?}",
+                    game_state.window.gl.n_draw_calls_this_frame,
+                    t_before_work.elapsed()
+                );
+            }
         }
     }
 

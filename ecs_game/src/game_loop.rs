@@ -941,7 +941,7 @@ fn update_debug(
             }
 
             if draw_world_chunks {
-                level.chunks.debug_draw(debug_painter);
+                level.chunks.debug_draw(debug_painter, &level.phys_world);
             }
         });
 
