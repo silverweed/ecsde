@@ -494,8 +494,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
     let data: Vec<&Collision_Data> = phys_world
         .collisions
         .values()
-        .map(|v| v.as_slice())
-        .flatten()
+        .flat_map(|v| v.as_slice())
         .collect();
     evt_register.raise_batch::<Evt_Collision_Happened>(&data);
 }

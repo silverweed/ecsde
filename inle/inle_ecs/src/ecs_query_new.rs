@@ -1,6 +1,5 @@
 use crate::comp_mgr::{Component_Manager, Component_Type};
 use crate::ecs_world::Entity;
-use std::any::TypeId;
 use std::collections::HashSet;
 
 // A structure that keeps track of which entities have a specific set of components.

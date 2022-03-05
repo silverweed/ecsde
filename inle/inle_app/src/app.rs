@@ -587,8 +587,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
                     [tracer_selected_idx]
                     .metadata
                     .get(&sid!("full_tag"))
-                    .map(|x| x.clone().try_into().ok())
-                    .flatten()
+                    .and_then(|x| x.clone().try_into().ok())
                     .unwrap_or_default();
                 set_traced_fn(debug_systems, fn_name);
             } else {

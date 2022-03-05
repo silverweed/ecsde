@@ -130,8 +130,6 @@ impl Gameplay_System {
         let mut level =
             load_system::level_load_sync(level_id, engine_state, game_res, self.cfg, cvars);
 
-        level.chunks.init(engine_state);
-
         self.levels.loaded_levels.push(Arc::new(Mutex::new(level)));
         self.levels
             .active_levels

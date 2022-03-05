@@ -382,7 +382,7 @@ impl Debug_Frame_Scroller {
                 self.n_frames
             } as u64;
         let tot_duration = (subdiv_first_frame..=subdiv_last_frame)
-            .map(|n_frame| {
+            .filter_map(|n_frame| {
                 debug_log.get_frame(n_frame).map(|frame| {
                     frame
                         .traces
@@ -391,7 +391,6 @@ impl Debug_Frame_Scroller {
                         .unwrap_or_else(Duration::default)
                 })
             })
-            .flatten()
             .sum();
         colors::lerp_col(
             colors::GREEN,
@@ -406,7 +405,7 @@ impl Debug_Frame_Scroller {
     fn calc_slot_color_frame(&self, debug_log: &Debug_Log, frame_idx: u16) -> colors::Color {
         debug_log
             .get_frame(self.map_frame_index_to_real_frame(frame_idx))
-            .map(|frame| {
+            .and_then(|frame| {
                 frame
                     .traces
                     .get(0)
@@ -422,7 +421,6 @@ impl Debug_Frame_Scroller {
                         )
                     })
             })
-            .flatten()
             .unwrap_or_else(|| colors::rgb(100, 100, 100))
     }
 

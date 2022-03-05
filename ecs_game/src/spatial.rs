@@ -1,9 +1,7 @@
 use inle_alloc::temp::*;
-use inle_app::app::Engine_State;
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_query_new::{Ecs_Query, Update_Result};
 use inle_ecs::ecs_world::{Component_Manager, Component_Updates, Ecs_World, Entity};
-use inle_events::evt_register::{with_cb_data, wrap_cb_data, Event_Callback_Data};
 use inle_math::vector::Vec2f;
 use inle_physics::collider::C_Collider;
 use inle_physics::phys_world::{Collider_Handle, Physics_World};
@@ -58,7 +56,6 @@ impl Chunk_Coords {
 
 pub struct World_Chunks {
     chunks: HashMap<Chunk_Coords, World_Chunk>,
-    to_destroy: Event_Callback_Data,
     query: Ecs_Query,
     pending_adds: Vec<Entity>,
     pending_removes: Vec<Entity>,
@@ -73,7 +70,6 @@ impl World_Chunks {
     pub fn new() -> Self {
         Self {
             chunks: HashMap::new(),
-            to_destroy: wrap_cb_data(Vec::<Entity>::new()),
             query: Ecs_Query::default()
                 .require::<C_Collider>()
                 .require::<C_Spatial2D>(),
@@ -81,8 +77,6 @@ impl World_Chunks {
             pending_removes: vec![],
         }
     }
-
-    pub fn init(&mut self, engine_state: &mut Engine_State) {}
 
     pub fn update_entity_components(
         &mut self,

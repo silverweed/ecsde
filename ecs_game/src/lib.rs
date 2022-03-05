@@ -176,8 +176,7 @@ where
             let tracers = inle_diagnostics::prelude::DEBUG_TRACERS.lock().unwrap();
             let saved_traces = tracers
                 .iter()
-                .map(|(_, tracer)| tracer.lock().unwrap().saved_traces.to_vec())
-                .flatten()
+                .flat_map(|(_, tracer)| tracer.lock().unwrap().saved_traces.to_vec())
                 .collect::<Vec<_>>();
             game_state
                 .engine_state
