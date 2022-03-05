@@ -43,6 +43,7 @@ pub struct Scope_Trace_Info {
     pub start_t: Instant,
     pub end_t: Instant,
     pub tag: &'static str,
+    pub tag_hash: u32,
 
     // These are only meaningful for collated traces
     pub n_calls: u32,
@@ -75,8 +76,8 @@ pub struct Scope_Trace {
 
 impl Scope_Trace {
     #[inline(always)]
-    pub fn new(tracer: &Arc<Mutex<Tracer>>, tag: &'static str) -> Self {
-        tracer.lock().unwrap().push_scope_trace(tag);
+    pub fn new(tracer: &Arc<Mutex<Tracer>>, tag: &'static str, tag_hash: u32) -> Self {
+        tracer.lock().unwrap().push_scope_trace(tag, tag_hash);
         Self {
             tracer: tracer.clone(),
         }
@@ -138,8 +139,8 @@ impl Scope_Trace_Info_Final {
 }
 
 #[inline(always)]
-pub fn debug_trace(tag: &'static str, tracer: &Arc<Mutex<Tracer>>) -> Scope_Trace {
-    Scope_Trace::new(tracer, tag)
+pub fn debug_trace(tag: &'static str, tag_hash: u32, tracer: &Arc<Mutex<Tracer>>) -> Scope_Trace {
+    Scope_Trace::new(tracer, tag, tag_hash)
 }
 
 #[inline(always)]
@@ -147,13 +148,14 @@ pub fn debug_trace_on_thread(
     tag: &'static str,
     tracers: &Debug_Tracers,
     thread_id: ThreadId,
+    tag_hash: u32,
 ) -> Scope_Trace {
     let mut tracers = tracers.lock().unwrap();
     let tracer = tracers
         .entry(thread_id)
         .or_insert_with(|| Arc::new(Mutex::new(Tracer::new(thread_id))));
 
-    debug_trace(tag, tracer)
+    debug_trace(tag, tag_hash, tracer)
 }
 
 #[derive(Clone, Debug)]
@@ -185,13 +187,14 @@ impl Tracer {
     // be too intrusive! Prefer delaying work until later, when processing
     // the traces.
     #[inline(always)]
-    fn push_scope_trace(&mut self, tag: &'static str) {
+    fn push_scope_trace(&mut self, tag: &'static str, tag_hash: u32) {
         let now = Instant::now();
         self.saved_traces.push(Tracer_Node {
             info: Scope_Trace_Info {
                 start_t: now,
                 end_t: now,
                 tag,
+                tag_hash,
                 n_calls: 1,
                 tot_duration: Duration::default(),
             },
@@ -316,46 +319,37 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
 
     // Note: `hash` is computed from the entire call stack (we can't just use the tag,
     // or the trace will only show the call under the first caller).
-    let mut tag_map =
-        HashMap::with_capacity_and_hasher(saved_traces.len(), Passthrough_Build_Hasher::default());
-
     #[inline(always)]
     fn hash_node(nodes: &[Tracer_Node], node: &Tracer_Node) -> u32 {
         const FNV1A_PRIME32: u32 = 16_777_619;
         const FNV1A_START32: u32 = 2_166_136_261;
 
-        let mut result = FNV1A_START32;
         let mut node = node;
-        loop {
-            let tag = node.info.tag;
-            for b in tag.bytes() {
-                result ^= u32::from(b);
-                result = result.wrapping_mul(FNV1A_PRIME32);
-            }
-            if let Some(parent_idx) = node.parent_idx {
-                node = &nodes[parent_idx];
-            } else {
-                break;
-            }
+        let mut x = FNV1A_START32;
+        x ^= node.info.tag_hash;
+        x = x.wrapping_mul(FNV1A_PRIME32);
+        while let Some(parent_idx) = node.parent_idx {
+            node = &nodes[parent_idx];
+            x ^= node.info.tag_hash;
+            x = x.wrapping_mul(FNV1A_PRIME32);
         }
-        result
+        x
     }
 
     // Accumulate n_calls of all nodes with the same tag.
     // @Speed: this could use the frame_allocator.
-    // NOTE: quick measuring showed:
-    // - doing this in parallel:  ~0.5ms, std=0.19
-    // - doing this sequentially: ~1.2ms, std=0.26
-    // -- 22 Jul 2021
+    let t = Instant::now();
     let hashes = saved_traces
         .par_iter()
         .map(|node| hash_node(saved_traces, node))
         .collect::<Vec<_>>();
+    ldebug!("hash: {:?}", t.elapsed());
 
+    let t = Instant::now();
     // Used to iterate the tag_map in insertion order
-    let mut tags_ordered = Vec::with_capacity(saved_traces.len());
-    let mut idx_map =
-        HashMap::with_capacity_and_hasher(saved_traces.len(), Passthrough_Build_Hasher::default());
+    let mut tags_ordered: Vec<u32> = Vec::with_capacity(saved_traces.len());
+    let mut tag_map = HashMap::with_hasher(Passthrough_Build_Hasher::default());
+    let mut idx_map = HashMap::with_hasher(Passthrough_Build_Hasher::default());
     for (i, node) in saved_traces.iter().enumerate() {
         let hash = hashes[i];
         let entry = tag_map.entry(hash).or_insert_with(|| Tag_Map_Info {
@@ -375,11 +369,8 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
             tags_ordered.push(hash);
         }
     }
+    ldebug!("insert: {:?}", t.elapsed());
 
-    // NOTE: quick measuring showed:
-    // - doing this in parallel:  ~0.2ms,  std=0.29
-    // - doing this sequentially: ~0.05ms, std=0.016
-    // -- 22 Jul 2021
     tags_ordered
         .iter()
         .map(|hash| {
