@@ -426,7 +426,19 @@ impl Gameplay_System {
         });
     }
 
+    pub fn pre_update_physics(&mut self) {
+        trace!("gameplay_system::pre_update_physics");
+
+        self.levels.foreach_active_level(|level| {
+            level
+                .chunks
+                .apply_pending_updates(&level.world, &level.phys_world);
+        });
+    }
+
     pub fn update_physics(&mut self, update_dt: Duration, frame_alloc: &mut temp::Temp_Allocator) {
+        trace!("gameplay_system::update_physics");
+
         let movement_system = &mut self.movement_system;
 
         self.levels.foreach_active_level(|level| {
@@ -448,10 +460,6 @@ impl Gameplay_System {
                     frame_alloc,
                 );
             }
-
-            level
-                .chunks
-                .apply_pending_updates(&level.world, &level.phys_world);
         });
     }
 }

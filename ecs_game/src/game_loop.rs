@@ -733,6 +733,8 @@ fn update_physics(
     let phys_settings = &game_state.engine_state.systems.physics_settings;
     let evt_register = &mut game_state.engine_state.systems.evt_register;
 
+    gameplay_system.pre_update_physics();
+
     gameplay_system.levels.foreach_active_level(|level| {
         #[cfg(debug_assertions)]
         let coll_debug = collision_debug_data

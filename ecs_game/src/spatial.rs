@@ -1,5 +1,6 @@
 use inle_alloc::temp::*;
 use inle_app::app::Engine_State;
+use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_query_new::{Ecs_Query, Update_Result};
 use inle_ecs::ecs_world::{Component_Manager, Component_Updates, Ecs_World, Entity};
 use inle_events::evt_register::{with_cb_data, wrap_cb_data, Event_Callback_Data};
@@ -73,7 +74,9 @@ impl World_Chunks {
         Self {
             chunks: HashMap::new(),
             to_destroy: wrap_cb_data(Vec::<Entity>::new()),
-            query: Ecs_Query::default().require::<C_Collider>(),
+            query: Ecs_Query::default()
+                .require::<C_Collider>()
+                .require::<C_Spatial2D>(),
             pending_adds: vec![],
             pending_removes: vec![],
         }
@@ -89,17 +92,14 @@ impl World_Chunks {
     ) {
         trace!("world_chunks::update");
 
-        dbg!(comp_updates);
         match self
             .query
             .update(comp_mgr, entity, &comp_updates.added, &comp_updates.removed)
         {
             Update_Result::Added => {
-                ldebug!("Adding entity {entity:?}");
                 self.pending_adds.push(entity);
             }
             Update_Result::Removed => {
-                ldebug!("Removing entity {entity:?}");
                 self.pending_removes.push(entity);
             }
             _ => {}
@@ -112,17 +112,12 @@ impl World_Chunks {
         let pending_adds = std::mem::take(&mut self.pending_adds);
         let pending_removes = std::mem::take(&mut self.pending_removes);
 
-        if let Some(colliders) = ecs_world.get_component_storage::<C_Collider>() {
+        if let (Some(colliders), Some(spatials)) = (
+            ecs_world.get_component_storage::<C_Collider>(),
+            ecs_world.get_component_storage::<C_Spatial2D>(),
+        ) {
             let colliders = colliders.lock_for_read();
-
-            for entity in pending_adds {
-                let collider = colliders.must_get(entity);
-                for (cld, handle) in
-                    phys_world.get_all_colliders_with_handles(collider.phys_body_handle)
-                {
-                    self.add_collider(handle, cld.position, cld.shape.extent());
-                }
-            }
+            let spatials = spatials.lock_for_read();
 
             for entity in pending_removes {
                 let collider = colliders.must_get(entity);
@@ -130,6 +125,17 @@ impl World_Chunks {
                     phys_world.get_all_colliders_with_handles(collider.phys_body_handle)
                 {
                     self.remove_collider(handle, cld.position, cld.shape.extent());
+                }
+            }
+
+            for entity in pending_adds {
+                let collider = colliders.must_get(entity);
+                for (cld, handle) in
+                    phys_world.get_all_colliders_with_handles(collider.phys_body_handle)
+                {
+                    // NOTE: here we cannot use cld.position because it's not been calculated yet.
+                    let starting_pos = spatials.must_get(entity).transform.position() + cld.offset;
+                    self.add_collider(handle, starting_pos, cld.shape.extent());
                 }
             }
         }
@@ -202,18 +208,23 @@ impl World_Chunks {
     ) {
         trace!("world_chunks::update_collider");
 
-        let mut prev_coords = excl_temp_array(frame_alloc);
-        self.get_all_chunks_containing(prev_pos, extent, &mut prev_coords);
-        let prev_coords = unsafe { prev_coords.into_read_only() };
-        let mut new_coords = excl_temp_array(frame_alloc);
-        self.get_all_chunks_containing(new_pos, extent, &mut new_coords);
-        let new_coords = unsafe { new_coords.into_read_only() };
+        let prev_coords = {
+            let mut prev_coords = excl_temp_array(frame_alloc);
+            self.get_all_chunks_containing(prev_pos, extent, &mut prev_coords);
+            unsafe { prev_coords.into_read_only() }
+        };
+        let new_coords = {
+            let mut new_coords = excl_temp_array(frame_alloc);
+            self.get_all_chunks_containing(new_pos, extent, &mut new_coords);
+            unsafe { new_coords.into_read_only() }
+        };
 
         let mut all_chunks = excl_temp_array(frame_alloc);
         // Pre-allocate enough memory to hold all the chunks; then `chunks_to_add` starts at index 0,
         // while `chunks_to_remove` starts at index `new_coords.len()`.
         // This works because we can have at most `new_coords.len()` chunks to add and `prev_coords.len()`
         // chunks to remove.
+        // @Robustness: this is likely UB in rust, we should do this in a safer way...
         unsafe {
             all_chunks.alloc_additional_uninit(new_coords.len() + prev_coords.len());
         }
@@ -281,18 +292,18 @@ impl World_Chunks {
 
         for coord in all_chunks
             .iter()
-            .skip(chunks_to_add_offset)
-            .take(n_chunks_to_add)
-        {
-            self.add_collider_coords(cld_handle, *coord);
-        }
-
-        for coord in all_chunks
-            .iter()
             .skip(chunks_to_remove_offset)
             .take(n_chunks_to_remove)
         {
             self.remove_collider_coords(cld_handle, *coord);
+        }
+
+        for coord in all_chunks
+            .iter()
+            .skip(chunks_to_add_offset)
+            .take(n_chunks_to_add)
+        {
+            self.add_collider_coords(cld_handle, *coord);
         }
     }
 

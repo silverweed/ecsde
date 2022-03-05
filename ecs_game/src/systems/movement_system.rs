@@ -36,6 +36,8 @@ impl Movement_System {
         phys_world: &Physics_World,
         moved: &mut Exclusive_Temp_Array<Moved_Collider>,
     ) {
+        trace!("movement_system::update_physics");
+
         let dt_secs = dt.as_secs_f32();
 
         foreach_entity!(self.query, ecs_world,
@@ -53,11 +55,13 @@ impl Movement_System {
             let starting_pos = spatial.frame_starting_pos;
             if (pos - starting_pos).magnitude2() > std::f32::EPSILON {
                 if let Some(collider) = ecs_world.get_component::<C_Collider>(entity) {
-                    for (collider, handle) in phys_world.get_all_colliders_with_handles(collider.phys_body_handle) {
+                    for (collider, handle) in phys_world.
+                            get_all_colliders_with_handles(collider.phys_body_handle)
+                            .filter(|(cld, _)| !cld.is_static) {
                         moved.push(Moved_Collider {
                             handle,
-                            prev_pos: starting_pos,
-                            new_pos: pos,
+                            prev_pos: starting_pos + collider.offset,
+                            new_pos: pos + collider.offset,
                             extent: collider.shape.extent(),
                         });
                     }
