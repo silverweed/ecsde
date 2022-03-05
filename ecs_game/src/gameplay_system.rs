@@ -79,7 +79,7 @@ fn create_systems(engine_state: &Engine_State) -> Vec<Box<dyn Game_System>> {
     vec![
         Box::new(gravity_system::Gravity_System::new()),
         Box::new(ground_detection_system::Ground_Detection_System::new()),
-        Box::new(ai::Ai_System::default()),
+        Box::new(ai::test_ai_system::Test_Ai_System::new()),
         Box::new(controllable_system::Controllable_System::new(
             &engine_state.config,
         )),
@@ -286,13 +286,10 @@ impl Gameplay_System {
         let cfg = &engine_state.config;
 
         ///// Update all game systems in all worlds /////
-        // Note: inlining foreach_active_levels because we don't want to borrow self.
         let levels = &self.levels;
         let input_cfg = self.input_cfg;
-        //let ground_collision_calc_system = &mut self.ground_collision_calc_system;
         let gres = &mut rsrc.gfx;
         let shader_cache = &mut rsrc.shader_cache;
-        let phys_settings = &engine_state.systems.physics_settings;
         let test_emitter_handle = self.test_particle_emitter;
         let systems = &mut self.systems;
 
@@ -303,20 +300,14 @@ impl Gameplay_System {
                 dt: *dt,
                 ecs_world: world,
                 phys_world: &mut level.phys_world,
-                phys_settings,
                 engine_state,
                 input_cfg: &input_cfg,
             };
-            for system in systems.iter_mut() {
+            for system in systems.iter() {
                 system.update(&mut update_args);
             }
 
-            let world = &mut level.world;
-
-            //ground_collision_calc_system.update(world, &mut level.phys_world, &mut level.chunks);
-
-            //gfx::multi_sprite_animation_system::update(&dt, world, &mut engine_state.frame_alloc);
-            level.chunks.update(world, &level.phys_world);
+            level.chunks.update(&mut level.world, &level.phys_world);
 
             // @Temporary DEBUG (this only works if we only have 1 test level)
             //let particle_mgr = particle_mgrs.get_mut(&level.id).unwrap();
@@ -340,7 +331,7 @@ impl Gameplay_System {
         &mut self,
         real_dt: &Duration,
         window: &Render_Window_Handle,
-        engine_state: &Engine_State,
+        engine_state: &mut Engine_State,
     ) {
         trace!("gameplay_system::realtime_update");
 
@@ -388,107 +379,12 @@ impl Gameplay_System {
         let mut axes = Virtual_Axes::default();
         std::mem::swap(&mut self.latest_frame_axes, &mut axes);
         self.update(&dt, time, &actions, &axes, cfg);
-    }
+    }*/
 
-    fn init_demo_entities(
-        &mut self,
-        rsrc: &mut Gfx_Resources,
-        env: &Env_Info,
-        rng: &mut rand::Default_Rng,
-        cfg: &cfg::Config,
-        gs_cfg: Gameplay_System_Config,
-    ) {
-        // #DEMO
-        let em = &mut self.ecs_world;
-
-        self.camera = em.new_entity();
-        {
-            let cam = em.add_component::<C_Camera2D>(self.camera);
-            //cam.transform.set_scale(2.5, 2.5);
-            cam.transform.set_position(-300., -300.);
-        }
-
-        {
-            let mut ctrl = em.add_component::<C_Controllable>(self.camera);
-            ctrl.speed = Cfg_Var::new("game/gameplay/player/player_speed", cfg);
-        }
-
-        let mut prev_entity: Option<Entity> = None;
-        let mut fst_entity: Option<Entity> = None;
-        let n_frames = 4;
-        for i in 0..gs_cfg.n_entities_to_spawn {
-            let entity = em.new_entity();
-            let (sw, sh) = {
-                let mut rend = em.add_component::<C_Renderable>(entity);
-                //rend.texture = rsrc.load_texture(&tex_path(&env, "yv.png"));
-                rend.texture = rsrc.load_texture(&tex_path(&env, "plant.png"));
-                assert!(rend.texture.is_some(), "Could not load texture!");
-                rend.modulate = if i == 1 {
-                    colors::rgb(0, 255, 0)
-                } else {
-                    colors::WHITE
-                };
-                let (sw, sh) = inle_gfx::render::get_texture_size(rsrc.get_texture(rend.texture));
-                rend.rect = Rect::new(0, 0, sw as i32 / (n_frames as i32), sh as i32);
-                (sw, sh)
-            };
-            if i == 1 {
-                let ctr = em.add_component::<C_Controllable>(entity);
-                ctr.speed = Cfg_Var::new("game/gameplay/player/player_speed", cfg);
-            }
-            {
-                let t = em.add_component::<C_Spatial2D>(entity);
-                let x = rand::rand_01(rng);
-                let y = rand::rand_01(rng);
-                if i > 0 {
-                    //t.local_transform.set_position(i as f32 * 242.0, 0.);
-                    t.local_transform.set_position(x * 500., 1. * y * 1500.);
-                }
-                self.scene_tree.add(entity, fst_entity, &t.local_transform);
-            }
-            /*
-            {
-                let c = em.add_component::<collider::Collider>(entity);
-                let width = (sw / n_frames) as f32;
-                let height = sh as f32;
-                c.shape = collider::Collision_Shape::Rect { width, height };
-                //c.shape = collider::Collision_Shape::Circle {
-                //radius: width.max(height) * 0.5,
-                //};
-                c.offset = -Vec2f::new(width * 0.5, height * 0.5);
-            }
-            */
-            {
-                let s = em.add_component::<C_Animated_Sprite>(entity);
-                s.n_frames = n_frames;
-                s.frame_time = 0.16;
-            }
-            prev_entity = Some(entity);
-            if fst_entity.is_none() {
-                fst_entity = Some(entity);
-            }
-            //{
-            //    let mut t = em.add_component::<C_Spatial2D>(entity);
-            //    t.transform.set_origin(sw as f32 * 0.5, sh as f32 * 0.5);
-            //    t.transform
-            //        .set_position(n as f32 * (i % n) as f32, n as f32 * (i / n) as f32);
-            //}
-            //{
-            //let mut ctrl = em.add_component::<C_Controllable>(entity);
-            //ctrl.speed = cfg.get_var_float_or("gameplay/player/player_speed", 300.0);
-            //}
-            self.entities.push(entity);
-        }
-    }
-
-    */
-
-    pub fn update_pending_component_updates<
+    pub fn update_pending_component_updates<F>(&mut self, mut on_comp_update_cb: F)
+    where
         F: FnMut(&HashMap<Entity, Component_Updates>, &Component_Manager),
-    >(
-        &mut self,
-        mut on_comp_update_cb: F,
-    ) {
+    {
         let mut systems = &mut self.systems;
         let movement_system = &mut self.movement_system;
         self.levels.foreach_active_level(|level| {

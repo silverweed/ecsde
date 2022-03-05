@@ -108,8 +108,6 @@ fn init_demo_entities(
 
     proc_gen::generate_random_level(gres, shader_cache, env, rng, cfg, level, gs_cfg);
 
-    let camera = create_camera(level, cfg);
-
     // Create player
     let player = entities::create_jelly(
         &mut level.world,
@@ -122,6 +120,8 @@ fn init_demo_entities(
         true,
     );
 
+    // Create following camera
+    let camera = create_camera(level, cfg);
     level.world.add_component(
         camera,
         C_Camera_Follow {
@@ -135,17 +135,27 @@ fn init_demo_entities(
 }
 
 fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World, phys_world: &Physics_World) {
-    foreach_entity!(world,
-        read: C_Collider;
-        write: C_Spatial2D;
-        |entity, (collider,): (&C_Collider,), (spatial,): (&mut C_Spatial2D,)| {
-        let pos = spatial.transform.position();
-        spatial.frame_starting_pos = pos;
-        let body_handle = collider.phys_body_handle;
-        for (collider, cld_handle) in phys_world.get_all_colliders_with_handles(body_handle) {
-            chunks.add_collider(cld_handle, pos, collider.shape.extent());
+    if let (Some(colliders), Some(spatials)) = (
+        world.get_component_storage::<C_Collider>(),
+        world.get_component_storage::<C_Spatial2D>(),
+    ) {
+        let colliders = colliders.lock_for_read();
+        let mut spatials = spatials.lock_for_write();
+        for &entity in world.entities() {
+            ldebug!("Checking entity {entity:?}");
+            if let (Some(collider), Some(spatial)) =
+                (colliders.get(entity), spatials.get_mut(entity))
+            {
+                let pos = spatial.transform.position();
+                spatial.frame_starting_pos = pos;
+                let body_handle = collider.phys_body_handle;
+                for (collider, cld_handle) in phys_world.get_all_colliders_with_handles(body_handle)
+                {
+                    chunks.add_collider(cld_handle, pos, collider.shape.extent());
+                }
+            }
         }
-    });
+    }
 }
 
 fn create_camera(level: &mut Level, cfg: &inle_cfg::Config) -> Entity {

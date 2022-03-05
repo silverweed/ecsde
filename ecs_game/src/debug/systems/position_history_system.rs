@@ -1,6 +1,7 @@
-use inle_cfg::Cfg_Var;
+use crate::systems::interface::{Game_System, Update_Args};
+use inle_cfg::{Cfg_Var, Config};
 use inle_ecs::components::base::C_Spatial2D;
-use inle_ecs::ecs_world::Ecs_World;
+use inle_ecs::ecs_query_new::Ecs_Query;
 use inle_math::vector::Vec2f;
 use std::collections::VecDeque;
 use std::time::Duration;
@@ -26,26 +27,53 @@ impl C_Position_History {
 }
 
 pub struct Position_History_System {
+    active: Cfg_Var<bool>,
     hist_size: Cfg_Var<u32>,
+    query: Ecs_Query,
 }
 
 impl Position_History_System {
-    pub fn new(hist_size: Cfg_Var<u32>) -> Self {
-        Self { hist_size }
+    pub fn new(cfg: &Config) -> Self {
+        Self {
+            active: Cfg_Var::new("debug/entities/pos_history/draw", cfg),
+            hist_size: Cfg_Var::new("debug/entities/pos_history/hist_size", cfg),
+            query: Ecs_Query::default()
+                .require::<C_Spatial2D>()
+                .require::<C_Position_History>(),
+        }
+    }
+}
+
+impl Game_System for Position_History_System {
+    fn get_queries_mut(&mut self) -> Vec<&mut Ecs_Query> {
+        vec![&mut self.query]
     }
 
-    pub fn update(&mut self, world: &mut Ecs_World, dt: Duration, cfg: &inle_cfg::Config) {
+    fn update(&self, args: &mut Update_Args) {
         trace!("position_history_system::update");
+
+        let Update_Args {
+            ecs_world: world,
+            engine_state,
+            dt,
+            ..
+        } = args;
+
+        let cfg = &engine_state.config;
+        let active = self.active.read(cfg);
+        if !active {
+            return;
+        }
 
         let hist_size = self.hist_size.read(cfg) as usize;
 
-        foreach_entity!(world,
+        foreach_entity!(self.query, world,
             read: C_Spatial2D;
             write: C_Position_History;
             |_e, (spatial,): (&C_Spatial2D,), (pos_hist,): (&mut C_Position_History,)| {
             let pos = spatial.transform.position();
 
-            pos_hist.time_since_latest_record += dt;
+            pos_hist.time_since_latest_record += *dt;
 
             let prev_positions = &mut pos_hist.positions;
 

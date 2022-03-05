@@ -308,7 +308,7 @@ where
             game_state.gameplay_system.realtime_update(
                 &real_dt,
                 &game_state.window,
-                &game_state.engine_state,
+                &mut game_state.engine_state,
             );
 
             // @Cleanup: where do we put this? Do we want this inside gameplay_system?
@@ -761,112 +761,52 @@ fn update_debug(
     collision_debug_data: HashMap<String_Id, physics::Collision_System_Debug_Data>,
     dt: Duration,
 ) {
-    let engine_state = &mut game_state.engine_state;
-    let debug_systems = &mut engine_state.debug_systems;
-
-    // Overlays
     let display_overlays = game_state
         .debug_cvars
         .display_overlays
-        .read(&engine_state.config);
-    let overlays_were_visible = debug_systems.debug_ui.is_overlay_enabled(sid!("time"));
-    if display_overlays {
-        if !overlays_were_visible {
-            set_debug_hud_enabled(&mut debug_systems.debug_ui, true);
-        }
+        .read(&game_state.engine_state.config);
 
-        update_time_debug_overlay(
-            debug_systems.debug_ui.get_overlay(sid!("time")),
-            &engine_state.time,
-            game_state.n_updates_last_frame,
-        );
+    draw_debug_overlays(game_state, display_overlays);
 
-        update_fps_debug_overlay(
-            debug_systems.debug_ui.get_overlay(sid!("fps")),
-            &game_state.fps_debug,
-            (1000.
-                / game_state
-                    .cvars
-                    .gameplay_update_tick_ms
-                    .read(&engine_state.config)) as u64,
-            game_state.cvars.vsync.read(&engine_state.config),
-            &engine_state.prev_frame_time,
-        );
+    {
+        let engine_state = &mut game_state.engine_state;
+        let debug_systems = &mut engine_state.debug_systems;
 
-        update_win_debug_overlay(
-            debug_systems.debug_ui.get_overlay(sid!("window")),
-            &game_state.window,
-        );
-    } else if overlays_were_visible {
-        set_debug_hud_enabled(&mut debug_systems.debug_ui, false);
-    }
-
-    let input_state = &engine_state.input_state;
-    let draw_mouse_rulers = game_state
-        .debug_cvars
-        .draw_mouse_rulers
-        .read(&engine_state.config);
-    // NOTE: this must be always cleared or the mouse position will remain after enabling and disabling the cfg var
-    debug_systems.debug_ui.get_overlay(sid!("mouse")).clear();
-    if draw_mouse_rulers {
-        let painter = &mut debug_systems.global_painter;
-        update_mouse_debug_overlay(
-            debug_systems.debug_ui.get_overlay(sid!("mouse")),
-            painter,
-            &game_state.window,
-            game_state
-                .gameplay_system
-                .levels
-                .first_active_level()
-                .map(|level| level.get_camera_transform()),
-            input_state,
-        );
-    }
-
-    let display_log_window = game_state
-        .debug_cvars
-        .display_log_window
-        .read(&engine_state.config);
-    let log_window_enabled = debug_systems
-        .debug_ui
-        .is_log_window_enabled(sid!("log_window"));
-    if display_log_window != log_window_enabled {
-        debug_systems
+        let display_log_window = game_state
+            .debug_cvars
+            .display_log_window
+            .read(&engine_state.config);
+        let log_window_enabled = debug_systems
             .debug_ui
-            .set_log_window_enabled(sid!("log_window"), display_log_window);
+            .is_log_window_enabled(sid!("log_window"));
+        if display_log_window != log_window_enabled {
+            debug_systems
+                .debug_ui
+                .set_log_window_enabled(sid!("log_window"), display_log_window);
+        }
     }
 
-    let draw_fps_graph = game_state
-        .debug_cvars
-        .draw_fps_graph
-        .read(&engine_state.config);
-    debug_systems
-        .debug_ui
-        .set_graph_enabled(sid!("fps"), draw_fps_graph);
-    if draw_fps_graph {
-        update_graph_fps(
-            debug_systems.debug_ui.get_graph(sid!("fps")),
-            &engine_state.time,
-            &game_state.fps_debug,
-        );
-    }
-
-    let draw_prev_frame_t_graph = game_state
-        .debug_cvars
-        .draw_prev_frame_t_graph
-        .read(&engine_state.config);
-    debug_systems
-        .debug_ui
-        .set_graph_enabled(sid!("prev_frame_time"), draw_prev_frame_t_graph);
-    if draw_prev_frame_t_graph {
-        update_graph_prev_frame_t(
-            debug_systems.debug_ui.get_graph(sid!("prev_frame_time")),
-            &engine_state.time,
-            &engine_state.prev_frame_time,
-        );
-    }
+    draw_debug_graphs(game_state);
 
     ////// Per-Level debugs //////
+    let input_cfg = &game_state.gameplay_system.input_cfg;
+    let game_debug_systems = &game_state.game_debug_systems;
+    let engine_state = &mut game_state.engine_state;
+    game_state
+        .gameplay_system
+        .levels
+        .foreach_active_level(|level| {
+            let mut update_args = crate::systems::interface::Update_Args {
+                dt,
+                ecs_world: &mut level.world,
+                phys_world: &mut level.phys_world,
+                engine_state,
+                input_cfg,
+            };
+            game_debug_systems.update(&mut update_args);
+        });
+
+    let debug_systems = &mut engine_state.debug_systems;
     let painters = &mut debug_systems.painters;
     let debug_ui = &mut debug_systems.debug_ui;
     let target_win_size = engine_state.app_config.target_win_size;
@@ -893,10 +833,9 @@ fn update_debug(
     let window = &mut game_state.window;
     let shader_cache = &mut game_resources.shader_cache;
     let env = &engine_state.env;
-    let pos_hist_system = &mut game_state.game_debug_systems.position_history_system;
-    let cfg = &engine_state.config;
     let particle_mgrs = &engine_state.systems.particle_mgrs;
     let queries = &game_state.debug_ecs_queries;
+    let input_state = &engine_state.input_state;
 
     game_state
         .gameplay_system
@@ -955,7 +894,6 @@ fn update_debug(
             }
 
             if draw_entity_pos_history {
-                pos_hist_system.update(&mut level.world, dt, cfg);
                 debug_draw_entities_pos_history(
                     debug_painter,
                     &queries.draw_entities_pos_history,
@@ -1008,5 +946,101 @@ fn update_debug(
     // @Cleanup
     if cvars.draw_buf_alloc.read(&engine_state.config) {
         inle_debug::backend_specific_debugs::draw_backend_specific_debug(window, global_painter);
+    }
+}
+
+#[cfg(debug_assertions)]
+fn draw_debug_overlays(game_state: &mut Game_State, display_overlays: bool) {
+    let engine_state = &mut game_state.engine_state;
+    let debug_systems = &mut engine_state.debug_systems;
+
+    let overlays_were_visible = debug_systems.debug_ui.is_overlay_enabled(sid!("time"));
+    if display_overlays {
+        if !overlays_were_visible {
+            set_debug_hud_enabled(&mut debug_systems.debug_ui, true);
+        }
+
+        update_time_debug_overlay(
+            debug_systems.debug_ui.get_overlay(sid!("time")),
+            &engine_state.time,
+            game_state.n_updates_last_frame,
+        );
+
+        update_fps_debug_overlay(
+            debug_systems.debug_ui.get_overlay(sid!("fps")),
+            &game_state.fps_debug,
+            (1000.
+                / game_state
+                    .cvars
+                    .gameplay_update_tick_ms
+                    .read(&engine_state.config)) as u64,
+            game_state.cvars.vsync.read(&engine_state.config),
+            &engine_state.prev_frame_time,
+        );
+
+        update_win_debug_overlay(
+            debug_systems.debug_ui.get_overlay(sid!("window")),
+            &game_state.window,
+        );
+    } else if overlays_were_visible {
+        set_debug_hud_enabled(&mut debug_systems.debug_ui, false);
+    }
+
+    let input_state = &engine_state.input_state;
+    let draw_mouse_rulers = game_state
+        .debug_cvars
+        .draw_mouse_rulers
+        .read(&engine_state.config);
+    // NOTE: this must be always cleared or the mouse position will remain after enabling and disabling the cfg var
+    debug_systems.debug_ui.get_overlay(sid!("mouse")).clear();
+    if draw_mouse_rulers {
+        let painter = &mut debug_systems.global_painter;
+        update_mouse_debug_overlay(
+            debug_systems.debug_ui.get_overlay(sid!("mouse")),
+            painter,
+            &game_state.window,
+            game_state
+                .gameplay_system
+                .levels
+                .first_active_level()
+                .map(|level| level.get_camera_transform()),
+            input_state,
+        );
+    }
+}
+
+#[cfg(debug_assertions)]
+fn draw_debug_graphs(game_state: &mut Game_State) {
+    let engine_state = &mut game_state.engine_state;
+    let debug_systems = &mut engine_state.debug_systems;
+
+    let draw_fps_graph = game_state
+        .debug_cvars
+        .draw_fps_graph
+        .read(&engine_state.config);
+    debug_systems
+        .debug_ui
+        .set_graph_enabled(sid!("fps"), draw_fps_graph);
+    if draw_fps_graph {
+        update_graph_fps(
+            debug_systems.debug_ui.get_graph(sid!("fps")),
+            &engine_state.time,
+            &game_state.fps_debug,
+        );
+    }
+
+    let draw_prev_frame_t_graph = game_state
+        .debug_cvars
+        .draw_prev_frame_t_graph
+        .read(&engine_state.config);
+    debug_systems
+        .debug_ui
+        .set_graph_enabled(sid!("prev_frame_time"), draw_prev_frame_t_graph);
+    if draw_prev_frame_t_graph {
+        update_graph_prev_frame_t(
+            debug_systems.debug_ui.get_graph(sid!("prev_frame_time")),
+            &engine_state.time,
+            &engine_state.prev_frame_time,
+        );
     }
 }

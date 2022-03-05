@@ -1,6 +1,5 @@
 use crate::spatial::World_Chunks;
 use inle_common::stringid::String_Id;
-use inle_ecs::ecs_query::Ecs_Query;
 use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_gfx::components::C_Camera2D;
 use inle_gfx::light::Lights;
@@ -24,29 +23,44 @@ pub struct Level {
 impl Level {
     // @Temporary: we need to better decide how to handle cameras
     pub fn get_camera_transform(&self) -> inle_math::transform::Transform2D {
-        let query = Ecs_Query::new(&self.world).read::<C_Camera2D>();
-        let cam_entity = query.entities()[0];
-        let cams = query.storages().begin_read::<C_Camera2D>();
-        cams.must_get(cam_entity).transform
+        let comp_reads = self
+            .world
+            .get_component_storage::<C_Camera2D>()
+            .unwrap()
+            .lock_for_read();
+        let cam_entity = self.cameras[0];
+        comp_reads.must_get(cam_entity).transform
     }
 
     // @Temporary
     pub fn move_camera_to(&mut self, pos: Vec2f) {
-        let query = Ecs_Query::new(&self.world).write::<C_Camera2D>();
-        let cam_entity = query.entities()[0];
-        let mut cams = query.storages().begin_write::<C_Camera2D>();
-        cams.must_get_mut(cam_entity).transform.set_position_v(pos);
+        let mut comp_writs = self
+            .world
+            .get_component_storage::<C_Camera2D>()
+            .unwrap()
+            .lock_for_write();
+        let cam_entity = self.cameras[0];
+        comp_writs
+            .must_get_mut(cam_entity)
+            .transform
+            .set_position_v(pos);
     }
 
     // @Temporary
     pub fn zoom_camera(&mut self, amt: Vec2f, is_absolute: bool) {
-        let query = Ecs_Query::new(&self.world).write::<C_Camera2D>();
-        let cam_entity = query.entities()[0];
-        let mut cams = query.storages().begin_write::<C_Camera2D>();
+        let mut comp_writs = self
+            .world
+            .get_component_storage::<C_Camera2D>()
+            .unwrap()
+            .lock_for_write();
+        let cam_entity = self.cameras[0];
         if is_absolute {
-            cams.must_get_mut(cam_entity).transform.set_scale_v(amt);
+            comp_writs
+                .must_get_mut(cam_entity)
+                .transform
+                .set_scale_v(amt);
         } else {
-            let transform = &mut cams.must_get_mut(cam_entity).transform;
+            let transform = &mut comp_writs.must_get_mut(cam_entity).transform;
             transform.set_scale_v(transform.scale() * amt);
         }
     }

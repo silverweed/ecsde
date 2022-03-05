@@ -4,23 +4,21 @@ use inle_ecs::ecs_query_new::Ecs_Query;
 use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_physics::phys_world::Physics_World;
-use inle_physics::physics::Physics_Settings;
 use std::time::Duration;
 
-pub struct Update_Args<'a> {
+pub struct Update_Args<'a, 'e> {
     pub dt: Duration,
     pub ecs_world: &'a mut Ecs_World,
     pub phys_world: &'a mut Physics_World,
-    pub phys_settings: &'a Physics_Settings,
-    pub engine_state: &'a Engine_State<'a>,
+    pub engine_state: &'a mut Engine_State<'e>,
     pub input_cfg: &'a Input_Config,
 }
 
-pub struct Realtime_Update_Args<'a> {
+pub struct Realtime_Update_Args<'a, 'e> {
     pub dt: Duration,
     pub window: &'a Render_Window_Handle,
     pub ecs_world: &'a mut Ecs_World,
-    pub engine_state: &'a Engine_State<'a>,
+    pub engine_state: &'a mut Engine_State<'e>,
     pub input_cfg: &'a Input_Config,
 
     // @Cleanup: ugly

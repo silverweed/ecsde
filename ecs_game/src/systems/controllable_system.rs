@@ -65,7 +65,7 @@ impl Game_System for Controllable_System {
         let movement = get_movement_from_input(axes, **input_cfg, cfg).x;
         let dt_secs = dt.as_secs_f32();
 
-        foreach_entity!(ecs_world,
+        foreach_entity!(self.query, ecs_world,
             read: C_Ground_Detection;
             write: C_Controllable, C_Spatial2D;
             |_e, (ground_detect,): (&C_Ground_Detection,), (ctrl, spatial): (&mut C_Controllable, &mut C_Spatial2D)| {

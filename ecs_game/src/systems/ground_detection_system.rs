@@ -36,9 +36,11 @@ impl Game_System for Ground_Detection_System {
         let Update_Args {
             ecs_world: world,
             phys_world,
-            phys_settings,
+            engine_state,
             ..
         } = args;
+
+        let phys_settings = &engine_state.systems.physics_settings;
 
         foreach_entity!(self.query, world,
             read: C_Collider;
