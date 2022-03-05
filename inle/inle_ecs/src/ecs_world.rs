@@ -163,14 +163,12 @@ impl Ecs_World {
     }
 
     #[inline]
-    pub fn get_component_storage<T: Copy + 'static>(&self) -> Option<&Component_Storage<T>> {
+    pub fn get_component_storage<T: 'static>(&self) -> Option<&Component_Storage<T>> {
         self.component_manager.get_component_storage::<T>()
     }
 
     #[inline]
-    pub fn get_component_storage_mut<T: Copy + 'static>(
-        &mut self,
-    ) -> Option<&mut Component_Storage<T>> {
+    pub fn get_component_storage_mut<T: 'static>(&mut self) -> Option<&mut Component_Storage<T>> {
         self.component_manager.get_component_storage_mut::<T>()
     }
 

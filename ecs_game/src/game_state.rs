@@ -11,7 +11,10 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
-use crate::debug::systems::Game_Debug_Systems;
+use {
+    crate::debug::debug_funcs::{create_debug_ecs_queries, Debug_Ecs_Queries},
+    crate::debug::systems::Game_Debug_Systems,
+};
 
 pub type Level_Batches = HashMap<String_Id, inle_gfx::render::batcher::Batches>;
 
@@ -38,6 +41,9 @@ pub struct Game_State<'a> {
 
     #[cfg(debug_assertions)]
     pub game_debug_systems: Game_Debug_Systems,
+
+    #[cfg(debug_assertions)]
+    pub debug_ecs_queries: Debug_Ecs_Queries,
 
     #[cfg(debug_assertions)]
     pub fps_debug: inle_debug::fps::Fps_Counter,
@@ -286,9 +292,12 @@ fn create_game_state<'a>(
         }
     }
 
+    let gameplay_system = gameplay_system::Gameplay_System::new(&engine_state);
+
     #[cfg(debug_assertions)]
     let game_debug_systems = Game_Debug_Systems::new(&engine_state.config);
-    let gameplay_system = gameplay_system::Gameplay_System::new(&engine_state);
+    #[cfg(debug_assertions)]
+    let debug_ecs_queries = create_debug_ecs_queries();
 
     Ok((
         Box::new(Game_State {
@@ -306,6 +315,8 @@ fn create_game_state<'a>(
             debug_cvars,
             #[cfg(debug_assertions)]
             game_debug_systems,
+            #[cfg(debug_assertions)]
+            debug_ecs_queries,
             #[cfg(debug_assertions)]
             fps_debug: inle_debug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(2)),
             #[cfg(debug_assertions)]
