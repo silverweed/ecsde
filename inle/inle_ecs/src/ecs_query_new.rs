@@ -4,16 +4,22 @@ use std::any::TypeId;
 use std::collections::HashSet;
 
 // A structure that keeps track of which entities have a specific set of components.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Ecs_Query {
     entities: Vec<Entity>,
 
     components: HashSet<Component_Type>,
 }
 
+pub enum Update_Result {
+    Ignored,
+    Added,
+    Removed,
+}
+
 impl Ecs_Query {
     pub fn require<T: 'static>(mut self) -> Self {
-        self.components.insert(TypeId::of::<T>());
+        self.components.insert(Component_Type::create::<T>());
         self
     }
 
@@ -23,7 +29,7 @@ impl Ecs_Query {
         entity: Entity,
         comp_added: &[Component_Type],
         comp_removed: &[Component_Type],
-    ) {
+    ) -> Update_Result {
         #[cfg(debug_assertions)]
         {
             use std::iter::FromIterator;
@@ -35,7 +41,7 @@ impl Ecs_Query {
             for comp in comp_removed {
                 if self.components.contains(comp) {
                     self.entities.swap_remove(idx);
-                    return;
+                    return Update_Result::Removed;
                 }
             }
         } else if comp_added.iter().any(|comp| self.components.contains(comp))
@@ -46,7 +52,10 @@ impl Ecs_Query {
                 .all(|comp| comp_mgr.has_component_dyn(entity, comp))
         {
             self.entities.push(entity);
+            return Update_Result::Added;
         }
+
+        Update_Result::Ignored
     }
 
     #[inline(always)]

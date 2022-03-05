@@ -135,6 +135,7 @@ fn init_demo_entities(
 }
 
 fn fill_world_chunks(chunks: &mut World_Chunks, world: &mut Ecs_World, phys_world: &Physics_World) {
+    return;
     if let (Some(colliders), Some(spatials)) = (
         world.get_component_storage::<C_Collider>(),
         world.get_component_storage::<C_Spatial2D>(),

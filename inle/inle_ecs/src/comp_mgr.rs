@@ -3,9 +3,54 @@ use anymap::any::UncheckedAnyExt;
 use anymap::Map;
 use std::any::{type_name, TypeId};
 use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-pub type Component_Type = TypeId;
+#[derive(Clone)]
+pub struct Component_Type {
+    id: TypeId,
+
+    #[cfg(debug_assertions)]
+    name: &'static str,
+}
+
+impl PartialEq for Component_Type {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Component_Type {}
+
+impl Hash for Component_Type {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl std::fmt::Debug for Component_Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        #[cfg(debug_assertions)]
+        {
+            write!(f, "{}", self.name)
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            write!(f, "{:?}", self.id)
+        }
+    }
+}
+
+impl Component_Type {
+    pub fn create<T: 'static>() -> Self {
+        let typeid = TypeId::of::<T>();
+        Self {
+            id: typeid,
+            #[cfg(debug_assertions)]
+            name: comp_name::<T>(),
+        }
+    }
+}
 
 pub struct Component_Manager {
     storages: Map<dyn Component_Storage_Interface>,
@@ -107,14 +152,15 @@ impl Component_Manager {
             self.components_per_entity
                 .resize(entity.index as usize + 1, HashSet::default());
         }
-        self.components_per_entity[entity.index as usize].insert(TypeId::of::<T>());
+        self.components_per_entity[entity.index as usize].insert(Component_Type::create::<T>());
     }
 
     #[inline]
     pub fn remove_component<T: 'static>(&mut self, entity: Entity) {
         if let Some(storage) = self.get_component_storage_mut::<T>() {
             storage.remove_component(entity);
-            let _ok = self.components_per_entity[entity.index as usize].remove(&TypeId::of::<T>());
+            let _ok = self.components_per_entity[entity.index as usize]
+                .remove(&Component_Type::create::<T>());
             debug_assert!(
                 _ok,
                 "Component {:?} of entity {:?} was removed from storage but not from components_per_entity!",
@@ -478,12 +524,17 @@ impl<T: 'static> Component_Storage_Interface for Component_Storage<T> {
 
     #[cfg(debug_assertions)]
     fn comp_name(&self) -> &'static str {
-        // Note: we assume that type_name returns a full path like foo::bar::Type, although that's not guaranteed.
-        // This won't break if that's not the case anyway.
-        let full_name = type_name::<T>();
-        let base_name = full_name.rsplit(':').next().unwrap_or(full_name);
-        base_name
+        comp_name::<T>()
     }
+}
+
+#[cfg(debug_assertions)]
+fn comp_name<T: 'static>() -> &'static str {
+    // Note: we assume that type_name returns a full path like foo::bar::Type, although that's not guaranteed.
+    // This won't break if that's not the case anyway.
+    let full_name = type_name::<T>();
+    let base_name = full_name.rsplit(':').next().unwrap_or(full_name);
+    base_name
 }
 
 //
@@ -530,24 +581,35 @@ mod tests {
         let e = Entity { index: 1, gen: 1 };
 
         comp_mgr.add_component(e, C1 {});
-        assert!(comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C1>()));
-        assert!(!comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C2>()));
+        assert!(comp_mgr.components_per_entity[e.index as usize]
+            .contains(&Component_Type::create::<C1>()));
+        assert!(!comp_mgr.components_per_entity[e.index as usize]
+            .contains(&Component_Type::create::<C2>()));
 
         comp_mgr.add_component(e, C2 { x: 1 });
-        assert!(comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C1>()));
-        assert!(comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C2>()));
+        assert!(comp_mgr.components_per_entity[e.index as usize]
+            .contains(&Component_Type::create::<C1>()));
+        assert!(comp_mgr.components_per_entity[e.index as usize]
+            .contains(&Component_Type::create::<C2>()));
 
         comp_mgr.remove_component::<C2>(e);
-        assert!(comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C1>()));
-        assert!(!comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C2>()));
+        assert!(comp_mgr.components_per_entity[e.index as usize]
+            .contains(&Component_Type::create::<C1>()));
+        assert!(!comp_mgr.components_per_entity[e.index as usize]
+            .contains(&Component_Type::create::<C2>()));
 
         comp_mgr.remove_component::<C1>(e);
-        assert!(!comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C1>()));
-        assert!(!comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C2>()));
+        assert!(!comp_mgr.components_per_entity[e.index as usize]
+            .contains(&Component_Type::create::<C1>()));
+        assert!(!comp_mgr.components_per_entity[e.index as usize]
+            .contains(&Component_Type::create::<C2>()));
 
         comp_mgr.add_component(e, C3 {});
-        assert!(!comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C1>()));
-        assert!(!comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C2>()));
-        assert!(comp_mgr.components_per_entity[e.index as usize].contains(&TypeId::of::<C3>()));
+        assert!(!comp_mgr.components_per_entity[e.index as usize]
+            .contains(&Component_Type::create::<C1>()));
+        assert!(!comp_mgr.components_per_entity[e.index as usize]
+            .contains(&Component_Type::create::<C2>()));
+        assert!(comp_mgr.components_per_entity[e.index as usize]
+            .contains(&Component_Type::create::<C3>()));
     }
 }

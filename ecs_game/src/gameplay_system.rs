@@ -307,7 +307,7 @@ impl Gameplay_System {
                 system.update(&mut update_args);
             }
 
-            level.chunks.update(&mut level.world, &level.phys_world);
+            //level.chunks.update(&mut level.world, &level.phys_world);
 
             // @Temporary DEBUG (this only works if we only have 1 test level)
             //let particle_mgr = particle_mgrs.get_mut(&level.id).unwrap();
@@ -415,6 +415,13 @@ impl Gameplay_System {
                         &comp_updates.removed,
                     );
                 }
+
+                // Chunks
+                level.chunks.update_entity_components(
+                    &level.world.component_manager,
+                    entity,
+                    &comp_updates,
+                );
             }
         });
     }
@@ -441,6 +448,10 @@ impl Gameplay_System {
                     frame_alloc,
                 );
             }
+
+            level
+                .chunks
+                .apply_pending_updates(&level.world, &level.phys_world);
         });
     }
 }

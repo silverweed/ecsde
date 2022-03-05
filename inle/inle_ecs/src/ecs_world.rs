@@ -1,7 +1,7 @@
 use super::comp_mgr::{self, Component_Type};
 use inle_alloc::gen_alloc::{Generational_Allocator, Generational_Index};
 use inle_events::evt_register;
-use std::any::{type_name, TypeId};
+use std::any::type_name;
 use std::collections::{HashMap, HashSet};
 
 pub type Entity = Generational_Index;
@@ -19,7 +19,7 @@ impl evt_register::Event for Evt_Entity_Destroyed {
     type Args = Entity;
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Component_Updates {
     pub added: Vec<Component_Type>,
     pub removed: Vec<Component_Type>,
@@ -28,7 +28,6 @@ pub struct Component_Updates {
 pub struct Ecs_World {
     entity_manager: Entity_Manager,
 
-    // Note: must be visible to entity_stream
     pub component_manager: Component_Manager,
 
     entities_pending_destroy_notify: HashSet<Entity>,
@@ -95,7 +94,7 @@ impl Ecs_World {
             .entry(entity)
             .or_insert_with(Component_Updates::default)
             .added
-            .push(TypeId::of::<T>());
+            .push(Component_Type::create::<T>());
     }
 
     #[inline]
@@ -144,7 +143,7 @@ impl Ecs_World {
             .entry(entity)
             .or_insert_with(Component_Updates::default)
             .removed
-            .push(TypeId::of::<T>());
+            .push(Component_Type::create::<T>());
     }
 
     #[inline]

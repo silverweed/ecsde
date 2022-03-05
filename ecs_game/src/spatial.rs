@@ -1,6 +1,7 @@
 use inle_alloc::temp::*;
 use inle_app::app::Engine_State;
-use inle_ecs::ecs_world::{Ecs_World, Entity, Evt_Entity_Destroyed};
+use inle_ecs::ecs_query_new::{Ecs_Query, Update_Result};
+use inle_ecs::ecs_world::{Component_Manager, Component_Updates, Ecs_World, Entity};
 use inle_events::evt_register::{with_cb_data, wrap_cb_data, Event_Callback_Data};
 use inle_math::vector::Vec2f;
 use inle_physics::collider::C_Collider;
@@ -57,6 +58,9 @@ impl Chunk_Coords {
 pub struct World_Chunks {
     chunks: HashMap<Chunk_Coords, World_Chunk>,
     to_destroy: Event_Callback_Data,
+    query: Ecs_Query,
+    pending_adds: Vec<Entity>,
+    pending_removes: Vec<Entity>,
 }
 
 #[derive(Default, Debug)]
@@ -69,41 +73,65 @@ impl World_Chunks {
         Self {
             chunks: HashMap::new(),
             to_destroy: wrap_cb_data(Vec::<Entity>::new()),
+            query: Ecs_Query::default().require::<C_Collider>(),
+            pending_adds: vec![],
+            pending_removes: vec![],
         }
     }
 
-    pub fn init(&mut self, engine_state: &mut Engine_State) {
-        engine_state
-            .systems
-            .evt_register
-            .subscribe::<Evt_Entity_Destroyed>(
-                Box::new(|entity, to_destroy| {
-                    with_cb_data(to_destroy.unwrap(), |to_destroy: &mut Vec<Entity>| {
-                        to_destroy.push(entity);
-                    });
-                }),
-                Some(self.to_destroy.clone()),
-            );
-    }
+    pub fn init(&mut self, engine_state: &mut Engine_State) {}
 
-    pub fn update(&mut self, ecs_world: &Ecs_World, phys_world: &Physics_World) {
+    pub fn update_entity_components(
+        &mut self,
+        comp_mgr: &Component_Manager,
+        entity: Entity,
+        comp_updates: &Component_Updates,
+    ) {
         trace!("world_chunks::update");
 
-        let mut to_remove = vec![];
-        with_cb_data(&mut self.to_destroy, |to_destroy: &mut Vec<Entity>| {
-            for &entity in to_destroy.iter() {
-                if let Some(collider) = ecs_world.get_component::<C_Collider>(entity) {
-                    for (cld, handle) in
-                        phys_world.get_all_colliders_with_handles(collider.phys_body_handle)
-                    {
-                        to_remove.push((handle, cld.position, cld.shape.extent()));
-                    }
+        dbg!(comp_updates);
+        match self
+            .query
+            .update(comp_mgr, entity, &comp_updates.added, &comp_updates.removed)
+        {
+            Update_Result::Added => {
+                ldebug!("Adding entity {entity:?}");
+                self.pending_adds.push(entity);
+            }
+            Update_Result::Removed => {
+                ldebug!("Removing entity {entity:?}");
+                self.pending_removes.push(entity);
+            }
+            _ => {}
+        }
+    }
+
+    pub fn apply_pending_updates(&mut self, ecs_world: &Ecs_World, phys_world: &Physics_World) {
+        trace!("world_chunks::apply_pending_updates");
+
+        let pending_adds = std::mem::take(&mut self.pending_adds);
+        let pending_removes = std::mem::take(&mut self.pending_removes);
+
+        if let Some(colliders) = ecs_world.get_component_storage::<C_Collider>() {
+            let colliders = colliders.lock_for_read();
+
+            for entity in pending_adds {
+                let collider = colliders.must_get(entity);
+                for (cld, handle) in
+                    phys_world.get_all_colliders_with_handles(collider.phys_body_handle)
+                {
+                    self.add_collider(handle, cld.position, cld.shape.extent());
                 }
             }
-            to_destroy.clear();
-        });
-        for (cld, pos, extent) in to_remove {
-            self.remove_collider(cld, pos, extent);
+
+            for entity in pending_removes {
+                let collider = colliders.must_get(entity);
+                for (cld, handle) in
+                    phys_world.get_all_colliders_with_handles(collider.phys_body_handle)
+                {
+                    self.remove_collider(handle, cld.position, cld.shape.extent());
+                }
+            }
         }
     }
 
