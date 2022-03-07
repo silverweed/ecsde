@@ -76,27 +76,33 @@ impl Game_System for Controllable_System {
             let vert_max_speed = ctrl.vert_max_speed.read(cfg);
 
             let reset_jumps = ground_detect.just_touched_ground;
-
             let can_jump = (if reset_jumps { 0 } else { ctrl.n_jumps_done }) < ctrl.max_jumps.read(cfg) as u32;
 
-            let velocity = &mut spatial.velocity;
+            //let velocity = &mut spatial.velocity;
+            //velocity.x += movement * acceleration * dt_secs;
 
-            velocity.x += movement * acceleration * dt_secs;
+            let accel = &mut spatial.acceleration;
+            accel.y = 0.0;
+            accel.x = movement * acceleration;
 
             let mut jumped = false;
             if can_jump && actions.contains(&(sid!("jump"), Action_Kind::Pressed)) {
-                velocity.y -= jump_impulse;
+                accel.y -= jump_impulse / dt_secs;
                 jumped = true;
             }
 
-            let velocity_norm = velocity.normalized_or_zero();
-            let speed = velocity.magnitude();
-            *velocity -=  velocity_norm * dampening * speed * dt_secs;
-            velocity.x = clamp(velocity.x, -horiz_max_speed, horiz_max_speed);
-            velocity.y = clamp(velocity.y, -vert_max_speed, vert_max_speed);
+            let velocity_norm = spatial.velocity.normalized_or_zero();
+            let speed = spatial.velocity.magnitude();
+            *accel -= velocity_norm * dampening * speed;
 
-            let v = *velocity * dt_secs;
-            ctrl.translation_this_frame = v;
+            //let velocity_norm = velocity.normalized_or_zero();
+            //let speed = velocity.magnitude();
+            //*velocity -=  velocity_norm * dampening * speed * dt_secs;
+            //velocity.x = clamp(velocity.x, -horiz_max_speed, horiz_max_speed);
+            //velocity.y = clamp(velocity.y, -vert_max_speed, vert_max_speed);
+
+            //let v = *velocity * dt_secs;
+            //ctrl.translation_this_frame = v;
             if reset_jumps {
                 ctrl.n_jumps_done = 0;
             }

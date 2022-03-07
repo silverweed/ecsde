@@ -29,12 +29,11 @@ impl Game_System for Gravity_System {
     }
 
     fn update(&self, args: &mut Update_Args) {
-        let secs = args.dt.as_secs_f32();
         foreach_entity!(self.query, args.ecs_world,
             read: C_Gravity;
             write: C_Spatial2D;
         |_e, (gravity,): (&C_Gravity,), (spatial,): (&mut C_Spatial2D,)| {
-            spatial.velocity += secs * v2!(0.0, gravity.acceleration.read(&args.engine_state.config));
+            spatial.acceleration += v2!(0.0, gravity.acceleration.read(&args.engine_state.config));
         });
     }
 }

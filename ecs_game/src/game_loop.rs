@@ -363,11 +363,16 @@ where
                     let render_system = &mut game_state.engine_state.systems.render_system;
                     #[cfg(debug_assertions)]
                     let debug_queries = &mut game_state.debug_ecs_queries;
+                    #[cfg(debug_assertions)]
+                    let game_debug_systems = &mut game_state.game_debug_systems;
                     game_state.gameplay_system.update_pending_component_updates(
                         |pending_updates, comp_mgr| {
                             render_system.update_queries(pending_updates, comp_mgr);
                             #[cfg(debug_assertions)]
-                            debug_queries.update_queries(pending_updates, comp_mgr);
+                            {
+                                debug_queries.update_queries(pending_updates, comp_mgr);
+                                game_debug_systems.update_queries(pending_updates, comp_mgr);
+                            }
                         },
                     );
 

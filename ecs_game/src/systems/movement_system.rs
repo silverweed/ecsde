@@ -44,9 +44,16 @@ impl Movement_System {
             read: ;
             write: C_Spatial2D;
         |entity, (), (spatial,): (&mut C_Spatial2D,)| {
-            if spatial.velocity.magnitude2() < MIN_SPEED * MIN_SPEED {
-                spatial.velocity = v2!(0., 0.);
+            let accel = spatial.acceleration;
+            let prev_accel = spatial.prev_acceleration;
+            let mut new_vel = spatial.velocity + (prev_accel + accel) * dt_secs * 0.5;
+
+            if new_vel.magnitude2() < MIN_SPEED * MIN_SPEED {
+                new_vel = v2!(0., 0.);
             }
+
+            spatial.velocity = new_vel;
+            spatial.prev_acceleration = accel;
 
             let translation = spatial.velocity * dt_secs;
             spatial.transform.translate_v(translation);
