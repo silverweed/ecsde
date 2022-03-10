@@ -346,7 +346,7 @@ impl<T> Component_Storage<T> {
 impl<T> Component_Storage_Read<'_, T> {
     #[inline]
     pub fn get(&self, entity: Entity) -> Option<&T> {
-        trace!("Component_Storage_Read::get");
+        //trace!("Component_Storage_Read::get");
 
         #[cfg(debug_assertions)]
         {
@@ -362,7 +362,7 @@ impl<T> Component_Storage_Read<'_, T> {
 
     #[inline]
     pub fn must_get(&self, entity: Entity) -> &T {
-        trace!("Component_Storage_Read::must_get");
+        //trace!("Component_Storage_Read::must_get");
 
         #[cfg(debug_assertions)]
         {
@@ -381,7 +381,7 @@ impl<T> Component_Storage_Read<'_, T> {
 impl<T> Component_Storage_Write<'_, T> {
     #[inline]
     pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
-        trace!("Component_Storage_Write::get_mut");
+        //trace!("Component_Storage_Write::get_mut");
 
         #[cfg(debug_assertions)]
         {
@@ -397,7 +397,7 @@ impl<T> Component_Storage_Write<'_, T> {
 
     #[inline]
     pub fn must_get_mut(&mut self, entity: Entity) -> &mut T {
-        trace!("Component_Storage_Write::must_get_mut");
+        //trace!("Component_Storage_Write::must_get_mut");
 
         #[cfg(debug_assertions)]
         {

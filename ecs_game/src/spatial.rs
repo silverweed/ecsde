@@ -148,6 +148,8 @@ impl World_Chunks {
     }
 
     fn add_collider_coords(&mut self, cld_handle: Collider_Handle, coords: Chunk_Coords) {
+        trace!("add_collider_coords");
+
         let chunk = self
             .chunks
             .entry(coords)
@@ -170,6 +172,8 @@ impl World_Chunks {
     }
 
     fn remove_collider_coords(&mut self, cld_handle: Collider_Handle, coords: Chunk_Coords) {
+        trace!("remove_collider_coords");
+
         let chunk = self.chunks.get_mut(&coords).unwrap_or_else(|| {
             fatal!(
                 "Collider {:?} should be in chunk {:?}, but that chunk does not exist.",

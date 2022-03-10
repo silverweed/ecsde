@@ -7,7 +7,7 @@
 macro_rules! tpl_map_apply {
     ($f:ident, $e:expr) => {{
         // @Speed: this takes forever! Why? Investigate!
-        trace!("tpl_map_apply");
+        //trace!("tpl_map_apply");
         $f!($e)
     }};
 }

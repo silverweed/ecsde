@@ -36,4 +36,4 @@ default-features = false
 version = "1.8"
 
 [dev-dependencies]
-float-cmp = "0.5.2"
+float-cmp = "0.5.*"

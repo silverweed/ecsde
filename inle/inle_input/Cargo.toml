@@ -25,7 +25,7 @@ default-features = false
 version = "1.8"
 
 [dependencies.sfml]
-version = "0.15.1"
+version = "0.15.*"
 git = "https://github.com/jeremyletang/rust-sfml"
 rev = "9199dc4"
 optional = true
