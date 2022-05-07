@@ -347,7 +347,7 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
 
     let t = Instant::now();
     // Used to iterate the tag_map in insertion order
-    let mut tags_ordered: Vec<u32> = Vec::with_capacity(saved_traces.len());
+    let mut tags_ordered: Vec<u32> = Vec::with_capacity(saved_traces.len() / 10);
     let mut tag_map = HashMap::with_hasher(Passthrough_Build_Hasher::default());
     let mut idx_map = HashMap::with_hasher(Passthrough_Build_Hasher::default());
     for (i, node) in saved_traces.iter().enumerate() {
