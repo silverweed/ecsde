@@ -77,13 +77,13 @@ struct Debug_Data {
 
 fn create_systems(engine_state: &Engine_State) -> Vec<Box<dyn Game_System>> {
     vec![
-        Box::new(ground_detection_system::Ground_Detection_System::new()),
         Box::new(ai::test_ai_system::Test_Ai_System::new()),
         Box::new(controllable_system::Controllable_System::new(
             &engine_state.config,
         )),
         // This must run after controllable_system
         Box::new(gravity_system::Gravity_System::new()),
+        Box::new(ground_detection_system::Ground_Detection_System::new()),
         Box::new(camera_system::Camera_System::new(&engine_state.config)),
         Box::new(free_camera_system::Free_Camera_System::new(
             &engine_state.config,
