@@ -338,14 +338,14 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
 
     // Accumulate n_calls of all nodes with the same tag.
     // @Speed: this could use the frame_allocator.
-    let t = Instant::now();
+    //let t = Instant::now();
     let hashes = saved_traces
         .par_iter()
         .map(|node| hash_node(saved_traces, node))
         .collect::<Vec<_>>();
-    ldebug!("hash: {:?}", t.elapsed());
+    //ldebug!("hash: {:?}", t.elapsed());
 
-    let t = Instant::now();
+    //let t = Instant::now();
     // Used to iterate the tag_map in insertion order
     let mut tags_ordered: Vec<u32> = Vec::with_capacity(saved_traces.len() / 10);
     let mut tag_map = HashMap::with_hasher(Passthrough_Build_Hasher::default());
@@ -369,7 +369,7 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
             tags_ordered.push(hash);
         }
     }
-    ldebug!("insert: {:?}", t.elapsed());
+    //ldebug!("insert: {:?}", t.elapsed());
 
     tags_ordered
         .iter()
