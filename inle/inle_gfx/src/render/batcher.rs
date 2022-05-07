@@ -36,6 +36,7 @@ pub struct Batches {
     textures_ws: BTreeMap<super::Z_Index, HashMap<Material, Sprite_Batch>>,
     point_lights_near_camera: SmallVec<[Point_Light; MAX_POINT_LIGHTS]>,
     rect_lights_near_camera: SmallVec<[Rect_Light; MAX_RECT_LIGHTS]>,
+    new_batches_created_last_frame: bool,
 }
 
 fn null_vertex() -> Vertex {
@@ -74,12 +75,15 @@ pub(super) fn add_texture_ws(
             .or_insert_with(HashMap::new)
     };
 
+    let mut created_new = false;
     let sprite_batches = {
         trace!("get_sprite_batches");
+
         &mut z_index_texmap
             .entry(*material)
             .or_insert_with(|| {
                 ldebug!("creating buffer for material {:?}", material);
+                created_new = true;
                 Sprite_Batch {
                     vbuffer: Vertex_Buffer_Holder::with_initial_vertex_count(
                         window,
@@ -104,6 +108,8 @@ pub(super) fn add_texture_ws(
             })
             .sprites
     };
+
+    batches.new_batches_created_last_frame |= created_new;
 
     {
         trace!("push_tex");
@@ -348,7 +354,6 @@ pub fn draw_batches(
     let visible_viewport = inle_win::window::get_camera_viewport(window, camera);
 
     let mut lights_ubo_needs_update = lights.process_commands();
-    ldebug!("----------- {}", lights_ubo_needs_update);
 
     {
         let mut old_point_lights_near_camera = SmallVec::<[Point_Light; MAX_POINT_LIGHTS]>::new();
@@ -388,6 +393,9 @@ pub fn draw_batches(
             || batches.rect_lights_near_camera != old_rect_lights_near_camera;
     }
 
+    lights_ubo_needs_update |= batches.new_batches_created_last_frame;
+    batches.new_batches_created_last_frame = false;
+
     let point_lights_near_camera = &batches.point_lights_near_camera;
     let rect_lights_near_camera = &batches.rect_lights_near_camera;
 
@@ -410,7 +418,6 @@ pub fn draw_batches(
             let shader = if draw_params.enable_shaders {
                 material.shader.map(|id| {
                     let shader = shader_cache.get_shader_mut(Some(id));
-                    ldebug!("set_shader_uniforms");
                     set_shader_uniforms(
                         window,
                         shader,
