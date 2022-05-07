@@ -269,7 +269,7 @@ fn set_shader_uniforms(
     lights: &Lights,
     point_lights_near_camera: &[Point_Light],
     rect_lights_near_camera: &[Rect_Light],
-    lights_ubo_needs_update: bool,
+    lights_ubo_needs_update: &mut bool,
     texture: &Texture,
     view_projection: &Matrix3<f32>,
 ) {
@@ -302,13 +302,16 @@ fn set_shader_uniforms(
 
     let lights_ubo = render::create_or_get_uniform_buffer(window, shader, c_str!("LightsBlock"));
     // Note: we only update the light uniforms if lights have changed AND we didn't update this particular UBO yet.
-    if lights_ubo_needs_update && !render::uniform_buffer_needs_transfer_to_gpu(lights_ubo) {
+    if *lights_ubo_needs_update && !render::uniform_buffer_needs_transfer_to_gpu(lights_ubo) {
         update_light_uniforms(
             lights_ubo,
             lights,
             point_lights_near_camera,
             rect_lights_near_camera,
         );
+
+        // We only need to update this UBO once per frame
+        *lights_ubo_needs_update = false;
     }
     render::bind_uniform_buffer(lights_ubo);
 }
@@ -345,6 +348,7 @@ pub fn draw_batches(
     let visible_viewport = inle_win::window::get_camera_viewport(window, camera);
 
     let mut lights_ubo_needs_update = lights.process_commands();
+    ldebug!("----------- {}", lights_ubo_needs_update);
 
     {
         let mut old_point_lights_near_camera = SmallVec::<[Point_Light; MAX_POINT_LIGHTS]>::new();
@@ -406,6 +410,7 @@ pub fn draw_batches(
             let shader = if draw_params.enable_shaders {
                 material.shader.map(|id| {
                     let shader = shader_cache.get_shader_mut(Some(id));
+                    ldebug!("set_shader_uniforms");
                     set_shader_uniforms(
                         window,
                         shader,
@@ -414,7 +419,7 @@ pub fn draw_batches(
                         lights,
                         point_lights_near_camera,
                         rect_lights_near_camera,
-                        lights_ubo_needs_update,
+                        &mut lights_ubo_needs_update,
                         texture,
                         &view_projection,
                     );
