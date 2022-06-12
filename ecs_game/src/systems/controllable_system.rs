@@ -58,17 +58,22 @@ impl Game_System for Controllable_System {
         let actions = &engine_state.input_state.processed.game_actions;
         let cfg = &engine_state.config;
 
-        if !self.camera_on_player.read(cfg) {
-            return;
-        }
-
-        let movement = get_movement_from_input(axes, **input_cfg, cfg).x;
+        let camera_on_player = self.camera_on_player.read(cfg);
+        let movement = if camera_on_player {
+            get_movement_from_input(axes, **input_cfg, cfg).x
+        } else {
+            0.0
+        };
         let dt_secs = dt.as_secs_f32();
 
         foreach_entity!(self.query, ecs_world,
-            read: C_Ground_Detection;
-            write: C_Controllable, C_Spatial2D;
-            |_e, (ground_detect,): (&C_Ground_Detection,), (ctrl, spatial): (&mut C_Controllable, &mut C_Spatial2D)| {
+                read: C_Ground_Detection;
+                write: C_Controllable, C_Spatial2D;
+                |_e
+                , (ground_detect,): (&C_Ground_Detection,)
+                , (ctrl, spatial): (&mut C_Controllable, &mut C_Spatial2D)
+                |
+        {
             let acceleration = ctrl.acceleration.read(cfg);
             let jump_impulse = ctrl.jump_impulse.read(cfg);
             let dampening = ctrl.dampening.read(cfg);
