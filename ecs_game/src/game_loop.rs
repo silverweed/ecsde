@@ -820,21 +820,21 @@ fn update_debug(
 
     let is_paused = engine_state.time.paused && !engine_state.time.is_stepping();
     let cvars = &game_state.debug_cvars;
-    let draw_entities = cvars.draw_entities.read(&engine_state.config);
-    let draw_component_lists = cvars.draw_component_lists.read(&engine_state.config);
-    let draw_velocities = cvars.draw_velocities.read(&engine_state.config);
-    let draw_entity_prev_frame_ghost = cvars
-        .draw_entity_prev_frame_ghost
-        .read(&engine_state.config);
-    let draw_entity_pos_history = cvars.draw_entity_pos_history.read(&engine_state.config);
-    let draw_colliders = cvars.draw_colliders.read(&engine_state.config);
-    let draw_debug_grid = cvars.draw_debug_grid.read(&engine_state.config);
-    let grid_square_size = cvars.debug_grid_square_size.read(&engine_state.config);
-    let grid_font_size = cvars.debug_grid_font_size.read(&engine_state.config);
-    let grid_opacity = cvars.debug_grid_opacity.read(&engine_state.config) as u8;
-    let draw_world_chunks = cvars.draw_world_chunks.read(&engine_state.config);
-    let draw_lights = cvars.draw_lights.read(&engine_state.config);
-    let draw_particle_emitters = cvars.draw_particle_emitters.read(&engine_state.config);
+    let cfg = &engine_state.config;
+    let draw_entities = cvars.draw_entities.read(cfg);
+    let draw_component_lists = cvars.draw_component_lists.read(cfg);
+    let draw_velocities = cvars.draw_velocities.read(cfg);
+    let draw_entity_prev_frame_ghost = cvars.draw_entity_prev_frame_ghost.read(cfg);
+    let draw_entity_pos_history = cvars.draw_entity_pos_history.read(cfg);
+    let draw_colliders = cvars.draw_colliders.read(cfg);
+    let draw_debug_grid = cvars.draw_debug_grid.read(cfg);
+    let grid_square_size = cvars.debug_grid_square_size.read(cfg);
+    let grid_font_size = cvars.debug_grid_font_size.read(cfg);
+    let grid_opacity = cvars.debug_grid_opacity.read(cfg) as u8;
+    let draw_world_chunks = cvars.draw_world_chunks.read(cfg);
+    let draw_lights = cvars.draw_lights.read(cfg);
+    let draw_particle_emitters = cvars.draw_particle_emitters.read(cfg);
+    let draw_entities_touching_ground = cvars.draw_entities_touching_ground.read(cfg);
     let lv_batches = &mut game_state.level_batches;
     let global_painter = &mut debug_systems.global_painter;
     let window = &mut game_state.window;
@@ -875,7 +875,7 @@ fn update_debug(
             if draw_entities {
                 debug_draw_transforms(
                     debug_painter,
-                    &queries.draw_transforms,
+                    &queries.just_spatials,
                     &level.world,
                     window,
                     input_state,
@@ -884,7 +884,7 @@ fn update_debug(
             }
 
             if draw_velocities {
-                debug_draw_velocities(debug_painter, &queries.draw_velocities, &level.world);
+                debug_draw_velocities(debug_painter, &queries.just_spatials, &level.world);
             }
 
             if draw_entity_prev_frame_ghost {
@@ -904,6 +904,14 @@ fn update_debug(
                 debug_draw_entities_pos_history(
                     debug_painter,
                     &queries.draw_entities_pos_history,
+                    &level.world,
+                );
+            }
+
+            if draw_entities_touching_ground {
+                debug_draw_entities_touching_ground(
+                    debug_painter,
+                    &queries.draw_entities_touching_ground,
                     &level.world,
                 );
             }

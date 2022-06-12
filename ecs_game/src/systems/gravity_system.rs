@@ -41,7 +41,9 @@ impl Game_System for Gravity_System {
             } else {
                 false
             };
-            if !touching_ground {
+            if touching_ground {
+                spatial.acceleration.y = 0.0;
+            } else {
                 spatial.acceleration += v2!(0.0, gravity.acceleration.read(&args.engine_state.config));
             }
         });

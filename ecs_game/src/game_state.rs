@@ -87,6 +87,7 @@ pub struct Debug_CVars {
     pub draw_entity_prev_frame_ghost: Cfg_Var<bool>,
     pub draw_component_lists: Cfg_Var<bool>,
     pub draw_entity_pos_history: Cfg_Var<bool>,
+    pub draw_entities_touching_ground: Cfg_Var<bool>,
 
     pub draw_debug_grid: Cfg_Var<bool>,
     pub debug_grid_square_size: Cfg_Var<f32>,
@@ -363,6 +364,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     let draw_component_lists = Cfg_Var::new("debug/entities/draw_component_lists", cfg);
     let draw_entity_prev_frame_ghost = Cfg_Var::new("debug/entities/draw_prev_frame_ghost", cfg);
     let draw_entity_pos_history = Cfg_Var::new("debug/entities/pos_history/draw", cfg);
+    let draw_entities_touching_ground = Cfg_Var::new("debug/entities/ground_detect/draw", cfg);
     let draw_colliders = Cfg_Var::new("debug/collisions/draw_colliders", cfg);
     let draw_debug_grid = Cfg_Var::new("debug/rendering/grid/draw_grid", cfg);
     let debug_grid_square_size = Cfg_Var::new("debug/rendering/grid/square_size", cfg);
@@ -391,6 +393,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
         draw_entity_prev_frame_ghost,
         draw_component_lists,
         draw_entity_pos_history,
+        draw_entities_touching_ground,
         draw_debug_grid,
         debug_grid_square_size,
         debug_grid_opacity,
