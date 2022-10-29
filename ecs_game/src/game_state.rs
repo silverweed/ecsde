@@ -88,6 +88,7 @@ pub struct Debug_CVars {
     pub draw_component_lists: Cfg_Var<bool>,
     pub draw_entity_pos_history: Cfg_Var<bool>,
     pub draw_entities_touching_ground: Cfg_Var<bool>,
+    pub draw_controllables: Cfg_Var<bool>,
 
     pub draw_debug_grid: Cfg_Var<bool>,
     pub debug_grid_square_size: Cfg_Var<f32>,
@@ -380,6 +381,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
     let update_physics = Cfg_Var::new("engine/debug/physics/update", cfg);
     let print_draw_stats = Cfg_Var::new("debug/rendering/print_draw_stats", cfg);
     let print_trace_stats = Cfg_Var::new("engine/debug/trace/print_time_taken", cfg);
+    let draw_controllables = Cfg_Var::new("debug/entities/controllables/draw", cfg);
 
     Debug_CVars {
         render_debug_visualization,
@@ -408,6 +410,7 @@ fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
         update_physics,
         print_draw_stats,
         print_trace_stats,
+        draw_controllables,
     }
 }
 

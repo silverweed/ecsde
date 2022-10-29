@@ -1,4 +1,5 @@
 use crate::debug::systems::position_history_system::C_Position_History;
+use crate::systems::controllable_system::C_Controllable;
 use crate::systems::ground_detection_system::C_Ground_Detection;
 use inle_app::render_system;
 use inle_common::colors;
@@ -31,6 +32,7 @@ pub struct Debug_Ecs_Queries {
     pub draw_entities_prev_frame_ghost: Ecs_Query,
     pub draw_entities_pos_history: Ecs_Query,
     pub draw_entities_touching_ground: Ecs_Query,
+    pub draw_controllables: Ecs_Query,
 }
 
 impl Debug_Ecs_Queries {
@@ -50,6 +52,7 @@ impl Debug_Ecs_Queries {
             up(&mut self.draw_entities_prev_frame_ghost);
             up(&mut self.draw_entities_pos_history);
             up(&mut self.draw_entities_touching_ground);
+            up(&mut self.draw_controllables);
         }
     }
 }
@@ -68,6 +71,9 @@ pub fn create_debug_ecs_queries() -> Debug_Ecs_Queries {
         draw_entities_touching_ground: Ecs_Query::default()
             .require::<C_Spatial2D>()
             .require::<C_Ground_Detection>(),
+        draw_controllables: Ecs_Query::default()
+            .require::<C_Spatial2D>()
+            .require::<C_Controllable>(),
     }
 }
 
@@ -876,5 +882,29 @@ pub fn debug_draw_entities_touching_ground(
                 spatial.transform.position() + v2!(5., 8.),
                 5,
                 if gnd_detect.just_left_ground { colors::GREEN } else { colors::RED });
+    });
+}
+
+pub fn debug_draw_controllables(
+    debug_painter: &mut Debug_Painter,
+    query: &Ecs_Query,
+    ecs_world: &Ecs_World,
+    window: &Render_Window_Handle,
+    camera: &Transform2D,
+    cfg: &inle_cfg::Config,
+) {
+    foreach_entity!(query, ecs_world,
+        read: C_Spatial2D, C_Controllable;
+        write: ;
+        |entity, (spatial, controllable): (&C_Spatial2D, &C_Controllable,), ()| {
+        let center = spatial.transform.position();
+        let radius = 5.0;
+        debug_painter.add_text(
+            &format!(
+                "jumps: {}/{}", controllable.n_jumps_done, controllable.max_jumps.read(cfg)),
+            center,
+            7,
+            colors::WHITE
+        );
     });
 }

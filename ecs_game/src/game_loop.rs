@@ -835,6 +835,7 @@ fn update_debug(
     let draw_lights = cvars.draw_lights.read(cfg);
     let draw_particle_emitters = cvars.draw_particle_emitters.read(cfg);
     let draw_entities_touching_ground = cvars.draw_entities_touching_ground.read(cfg);
+    let draw_controllables = cvars.draw_controllables.read(cfg);
     let lv_batches = &mut game_state.level_batches;
     let global_painter = &mut debug_systems.global_painter;
     let window = &mut game_state.window;
@@ -880,6 +881,17 @@ fn update_debug(
                     window,
                     input_state,
                     &level.get_camera_transform(),
+                );
+            }
+
+            if draw_controllables {
+                debug_draw_controllables(
+                    debug_painter,
+                    &queries.draw_controllables,
+                    &level.world,
+                    window,
+                    &level.get_camera_transform(),
+                    cfg,
                 );
             }
 
