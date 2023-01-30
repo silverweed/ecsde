@@ -896,9 +896,8 @@ pub fn debug_draw_controllables(
     foreach_entity!(query, ecs_world,
         read: C_Spatial2D, C_Controllable;
         write: ;
-        |entity, (spatial, controllable): (&C_Spatial2D, &C_Controllable,), ()| {
+        |_entity, (spatial, controllable): (&C_Spatial2D, &C_Controllable,), ()| {
         let center = spatial.transform.position();
-        let radius = 5.0;
         debug_painter.add_text(
             &format!(
                 "jumps: {}/{}", controllable.n_jumps_done, controllable.max_jumps.read(cfg)),

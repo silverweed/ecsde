@@ -50,7 +50,7 @@ impl Replay_Data_Point {
             frame_number,
             events: events
                 .iter()
-                .filter(|evt| serialize::should_event_be_serialized(*evt))
+                .filter(|evt| serialize::should_event_be_serialized(evt))
                 .cloned()
                 .collect(),
             joy_data: *joy_data,

@@ -404,7 +404,7 @@ pub fn flatten_traces(
             accum.info.tot_duration() + trace.info.tot_duration(),
         );
     }
-    flat_traces.into_iter().map(|(_, v)| v)
+    flat_traces.into_values()
 }
 
 /// Construct a forest of Trace_Trees from the saved_traces array.

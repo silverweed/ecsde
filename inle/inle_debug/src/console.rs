@@ -530,7 +530,7 @@ impl Console {
 
         // Draw cursor
         let cursor = Rect::new(
-            pad_x + (self.cur_pos as f32 / self.cur_line.len().max(1) as f32) * line_w as f32,
+            pad_x + (self.cur_pos as f32 / self.cur_line.len().max(1) as f32) * line_w,
             pos.y + linesep,
             font_size as f32 * 0.6,
             font_size as f32 * 0.1,
@@ -539,7 +539,7 @@ impl Console {
 
         // Draw output
         {
-            let mut pos = pos - Vec2f::new(0.0, linesep as f32);
+            let mut pos = pos - Vec2f::new(0.0, linesep);
             for (line, color) in self.output.iter().rev() {
                 let text = render::create_text(window, line, font, font_size);
                 render::render_text(window, &text, *color, pos);
@@ -573,8 +573,8 @@ impl Console {
 
         // Draw hints background
         {
-            let position = pos - Vec2f::new(0.0, linesep as f32 * texts.len() as f32);
-            let tot_height = linesep as f32 * texts.len() as f32;
+            let position = pos - Vec2f::new(0.0, linesep * texts.len() as f32);
+            let tot_height = linesep * texts.len() as f32;
             render::render_rect(
                 window,
                 Rect::new(position.x, position.y, w as f32, tot_height),

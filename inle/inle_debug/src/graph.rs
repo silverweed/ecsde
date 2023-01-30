@@ -100,7 +100,7 @@ impl Debug_Element for Debug_Graph_View {
                 .filter(|Vec2f { x, y }| xr.contains(x) && yr.contains(y));
             for (i, point) in drawn_points.enumerate() {
                 let point_pos = self.get_coords_for(*point);
-                if point_pos.x >= mpos.x as f32 {
+                if point_pos.x >= mpos.x {
                     self.hovered_point = Some(i);
                     break;
                 }

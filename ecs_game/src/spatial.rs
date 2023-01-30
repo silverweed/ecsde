@@ -386,8 +386,8 @@ impl World_Chunks {
 
         let max_colliders = self
             .chunks
-            .iter()
-            .map(|(_, chk)| chk.colliders.len())
+            .values()
+            .map(|chk| chk.colliders.len())
             .max()
             .unwrap_or(0) as f32;
 

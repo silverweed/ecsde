@@ -159,7 +159,7 @@ pub(super) fn internal_game_init<'a>(
             &mut game_state.engine_state,
             &mut game_state.gameplay_system,
             &mut game_state.window,
-            &mut *game_resources,
+            &mut game_resources,
             &mut game_state.level_batches,
             &parsed_cmdline_args,
             &game_state.cvars,

@@ -89,11 +89,11 @@ impl Log_Window {
         let first = self.first_line as u16;
         let mut n_real_lines_skipped = 0;
         for (i, line) in self.lines.iter().enumerate() {
-            n_real_lines_skipped += line.required_lines.get() as u16;
+            n_real_lines_skipped += line.required_lines.get();
             if n_real_lines_skipped >= first {
                 return (
                     i,
-                    (line.required_lines.get() as u16) - (n_real_lines_skipped - first),
+                    line.required_lines.get() - (n_real_lines_skipped - first),
                 );
             }
         }

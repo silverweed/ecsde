@@ -295,7 +295,7 @@ impl Debug_Frame_Scroller {
             };
             let color = if hovered {
                 colors::WHITE
-            } else if i as u16 == cur {
+            } else if i == cur {
                 colors::rgba(40, 100, 200, 240)
             } else {
                 let alpha = if i < filled {

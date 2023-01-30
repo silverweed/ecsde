@@ -6,7 +6,6 @@ use inle_cfg::{self, Cfg_Var};
 use inle_ecs::components::base::C_Spatial2D;
 use inle_ecs::ecs_query_new::Ecs_Query;
 use inle_input::input_state::Action_Kind;
-use inle_math::math::clamp;
 use inle_math::vector::Vec2f;
 
 #[derive(Copy, Clone, Debug, Default)]
