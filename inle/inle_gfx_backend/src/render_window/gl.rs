@@ -31,6 +31,9 @@ pub struct Render_Window_Handle {
     viewport: Recti,
     pub gl: Gl,
     pub temp_allocator: temp::Temp_Allocator,
+
+    #[cfg(debug_assertions)]
+    start_frame_called: bool,
 }
 
 impl AsRef<Window_Handle> for Render_Window_Handle {
@@ -56,6 +59,8 @@ pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
         viewport: Recti::new(0, 0, win_size.0 as _, win_size.1 as _),
         gl: init_gl(),
         temp_allocator: temp::Temp_Allocator::with_capacity(inle_common::units::megabytes(10)),
+        #[cfg(debug_assertions)]
+        start_frame_called: false,
     }
 }
 
@@ -231,7 +236,13 @@ pub fn set_clear_color(_window: &mut Render_Window_Handle, color: Color) {
     }
 }
 
-pub fn clear(_window: &mut Render_Window_Handle) {
+pub fn clear(window: &mut Render_Window_Handle) {
+    #[cfg(debug_assertions)]
+    {
+        debug_assert!(window.start_frame_called, "You forgot to call render_window::start_new_frame()!");
+        window.start_frame_called = false;
+    }
+
     unsafe {
         glcheck!(gl::Clear(gl::COLOR_BUFFER_BIT));
     }
@@ -305,6 +316,7 @@ pub fn start_new_frame(window: &mut Render_Window_Handle) {
 
     #[cfg(debug_assertions)]
     {
+        window.start_frame_called = true;
         window.gl.n_draw_calls_prev_frame = window.gl.n_draw_calls_this_frame;
         window.gl.n_draw_calls_this_frame = 0;
     }

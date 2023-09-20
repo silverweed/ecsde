@@ -1,5 +1,5 @@
 #[cfg(debug_assertions)]
-mod tracer_drawing;
+pub mod tracer_drawing;
 
 use crate::app_config::App_Config;
 use inle_alloc::temp::Temp_Allocator;
@@ -518,9 +518,9 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
                     Cfg_Var::<bool>::new("engine/debug/trace/view_flat", &engine_state.config)
                         .read(&engine_state.config);
                 if trace_view_flat {
-                    tracer_drawing::update_trace_flat_overlay(engine_state);
+                    tracer_drawing::update_trace_flat_overlay(&mut engine_state.debug_systems, &engine_state.config, &mut engine_state.frame_alloc);
                 } else {
-                    tracer_drawing::update_trace_tree_overlay(engine_state);
+                    tracer_drawing::update_trace_tree_overlay(&mut engine_state.debug_systems, &engine_state.config, &mut engine_state.frame_alloc);
                 }
                 engine_state.debug_systems.trace_overlay_update_t =
                     refresh_rate.read(&engine_state.config);
@@ -533,7 +533,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
         }
 
         Overlay_Shown::Threads => {
-            tracer_drawing::update_thread_overlay(engine_state, &trace_roots);
+            tracer_drawing::update_thread_overlay(&mut engine_state.debug_systems, &engine_state.app_config, &trace_roots);
         }
 
         _ => {}

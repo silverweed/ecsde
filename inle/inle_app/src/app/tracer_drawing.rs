@@ -1,10 +1,12 @@
 use crate::app::Engine_State;
-use inle_cfg::Cfg_Var;
+use inle_cfg::{Config, Cfg_Var};
+use inle_alloc::temp::Temp_Allocator;
 use inle_common::colors;
 use inle_common::units::format_bytes_pretty;
 use inle_core::time;
 use inle_debug::graph;
 use inle_debug::overlay::Debug_Overlay;
+use crate::debug_systems::Debug_Systems;
 use inle_diagnostics::tracer::{self, Trace_Tree, Tracer_Node_Final};
 use inle_math::transform::Transform2D;
 use std::borrow::Cow;
@@ -51,7 +53,7 @@ fn add_tracer_node_line(
         .with_metadata(sid!("full_tag"), node.info.tag.to_string());
 }
 
-pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
+pub fn update_trace_tree_overlay(debug_systems: &mut Debug_Systems, config: &Config, frame_alloc: &mut Temp_Allocator) {
     fn add_tree_lines(
         tree: &Trace_Tree,
         total_traced_time: &Duration,
@@ -69,8 +71,8 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
         }
     }
 
-    let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
-    let debug_log = &mut engine_state.debug_systems.log;
+    let scroller = &debug_systems.debug_ui.frame_scroller;
+    let debug_log = &mut debug_systems.log;
     let frame = scroller.get_real_selected_frame();
     let debug_frame = debug_log.get_frame(frame);
     if debug_frame.is_none() {
@@ -78,8 +80,7 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
         return;
     }
     let traces = &debug_frame.unwrap().traces;
-    let overlay = engine_state
-        .debug_systems
+    let overlay = debug_systems
         .debug_ui
         .get_overlay(sid!("trace"));
 
@@ -89,11 +90,10 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
     let mut trace_trees = tracer::build_trace_trees(traces);
     tracer::sort_trace_trees(&mut trace_trees);
 
-    overlay.cfg.font_size = Cfg_Var::new("engine/debug/trace/font_size", &engine_state.config);
+    overlay.cfg.font_size = Cfg_Var::new("engine/debug/trace/font_size", config);
 
     let prune_duration_ms =
-        Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config)
-            .read(&engine_state.config);
+        Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", config).read(config);
     let prune_duration = Duration::from_secs_f32(prune_duration_ms * 0.001);
 
     overlay
@@ -101,8 +101,8 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
             "frame {} | debug_log_mem {} | temp_mem_max_usage {} / {}",
             frame,
             format_bytes_pretty(debug_log.mem_used),
-            format_bytes_pretty(engine_state.frame_alloc.high_water_mark),
-            format_bytes_pretty(engine_state.frame_alloc.cap)
+            format_bytes_pretty(frame_alloc.high_water_mark),
+            format_bytes_pretty(frame_alloc.cap)
         ))
         .with_color(colors::rgb(144, 144, 144));
     overlay
@@ -119,22 +119,18 @@ pub fn update_trace_tree_overlay(engine_state: &mut Engine_State) {
     }
 }
 
-pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
-    let scroller = &engine_state.debug_systems.debug_ui.frame_scroller;
-    let debug_log = &mut engine_state.debug_systems.log;
+pub fn update_trace_flat_overlay(debug_systems: &mut Debug_Systems, config: &Config, frame_alloc: &mut Temp_Allocator) {
+    let scroller = &debug_systems.debug_ui.frame_scroller;
+    let debug_log = &mut debug_systems.log;
     let frame = scroller.get_real_selected_frame();
-    let overlay = engine_state
-        .debug_systems
-        .debug_ui
-        .get_overlay(sid!("trace"));
+    let overlay = debug_systems.debug_ui.get_overlay(sid!("trace"));
 
     overlay.clear();
 
-    overlay.cfg.font_size = Cfg_Var::new("engine/debug/trace/font_size", &engine_state.config);
+    overlay.cfg.font_size = Cfg_Var::new("engine/debug/trace/font_size", config);
 
     let prune_duration_ms =
-        Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", &engine_state.config)
-            .read(&engine_state.config);
+        Cfg_Var::<f32>::new("engine/debug/trace/prune_duration_ms", config).read(config);
     let prune_duration = Duration::from_secs_f32(prune_duration_ms * 0.001);
 
     overlay
@@ -142,8 +138,8 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
             "frame {} | debug_log_mem {} | temp_mem_max_usage {} / {}",
             frame,
             format_bytes_pretty(debug_log.mem_used),
-            format_bytes_pretty(engine_state.frame_alloc.high_water_mark),
-            format_bytes_pretty(engine_state.frame_alloc.cap)
+            format_bytes_pretty(frame_alloc.high_water_mark),
+            format_bytes_pretty(frame_alloc.cap)
         ))
         .with_color(colors::rgb(144, 144, 144));
     overlay
@@ -175,7 +171,8 @@ pub fn update_trace_flat_overlay(engine_state: &mut Engine_State) {
 // To do that, we must first save the relevant data in Debug_Log, which currently does not
 // contain the start/end times.
 pub fn update_thread_overlay(
-    engine_state: &mut Engine_State,
+    debug_systems: &mut Debug_Systems,
+    app_config: &crate::app_config::App_Config,
     trace_roots: &[(ThreadId, tracer::Tracer_Node)],
 ) {
     // @Copypaste from update_trace_tree_overlay
@@ -189,10 +186,10 @@ pub fn update_thread_overlay(
     //}
     //let traces = &debug_frame.unwrap().traces;
 
-    let painter = &mut engine_state.debug_systems.global_painter;
+    let painter = &mut debug_systems.global_painter;
     let (win_w, win_h) = (
-        engine_state.app_config.target_win_size.0 as f32,
-        engine_state.app_config.target_win_size.1 as f32,
+        app_config.target_win_size.0 as f32,
+        app_config.target_win_size.1 as f32,
     );
     let outer_width = win_w * 0.5;
     let outer_height = win_h * 0.5;
