@@ -46,8 +46,8 @@ pub struct Game_Bundle<'r> {
 
 #[no_mangle]
 pub unsafe extern "C" fn game_init<'a>(_args: *const *const c_char, _args_count: usize) -> Game_Bundle<'a> {
-    let mut game_state = internal_game_init();
     let mut game_res = create_game_resources();
+    let mut game_state = internal_game_init();
 
     game_post_init(&mut *game_state, &mut *game_res);
 
@@ -95,7 +95,15 @@ pub unsafe extern "C" fn game_update(game_state: *mut Game_State, game_res: *mut
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn game_shutdown(_game_state: *mut Game_State, _game_res: *mut Game_Resources) {}
+pub unsafe extern "C" fn game_shutdown(game_state: *mut Game_State, game_res: *mut Game_Resources) {
+    inle_gfx::render_window::shutdown(&mut (*game_state).window);
+
+    std::ptr::drop_in_place(game_state);
+    std::alloc::dealloc(game_state as *mut u8, std::alloc::Layout::new::<Game_State>());
+
+    std::ptr::drop_in_place(game_res);
+    std::alloc::dealloc(game_res as *mut u8, std::alloc::Layout::new::<Game_Resources>());
+}
 
 /*
 #[cfg(debug_assertions)]
