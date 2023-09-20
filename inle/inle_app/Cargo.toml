@@ -15,7 +15,6 @@ inle_debug = { path = "../inle_debug" }
 inle_diagnostics = { path = "../inle_diagnostics" }
 inle_events = { path = "../inle_events" }
 inle_fs = { path = "../inle_fs" }
-inle_input = { path = "../inle_input" }
 inle_math = { path = "../inle_math" }
 inle_resources = { path = "../inle_resources" }
 notify = "4.0"

@@ -179,6 +179,10 @@ pub fn prepare_poll_events(window: &mut Window_Handle) {
     while let Ok(evt) = window.joystick_events.try_recv() {
         window.events_buffer.push_back(evt);
     }
+
+    if window.handle.should_close() {
+        window.events_buffer.push_back(Event::Window(glfw::WindowEvent::Close));
+    }
 }
 
 pub fn poll_event(window: &mut Window_Handle) -> Option<Event> {

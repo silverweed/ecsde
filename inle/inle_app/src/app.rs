@@ -37,8 +37,6 @@ pub struct Engine_State<'r> {
 
     pub rng: rand::Default_Rng,
 
-    pub input_state: inle_input::input_state::Input_State,
-
     pub frame_alloc: Temp_Allocator,
 
     pub long_task_mgr: Long_Task_Manager,
@@ -58,7 +56,6 @@ pub fn create_engine_state<'r>(
     app_config: App_Config,
     loggers: inle_diagnostics::log::Loggers,
 ) -> Result<Engine_State<'r>, Box<dyn std::error::Error>> {
-    let input_state = inle_input::input_state::create_input_state(&env);
     let time = time::Time::default();
     let seed;
     #[cfg(debug_assertions)]
@@ -86,7 +83,6 @@ pub fn create_engine_state<'r>(
         loggers,
         time,
         rng,
-        input_state,
         frame_alloc: Temp_Allocator::with_capacity(megabytes(10)),
         long_task_mgr: Long_Task_Manager::default(),
         _pd: std::marker::PhantomData,
@@ -383,6 +379,7 @@ pub fn init_engine_debug(
 
     debug_ui.cfg = cfg;
 
+    /*
     {
         use inle_input::bindings::{Input_Action, Input_Action_Simple};
 
@@ -418,6 +415,7 @@ pub fn init_engine_debug(
             ui_scale: debug_ui.cfg.ui_scale,
         });
     }
+    */
 
     Ok(())
 }
