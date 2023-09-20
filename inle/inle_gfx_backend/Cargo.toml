@@ -8,10 +8,8 @@ edition = "2018"
 
 [features]
 gfx-null = []
-gfx-sfml = ["sfml/graphics"]
 gfx-gl = ["gl"]
 default = ["gfx-gl"]
-#default = ["gfx-sfml"]
 
 [dependencies]
 inle_alloc = { path = "../inle_alloc" }
@@ -19,13 +17,6 @@ inle_common = { path = "../inle_common" }
 inle_diagnostics = { path = "../inle_diagnostics" }
 inle_math = { path = "../inle_math" }
 inle_win = { path = "../inle_win" }
-
-[dependencies.sfml]
-version = "0.15.1"
-git = "https://github.com/jeremyletang/rust-sfml"
-rev = "9199dc4"
-optional = true
-default-features = false
 
 [dependencies.gl]
 optional = true

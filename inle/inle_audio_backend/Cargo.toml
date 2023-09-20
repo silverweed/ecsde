@@ -7,17 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-audio-sfml = ["sfml/audio"]
 audio-null = []
 default = ["audio-null"]
-#default = ["audio-sfml"]
 
 [dependencies]
 inle_common = { path = "../inle_common" }
-
-[dependencies.sfml]
-version = "0.15.1"
-git = "https://github.com/jeremyletang/rust-sfml"
-rev = "9199dc4"
-optional = true
-default-features = false

@@ -2,17 +2,11 @@ use crate::render_window::Render_Window_Handle;
 use inle_math::matrix::Matrix3;
 use inle_math::transform::Transform2D;
 
-#[cfg(feature = "gfx-sfml")]
-pub mod sfml;
-
 #[cfg(feature = "gfx-null")]
 pub mod null;
 
 #[cfg(feature = "gfx-gl")]
 pub mod gl;
-
-#[cfg(feature = "gfx-sfml")]
-pub use self::sfml as backend;
 
 #[cfg(feature = "gfx-null")]
 pub use self::null as backend;

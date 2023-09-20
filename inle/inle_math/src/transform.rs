@@ -2,9 +2,6 @@ use super::angle::{rad, Angle};
 use super::matrix::Matrix3;
 use super::vector::Vec2f;
 
-#[cfg(feature = "gfx-sfml")]
-pub mod sfml;
-
 // Likely @Incomplete: we don't want to recalculate the matrix every time.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Transform2D {

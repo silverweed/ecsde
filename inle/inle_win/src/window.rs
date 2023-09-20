@@ -2,17 +2,11 @@ use inle_math::rect::{Rect, Rectf};
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i, Vec2u};
 
-#[cfg(feature = "win-sfml")]
-mod sfml;
-
 #[cfg(feature = "win-glfw")]
 mod glfw;
 
 #[cfg(feature = "win-winit")]
 mod winit;
-
-#[cfg(feature = "win-sfml")]
-use self::sfml as backend;
 
 #[cfg(feature = "win-glfw")]
 use self::glfw as backend;

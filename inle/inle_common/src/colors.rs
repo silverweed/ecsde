@@ -1,6 +1,3 @@
-#[cfg(feature = "gfx-sfml")]
-mod sfml;
-
 use inle_math::angle::{rad, Angle};
 use std::f32::consts::{FRAC_PI_3, PI};
 

@@ -10,12 +10,6 @@ mod glfw;
 #[cfg(feature = "win-glfw")]
 use self::glfw as backend;
 
-#[cfg(feature = "win-sfml")]
-mod sfml;
-
-#[cfg(feature = "win-sfml")]
-use self::sfml as backend;
-
 // Abstraction layer for input events
 
 #[derive(Clone, Debug, PartialEq)]

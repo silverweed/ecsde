@@ -4,9 +4,6 @@ use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-#[cfg(feature = "gfx-sfml")]
-mod sfml;
-
 #[repr(C)]
 pub struct Vector2<T> {
     pub x: T,

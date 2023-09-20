@@ -8,23 +8,13 @@ edition = "2018"
 
 [features]
 win-glfw = ["glfw"]
-win-sfml = ["sfml/window"]
 win-winit = ["winit"]
-gfx-sfml = ["sfml/graphics"]
 gfx-gl = []
-#default = ["win-sfml", "gfx-sfml"]
 default= ["win-glfw", "gfx-gl"]
 
 [dependencies]
 inle_math = { path = "../inle_math" }
 inle_diagnostics = { path = "../inle_diagnostics" }
-
-[dependencies.sfml]
-version = "0.15.1"
-git = "https://github.com/jeremyletang/rust-sfml"
-rev = "9199dc4"
-optional = true
-default-features = false
 
 [dependencies.glfw]
 version = "0.42"

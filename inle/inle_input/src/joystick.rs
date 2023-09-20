@@ -4,14 +4,8 @@ use inle_win::window::Window_Handle;
 use std::convert::TryFrom;
 use std::fmt;
 
-#[cfg(feature = "win-sfml")]
-mod sfml;
-
 #[cfg(feature = "win-glfw")]
 mod glfw;
-
-#[cfg(feature = "win-sfml")]
-use self::sfml as backend;
 
 #[cfg(feature = "win-glfw")]
 use self::glfw as backend;

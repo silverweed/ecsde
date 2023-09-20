@@ -4,9 +4,6 @@ use std::cmp::{Eq, Ordering, PartialEq};
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};
 
-#[cfg(feature = "gfx-sfml")]
-mod sfml;
-
 #[repr(C)]
 pub struct Rect<T> {
     pub x: T,

@@ -8,8 +8,6 @@ edition = "2018"
 
 [features]
 #gfx-null = []
-#gfx-sfml = ["sfml/graphics"]
-#default = ["gfx-sfml"]
 
 [dependencies]
 inle_alloc = { path = "../inle_alloc" }
