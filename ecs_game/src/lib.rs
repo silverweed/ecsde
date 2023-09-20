@@ -124,6 +124,8 @@ where
 
     let t_before_work = Instant::now();
 
+    inle_gfx::render_window::start_new_frame(&mut game_state.window);
+
     #[cfg(debug_assertions)]
     {
         inle_diagnostics::prelude::DEBUG_TRACERS
@@ -133,8 +135,6 @@ where
             .for_each(|t| t.lock().unwrap().start_frame());
 
         let log = &mut game_state.engine_state.debug_systems.log;
-
-        inle_gfx::render_window::start_new_frame(&mut game_state.window);
 
         if !game_state.engine_state.time.paused {
             if game_state.engine_state.time.was_paused() {
