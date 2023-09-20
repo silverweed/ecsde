@@ -10,14 +10,15 @@ lazy_static! {
 }
 
 #[cfg(debug_assertions)]
-static mut VERBOSE: AtomicBool = AtomicBool::new(false);
+static VERBOSE: AtomicBool = AtomicBool::new(false);
 
 #[inline(always)]
 pub fn is_verbose() -> bool {
     #[cfg(debug_assertions)]
-    unsafe {
+    {
         VERBOSE.load(Ordering::Acquire)
     }
+
     #[cfg(not(debug_assertions))]
     {
         false
@@ -27,7 +28,7 @@ pub fn is_verbose() -> bool {
 #[inline(always)]
 pub fn set_verbose(_verbose: bool) {
     #[cfg(debug_assertions)]
-    unsafe {
+    {
         VERBOSE.store(_verbose, Ordering::Release);
     }
 }

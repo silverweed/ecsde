@@ -388,4 +388,6 @@ impl Logger for Log_Window_Logger {
             required_lines: Cell::new(1),
         });
     }
+
+    fn set_log_file_line(&mut self, _l: bool) {}
 }

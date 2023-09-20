@@ -15,4 +15,3 @@ libloading = "*"
 [dependencies.notify]
 optional = true
 version = "4.0"
-

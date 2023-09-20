@@ -3,7 +3,6 @@
 #![allow(non_camel_case_types)]
 
 mod game_api;
-
 mod hotload;
 
 use game_api::Game_Api;
@@ -94,7 +93,7 @@ fn main() -> io::Result<()> {
 }
 
 fn main_with_hotload(argc: usize, argv: *const *const c_char, game_dll_abs_path: &str, mut game_lib: ll::Library, mut unique_lib_path: PathBuf) -> io::Result<()> {
-    eprintln!("Running with hotload ENABLED");
+    eprintln!("[ INFO ] Running with hotload ENABLED");
 
     let mut game_api = game_load(&game_lib).unwrap();
     let game_api::Game_Bundle {
@@ -144,7 +143,7 @@ fn main_with_hotload(argc: usize, argv: *const *const c_char, game_dll_abs_path:
 }
 
 fn main_without_hotload(argc: usize, argv: *const *const c_char, game_dll_abs_path: &str, game_lib: ll::Library) -> io::Result<()> {
-    eprintln!("Running with hotload DISABLED");
+    eprintln!("[ INFO ] Running with hotload DISABLED");
 
     let game_api = game_load(&game_lib).unwrap();
     let game_api::Game_Bundle {

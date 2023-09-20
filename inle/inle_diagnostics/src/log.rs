@@ -2,6 +2,8 @@ use std::sync::{Arc, Mutex};
 
 pub trait Logger: Send {
     fn log(&mut self, file: &'static str, line: u32, tag: &'static str, msg: &str);
+
+    fn set_log_file_line(&mut self, l: bool);
 }
 
 pub type Loggers = Arc<Mutex<Vec<Box<dyn Logger>>>>;
@@ -18,19 +20,33 @@ pub fn emit_log_msg(file: &'static str, line: u32, tag: &'static str, msg: &str)
             .iter_mut()
             .for_each(|logger| logger.log(file, line, tag, msg));
     } else {
-        Println_Logger {}.log(file, line, tag, msg);
+        Println_Logger::default().log(file, line, tag, msg);
     }
 }
 
-pub struct Println_Logger;
+#[derive(Default)]
+struct Println_Logger {
+    pub log_file_line: bool,
+}
 
 impl Logger for Println_Logger {
-    fn log(&mut self, _file: &'static str, _line: u32, tag: &'static str, msg: &str) {
-        if tag == "DEBUG" || tag == "VERBOSE" {
-            eprintln!("[ {} ] {}", tag, msg);
-        } else {
-            println!("[ {} ] {}", tag, msg);
+    fn log(&mut self, file: &'static str, line: u32, tag: &'static str, msg: &str) {
+        use std::fmt::Write;
+
+        let mut s = format!("[ {} ] ", tag);
+        if self.log_file_line {
+            write!(s, "{}:{}  ", file, line).unwrap();
         }
+        write!(s, "{}", msg).unwrap();
+        if tag == "DEBUG" || tag == "VERBOSE" {
+            eprintln!("{}", s);
+        } else {
+            println!("{}", s);
+        }
+    }
+
+    fn set_log_file_line(&mut self, l: bool) {
+        self.log_file_line = l;
     }
 }
 
@@ -58,7 +74,13 @@ pub unsafe fn unregister_loggers() {
 }
 
 pub fn add_default_logger(loggers: &mut Loggers) {
-    add_logger(loggers, Box::new(Println_Logger {}));
+    let mut loggers = loggers.lock().unwrap();
+    loggers.insert(0, Box::new(Println_Logger::default()));
+}
+
+pub fn set_log_file_line(loggers: &mut Loggers, idx: usize, log_file_line: bool) {
+    let mut loggers = loggers.lock().unwrap();
+    loggers.get_mut(idx).map(|l| l.set_log_file_line(log_file_line));
 }
 
 pub fn add_logger(loggers: &mut Loggers, logger: Box<dyn Logger>) {
