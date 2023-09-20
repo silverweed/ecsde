@@ -21,7 +21,8 @@ impl Debug_Calipers {
         camera: &Transform2D,
         input_state: &Input_State,
     ) {
-        let pos = render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, camera);
+        let mpos = Vec2i::from(Vec2f::from(mouse::raw_mouse_pos(&input_state.raw.mouse_state)));
+        let pos = render_window::mouse_pos_in_world(window, mpos, camera);
         self.start_world_pos = pos;
         self.dragging = true;
     }

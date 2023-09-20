@@ -16,7 +16,6 @@ inle_core = { path = "../inle_core" }
 inle_common = { path = "../inle_common" }
 inle_diagnostics = { path = "../inle_diagnostics" }
 inle_gfx_backend = { path = "../inle_gfx_backend" }
-inle_input = { path = "../inle_input" }
 inle_math = { path = "../inle_math" }
 inle_resources = { path = "../inle_resources" }
 inle_win = { path = "../inle_win" }

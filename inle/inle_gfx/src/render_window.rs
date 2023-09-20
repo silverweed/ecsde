@@ -1,6 +1,5 @@
 use inle_common::colors::Color;
 use inle_gfx_backend::render_window::backend;
-use inle_input::mouse::{self, Mouse_State};
 use inle_math::rect::Rect;
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
@@ -76,11 +75,11 @@ pub fn project_world_pos(
 
 pub fn mouse_pos_in_world(
     window: &Render_Window_Handle,
-    mouse_state: &Mouse_State,
+    mouse_pos: Vec2i,
     camera: &Transform2D,
 ) -> Vec2f {
     unproject_screen_pos(
-        Vec2i::from(Vec2f::from(mouse::raw_mouse_pos(mouse_state))),
+        mouse_pos,
         window,
         camera,
     )
