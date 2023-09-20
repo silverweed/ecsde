@@ -51,7 +51,7 @@ impl Logger for Println_Logger {
 }
 
 /// # Safety
-/// This function is not thread-safe
+/// This function is not thread-safe. No other thread can access the loggers while this is called.
 pub unsafe fn create_loggers() -> Loggers {
     let loggers = Arc::new(Mutex::new(vec![]));
     register_loggers(&loggers);

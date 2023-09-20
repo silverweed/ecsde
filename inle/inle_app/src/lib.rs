@@ -11,12 +11,8 @@ extern crate inle_common;
 extern crate inle_diagnostics;
 
 #[macro_use]
-extern crate inle_ecs;
-
-#[macro_use]
 extern crate inle_math;
 
 pub mod app;
 pub mod app_config;
-pub mod render_system;
-pub mod systems;
+pub mod debug_systems;

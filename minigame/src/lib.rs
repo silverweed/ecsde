@@ -3,7 +3,7 @@ extern crate inle_diagnostics;
 
 use std::ffi::c_char;
 
-//use inle_app::app_config;
+use inle_app::app_config;
 
 pub struct Game_State {
 }
@@ -35,6 +35,7 @@ pub unsafe extern "C" fn game_update(game_state: *mut Game_State, _game_res: *mu
 #[no_mangle]
 pub unsafe extern "C" fn game_shutdown(_game_state: *mut Game_State, _game_res: *mut Game_Resources) {}
 
+/*
 #[cfg(debug_assertions)]
 #[no_mangle]
 pub unsafe extern "C" fn game_unload(_game_state: *mut Game_State, _game_res: *mut Game_Resources) {}
@@ -42,22 +43,21 @@ pub unsafe extern "C" fn game_unload(_game_state: *mut Game_State, _game_res: *m
 #[cfg(debug_assertions)]
 #[no_mangle]
 pub unsafe extern "C" fn game_reload(_game_state: *mut Game_State, _game_res: *mut Game_Resources) {}
+*/
 
 fn internal_game_init() -> Box<Game_State> {
     use inle_core::env::Env_Info;
     use inle_cfg::Cfg_Var;
 
-    inle_diagnostics::set_verbose(true);
     let mut loggers = unsafe { inle_diagnostics::log::create_loggers() };
     inle_diagnostics::log::add_default_logger(&mut loggers);
-    inle_diagnostics::log::set_log_file_line(&mut loggers, 0, true);
 
     linfo!("Hello!");
 
-    //let env = Env_Info::gather().unwrap();
-    /*
+    let env = Env_Info::gather().unwrap();
     let config = inle_cfg::Config::new_from_dir(&env.cfg_root);
 
+    /*
     let app_cfg = {
         let cfg = &config;
         let win_width: Cfg_Var<i32> = Cfg_Var::new("engine/window/width", cfg);

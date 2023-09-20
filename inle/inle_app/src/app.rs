@@ -2,24 +2,22 @@
 mod tracer_drawing;
 
 use crate::app_config::App_Config;
-use crate::systems::Core_Systems;
 use inle_alloc::temp::Temp_Allocator;
+use inle_core::tasks::Long_Task_Manager;
 use inle_common::units::*;
 use inle_common::Maybe_Error;
 use inle_core::env::Env_Info;
 use inle_core::rand;
 use inle_core::time;
-use inle_gfx::render_window::Render_Window_Handle;
 use inle_resources::gfx::Gfx_Resources;
 use inle_resources::gfx::Shader_Cache;
 
 #[cfg(debug_assertions)]
 use {
-    crate::systems::Debug_Systems,
+    crate::debug_systems::Debug_Systems,
     inle_cfg::Cfg_Var,
     inle_common::colors,
     inle_diagnostics::tracer,
-    inle_replay::{replay_data::Replay_Data, replay_input_provider::Replay_Input_Provider},
     std::convert::TryInto,
     std::time::Duration,
 };
@@ -40,11 +38,10 @@ pub struct Engine_State<'r> {
     pub rng: rand::Default_Rng,
 
     pub input_state: inle_input::input_state::Input_State,
-    pub systems: Core_Systems<'r>,
 
     pub frame_alloc: Temp_Allocator,
 
-    pub global_batches: inle_gfx::render::batcher::Batches,
+    pub long_task_mgr: Long_Task_Manager,
 
     #[cfg(debug_assertions)]
     pub debug_systems: Debug_Systems,
@@ -52,8 +49,7 @@ pub struct Engine_State<'r> {
     #[cfg(debug_assertions)]
     pub prev_frame_time: Duration,
 
-    #[cfg(debug_assertions)]
-    pub replay_input_provider: Option<Replay_Input_Provider>,
+    _pd: std::marker::PhantomData<&'r ()>,
 }
 
 pub fn create_engine_state<'r>(
@@ -62,7 +58,6 @@ pub fn create_engine_state<'r>(
     app_config: App_Config,
     loggers: inle_diagnostics::log::Loggers,
 ) -> Result<Engine_State<'r>, Box<dyn std::error::Error>> {
-    let systems = Core_Systems::new();
     let input_state = inle_input::input_state::create_input_state(&env);
     let time = time::Time::default();
     let seed;
@@ -92,15 +87,13 @@ pub fn create_engine_state<'r>(
         time,
         rng,
         input_state,
-        systems,
-        global_batches: inle_gfx::render::batcher::Batches::default(),
         frame_alloc: Temp_Allocator::with_capacity(megabytes(10)),
+        long_task_mgr: Long_Task_Manager::default(),
+        _pd: std::marker::PhantomData,
         #[cfg(debug_assertions)]
         debug_systems,
         #[cfg(debug_assertions)]
         prev_frame_time: Duration::default(),
-        #[cfg(debug_assertions)]
-        replay_input_provider: None,
     })
 }
 
@@ -122,7 +115,6 @@ pub fn start_config_watch(env: &Env_Info, config: &mut inle_cfg::Config) -> Mayb
 }
 
 pub fn init_engine_systems(
-    window: &Render_Window_Handle,
     engine_state: &mut Engine_State,
     gres: &mut Gfx_Resources,
     shader_cache: &mut Shader_Cache,
@@ -130,25 +122,19 @@ pub fn init_engine_systems(
     gres.init();
     shader_cache.init();
 
+    /*
     inle_input::joystick::init_joysticks(
         window,
         &engine_state.env,
         &mut engine_state.input_state.raw.joy_state,
     );
-    inle_ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
-    engine_state.systems.long_task_mgr.start(1);
+    */
+    //inle_ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
+    engine_state.long_task_mgr.start(1);
 
     linfo!("Number of Rayon threads: {}", rayon::current_num_threads());
 
     Ok(())
-}
-
-#[cfg(debug_assertions)]
-pub fn start_recording(engine_state: &mut Engine_State) -> Maybe_Error {
-    engine_state
-        .debug_systems
-        .replay_recording_system
-        .start_recording_thread(&engine_state.env, &engine_state.config)
 }
 
 #[cfg(debug_assertions)]
@@ -436,6 +422,7 @@ pub fn init_engine_debug(
     Ok(())
 }
 
+/*
 /// Returns true if the engine should quit
 pub fn handle_core_actions(
     actions: &[inle_input::core_actions::Core_Action],
@@ -460,26 +447,11 @@ pub fn handle_core_actions(
 
     false
 }
-
-#[cfg(debug_assertions)]
-pub fn try_create_replay_data(replay_file: &std::path::Path) -> Option<Replay_Data> {
-    match Replay_Data::from_file(replay_file) {
-        Ok(data) => Some(data),
-        Err(err) => {
-            lerr!("Failed to load replay data from {:?}: {}", replay_file, err);
-            None
-        }
-    }
-}
-
-#[cfg(debug_assertions)]
-pub fn set_replay_data(engine_state: &mut Engine_State, replay_data: Replay_Data) {
-    engine_state.replay_input_provider = Some(Replay_Input_Provider::new(replay_data));
-}
+*/
 
 #[cfg(debug_assertions)]
 pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
-    use crate::systems::Overlay_Shown;
+    use crate::debug_systems::Overlay_Shown;
     use inle_diagnostics::{prelude, tracer::Tracer_Node};
     use std::thread::ThreadId;
 
