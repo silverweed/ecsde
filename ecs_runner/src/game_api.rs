@@ -27,8 +27,6 @@ pub struct Game_Api<'lib> {
     pub update:
         ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State, *mut Game_Resources) -> bool>,
     pub shutdown: ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State, *mut Game_Resources)>,
-    #[cfg(debug_assertions)]
-    pub unload: ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State, *mut Game_Resources)>,
-    #[cfg(debug_assertions)]
-    pub reload: ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State, *mut Game_Resources)>,
+    pub unload: Option<ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State, *mut Game_Resources)>>,
+    pub reload: Option<ll::Symbol<'lib, unsafe extern "C" fn(*mut Game_State, *mut Game_Resources)>>,
 }

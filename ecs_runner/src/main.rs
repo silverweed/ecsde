@@ -4,15 +4,14 @@
 
 mod game_api;
 
-#[cfg(feature = "hotload")]
 mod hotload;
 
 use game_api::Game_Api;
 use libloading as ll;
-use std::ffi::CString;
+use std::ffi::{c_char, CString};
 use std::path::{Path, PathBuf};
+use std::io;
 
-#[cfg(feature = "hotload")]
 use {hotload::*, std::sync::mpsc::Receiver};
 
 #[cfg(debug_assertions)]
@@ -21,11 +20,11 @@ const GAME_DLL_FOLDER: &str = "target/debug";
 const GAME_DLL_FOLDER: &str = "target/release";
 
 #[cfg(target_os = "linux")]
-const GAME_DLL_FILE: &str = "libecs_game.so";
+const GAME_DLL_FILE: &str = "libminigame.so";
 #[cfg(target_os = "windows")]
-const GAME_DLL_FILE: &str = "ecs_game.dll";
+const GAME_DLL_FILE: &str = "minigame.dll";
 #[cfg(target_os = "macos")]
-const GAME_DLL_FILE: &str = "libecs_game.dylib";
+const GAME_DLL_FILE: &str = "libminigame.dylib";
 
 macro_rules! get_argc_argv {
     ($argc: ident, $argv: ident) => {
@@ -42,32 +41,78 @@ macro_rules! get_argc_argv {
     };
 }
 
-#[cfg(feature = "hotload")]
-fn main() -> std::io::Result<()> {
-    eprintln!("Running with hotload ENABLED");
-
+fn main() -> io::Result<()> {
     // Convert rust args to C args, since our game API expects that.
     get_argc_argv!(argc, argv);
 
     let game_dll_abs_path = format!("{}/{}", GAME_DLL_FOLDER, GAME_DLL_FILE);
-    let reload_pending_recv = start_hotload(PathBuf::from(game_dll_abs_path.clone()))?;
 
-    let (mut game_lib, mut unique_lib_path) = lib_load(&game_dll_abs_path);
-    let mut game_api = game_load(&game_lib)?;
+    let create_temp = cfg!(feature = "hotload");
+    match lib_load(&game_dll_abs_path, create_temp) {
+        Ok(res) => {
+            let mut game_lib = res.lib;
+            let mut unique_lib_path = res.path.clone();
+            match game_load(&game_lib) {
+                Ok(mut game_api) => {
+                    if let Err(main_err) = {
+                        if game_api.unload.is_some() && game_api.reload.is_some() {
+                            main_with_hotload(argc, argv, &game_dll_abs_path, game_lib, unique_lib_path)
+                        } else {
+                            main_without_hotload(argc, argv, &game_dll_abs_path, game_lib)
+                        }
+                    } {
+                        if create_temp {
+                            if let Err(rm_err) = std::fs::remove_file(&res.path) {
+                                eprintln!("[ WARNING ] Failed to remove old lib {:?}: {:?}", res.path, rm_err);
+                            }
+                        }
+                        Err(main_err)
+                    } else {
+                        Ok(())
+                    }
+                }
+                Err(game_load_err) => {
+                    if create_temp {
+                        let _err = game_lib.close();
+                        if let Err(rm_err) = std::fs::remove_file(&res.path) {
+                            eprintln!("[ WARNING ] Failed to remove old lib {:?}: {:?}", res.path, rm_err);
+                        }
+                    }
+                    Err(io::Error::new(io::ErrorKind::Other, game_load_err))
+                }
+            }
+        }
+        Err(lib_load_err) => {
+            if create_temp {
+                if let Err(rm_err) = std::fs::remove_file(&lib_load_err.path) {
+                    eprintln!("[ WARNING ] Failed to remove old lib {:?}: {:?}", lib_load_err.path, rm_err);
+                }
+            }
+            panic!("[ ERROR ] Failed to load library '{:?}': {:?}", lib_load_err.path, lib_load_err.err);
+        }
+    }
+}
+
+fn main_with_hotload(argc: usize, argv: *const *const c_char, game_dll_abs_path: &str, mut game_lib: ll::Library, mut unique_lib_path: PathBuf) -> io::Result<()> {
+    eprintln!("Running with hotload ENABLED");
+
+    let mut game_api = game_load(&game_lib).unwrap();
     let game_api::Game_Bundle {
         game_state,
         game_resources,
     } = unsafe { (game_api.init)(argv, argc) };
 
+    let reload_pending_recv = start_hotload(PathBuf::from(game_dll_abs_path.clone()))?;
+
     loop {
         if reload_pending_recv.try_recv().is_ok() {
             unsafe {
-                (game_api.unload)(game_state, game_resources);
+                (game_api.unload.unwrap())(game_state, game_resources);
             }
             game_lib = lib_reload(&game_dll_abs_path, &mut unique_lib_path);
             unsafe {
-                game_api = game_load(&game_lib)?;
-                (game_api.reload)(game_state, game_resources);
+                game_api = game_load(&game_lib).unwrap();
+                (game_api.reload.unwrap())(game_state, game_resources);
                 eprintln!(
                     "[ OK ] Reloaded API and game state from {:?}.",
                     unique_lib_path
@@ -86,6 +131,8 @@ fn main() -> std::io::Result<()> {
         (game_api.shutdown)(game_state, game_resources);
     }
 
+    game_lib.close().map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+
     if let Err(err) = std::fs::remove_file(&unique_lib_path) {
         eprintln!(
             "[ WARNING ] Failed to remove old lib {:?}: {:?}",
@@ -96,16 +143,10 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "hotload"))]
-fn main() -> std::io::Result<()> {
+fn main_without_hotload(argc: usize, argv: *const *const c_char, game_dll_abs_path: &str, game_lib: ll::Library) -> io::Result<()> {
     eprintln!("Running with hotload DISABLED");
 
-    // Convert rust args to C args, since our game API expects that.
-    get_argc_argv!(argc, argv);
-
-    let game_dll_abs_path = format!("{}/{}", GAME_DLL_FOLDER, GAME_DLL_FILE);
-    let (game_lib, _) = lib_load(&game_dll_abs_path);
-    let game_api = game_load(&game_lib)?;
+    let game_api = game_load(&game_lib).unwrap();
     let game_api::Game_Bundle {
         game_state,
         game_resources,
@@ -123,25 +164,42 @@ fn main() -> std::io::Result<()> {
         (game_api.shutdown)(game_state, game_resources);
     }
 
-    Ok(())
+    game_lib.close().map_err(|err| io::Error::new(io::ErrorKind::Other, err))
 }
 
-fn game_load(game_lib: &ll::Library) -> ll::Result<Game_Api<'_>> {
+fn game_load(game_lib: &ll::Library) -> Result<Game_Api<'_>, ll::Error> {
     unsafe {
+        let init= game_lib.get(b"game_init\0")?;
+        let update= game_lib.get(b"game_update\0")?;
+        let shutdown= game_lib.get(b"game_shutdown\0")?;
+        let unload= game_lib.get(b"game_unload\0").ok();
+        let reload= game_lib.get(b"game_reload\0").ok();
         Ok(Game_Api {
-            init: game_lib.get(b"game_init\0")?,
-            update: game_lib.get(b"game_update\0")?,
-            shutdown: game_lib.get(b"game_shutdown\0")?,
-            #[cfg(debug_assertions)]
-            unload: game_lib.get(b"game_unload\0")?,
-            #[cfg(debug_assertions)]
-            reload: game_lib.get(b"game_reload\0")?,
+            init, update, shutdown, unload, reload
         })
     }
 }
 
-fn lib_load(lib_path: &str) -> (ll::Library, PathBuf) {
-    let loaded_path = if cfg!(feature = "hotload") {
+struct Lib_Load_Res {
+    pub lib: ll::Library,
+    pub path: PathBuf,
+}
+
+struct Lib_Load_Err {
+    pub err: ll::Error,
+    pub path: PathBuf
+}
+
+impl std::fmt::Debug for Lib_Load_Err {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        writeln!(f, "{:?}", self.err)
+    }
+}
+
+fn lib_load(lib_path: &str, create_temp: bool) -> Result<Lib_Load_Res, Lib_Load_Err> {
+    eprintln!("[ INFO ] Game lib is {}", lib_path);
+
+    let loaded_path = if create_temp {
         let unique_name = {
             let timestamp = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -158,21 +216,18 @@ fn lib_load(lib_path: &str) -> (ll::Library, PathBuf) {
         PathBuf::from(lib_path)
     };
 
-    eprintln!("[ INFO ] Loading lib {:?}", loaded_path);
+    eprintln!("[ INFO ] Loading lib {}", loaded_path.display());
 
-    (
-        ll::Library::new(loaded_path.as_os_str()).unwrap_or_else(|err| {
-            panic!(
-                "[ ERROR ] Failed to load library '{:?}': {:?}",
-                loaded_path, err
-            )
-        }),
-        loaded_path,
-    )
+    unsafe { ll::Library::new(loaded_path.as_os_str()) }.map_err(|err| Lib_Load_Err {
+        err,
+        path: loaded_path.clone()
+    }).map(|lib| Lib_Load_Res {
+        lib,
+        path: loaded_path,
+    })
 }
 
-#[cfg(feature = "hotload")]
-fn start_hotload(game_dll_path: PathBuf) -> std::io::Result<Receiver<()>> {
+fn start_hotload(game_dll_path: PathBuf) -> io::Result<Receiver<()>> {
     use std::sync::mpsc::sync_channel;
 
     let (reload_pending_send, reload_pending_recv) = sync_channel(1);
