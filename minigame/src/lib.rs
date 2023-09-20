@@ -77,10 +77,13 @@ pub unsafe extern "C" fn game_update(game_state: *mut Game_State, game_res: *mut
     inle_gfx::render::render_text(win, &txt, inle_common::colors::GREEN, v2!(100., 100.));
     inle_win::window::display(win);
 
-    let refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", &game_state.config);
-    update_traces(inle_app::debug_systems::Overlay_Shown::Trace, refresh_rate, 
-                 &mut game_state.debug_sys, &game_state.config,
-                 &game_state.time, game_state.cur_frame, &mut game_state.frame_alloc);
+    #[cfg(debug_assertions)]
+    {
+        let refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", &game_state.config);
+        update_traces(inle_app::debug_systems::Overlay_Shown::Trace, refresh_rate, 
+                     &mut game_state.debug_sys, &game_state.config,
+                     &game_state.time, game_state.cur_frame, &mut game_state.frame_alloc);
+    }
 
 
     game_state.frame_alloc.dealloc_all();
@@ -206,6 +209,7 @@ fn handle_core_actions(window: &mut inle_gfx::render_window::Render_Window_Handl
 }
 
 
+#[cfg(debug_assertions)]
 fn update_traces(show_overlay: inle_app::debug_systems::Overlay_Shown, refresh_rate: Cfg_Var<f32>, 
                  debug_systems: &mut inle_app::debug_systems::Debug_Systems, config: &inle_cfg::config::Config,
                  time: &inle_core::time::Time, cur_frame: u64, frame_alloc: &mut inle_alloc::temp::Temp_Allocator,

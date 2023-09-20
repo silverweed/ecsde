@@ -97,12 +97,12 @@ pub struct Buffer_Allocator {
 }
 
 // Needed for the buf_alloc_debug
-#[cfg(debug_assertions)]
 impl Buffer_Allocator {
     pub fn get_buckets(&self) -> &[Buffer_Allocator_Bucket] {
         &self.buckets
     }
 
+    #[cfg(debug_assertions)]
     pub fn get_cur_allocated(&self) -> &HashSet<Non_Empty_Buffer_Handle> {
         &self.cur_allocated
     }

@@ -17,6 +17,6 @@ extern crate inle_diagnostics;
 #[macro_use]
 extern crate inle_math;
 
-pub_in_debug! {mod backend_common;} // this needs to be exported for the buf_alloc_debug
+pub mod backend_common; // this needs to be exported for the buf_alloc_debug
 pub mod render;
 pub mod render_window;
