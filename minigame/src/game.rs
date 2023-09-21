@@ -1,5 +1,5 @@
-use super::{Game_State, Game_Resources};
 use super::debug;
+use super::{Game_Resources, Game_State};
 use inle_cfg::Cfg_Var;
 use inle_input::core_actions::Core_Action;
 
@@ -11,8 +11,6 @@ pub fn internal_game_init() -> Box<Game_State> {
 
     let mut loggers = unsafe { inle_diagnostics::log::create_loggers() };
     inle_diagnostics::log::add_default_logger(&mut loggers);
-
-    linfo!("Hello logs!");
 
     let env = Env_Info::gather().unwrap();
     let mut config = inle_cfg::Config::new_from_dir(&env.cfg_root);
@@ -51,8 +49,10 @@ pub fn internal_game_init() -> Box<Game_State> {
 
     let seed = inle_core::rand::new_random_seed().unwrap();
     let rng = inle_core::rand::new_rng_with_seed(seed);
+
     let mut debug_systems = inle_app::debug_systems::Debug_Systems::new(&config);
-    debug_systems.show_overlay = inle_app::debug_systems::Overlay_Shown::Trace;
+    //debug_systems.show_overlay = inle_app::debug_systems::Overlay_Shown::Trace;
+
     let time = inle_core::time::Time::default();
     let frame_alloc =
         inle_alloc::temp::Temp_Allocator::with_capacity(inle_common::units::gigabytes(1));
@@ -99,7 +99,6 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
     }
 }
 
-
 pub fn start_frame(game_state: &mut Game_State) {
     inle_gfx::render_window::start_new_frame(&mut game_state.window);
 
@@ -129,7 +128,9 @@ pub fn end_frame(game_state: &mut Game_State) {
         );
     }
 
-    unsafe { game_state.frame_alloc.dealloc_all(); }
+    unsafe {
+        game_state.frame_alloc.dealloc_all();
+    }
 }
 
 //
@@ -178,4 +179,35 @@ fn handle_core_actions(
         }
     }
     false
+}
+
+//
+// Render
+//
+pub fn render(game_state: &mut Game_State, game_res: &mut Game_Resources) {
+    trace!("render");
+
+    let win = &mut game_state.window;
+    inle_gfx::render_window::clear(win);
+
+    // TEMP
+    let font = game_res.gfx.get_font(game_state.default_font);
+    let txt = inle_gfx::render::create_text(win, "Hello Minigame!", font, 42);
+    inle_gfx::render::render_text(win, &txt, inle_common::colors::GREEN, v2!(100., 100.));
+    //
+
+    #[cfg(debug_assertions)]
+    {
+        debug::render_debug(
+            &mut game_state.debug_systems,
+            win,
+            &game_state.input,
+            &game_state.config,
+            &mut game_state.frame_alloc,
+            &mut game_state.time,
+            &mut game_res.gfx,
+        );
+    }
+
+    inle_win::window::display(win);
 }

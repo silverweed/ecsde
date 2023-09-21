@@ -4,6 +4,8 @@ use super::{Game_Resources, Game_State};
 use inle_app::debug_systems::Debug_Systems;
 use inle_cfg::Cfg_Var;
 use inle_debug::console::Console_Status;
+use inle_input::input_state::Action_Kind;
+use std::convert::TryInto;
 
 pub fn init_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     let ui_scale = Cfg_Var::<f32>::new("engine/debug/ui/ui_scale", &game_state.config);
@@ -132,31 +134,16 @@ pub fn start_debug_frame(
     }
 }
 
-pub fn update_debug(game_state: &mut Game_State) {
-    use inle_input::input_state::Action_Kind;
+pub fn update_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) {
+    trace!("update_debug");
 
-    let console_status = update_console(game_state);
+    update_console(game_state);
+    update_scroller(game_state);
 
-    let actions = &game_state.input.processed.game_actions;
-
-    if actions.contains(&(sid!("calipers"), Action_Kind::Pressed)) {
-        let camera_xform = inle_math::transform::Transform2D::default();
-        game_state.debug_systems.calipers.start_measuring_dist(
-            &game_state.window,
-            &camera_xform,
-            &game_state.input,
-        );
-    } else if actions.contains(&(sid!("calipers"), Action_Kind::Released)) {
-        game_state.debug_systems.calipers.end_measuring();
-    }
-
-    inle_win::window::set_key_repeat_enabled(
-        &mut game_state.window,
-        console_status == Console_Status::Open,
-    );
+    handle_debug_actions(game_state, game_res);
 }
 
-fn update_console(game_state: &mut Game_State) -> Console_Status {
+fn update_console(game_state: &mut Game_State) {
     trace!("console::update");
 
     let mut console = game_state.debug_systems.console.lock().unwrap();
@@ -190,14 +177,31 @@ fn update_console(game_state: &mut Game_State) -> Console_Status {
     }
 
     let actions = &game_state.input.processed.game_actions;
-    if actions.contains(&(
-        sid!("toggle_console"),
-        inle_input::input_state::Action_Kind::Pressed,
-    )) {
+    if actions.contains(&(sid!("toggle_console"), Action_Kind::Pressed)) {
         console.toggle();
     }
 
-    console.status
+    inle_win::window::set_key_repeat_enabled(
+        &mut game_state.window,
+        console.status == Console_Status::Open,
+    );
+}
+
+fn update_scroller(game_state: &mut Game_State) {
+    let scroller = &mut game_state.debug_systems.debug_ui.frame_scroller;
+    let prev_selected_frame = scroller.cur_frame;
+    let prev_selected_second = scroller.cur_second;
+    let was_manually_selected = scroller.manually_selected;
+
+    scroller.handle_events(&game_state.input.raw.events);
+
+    if scroller.cur_frame != prev_selected_frame
+        || scroller.cur_second != prev_selected_second
+        || was_manually_selected != scroller.manually_selected
+    {
+        game_state.time.paused = scroller.manually_selected;
+        game_state.debug_systems.trace_overlay_update_t = 0.;
+    }
 }
 
 pub fn update_traces(
@@ -294,7 +298,6 @@ pub fn update_traces(
     }
 
     // Function trace graph
-    /*
     if trace_realtime || !time.paused {
         let sid_trace = sid!("trace");
         let trace_hover_data = debug_systems
@@ -324,7 +327,7 @@ pub fn update_traces(
 
             let graph = debug_systems.debug_ui.get_graph(sid!("fn_profile"));
 
-            let flattened_traces = tracer::flatten_traces(&final_traces);
+            let flattened_traces = inle_diagnostics::tracer::flatten_traces(&final_traces);
             tracer_drawing::update_graph_traced_fn(
                 flattened_traces,
                 graph,
@@ -342,7 +345,6 @@ pub fn update_traces(
                 .set_graph_enabled(sid!("fn_profile"), false);
         }
     }
-    */
 }
 
 pub fn render_debug<'a, 'r>(
@@ -419,4 +421,110 @@ pub fn render_debug<'a, 'r>(
             .unwrap()
             .draw(window, gres, config);
     }
+}
+
+macro_rules! add_msg {
+    ($game_state: expr, $msg: expr) => {
+        $game_state
+            .debug_systems
+            .debug_ui
+            .get_overlay(sid!("msg"))
+            .add_line($msg)
+    };
+}
+
+fn handle_debug_actions(game_state: &mut Game_State, game_res: &mut Game_Resources) {
+    use inle_app::debug_systems::Overlay_Shown;
+
+    let actions = &game_state.input.processed.game_actions;
+    // @Speed: eventually we want to replace all the *name == sid with a const sid function, to allow doing
+    // (sid!("game_speed_up"), Action_Kind::Pressed) => { ... }
+    for action in actions {
+        match action {
+            (name, Action_Kind::Pressed) if *name == sid!("calipers") => {
+                let camera_xform = inle_math::transform::Transform2D::default();
+                game_state.debug_systems.calipers.start_measuring_dist(
+                    &game_state.window,
+                    &camera_xform,
+                    &game_state.input,
+                );
+            }
+            (name, Action_Kind::Released) if *name == sid!("calipers") => {
+                game_state.debug_systems.calipers.end_measuring();
+            }
+            (name, Action_Kind::Pressed)
+                if *name == sid!("game_speed_up") || *name == sid!("game_speed_down") =>
+            {
+                let mut ts = game_state.time.time_scale;
+                if action.0 == sid!("game_speed_up") {
+                    ts *= 2.0;
+                } else {
+                    ts *= 0.5;
+                }
+                ts = inle_math::math::clamp(ts, 0.001, 32.0);
+                if ts > 0.0 {
+                    game_state.time.time_scale = ts;
+                }
+                add_msg!(
+                    game_state,
+                    &format!("Time scale: {:.3}", game_state.time.time_scale)
+                );
+            }
+            (name, Action_Kind::Pressed) if *name == sid!("pause_toggle") => {
+                game_state.time.pause_toggle();
+                inle_win::window::set_key_repeat_enabled(
+                    &mut game_state.window,
+                    game_state.time.paused,
+                );
+                add_msg!(
+                    game_state,
+                    if game_state.time.paused {
+                        "Paused"
+                    } else {
+                        "Resumed"
+                    }
+                );
+            }
+            (name, Action_Kind::Pressed) if *name == sid!("step_sim") => {}
+            (name, Action_Kind::Pressed) if *name == sid!("toggle_trace_overlay") => {
+                let show_trace = game_state.debug_systems.show_overlay;
+                let show_trace = show_trace != Overlay_Shown::Trace;
+                if show_trace {
+                    game_state.debug_systems.show_overlay = Overlay_Shown::Trace;
+                } else {
+                    game_state.debug_systems.show_overlay = Overlay_Shown::None;
+                }
+                game_state
+                    .debug_systems
+                    .debug_ui
+                    .set_overlay_enabled(sid!("trace"), show_trace);
+            }
+            (name, Action_Kind::Pressed) if *name == sid!("toggle_threads_overlay") => {
+                let show_threads = game_state.debug_systems.show_overlay;
+                let show_threads = show_threads != Overlay_Shown::Threads;
+                if show_threads {
+                    game_state
+                        .debug_systems
+                        .debug_ui
+                        .set_overlay_enabled(sid!("trace"), false);
+                    game_state.debug_systems.show_overlay = Overlay_Shown::Threads;
+                } else {
+                    game_state.debug_systems.show_overlay = Overlay_Shown::None;
+                }
+            }
+            (name, Action_Kind::Pressed) if *name == sid!("move_camera_to_origin") => {
+                add_msg!(game_state, "Moved camera to origin");
+            }
+            (name, Action_Kind::Released) if *name == sid!("toggle_camera_on_player") => {}
+            _ => {}
+        }
+    }
+}
+
+pub fn set_traced_fn(debug_systems: &mut Debug_Systems, fn_name: String) {
+    debug_systems.traced_fn = fn_name.clone();
+    let graph = debug_systems.debug_ui.get_graph(sid!("fn_profile"));
+    graph.cfg.title = Some(fn_name);
+    graph.data.points.clear();
+    graph.selected_point = None;
 }

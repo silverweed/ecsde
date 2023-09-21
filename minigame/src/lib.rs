@@ -75,47 +75,29 @@ pub unsafe extern "C" fn game_update(
     let game_state = &mut *game_state;
     let game_res = &mut *game_res;
 
-    game::start_frame(game_state);
-
-    //
-    // Input
-    //
-    game::process_input(game_state);
-
-    //
-    // Update
-    //
-    #[cfg(debug_assertions)]
     {
-        debug::update_debug(game_state);
+        trace!("game_update");
+
+        game::start_frame(game_state);
+
+        //
+        // Input
+        //
+        game::process_input(game_state);
+
+        //
+        // Update
+        //
+        #[cfg(debug_assertions)]
+        {
+            debug::update_debug(game_state, game_res);
+        }
+
+        //
+        // Render
+        //
+        game::render(game_state, game_res);
     }
-
-    //
-    // Render
-    //
-    let win = &mut game_state.window;
-    inle_gfx::render_window::clear(win);
-
-    // TEMP
-    let font = game_res.gfx.get_font(game_state.default_font);
-    let txt = inle_gfx::render::create_text(win, "Hello Minigame!", font, 42);
-    inle_gfx::render::render_text(win, &txt, inle_common::colors::GREEN, v2!(100., 100.));
-    //
-
-    #[cfg(debug_assertions)]
-    {
-        debug::render_debug(
-            &mut game_state.debug_systems,
-            win,
-            &game_state.input,
-            &game_state.config,
-            &mut game_state.frame_alloc,
-            &mut game_state.time,
-            &mut game_res.gfx,
-        );
-    }
-
-    inle_win::window::display(win);
 
     game::end_frame(game_state);
 
@@ -163,4 +145,3 @@ pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mu
     inle_win::window::recreate_window(&mut game_state.window);
     inle_gfx::render_window::recreate_render_window(&mut game_state.window);
 }
-
