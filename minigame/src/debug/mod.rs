@@ -133,8 +133,6 @@ pub fn start_debug_frame(
 }
 
 pub fn update_debug(game_state: &mut Game_State) {
-    use crate::debug::console_executor;
-    use inle_debug::console::Console_Status;
     use inle_input::input_state::Action_Kind;
 
     let console_status = update_console(game_state);
@@ -347,7 +345,7 @@ pub fn update_traces(
     */
 }
 
-pub fn update_debug_graphics<'a, 'r>(
+pub fn render_debug<'a, 'r>(
     debug_systems: &mut Debug_Systems,
     window: &mut inle_gfx::render_window::Render_Window_Handle,
     input: &inle_input::input_state::Input_State,
