@@ -120,6 +120,9 @@ pub fn create_window(
     let (joy_cb, joy_evt_recv) = create_joystick_callback(&glfw);
     glfw.set_joystick_callback(Some(joy_cb));
 
+    let real_size = window.get_size();
+    let real_size = (real_size.0 as u32, real_size.1 as u32);
+
     // @Incomplete: vsync, etc
 
     Window_Handle {
@@ -130,7 +133,7 @@ pub fn create_window(
         event_receiver: events,
         events_buffer: VecDeque::with_capacity(8),
         cursor_pos: (0., 0.),
-        real_size: (1, 1),
+        real_size,
         joystick_events: joy_evt_recv,
     }
 }

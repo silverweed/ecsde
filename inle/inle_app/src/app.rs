@@ -46,6 +46,80 @@ pub struct Engine_State<'r> {
     _pd: std::marker::PhantomData<&'r ()>,
 }
 
+pub struct Engine_CVars {
+    pub gameplay_update_tick_ms: Cfg_Var<f32>,
+    pub gameplay_max_time_budget_ms: Cfg_Var<f32>,
+    pub vsync: Cfg_Var<bool>,
+    pub clear_color: Cfg_Var<u32>,
+    pub enable_shaders: Cfg_Var<bool>,
+    pub enable_shadows: Cfg_Var<bool>,
+    pub enable_particles: Cfg_Var<bool>,
+
+    pub draw_lights: Cfg_Var<bool>,
+    pub draw_particle_emitters: Cfg_Var<bool>,
+    pub trace_overlay_refresh_rate: Cfg_Var<f32>,
+    pub draw_debug_grid: Cfg_Var<bool>,
+    pub debug_grid_square_size: Cfg_Var<f32>,
+    pub debug_grid_opacity: Cfg_Var<i32>,
+    pub debug_grid_font_size: Cfg_Var<u32>,
+    pub draw_fps_graph: Cfg_Var<bool>,
+    pub draw_prev_frame_t_graph: Cfg_Var<bool>,
+    pub draw_mouse_rulers: Cfg_Var<bool>,
+    pub draw_buf_alloc: Cfg_Var<bool>,
+    pub display_log_window: Cfg_Var<bool>,
+    pub display_overlays: Cfg_Var<bool>,
+    pub update_physics: Cfg_Var<bool>,
+}
+
+pub fn create_engine_cvars(cfg: &inle_cfg::Config) -> Engine_CVars {
+    let gameplay_update_tick_ms = Cfg_Var::new("engine/gameplay/update_tick_ms", cfg);
+    let gameplay_max_time_budget_ms = Cfg_Var::new("engine/gameplay/max_time_budget_ms", cfg);
+    let clear_color = Cfg_Var::new("engine/rendering/clear_color", cfg);
+    let vsync = Cfg_Var::new("engine/window/vsync", cfg);
+    let enable_shaders = Cfg_Var::new("engine/rendering/enable_shaders", cfg);
+    let enable_shadows = Cfg_Var::new("engine/rendering/enable_shadows", cfg);
+    let enable_particles = Cfg_Var::new("engine/rendering/enable_particles", cfg);
+
+    let draw_lights = Cfg_Var::new("engine/debug/rendering/draw_lights", cfg);
+    let draw_particle_emitters = Cfg_Var::new("engine/debug/rendering/draw_particle_emitters", cfg);
+    let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
+    let draw_debug_grid = Cfg_Var::new("engine/debug/rendering/grid/draw_grid", cfg);
+    let debug_grid_square_size = Cfg_Var::new("engine/debug/rendering/grid/square_size", cfg);
+    let debug_grid_opacity = Cfg_Var::new("engine/debug/rendering/grid/opacity", cfg);
+    let debug_grid_font_size = Cfg_Var::new("engine/debug/rendering/grid/font_size", cfg);
+    let draw_fps_graph = Cfg_Var::new("engine/debug/graphs/fps", cfg);
+    let draw_prev_frame_t_graph = Cfg_Var::new("engine/debug/graphs/prev_frame_t", cfg);
+    let draw_mouse_rulers = Cfg_Var::new("engine/debug/window/draw_mouse_rulers", cfg);
+    let display_log_window = Cfg_Var::new("engine/debug/log_window/display", cfg);
+    let display_overlays = Cfg_Var::new("engine/debug/overlay/display", cfg);
+    let update_physics = Cfg_Var::new("engine/debug/physics/update", cfg);
+    let draw_buf_alloc = Cfg_Var::new("engine/debug/rendering/draw_buf_alloc", cfg);
+
+    Engine_CVars {
+        gameplay_update_tick_ms,
+        gameplay_max_time_budget_ms,
+        vsync,
+        clear_color,
+        enable_shaders,
+        enable_shadows,
+        enable_particles,
+        draw_lights,
+        draw_particle_emitters,
+        trace_overlay_refresh_rate,
+        draw_debug_grid,
+        debug_grid_square_size,
+        debug_grid_opacity,
+        debug_grid_font_size,
+        draw_fps_graph,
+        draw_prev_frame_t_graph,
+        draw_mouse_rulers,
+        draw_buf_alloc,
+        display_log_window,
+        display_overlays,
+        update_physics,
+    }
+}
+
 pub fn create_engine_state<'r>(
     env: Env_Info,
     config: inle_cfg::Config,
@@ -120,8 +194,8 @@ pub fn init_engine_systems(
         &engine_state.env,
         &mut engine_state.input_state.raw.joy_state,
     );
+    inle_ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
     */
-    //inle_ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
     engine_state.long_task_mgr.start(1);
 
     linfo!("Number of Rayon threads: {}", rayon::current_num_threads());

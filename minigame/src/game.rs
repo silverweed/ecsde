@@ -1,8 +1,8 @@
 use super::debug;
 use super::{Game_Resources, Game_State};
-use std::time::Duration;
 use inle_cfg::Cfg_Var;
 use inle_input::core_actions::Core_Action;
+use std::time::Duration;
 
 pub struct CVars {
     pub gameplay_update_tick_ms: Cfg_Var<f32>,
@@ -38,7 +38,6 @@ pub struct Debug_CVars {
     pub update_physics: Cfg_Var<bool>,
     pub print_draw_stats: Cfg_Var<bool>,
 }
-
 
 //
 // Init
@@ -82,21 +81,21 @@ pub fn internal_game_init() -> Box<Game_State> {
 
     inle_gfx::render_window::set_clear_color(&mut window, inle_common::colors::rgb(30, 30, 30));
 
-    let input = inle_input::input_state::create_input_state(&env);
+    let mut input = inle_input::input_state::create_input_state(&env);
+    inle_input::joystick::init_joysticks(&window, &env, &mut input.raw.joy_state);
+
+    //inle_ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
 
     let seed = inle_core::rand::new_random_seed().unwrap();
     let rng = inle_core::rand::new_rng_with_seed(seed);
 
     let mut debug_systems = inle_app::debug_systems::Debug_Systems::new(&config);
-    //debug_systems.show_overlay = inle_app::debug_systems::Overlay_Shown::Trace;
 
     let time = inle_core::time::Time::default();
     let frame_alloc =
         inle_alloc::temp::Temp_Allocator::with_capacity(inle_common::units::gigabytes(1));
 
-    let cvars = create_cvars(&config);
-    #[cfg(debug_assertions)]
-    let debug_cvars = create_debug_cvars(&config);
+    let engine_cvars = inle_app::app::create_engine_cvars(&config);
 
     Box::new(Game_State {
         env,
@@ -113,9 +112,7 @@ pub fn internal_game_init() -> Box<Game_State> {
         should_quit: false,
         default_font: None,
         debug_systems,
-        cvars,
-        #[cfg(debug_assertions)]
-        debug_cvars,
+        engine_cvars,
         #[cfg(debug_assertions)]
         fps_counter: inle_debug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(1)),
     })
@@ -257,73 +254,4 @@ pub fn render(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     }
 
     inle_win::window::display(win);
-}
-
-fn create_cvars(cfg: &inle_cfg::Config) -> CVars {
-    let gameplay_update_tick_ms = Cfg_Var::new("engine/gameplay/update_tick_ms", cfg);
-    let gameplay_max_time_budget_ms = Cfg_Var::new("engine/gameplay/max_time_budget_ms", cfg);
-    let clear_color = Cfg_Var::new("engine/rendering/clear_color", cfg);
-    let vsync = Cfg_Var::new("engine/window/vsync", cfg);
-    let enable_shaders = Cfg_Var::new("engine/rendering/enable_shaders", cfg);
-    let enable_shadows = Cfg_Var::new("engine/rendering/enable_shadows", cfg);
-    let enable_particles = Cfg_Var::new("engine/rendering/enable_particles", cfg);
-    let ambient_intensity = Cfg_Var::new("game/world/lighting/ambient_intensity", cfg);
-    let ambient_color = Cfg_Var::new("game/world/lighting/ambient_color", cfg);
-
-    CVars {
-        gameplay_update_tick_ms,
-        gameplay_max_time_budget_ms,
-        vsync,
-        clear_color,
-        enable_shaders,
-        enable_shadows,
-        enable_particles,
-        ambient_intensity,
-        ambient_color,
-    }
-}
-
-#[cfg(debug_assertions)]
-fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
-    let render_debug_visualization = Cfg_Var::new("debug/rendering/debug_visualization", cfg);
-    let draw_lights = Cfg_Var::new("debug/rendering/draw_lights", cfg);
-    let draw_particle_emitters = Cfg_Var::new("debug/rendering/draw_particle_emitters", cfg);
-    let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
-    let draw_entities = Cfg_Var::new("debug/entities/draw_entities", cfg);
-    let draw_velocities = Cfg_Var::new("debug/entities/draw_velocities", cfg);
-    let draw_colliders = Cfg_Var::new("debug/collisions/draw_colliders", cfg);
-    let draw_debug_grid = Cfg_Var::new("debug/rendering/grid/draw_grid", cfg);
-    let debug_grid_square_size = Cfg_Var::new("debug/rendering/grid/square_size", cfg);
-    let debug_grid_opacity = Cfg_Var::new("debug/rendering/grid/opacity", cfg);
-    let debug_grid_font_size = Cfg_Var::new("debug/rendering/grid/font_size", cfg);
-    let draw_fps_graph = Cfg_Var::new("debug/graphs/fps", cfg);
-    let draw_prev_frame_t_graph = Cfg_Var::new("debug/graphs/prev_frame_t", cfg);
-    let draw_mouse_rulers = Cfg_Var::new("debug/window/draw_mouse_rulers", cfg);
-    let draw_buf_alloc = Cfg_Var::new("debug/rendering/draw_buf_alloc", cfg);
-    let display_log_window = Cfg_Var::new("engine/debug/log_window/display", cfg);
-    let display_overlays = Cfg_Var::new("engine/debug/overlay/display", cfg);
-    let update_physics = Cfg_Var::new("engine/debug/physics/update", cfg);
-    let print_draw_stats = Cfg_Var::new("debug/rendering/print_draw_stats", cfg);
-
-    Debug_CVars {
-        render_debug_visualization,
-        draw_lights,
-        draw_particle_emitters,
-        trace_overlay_refresh_rate,
-        draw_colliders,
-        draw_entities,
-        draw_velocities,
-        draw_debug_grid,
-        debug_grid_square_size,
-        debug_grid_opacity,
-        debug_grid_font_size,
-        draw_fps_graph,
-        draw_prev_frame_t_graph,
-        draw_mouse_rulers,
-        draw_buf_alloc,
-        display_log_window,
-        display_overlays,
-        update_physics,
-        print_draw_stats,
-    }
 }

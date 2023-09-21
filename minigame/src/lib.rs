@@ -40,9 +40,7 @@ pub struct Game_State {
 
     debug_systems: inle_app::debug_systems::Debug_Systems,
 
-    cvars: game::CVars,
-    #[cfg(debug_assertions)]
-    debug_cvars: game::Debug_CVars,
+    engine_cvars: inle_app::app::Engine_CVars,
 
     #[cfg(debug_assertions)]
     fps_counter: inle_debug::fps::Fps_Counter,

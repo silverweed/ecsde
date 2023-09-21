@@ -1,4 +1,5 @@
 use crate::events::Input_Raw_Event;
+use inle_cfg::Cfg_Var;
 use inle_core::env::Env_Info;
 use inle_win::window::Window_Handle;
 use std::convert::TryFrom;
@@ -21,10 +22,16 @@ pub enum Joystick_Type {
     XBox360,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default)]
+pub struct Joystick_Config {
+    pub deadzone: Cfg_Var<f32>,
+}
+
+#[derive(Clone, Debug)]
 pub struct Joystick {
     pub id: Joystick_Id,
     pub joy_type: Joystick_Type,
+    pub config: Joystick_Config,
 }
 
 // Don't change the order of these! @Volatile with the mappings below.
@@ -144,7 +151,7 @@ pub fn is_joy_connected(state: &Joystick_State, id: Joystick_Id) -> bool {
 
 #[inline]
 pub fn get_joy_type(state: &Joystick_State, id: Joystick_Id) -> Option<Joystick_Type> {
-    state.joysticks[id as usize].map(|j| j.joy_type)
+    state.joysticks[id as usize].as_ref().map(|j| j.joy_type)
 }
 
 #[inline]
@@ -333,6 +340,7 @@ fn register_joystick(
             joy_state.joysticks[joystick_id as usize] = Some(Joystick {
                 id: joystick_id,
                 joy_type,
+                config: Joystick_Config::default(),
             });
             true
         }

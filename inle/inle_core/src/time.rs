@@ -8,6 +8,9 @@ pub struct Time {
     /// How much time elapsed since the start of Time, as latest recorded during update()
     real_time: Duration,
 
+    /// Realtime duration of the previous frame
+    prev_frame_time: Duration,
+
     /// The latest updated real delta time
     real_dt: Duration,
 
@@ -38,6 +41,7 @@ impl Default for Time {
         Time {
             start_time: now,
             real_time: now.elapsed(),
+            prev_frame_time: Duration::default(),
             real_dt: Duration::default(),
             game_time: Duration::default(),
             prev_game_time: Duration::default(),
@@ -63,9 +67,9 @@ impl Time {
         self.stepping = false;
 
         // Update real time
-        let prev_real_time = self.real_time;
+        self.prev_frame_time = self.real_time;
         self.real_time = self.start_time.elapsed();
-        self.real_dt = self.real_time - prev_real_time;
+        self.real_dt = self.real_time - self.prev_frame_time;
 
         // Update game time
         self.prev_game_time = self.game_time;
@@ -122,6 +126,11 @@ impl Time {
     #[inline(always)]
     pub fn game_time(&self) -> Duration {
         self.game_time
+    }
+
+    #[inline(always)]
+    pub fn prev_frame_time(&self) -> Duration {
+        self.prev_frame_time
     }
 }
 

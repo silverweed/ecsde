@@ -15,4 +15,5 @@ extern crate inle_math;
 
 pub mod app;
 pub mod app_config;
+pub mod debug_overlays;
 pub mod debug_systems;

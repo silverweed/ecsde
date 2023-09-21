@@ -11,6 +11,7 @@ win-glfw = ["glfw"]
 default = ["win-glfw"]
 
 [dependencies]
+inle_cfg = { path = "../inle_cfg" }
 inle_common = { path = "../inle_common" }
 inle_core = { path = "../inle_core" }
 inle_diagnostics = { path = "../inle_diagnostics" }

@@ -1,5 +1,4 @@
 mod console_executor;
-mod overlays;
 
 use super::{Game_Resources, Game_State};
 use inle_app::debug_systems::Debug_Systems;
@@ -143,7 +142,17 @@ pub fn update_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) 
 
     handle_debug_actions(game_state, game_res);
 
-    overlays::update_debug(game_state, game_res);
+    game_state.fps_counter.tick(&game_state.time.dt());
+
+    inle_app::debug_overlays::update_debug(
+        &game_state.engine_cvars,
+        &game_state.config,
+        &mut game_state.window,
+        &mut game_state.debug_systems,
+        &game_state.time,
+        &game_state.fps_counter,
+        &game_state.input,
+    );
 }
 
 fn update_console(game_state: &mut Game_State) {

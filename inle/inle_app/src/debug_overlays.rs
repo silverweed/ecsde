@@ -1,68 +1,57 @@
-use crate::{Game_State, Game_Resources};
-use std::time::Duration;
+use inle_common::colors;
+use inle_common::paint_props::Paint_Properties;
 use inle_common::stringid::String_Id;
 use inle_core::time;
-use inle_common::paint_props::Paint_Properties;
-use std::convert::TryInto;
-use std::collections::HashMap;
-use inle_math::vector::{Vec2i,Vec2f};
-use inle_math::transform::Transform2D;
-use inle_math::shapes::{Circle, Arrow, Line};
+use inle_debug::painter::Debug_Painter;
 use inle_gfx::render_window::{self, Render_Window_Handle};
 use inle_input::mouse;
+use inle_math::shapes::{Arrow, Circle, Line};
+use inle_math::transform::Transform2D;
+use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window;
-use inle_common::colors;
-use inle_debug::painter::Debug_Painter;
+use std::convert::TryInto;
+use std::time::Duration;
 
 pub fn update_debug(
-    game_state: &mut Game_State,
-    game_resources: &mut Game_Resources,
+    cvars: &crate::app::Engine_CVars,
+    config: &inle_cfg::Config,
+    window: &mut Render_Window_Handle,
+    debug_systems: &mut crate::debug_systems::Debug_Systems,
+    time: &time::Time,
+    fps_counter: &inle_debug::fps::Fps_Counter,
+    input_state: &inle_input::input_state::Input_State,
 ) {
-    let collision_debug_data: HashMap<String_Id, inle_physics::physics::Collision_System_Debug_Data> = HashMap::default();
-    let dt = game_state.time.dt();
-    let debug_systems = &mut game_state.debug_systems;
-    let cvars = &game_state.cvars;
-    let dbg_cvars = &game_state.debug_cvars;
-    let config = &game_state.config;
+    let dt = time.dt();
 
     // Overlays
-    let display_overlays = dbg_cvars
-        .display_overlays
-        .read(config);
+    let display_overlays = cvars.display_overlays.read(config);
     let overlays_were_visible = debug_systems.debug_ui.is_overlay_enabled(sid!("time"));
     if display_overlays {
         if !overlays_were_visible {
             set_debug_hud_enabled(&mut debug_systems.debug_ui, true);
         }
 
-        update_time_debug_overlay(
-            debug_systems.debug_ui.get_overlay(sid!("time")),
-            &game_state.time,
-            1
-        );
+        update_time_debug_overlay(debug_systems.debug_ui.get_overlay(sid!("time")), time);
 
         update_fps_debug_overlay(
             debug_systems.debug_ui.get_overlay(sid!("fps")),
-            &game_state.fps_counter,
-            (1000.
-                / cvars
-                    .gameplay_update_tick_ms
-                    .read(config)) as u64,
+            fps_counter,
+            (1000. / cvars.gameplay_update_tick_ms.read(config)) as u64,
             cvars.vsync.read(config),
         );
 
-        update_win_debug_overlay(
-            debug_systems.debug_ui.get_overlay(sid!("window")),
-            &game_state.window,
-        );
+        update_win_debug_overlay(debug_systems.debug_ui.get_overlay(sid!("window")), window);
     } else if overlays_were_visible {
         set_debug_hud_enabled(&mut debug_systems.debug_ui, false);
     }
 
-    let input_state = &game_state.input;
-    let draw_mouse_rulers = dbg_cvars
-        .draw_mouse_rulers
-        .read(config);
+    update_joystick_debug_overlay(
+        debug_systems.debug_ui.get_overlay(sid!("joysticks")),
+        &input_state.raw.joy_state,
+        config,
+    );
+
+    let draw_mouse_rulers = cvars.draw_mouse_rulers.read(config);
     // NOTE: this must be always cleared or the mouse position will remain after enabling and disabling the cfg var
     debug_systems.debug_ui.get_overlay(sid!("mouse")).clear();
     if draw_mouse_rulers {
@@ -70,14 +59,14 @@ pub fn update_debug(
         update_mouse_debug_overlay(
             debug_systems.debug_ui.get_overlay(sid!("mouse")),
             painter,
-            &game_state.window,
+            window,
             None,
             input_state,
         );
     }
 
     /*
-    let display_log_window = dbg_cvars
+    let display_log_window = cvars
         .display_log_window
         .read(config);
     let log_window_enabled = debug_systems
@@ -90,161 +79,52 @@ pub fn update_debug(
     }
     */
 
-    let draw_fps_graph = dbg_cvars
-        .draw_fps_graph
-        .read(config);
+    let draw_fps_graph = cvars.draw_fps_graph.read(config);
     debug_systems
         .debug_ui
         .set_graph_enabled(sid!("fps"), draw_fps_graph);
     if draw_fps_graph {
         update_graph_fps(
             debug_systems.debug_ui.get_graph(sid!("fps")),
-            &game_state.time,
-            &game_state.fps_counter,
+            time,
+            fps_counter,
         );
     }
 
-    let draw_prev_frame_t_graph = dbg_cvars
-        .draw_prev_frame_t_graph
-        .read(config);
+    let draw_prev_frame_t_graph = cvars.draw_prev_frame_t_graph.read(config);
     debug_systems
         .debug_ui
         .set_graph_enabled(sid!("prev_frame_time"), draw_prev_frame_t_graph);
     if draw_prev_frame_t_graph {
         update_graph_prev_frame_t(
             debug_systems.debug_ui.get_graph(sid!("prev_frame_time")),
-            &game_state.time,
-            &game_state.prev_frame_time,
+            time,
         );
     }
 
-    ////// Per-Level debugs //////
-    /*
-    let painters = &mut debug_systems.painters;
-    let debug_ui = &mut debug_systems.debug_ui;
-    let target_win_size = game_state.app_config.target_win_size;
-
-    let is_paused = game_state.time.paused && !game_state.time.is_stepping();
-    let cvars = &game_state.debug_cvars;
-    let config = &game_state.config;
-    let draw_entities = cvars.draw_entities.read(config);
-    let draw_component_lists = cvars.draw_component_lists.read(config);
-    let draw_velocities = cvars.draw_velocities.read(config);
-    let draw_entity_prev_frame_ghost = cvars
-        .draw_entity_prev_frame_ghost
-        .read(config);
-    let draw_entity_pos_history = cvars.draw_entity_pos_history.read(config);
-    let draw_colliders = cvars.draw_colliders.read(config);
-    let draw_debug_grid = cvars.draw_debug_grid.read(config);
-    let grid_square_size = cvars.debug_grid_square_size.read(config);
-    let grid_font_size = cvars.debug_grid_font_size.read(config);
-    let grid_opacity = cvars.debug_grid_opacity.read(config) as u8;
-    let draw_world_chunks = cvars.draw_world_chunks.read(config);
-    let draw_lights = cvars.draw_lights.read(config);
-    let draw_particle_emitters = cvars.draw_particle_emitters.read(config);
-    let global_painter = &mut debug_systems.global_painter;
-    let window = &mut game_state.window;
-    let shader_cache = &mut game_resources.shader_cache;
-    let env = &game_state.env;
-    let particle_mgrs = &engine_state.systems.particle_mgrs;
-
-    game_state
-        .gameplay_system
-        .levels
-        .foreach_active_level(|level| {
-            let debug_painter = painters
-                .get_mut(&level.id)
-                .unwrap_or_else(|| fatal!("Debug painter not found for level {:?}", level.id));
-
-            if display_overlays {
-                update_entities_and_draw_calls_debug_overlay(
-                    debug_ui.get_overlay(sid!("entities")),
-    let cfg = &game_state.config;
-                    &level.world,
-                    window,
-                );
-                update_camera_debug_overlay(
-                    debug_ui.get_overlay(sid!("camera")),
-                    &level.get_camera_transform(),
-                );
-
-                if let Some(cls_debug_data) = collision_debug_data.get(&level.id) {
-                    update_physics_debug_overlay(
-                        debug_ui.get_overlay(sid!("physics")),
-                        cls_debug_data,
-                        &level.chunks,
-                    );
-                }
-            }
-
-            if draw_entities {
-                debug_draw_transforms(
-                    debug_painter,
-                    &level.world,
-                    window,
-                    input_state,
-                    &level.get_camera_transform(),
-                );
-            }
-
-            if draw_velocities {
-                debug_draw_velocities(debug_painter, &level.world);
-            }
-
-            if draw_entity_prev_frame_ghost {
-                let batches = lv_batches.get_mut(&level.id).unwrap();
-                debug_draw_entities_prev_frame_ghost(
-                    window,
-                    batches,
-                    shader_cache,
-                    env,
-                    &mut level.world,
-                    is_paused,
-                );
-            }
-
-            if draw_entity_pos_history {
-                pos_hist_system.update(&mut level.world, dt, cfg);
-                debug_draw_entities_pos_history(debug_painter, &level.world);
-            }
-
-            if draw_component_lists {
-                debug_draw_component_lists(debug_painter, &level.world);
-            }
-
-            if draw_colliders {
-                debug_draw_colliders(debug_painter, &level.world, &level.phys_world);
-            }
-
-            if draw_lights {
-                debug_draw_lights(global_painter, debug_painter, &level.lights);
-            }
-
-            if draw_particle_emitters {
-                debug_draw_particle_emitters(debug_painter, particle_mgrs.get(&level.id).unwrap());
-            }
-
-            // Debug grid
-            if draw_debug_grid {
-                debug_draw_grid(
-                    debug_painter,
-                    &level.get_camera_transform(),
-                    target_win_size,
-                    grid_square_size,
-                    grid_opacity,
-                    grid_font_size as _,
-                );
-            }
-
-            if draw_world_chunks {
-                level.chunks.debug_draw(debug_painter);
-            }
-        });
-    */
+    let draw_grid = cvars.draw_debug_grid.read(config);
+    if draw_grid {
+        let camera_xform = Transform2D::default();
+        let square_size = cvars.debug_grid_square_size.read(config);
+        let opacity = cvars.debug_grid_opacity.read(config);
+        let font_size = cvars.debug_grid_font_size.read(config);
+        let win_size = window::get_window_real_size(window);
+        debug_draw_grid(
+            &mut debug_systems.global_painter,
+            &camera_xform,
+            win_size,
+            square_size,
+            opacity as _,
+            font_size as _,
+        );
+    }
 
     // @Cleanup
-    if dbg_cvars.draw_buf_alloc.read(config) {
-        inle_debug::backend_specific_debugs::draw_backend_specific_debug(&mut game_state.window, &mut game_state.debug_systems.global_painter);
+    if cvars.draw_buf_alloc.read(config) {
+        inle_debug::backend_specific_debugs::draw_backend_specific_debug(
+            window,
+            &mut debug_systems.global_painter,
+        );
     }
 }
 
@@ -252,14 +132,11 @@ pub fn update_debug(
 fn update_joystick_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     joy_state: &inle_input::joystick::Joystick_State,
-    input_cfg: crate::input::Input_Config,
     cfg: &inle_cfg::Config,
 ) {
     use inle_input::joystick;
 
     debug_overlay.clear();
-
-    let deadzone = input_cfg.joy_deadzone.read(cfg);
 
     let (real_axes, joy_mask) = inle_input::joystick::get_all_joysticks_axes_values(joy_state);
 
@@ -273,6 +150,12 @@ fn update_joystick_debug_overlay(
                 let axis: joystick::Joystick_Axis = i.try_into().unwrap_or_else(|err| {
                     fatal!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
                 });
+                let deadzone = joy_state.joysticks[joy_id as usize]
+                    .as_ref()
+                    .unwrap()
+                    .config
+                    .deadzone
+                    .read(cfg);
                 debug_overlay
                     .add_line(&format!("{:?}: {:5.2}", axis, axes[i as usize]))
                     .with_color(if axes[i as usize].abs() > deadzone {
@@ -289,18 +172,16 @@ fn update_joystick_debug_overlay(
 fn update_time_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     time: &time::Time,
-    n_updates: u32,
 ) {
     debug_overlay.clear();
 
     debug_overlay
         .add_line(&format!(
-            "[time] game: {:.2}, real: {:.2}, scale: {:.2}, paused: {}, n.upd: {}",
+            "[time] game: {:.2}, real: {:.2}, scale: {:.2}, paused: {}",
             time.game_time().as_secs_f32(),
             time.real_time().as_secs_f32(),
             time.time_scale,
             if time.paused { "yes" } else { "no" },
-            n_updates,
         ))
         .with_color(colors::rgb(100, 200, 200));
 }
@@ -344,7 +225,9 @@ fn update_mouse_debug_overlay(
         .add_line(&format!("s {},{}", pos.x, pos.y))
         .with_color(colors::rgba(220, 220, 220, 220));
     if let Some(camera) = camera {
-        let mpos = Vec2i::from(Vec2f::from(mouse::raw_mouse_pos(&input_state.raw.mouse_state)));
+        let mpos = Vec2i::from(Vec2f::from(mouse::raw_mouse_pos(
+            &input_state.raw.mouse_state,
+        )));
         let wpos = render_window::mouse_pos_in_world(window, mpos, &camera);
         debug_overlay
             .add_line(&format!("w {:.2},{:.2}", wpos.x, wpos.y,))
@@ -437,227 +320,6 @@ fn update_record_debug_overlay(
             .with_color(colors::rgb(200, 30, 30));
     }
 }
-
-/*
-#[cfg(debug_assertions)]
-fn debug_draw_colliders(
-    debug_painter: &mut Debug_Painter,
-    ecs_world: &Ecs_World,
-    phys_world: &Physics_World,
-) {
-    use crate::collisions::Game_Collision_Layer;
-    use inle_physics::collider::{C_Collider, Collision_Shape};
-    use std::convert::TryFrom;
-
-    foreach_entity!(ecs_world,
-        read: C_Collider, C_Spatial2D;
-        write: ;
-    |_e, (collider_comp, _spatial): (&C_Collider, &C_Spatial2D), ()| {
-        for collider in phys_world.get_all_colliders(collider_comp.phys_body_handle) {
-            // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
-            // @Incomplete: scale?
-            let mut transform = Transform2D::from_pos_rot_scale(collider.position, rad(0.), v2!(1., 1.));
-
-            debug_painter.add_text(
-                &Game_Collision_Layer::try_from(collider.layer).map_or_else(
-                    |_| format!("? {}", collider.layer),
-                    |gcl| format!("{:?}", gcl),
-                ),
-                collider.position,
-                5,
-                colors::BLACK);
-
-            let mut cld_color = colors::rgba(255, 255, 0, 100);
-
-            let colliding_with = phys_world.get_collisions(collider.handle);
-            if !colliding_with.is_empty() {
-                cld_color = colors::rgba(255, 0, 0, 100);
-            }
-
-            for cls_data in colliding_with {
-                let oth_cld = phys_world.get_collider(cls_data.other_collider).unwrap();
-                debug_painter.add_arrow(Arrow {
-                    center: collider.position,
-                    direction: oth_cld.position - collider.position,
-                    thickness: 1.,
-                    arrow_size: 5.,
-                }, colors::GREEN);
-                debug_painter.add_arrow(Arrow {
-                    center: collider.position, // @Incomplete: it'd be nice to have the exact collision position
-                    direction: cls_data.info.normal * 20.0,
-                    thickness: 1.,
-                    arrow_size: 5.,
-                }, colors::PINK);
-            }
-
-            match collider.shape {
-                Collision_Shape::Rect { width, height } => {
-                    transform.translate(-width * 0.5, -height * 0.5);
-                    debug_painter.add_rect(Vec2f::new(width, height), &transform, cld_color);
-                }
-                Collision_Shape::Circle { radius } => {
-                    transform.translate(-radius * 0.5, -radius * 0.5);
-                    debug_painter.add_circle(
-                        Circle {
-                            center: collider.position,
-                            radius,
-                        },
-                        cld_color,
-                    );
-                }
-                _ => {}
-            }
-
-            debug_painter.add_circle(
-                Circle {
-                    center: collider.position,
-                    radius: 2.,
-                },
-                colors::ORANGE);
-
-            debug_painter.add_text(
-                &format!("{},{}", collider.handle.gen, collider.handle.index),
-                collider.position + v2!(2., -3.),
-                5, colors::ORANGE);
-        }
-    });
-}
-
-#[cfg(debug_assertions)]
-fn debug_draw_transforms(
-    debug_painter: &mut Debug_Painter,
-    ecs_world: &Ecs_World,
-    window: &Render_Window_Handle,
-    input_state: &Input_State,
-    camera: &Transform2D,
-) {
-    use inle_ecs::ecs_world::Entity;
-
-    let mpos = render_window::mouse_pos_in_world(window, &input_state.raw.mouse_state, camera);
-    let mut entity_overlapped = (Entity::INVALID, 0.);
-    foreach_entity!(ecs_world,
-        read: C_Spatial2D;
-        write: ;
-        |entity, (spatial, ): (&C_Spatial2D,), ()| {
-        let transform = &spatial.transform;
-        let center = transform.position();
-        let radius = 5.0;
-        debug_painter.add_circle(
-            Circle {
-                radius,
-                center,
-            },
-            colors::rgb(50, 100, 200),
-        );
-
-        let overlap_radius = 8.0 * radius;
-        let dist2 = (center - mpos).magnitude2();
-        let overlaps = dist2 < overlap_radius * overlap_radius;
-        if overlaps && (entity_overlapped.0 == Entity::INVALID || dist2 < entity_overlapped.1) {
-            entity_overlapped = (entity, dist2);
-        }
-
-        debug_painter.add_text(
-            &format!(
-                "{:.2},{:.2}",
-                transform.position().x,
-                transform.position().y
-            ),
-            transform.position(),
-            7,
-            Paint_Properties {
-                color: colors::WHITE,
-                border_thick: 1.,
-                border_color: colors::BLACK,
-                ..Default::default()
-            },
-        );
-    });
-
-    if entity_overlapped.0 != Entity::INVALID {
-        let spatial = ecs_world
-            .get_component::<C_Spatial2D>(entity_overlapped.0)
-            .unwrap();
-        debug_painter.add_text(
-            &format!("{:?}", entity_overlapped.0),
-            spatial.transform.position() - v2!(0., 10.),
-            7,
-            Paint_Properties {
-                color: colors::WHITE,
-                border_thick: 1.,
-                border_color: colors::BLACK,
-                ..Default::default()
-            },
-        );
-    }
-}
-
-#[cfg(debug_assertions)]
-fn debug_draw_velocities(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
-    const COLOR: colors::Color = colors::rgb(100, 0, 120);
-
-    foreach_entity!(ecs_world,
-        read: C_Spatial2D;
-        write: ;
-    |_e, (spatial, ): (&C_Spatial2D, ), ()| {
-        if spatial.velocity.magnitude2() > 0. {
-            let transform = &spatial.transform;
-            debug_painter.add_arrow(
-                Arrow {
-                    center: transform.position(),
-                    direction: spatial.velocity * 0.5,
-                    thickness: 3.,
-                    arrow_size: 20.,
-                },
-                COLOR,
-            );
-            debug_painter.add_shaded_text(
-                &spatial.velocity.to_string(),
-                transform.position() + Vec2f::new(1., -15.),
-                12,
-                COLOR,
-                colors::WHITE,
-            );
-        }
-    });
-}
-
-#[cfg(debug_assertions)]
-fn debug_draw_component_lists(debug_painter: &mut Debug_Painter, ecs_world: &Ecs_World) {
-    use crate::debug::entity_debug::C_Debug_Data;
-
-    foreach_entity!(ecs_world,
-        read: ;
-        write: ;
-    |entity, (), ()| {
-        let pos = if let Some(spatial) = ecs_world.get_component::<C_Spatial2D>(entity) {
-            spatial.transform.position() + v2!(0., -15.)
-        } else {
-            v2!(0., 0.) // @Incomplete
-        };
-
-         if let Some(debug) = ecs_world.get_component::<C_Debug_Data>(entity) {
-            let name = debug.entity_name.as_ref();
-            debug_painter.add_shaded_text(name, pos, 7, colors::GREEN, colors::BLACK);
-        } else {
-            debug_painter.add_shaded_text("<Unknown>", pos, 7, colors::GREEN, colors::BLACK);
-        }
-
-        for (i, comp_name) in ecs_world.get_comp_name_list_for_entity(entity).iter().enumerate() {
-            debug_painter.add_shaded_text_with_shade_distance(
-                &format!(
-                    " {}", comp_name
-                ),
-                pos + v2!(0., (i + 1) as f32 * 8.5),
-                6,
-                colors::WHITE,
-                colors::BLACK,
-                v2!(0.5, 0.5),
-            );
-        }
-    });
-}
-*/
 
 #[cfg(debug_assertions)]
 fn debug_draw_lights(
@@ -835,18 +497,14 @@ fn update_graph_fps(
 }
 
 #[cfg(debug_assertions)]
-fn update_graph_prev_frame_t(
-    graph: &mut inle_debug::graph::Debug_Graph_View,
-    time: &time::Time,
-    prev_frame_t: &Duration,
-) {
+fn update_graph_prev_frame_t(graph: &mut inle_debug::graph::Debug_Graph_View, time: &time::Time) {
     const TIME_LIMIT: f32 = 10.0;
 
     inle_debug::graph::add_point_and_scroll(
         graph,
         time.real_time(),
         TIME_LIMIT,
-        prev_frame_t.as_secs_f32() * 1000.,
+        time.prev_frame_time().as_secs_f32() * 1000.,
     );
 }
 
