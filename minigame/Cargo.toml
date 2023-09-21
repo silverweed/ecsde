@@ -16,14 +16,11 @@ inle_core = { path = "../inle/inle_core" }
 inle_common = { path = "../inle/inle_common" }
 inle_debug = { path = "../inle/inle_debug" }
 inle_diagnostics = { path = "../inle/inle_diagnostics" }
-inle_ecs = { path = "../inle/inle_ecs" }
 inle_events = { path = "../inle/inle_events" }
 inle_fs = { path = "../inle/inle_fs" }
 inle_gfx = { path = "../inle/inle_gfx" }
 inle_input = { path = "../inle/inle_input" }
 inle_math = { path = "../inle/inle_math" }
-inle_physics = { path = "../inle/inle_physics" }
-inle_replay = { path = "../inle/inle_replay" }
 inle_resources = { path = "../inle/inle_resources" }
 inle_ui = { path = "../inle/inle_ui" }
 inle_win = { path = "../inle/inle_win" }

@@ -1,11 +1,5 @@
+use inle_debug::{calipers, console, debug_ui, log, painter::Debug_Painter};
 use std::sync::{Arc, Mutex};
-use {
-    inle_core::env::Env_Info,
-    inle_common::stringid::String_Id,
-    inle_core::rand::Default_Rng_Seed,
-    inle_debug::{calipers, console, debug_ui, log, painter::Debug_Painter},
-    inle_resources::gfx::Gfx_Resources,
-};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Overlay_Shown {
@@ -28,7 +22,7 @@ pub struct Debug_Systems {
 }
 
 impl Debug_Systems {
-    pub fn new(cfg: &inle_cfg::Config, rng_seed: Default_Rng_Seed) -> Debug_Systems {
+    pub fn new(cfg: &inle_cfg::Config) -> Debug_Systems {
         let ms_per_frame =
             inle_cfg::Cfg_Var::<f32>::new("engine/gameplay/update_tick_ms", cfg).read(cfg);
         let debug_log_size =

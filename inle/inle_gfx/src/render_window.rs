@@ -78,11 +78,7 @@ pub fn mouse_pos_in_world(
     mouse_pos: Vec2i,
     camera: &Transform2D,
 ) -> Vec2f {
-    unproject_screen_pos(
-        mouse_pos,
-        window,
-        camera,
-    )
+    unproject_screen_pos(mouse_pos, window, camera)
 }
 
 #[inline(always)]

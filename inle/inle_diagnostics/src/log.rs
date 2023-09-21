@@ -80,7 +80,9 @@ pub fn add_default_logger(loggers: &mut Loggers) {
 
 pub fn set_log_file_line(loggers: &mut Loggers, idx: usize, log_file_line: bool) {
     let mut loggers = loggers.lock().unwrap();
-    loggers.get_mut(idx).map(|l| l.set_log_file_line(log_file_line));
+    loggers
+        .get_mut(idx)
+        .map(|l| l.set_log_file_line(log_file_line));
 }
 
 pub fn add_logger(loggers: &mut Loggers, logger: Box<dyn Logger>) {

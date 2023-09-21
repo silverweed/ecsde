@@ -1,12 +1,11 @@
-use crate::app::Engine_State;
-use inle_cfg::{Config, Cfg_Var};
+use crate::debug_systems::Debug_Systems;
 use inle_alloc::temp::Temp_Allocator;
+use inle_cfg::{Cfg_Var, Config};
 use inle_common::colors;
 use inle_common::units::format_bytes_pretty;
 use inle_core::time;
 use inle_debug::graph;
 use inle_debug::overlay::Debug_Overlay;
-use crate::debug_systems::Debug_Systems;
 use inle_diagnostics::tracer::{self, Trace_Tree, Tracer_Node_Final};
 use inle_math::transform::Transform2D;
 use std::borrow::Cow;
@@ -53,7 +52,11 @@ fn add_tracer_node_line(
         .with_metadata(sid!("full_tag"), node.info.tag.to_string());
 }
 
-pub fn update_trace_tree_overlay(debug_systems: &mut Debug_Systems, config: &Config, frame_alloc: &mut Temp_Allocator) {
+pub fn update_trace_tree_overlay(
+    debug_systems: &mut Debug_Systems,
+    config: &Config,
+    frame_alloc: &mut Temp_Allocator,
+) {
     fn add_tree_lines(
         tree: &Trace_Tree,
         total_traced_time: &Duration,
@@ -80,9 +83,7 @@ pub fn update_trace_tree_overlay(debug_systems: &mut Debug_Systems, config: &Con
         return;
     }
     let traces = &debug_frame.unwrap().traces;
-    let overlay = debug_systems
-        .debug_ui
-        .get_overlay(sid!("trace"));
+    let overlay = debug_systems.debug_ui.get_overlay(sid!("trace"));
 
     overlay.clear();
 
@@ -119,7 +120,11 @@ pub fn update_trace_tree_overlay(debug_systems: &mut Debug_Systems, config: &Con
     }
 }
 
-pub fn update_trace_flat_overlay(debug_systems: &mut Debug_Systems, config: &Config, frame_alloc: &mut Temp_Allocator) {
+pub fn update_trace_flat_overlay(
+    debug_systems: &mut Debug_Systems,
+    config: &Config,
+    frame_alloc: &mut Temp_Allocator,
+) {
     let scroller = &debug_systems.debug_ui.frame_scroller;
     let debug_log = &mut debug_systems.log;
     let frame = scroller.get_real_selected_frame();

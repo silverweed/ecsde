@@ -181,7 +181,9 @@ pub fn prepare_poll_events(window: &mut Window_Handle) {
     }
 
     if window.handle.should_close() {
-        window.events_buffer.push_back(Event::Window(glfw::WindowEvent::Close));
+        window
+            .events_buffer
+            .push_back(Event::Window(glfw::WindowEvent::Close));
     }
 }
 

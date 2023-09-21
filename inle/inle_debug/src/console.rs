@@ -19,7 +19,7 @@ mod history;
 
 use history::{Direction, History};
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Console_Status {
     Open,
     Closed,

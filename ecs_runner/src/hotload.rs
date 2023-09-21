@@ -48,7 +48,7 @@ pub fn lib_reload(lib_path: &str, unique_path: &mut PathBuf) -> ll::Library {
             unique_path, err
         );
     }
-    let super::Lib_Load_Res{ lib, path } = super::lib_load(lib_path, true).unwrap();
+    let super::Lib_Load_Res { lib, path } = super::lib_load(lib_path, true).unwrap();
     *unique_path = path;
     lib
 }

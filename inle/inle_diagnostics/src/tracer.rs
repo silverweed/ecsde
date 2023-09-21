@@ -203,7 +203,7 @@ impl Tracer {
     #[inline(always)]
     fn pop_scope_trace(&mut self) {
         let now = Instant::now();
-        let mut active_node = &mut self.saved_traces[self
+        let active_node = &mut self.saved_traces[self
             .cur_active
             .expect("[ ERROR ] Popped scope trace while none is active!")];
         active_node.info.end_t = now;

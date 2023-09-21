@@ -93,6 +93,11 @@ impl Debug_Frame_Scroller {
     }
 
     fn update_frame(&mut self, log: &Debug_Log) {
+        debug_assert!(
+            self.n_frames > 0,
+            "n_frames is 0! Have you properly configured the frame scroller?"
+        );
+
         self.cur_frame = ((log.hist_len - 1) % self.n_frames as u32) as u16;
         self.n_filled_frames = self.cur_frame + 1;
 

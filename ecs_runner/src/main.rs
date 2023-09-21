@@ -8,8 +8,8 @@ mod hotload;
 use game_api::Game_Api;
 use libloading as ll;
 use std::ffi::{c_char, CString};
-use std::path::{Path, PathBuf};
 use std::io;
+use std::path::{Path, PathBuf};
 
 use {hotload::*, std::sync::mpsc::Receiver};
 
@@ -49,20 +49,29 @@ fn main() -> io::Result<()> {
     let create_temp = cfg!(feature = "hotload");
     match lib_load(&game_dll_abs_path, create_temp) {
         Ok(res) => {
-            let mut game_lib = res.lib;
-            let mut unique_lib_path = res.path.clone();
+            let game_lib = res.lib;
+            let unique_lib_path = res.path.clone();
             match game_load(&game_lib) {
-                Ok(mut game_api) => {
+                Ok(game_api) => {
                     if let Err(main_err) = {
                         if game_api.unload.is_some() && game_api.reload.is_some() {
-                            main_with_hotload(argc, argv, &game_dll_abs_path, game_lib, unique_lib_path)
+                            main_with_hotload(
+                                argc,
+                                argv,
+                                &game_dll_abs_path,
+                                game_lib,
+                                unique_lib_path,
+                            )
                         } else {
-                            main_without_hotload(argc, argv, &game_dll_abs_path, game_lib)
+                            main_without_hotload(argc, argv, game_lib)
                         }
                     } {
                         if create_temp {
                             if let Err(rm_err) = std::fs::remove_file(&res.path) {
-                                eprintln!("[ WARNING ] Failed to remove old lib {:?}: {:?}", res.path, rm_err);
+                                eprintln!(
+                                    "[ WARNING ] Failed to remove old lib {:?}: {:?}",
+                                    res.path, rm_err
+                                );
                             }
                         }
                         Err(main_err)
@@ -74,7 +83,10 @@ fn main() -> io::Result<()> {
                     if create_temp {
                         let _err = game_lib.close();
                         if let Err(rm_err) = std::fs::remove_file(&res.path) {
-                            eprintln!("[ WARNING ] Failed to remove old lib {:?}: {:?}", res.path, rm_err);
+                            eprintln!(
+                                "[ WARNING ] Failed to remove old lib {:?}: {:?}",
+                                res.path, rm_err
+                            );
                         }
                     }
                     Err(io::Error::new(io::ErrorKind::Other, game_load_err))
@@ -84,15 +96,27 @@ fn main() -> io::Result<()> {
         Err(lib_load_err) => {
             if create_temp {
                 if let Err(rm_err) = std::fs::remove_file(&lib_load_err.path) {
-                    eprintln!("[ WARNING ] Failed to remove old lib {:?}: {:?}", lib_load_err.path, rm_err);
+                    eprintln!(
+                        "[ WARNING ] Failed to remove old lib {:?}: {:?}",
+                        lib_load_err.path, rm_err
+                    );
                 }
             }
-            panic!("[ ERROR ] Failed to load library '{:?}': {:?}", lib_load_err.path, lib_load_err.err);
+            panic!(
+                "[ ERROR ] Failed to load library '{:?}': {:?}",
+                lib_load_err.path, lib_load_err.err
+            );
         }
     }
 }
 
-fn main_with_hotload(argc: usize, argv: *const *const c_char, game_dll_abs_path: &str, mut game_lib: ll::Library, mut unique_lib_path: PathBuf) -> io::Result<()> {
+fn main_with_hotload(
+    argc: usize,
+    argv: *const *const c_char,
+    game_dll_abs_path: &str,
+    mut game_lib: ll::Library,
+    mut unique_lib_path: PathBuf,
+) -> io::Result<()> {
     eprintln!("[ INFO ] Running with hotload ENABLED");
 
     let mut game_api = game_load(&game_lib).unwrap();
@@ -130,7 +154,9 @@ fn main_with_hotload(argc: usize, argv: *const *const c_char, game_dll_abs_path:
         (game_api.shutdown)(game_state, game_resources);
     }
 
-    game_lib.close().map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+    game_lib
+        .close()
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
 
     if let Err(err) = std::fs::remove_file(&unique_lib_path) {
         eprintln!(
@@ -142,7 +168,11 @@ fn main_with_hotload(argc: usize, argv: *const *const c_char, game_dll_abs_path:
     Ok(())
 }
 
-fn main_without_hotload(argc: usize, argv: *const *const c_char, game_dll_abs_path: &str, game_lib: ll::Library) -> io::Result<()> {
+fn main_without_hotload(
+    argc: usize,
+    argv: *const *const c_char,
+    game_lib: ll::Library,
+) -> io::Result<()> {
     eprintln!("[ INFO ] Running with hotload DISABLED");
 
     let game_api = game_load(&game_lib).unwrap();
@@ -163,18 +193,24 @@ fn main_without_hotload(argc: usize, argv: *const *const c_char, game_dll_abs_pa
         (game_api.shutdown)(game_state, game_resources);
     }
 
-    game_lib.close().map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+    game_lib
+        .close()
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
 }
 
 fn game_load(game_lib: &ll::Library) -> Result<Game_Api<'_>, ll::Error> {
     unsafe {
-        let init= game_lib.get(b"game_init\0")?;
-        let update= game_lib.get(b"game_update\0")?;
-        let shutdown= game_lib.get(b"game_shutdown\0")?;
-        let unload= game_lib.get(b"game_unload\0").ok();
-        let reload= game_lib.get(b"game_reload\0").ok();
+        let init = game_lib.get(b"game_init\0")?;
+        let update = game_lib.get(b"game_update\0")?;
+        let shutdown = game_lib.get(b"game_shutdown\0")?;
+        let unload = game_lib.get(b"game_unload\0").ok();
+        let reload = game_lib.get(b"game_reload\0").ok();
         Ok(Game_Api {
-            init, update, shutdown, unload, reload
+            init,
+            update,
+            shutdown,
+            unload,
+            reload,
         })
     }
 }
@@ -186,7 +222,7 @@ struct Lib_Load_Res {
 
 struct Lib_Load_Err {
     pub err: ll::Error,
-    pub path: PathBuf
+    pub path: PathBuf,
 }
 
 impl std::fmt::Debug for Lib_Load_Err {
@@ -217,13 +253,15 @@ fn lib_load(lib_path: &str, create_temp: bool) -> Result<Lib_Load_Res, Lib_Load_
 
     eprintln!("[ INFO ] Loading lib {}", loaded_path.display());
 
-    unsafe { ll::Library::new(loaded_path.as_os_str()) }.map_err(|err| Lib_Load_Err {
-        err,
-        path: loaded_path.clone()
-    }).map(|lib| Lib_Load_Res {
-        lib,
-        path: loaded_path,
-    })
+    unsafe { ll::Library::new(loaded_path.as_os_str()) }
+        .map_err(|err| Lib_Load_Err {
+            err,
+            path: loaded_path.clone(),
+        })
+        .map(|lib| Lib_Load_Res {
+            lib,
+            path: loaded_path,
+        })
 }
 
 fn start_hotload(game_dll_path: PathBuf) -> io::Result<Receiver<()>> {

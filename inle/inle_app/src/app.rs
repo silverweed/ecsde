@@ -3,23 +3,19 @@ pub mod tracer_drawing;
 
 use crate::app_config::App_Config;
 use inle_alloc::temp::Temp_Allocator;
-use inle_core::tasks::Long_Task_Manager;
 use inle_common::units::*;
 use inle_common::Maybe_Error;
 use inle_core::env::Env_Info;
 use inle_core::rand;
+use inle_core::tasks::Long_Task_Manager;
 use inle_core::time;
 use inle_resources::gfx::Gfx_Resources;
 use inle_resources::gfx::Shader_Cache;
 
 #[cfg(debug_assertions)]
 use {
-    crate::debug_systems::Debug_Systems,
-    inle_cfg::Cfg_Var,
-    inle_common::colors,
-    inle_diagnostics::tracer,
-    std::convert::TryInto,
-    std::time::Duration,
+    crate::debug_systems::Debug_Systems, inle_cfg::Cfg_Var, inle_common::colors,
+    inle_diagnostics::tracer, std::convert::TryInto, std::time::Duration,
 };
 
 pub struct Engine_State<'r> {
@@ -71,7 +67,7 @@ pub fn create_engine_state<'r>(
         seed = rand::new_random_seed()?;
     }
     #[cfg(debug_assertions)]
-    let debug_systems = Debug_Systems::new(&config, seed);
+    let debug_systems = Debug_Systems::new(&config);
     let rng = rand::new_rng_with_seed(seed);
 
     Ok(Engine_State {
@@ -135,7 +131,11 @@ pub fn init_engine_systems(
 
 #[cfg(debug_assertions)]
 pub fn init_engine_debug(
-    engine_state: &mut Engine_State<'_>,
+    env: &inle_core::env::Env_Info,
+    config: &inle_cfg::Config,
+    debug_systems: &mut crate::debug_systems::Debug_Systems,
+    app_config: &crate::app_config::App_Config,
+    input_state: &inle_input::input_state::Input_State,
     gfx_resources: &mut Gfx_Resources<'_>,
     cfg: inle_debug::debug_ui::Debug_Ui_System_Config,
 ) -> Maybe_Error {
@@ -144,21 +144,18 @@ pub fn init_engine_debug(
     use inle_math::vector::{Vec2f, Vec2u};
 
     let font = gfx_resources.load_font(&inle_resources::gfx::font_path(
-        &engine_state.env,
-        cfg.font_name.read(&engine_state.config),
+        env,
+        cfg.font_name.read(config),
     ));
 
-    engine_state
-        .debug_systems
-        .global_painter
-        .init(gfx_resources, &engine_state.env);
+    debug_systems.global_painter.init(gfx_resources, env);
 
     let (win_w, win_h) = (
-        engine_state.app_config.target_win_size.0 as f32,
-        engine_state.app_config.target_win_size.1 as f32,
+        app_config.target_win_size.0 as f32,
+        app_config.target_win_size.1 as f32,
     );
 
-    let debug_ui = &mut engine_state.debug_systems.debug_ui;
+    let debug_ui = &mut debug_systems.debug_ui;
     debug_ui.set_font(font);
 
     // Frame scroller
@@ -170,29 +167,26 @@ pub fn init_engine_debug(
         scroller.pos.y = 15;
         scroller.cfg = inle_debug::frame_scroller::Debug_Frame_Scroller_Config {
             font,
-            font_size: Cfg_Var::new(
-                "engine/debug/frame_scroller/label_font_size",
-                &engine_state.config,
-            ),
+            font_size: Cfg_Var::new("engine/debug/frame_scroller/label_font_size", config),
             ui_scale: cfg.ui_scale,
         };
     }
 
-    let ui_scale = cfg.ui_scale.read(&engine_state.config);
+    let ui_scale = cfg.ui_scale.read(config);
     // Debug overlays
     {
         let mut debug_overlay_config = overlay::Debug_Overlay_Config {
             ui_scale: cfg.ui_scale,
-            row_spacing: Cfg_Var::new("engine/debug/overlay/row_spacing", &engine_state.config),
+            row_spacing: Cfg_Var::new("engine/debug/overlay/row_spacing", config),
             font_size: cfg.font_size,
-            pad_x: Cfg_Var::new("engine/debug/overlay/pad_x", &engine_state.config),
-            pad_y: Cfg_Var::new("engine/debug/overlay/pad_y", &engine_state.config),
-            background: Cfg_Var::new("engine/debug/overlay/background", &engine_state.config),
+            pad_x: Cfg_Var::new("engine/debug/overlay/pad_x", config),
+            pad_y: Cfg_Var::new("engine/debug/overlay/pad_y", config),
+            background: Cfg_Var::new("engine/debug/overlay/background", config),
             font,
             ..Default::default()
         };
 
-        let mut joy_overlay = debug_ui
+        let joy_overlay = debug_ui
             .create_overlay(sid!("joysticks"), &debug_overlay_config)
             .unwrap();
         joy_overlay.cfg.horiz_align = Align::End;
@@ -219,10 +213,8 @@ pub fn init_engine_debug(
         fps_overlay.cfg.vert_align = Align::End;
         fps_overlay.position = v2!(0.0, win_h);
 
-        debug_overlay_config.fadeout_time = Cfg_Var::new(
-            "engine/debug/overlay/msg/fadeout_time",
-            &engine_state.config,
-        );
+        debug_overlay_config.fadeout_time =
+            Cfg_Var::new("engine/debug/overlay/msg/fadeout_time", config);
         let msg_overlay = debug_ui
             .create_overlay(sid!("msg"), &debug_overlay_config)
             .unwrap();
@@ -230,28 +222,20 @@ pub fn init_engine_debug(
         msg_overlay.position = Vec2f::new(0.0, 0.0);
         debug_overlay_config.fadeout_time = Cfg_Var::new_from_val(0.0);
 
-        debug_overlay_config.pad_x =
-            Cfg_Var::new("engine/debug/overlay/mouse/pad_x", &engine_state.config);
-        debug_overlay_config.pad_y =
-            Cfg_Var::new("engine/debug/overlay/mouse/pad_y", &engine_state.config);
-        debug_overlay_config.background = Cfg_Var::new(
-            "engine/debug/overlay/mouse/background",
-            &engine_state.config,
-        );
+        debug_overlay_config.pad_x = Cfg_Var::new("engine/debug/overlay/mouse/pad_x", config);
+        debug_overlay_config.pad_y = Cfg_Var::new("engine/debug/overlay/mouse/pad_y", config);
+        debug_overlay_config.background =
+            Cfg_Var::new("engine/debug/overlay/mouse/background", config);
         let mouse_overlay = debug_ui
             .create_overlay(sid!("mouse"), &debug_overlay_config)
             .unwrap();
         mouse_overlay.cfg.horiz_align = Align::Begin;
         mouse_overlay.cfg.vert_align = Align::End;
 
-        debug_overlay_config.background = Cfg_Var::new(
-            "engine/debug/overlay/trace/background",
-            &engine_state.config,
-        );
-        debug_overlay_config.pad_x =
-            Cfg_Var::new("engine/debug/overlay/trace/pad_x", &engine_state.config);
-        debug_overlay_config.pad_y =
-            Cfg_Var::new("engine/debug/overlay/trace/pad_y", &engine_state.config);
+        debug_overlay_config.background =
+            Cfg_Var::new("engine/debug/overlay/trace/background", config);
+        debug_overlay_config.pad_x = Cfg_Var::new("engine/debug/overlay/trace/pad_x", config);
+        debug_overlay_config.pad_y = Cfg_Var::new("engine/debug/overlay/trace/pad_y", config);
         let trace_overlay = debug_ui
             .create_overlay(sid!("trace"), &debug_overlay_config)
             .unwrap();
@@ -262,18 +246,12 @@ pub fn init_engine_debug(
         // Trace overlay starts disabled
         debug_ui.set_overlay_enabled(sid!("trace"), false);
 
-        debug_overlay_config.background = Cfg_Var::new(
-            "engine/debug/overlay/record/background",
-            &engine_state.config,
-        );
-        debug_overlay_config.pad_x =
-            Cfg_Var::new("engine/debug/overlay/record/pad_x", &engine_state.config);
-        debug_overlay_config.pad_y =
-            Cfg_Var::new("engine/debug/overlay/record/pad_y", &engine_state.config);
-        debug_overlay_config.font_size = Cfg_Var::new(
-            "engine/debug/overlay/record/font_size",
-            &engine_state.config,
-        );
+        debug_overlay_config.background =
+            Cfg_Var::new("engine/debug/overlay/record/background", config);
+        debug_overlay_config.pad_x = Cfg_Var::new("engine/debug/overlay/record/pad_x", config);
+        debug_overlay_config.pad_y = Cfg_Var::new("engine/debug/overlay/record/pad_y", config);
+        debug_overlay_config.font_size =
+            Cfg_Var::new("engine/debug/overlay/record/font_size", config);
         let record_overlay = debug_ui
             .create_overlay(sid!("record"), &debug_overlay_config)
             .unwrap();
@@ -288,15 +266,9 @@ pub fn init_engine_debug(
             grid_xstep: Some(graph::Grid_Step::Fixed_Step(5.)),
             grid_ystep: Some(graph::Grid_Step::Fixed_Step(30.)),
             ui_scale: cfg.ui_scale,
-            label_font_size: Cfg_Var::new(
-                "engine/debug/graphs/label_font_size",
-                &engine_state.config,
-            ),
+            label_font_size: Cfg_Var::new("engine/debug/graphs/label_font_size", config),
             title: Some(String::from("FPS")),
-            title_font_size: Cfg_Var::new(
-                "engine/debug/graphs/title_font_size",
-                &engine_state.config,
-            ),
+            title_font_size: Cfg_Var::new("engine/debug/graphs/title_font_size", config),
             color: colors::YELLOW,
             low_threshold: Some((25.0, colors::RED)),
             high_threshold: Some((55.0, colors::GREEN)),
@@ -338,30 +310,22 @@ pub fn init_engine_debug(
         graph.size = Vec2u::new(win_w as _, (0.15 * win_h) as _);
     }
 
+    /*
     {
         let log_window_config = inle_debug::log_window::Log_Window_Config {
             font,
-            font_size: Cfg_Var::new("engine/debug/log_window/font_size", &engine_state.config),
+            font_size: Cfg_Var::new("engine/debug/log_window/font_size", config),
             title: std::borrow::Cow::Borrowed("Log"),
-            title_font_size: Cfg_Var::new(
-                "engine/debug/log_window/title_font_size",
-                &engine_state.config,
-            ),
-            header_height: Cfg_Var::new(
-                "engine/debug/log_window/header_height",
-                &engine_state.config,
-            ),
+            title_font_size: Cfg_Var::new("engine/debug/log_window/title_font_size", config),
+            header_height: Cfg_Var::new("engine/debug/log_window/header_height", config),
             ui_scale: cfg.ui_scale,
-            pad_x: Cfg_Var::new("engine/debug/log_window/pad_x", &engine_state.config),
-            pad_y: Cfg_Var::new("engine/debug/log_window/pad_y", &engine_state.config),
-            linesep: Cfg_Var::new("engine/debug/log_window/linesep", &engine_state.config),
-            scrolled_lines: Cfg_Var::new(
-                "engine/debug/log_window/scrolled_lines",
-                &engine_state.config,
-            ),
+            pad_x: Cfg_Var::new("engine/debug/log_window/pad_x", config),
+            pad_y: Cfg_Var::new("engine/debug/log_window/pad_y", config),
+            linesep: Cfg_Var::new("engine/debug/log_window/linesep", config),
+            scrolled_lines: Cfg_Var::new("engine/debug/log_window/scrolled_lines", config),
             page_scrolled_lines: Cfg_Var::new(
                 "engine/debug/log_window/page_scrolled_lines",
-                &engine_state.config,
+                config,
             ),
             max_lines: 2000,
         };
@@ -376,17 +340,16 @@ pub fn init_engine_debug(
 
         inle_diagnostics::log::add_logger(&mut engine_state.loggers, logger);
     }
+    */
 
     debug_ui.cfg = cfg;
 
-    /*
     {
         use inle_input::bindings::{Input_Action, Input_Action_Simple};
 
-        let console = &mut engine_state.debug_systems.console.lock().unwrap();
+        let console = &mut debug_systems.console.lock().unwrap();
         console.size = Vec2u::new(win_w as _, win_h as u32 / 2);
-        console.toggle_console_keys = engine_state
-            .input_state
+        console.toggle_console_keys = input_state
             .bindings
             .get_all_actions_triggering(sid!("toggle_console"))
             .iter()
@@ -404,18 +367,14 @@ pub fn init_engine_debug(
             .collect();
         console.init(inle_debug::console::Console_Config {
             font,
-            font_size: Cfg_Var::new("engine/debug/console/font_size", &engine_state.config),
-            pad_x: Cfg_Var::new("engine/debug/console/pad_x", &engine_state.config),
-            linesep: Cfg_Var::new("engine/debug/console/linesep", &engine_state.config),
-            opacity: Cfg_Var::new("engine/debug/console/opacity", &engine_state.config),
-            cur_line_opacity: Cfg_Var::new(
-                "engine/debug/console/cur_line_opacity",
-                &engine_state.config,
-            ),
+            font_size: Cfg_Var::new("engine/debug/console/font_size", config),
+            pad_x: Cfg_Var::new("engine/debug/console/pad_x", config),
+            linesep: Cfg_Var::new("engine/debug/console/linesep", config),
+            opacity: Cfg_Var::new("engine/debug/console/opacity", config),
+            cur_line_opacity: Cfg_Var::new("engine/debug/console/cur_line_opacity", config),
             ui_scale: debug_ui.cfg.ui_scale,
         });
     }
-    */
 
     Ok(())
 }
@@ -518,9 +477,17 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
                     Cfg_Var::<bool>::new("engine/debug/trace/view_flat", &engine_state.config)
                         .read(&engine_state.config);
                 if trace_view_flat {
-                    tracer_drawing::update_trace_flat_overlay(&mut engine_state.debug_systems, &engine_state.config, &mut engine_state.frame_alloc);
+                    tracer_drawing::update_trace_flat_overlay(
+                        &mut engine_state.debug_systems,
+                        &engine_state.config,
+                        &mut engine_state.frame_alloc,
+                    );
                 } else {
-                    tracer_drawing::update_trace_tree_overlay(&mut engine_state.debug_systems, &engine_state.config, &mut engine_state.frame_alloc);
+                    tracer_drawing::update_trace_tree_overlay(
+                        &mut engine_state.debug_systems,
+                        &engine_state.config,
+                        &mut engine_state.frame_alloc,
+                    );
                 }
                 engine_state.debug_systems.trace_overlay_update_t =
                     refresh_rate.read(&engine_state.config);
@@ -533,7 +500,11 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
         }
 
         Overlay_Shown::Threads => {
-            tracer_drawing::update_thread_overlay(&mut engine_state.debug_systems, &engine_state.app_config, &trace_roots);
+            tracer_drawing::update_thread_overlay(
+                &mut engine_state.debug_systems,
+                &engine_state.app_config,
+                &trace_roots,
+            );
         }
 
         _ => {}

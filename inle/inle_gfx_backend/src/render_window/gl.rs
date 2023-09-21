@@ -239,7 +239,10 @@ pub fn set_clear_color(_window: &mut Render_Window_Handle, color: Color) {
 pub fn clear(window: &mut Render_Window_Handle) {
     #[cfg(debug_assertions)]
     {
-        debug_assert!(window.start_frame_called, "You forgot to call render_window::start_new_frame()!");
+        debug_assert!(
+            window.start_frame_called,
+            "You forgot to call render_window::start_new_frame()!"
+        );
         window.start_frame_called = false;
     }
 
