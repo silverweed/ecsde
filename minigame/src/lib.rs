@@ -10,6 +10,7 @@ extern crate inle_common;
 extern crate inle_math;
 
 mod game;
+mod input;
 
 #[cfg(debug_assertions)]
 mod debug;
@@ -28,6 +29,7 @@ pub struct Game_State {
 
     time: inle_core::time::Time,
     cur_frame: u64,
+    prev_frame_time: std::time::Duration,
 
     frame_alloc: inle_alloc::temp::Temp_Allocator,
 
@@ -37,6 +39,13 @@ pub struct Game_State {
     default_font: inle_resources::gfx::Font_Handle,
 
     debug_systems: inle_app::debug_systems::Debug_Systems,
+
+    cvars: game::CVars,
+    #[cfg(debug_assertions)]
+    debug_cvars: game::Debug_CVars,
+
+    #[cfg(debug_assertions)]
+    fps_counter: inle_debug::fps::Fps_Counter,
 }
 
 pub struct Game_Resources<'r> {
@@ -75,6 +84,7 @@ pub unsafe extern "C" fn game_update(
     let game_state = &mut *game_state;
     let game_res = &mut *game_res;
 
+    let t_before_work = std::time::Instant::now();
     {
         trace!("game_update");
 
@@ -98,6 +108,8 @@ pub unsafe extern "C" fn game_update(
         //
         game::render(game_state, game_res);
     }
+
+    game_state.prev_frame_time = t_before_work.elapsed();
 
     game::end_frame(game_state);
 

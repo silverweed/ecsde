@@ -21,6 +21,7 @@ inle_fs = { path = "../inle/inle_fs" }
 inle_gfx = { path = "../inle/inle_gfx" }
 inle_input = { path = "../inle/inle_input" }
 inle_math = { path = "../inle/inle_math" }
+inle_physics = { path = "../inle/inle_physics" }
 inle_resources = { path = "../inle/inle_resources" }
 inle_ui = { path = "../inle/inle_ui" }
 inle_win = { path = "../inle/inle_win" }

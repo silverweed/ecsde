@@ -1,4 +1,5 @@
 mod console_executor;
+mod overlays;
 
 use super::{Game_Resources, Game_State};
 use inle_app::debug_systems::Debug_Systems;
@@ -141,6 +142,8 @@ pub fn update_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) 
     update_scroller(game_state);
 
     handle_debug_actions(game_state, game_res);
+
+    overlays::update_debug(game_state, game_res);
 }
 
 fn update_console(game_state: &mut Game_State) {
