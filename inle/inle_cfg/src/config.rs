@@ -98,7 +98,25 @@ impl Config {
                 if std::mem::discriminant(&val) == std::mem::discriminant(o.get()) {
                     o.insert(val);
                 } else {
-                    return Err(format!("Cfg_Var {:?} was not updated because its current value ({:?}) has a type different from the new one ({:?})", id, o.get(), val));
+                    return Err(format!("Cfg_Var {:?} was not updated because its current value ({:?}) has a type different from the new one ({:?}).", id, o.get(), val));
+                }
+            }
+        }
+        self.just_changed.insert(id);
+        Ok(())
+    }
+
+    // Only works if the cfg var is a bool
+    pub fn toggle_cfg(&mut self, id: String_Id) -> Result<(), String> {
+        match self.cfg_var_table.entry(id) {
+            Entry::Vacant(_v) => {
+                return Err(format!("Cfg_Var {:?} does not exist.", id));
+            }
+            Entry::Occupied(mut o) => {
+                if let Cfg_Value::Bool(val) = o.get() {
+                    o.insert(Cfg_Value::Bool(!val));
+                } else {
+                    return Err(format!("Cfg_Var {:?} was not updated because its current value ({:?}) has a type different from Bool.", id, o.get()));
                 }
             }
         }

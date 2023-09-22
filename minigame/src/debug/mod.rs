@@ -528,6 +528,10 @@ fn handle_debug_actions(game_state: &mut Game_State, game_res: &mut Game_Resourc
                 add_msg!(game_state, "Moved camera to origin");
             }
             (name, Action_Kind::Released) if *name == sid!("toggle_camera_on_player") => {}
+            (name, Action_Kind::Pressed) if *name == sid!("toggle_overlays") => {
+                game_state.config.toggle_cfg(sid!("engine/debug/overlay/display")).
+                    unwrap_or_else(|err| lerr!("{}", err));
+            }
             _ => {}
         }
     }

@@ -30,6 +30,7 @@ toggle_console: Tilde
 calipers: Mouse_Middle, CTRL+Mouse_Left
 debug_dig: LControl
 toggle_camera_on_player: Home, Delete
+toggle_overlays: CTRL+Tab
 
 # Game
 place_entity: Mouse_Left

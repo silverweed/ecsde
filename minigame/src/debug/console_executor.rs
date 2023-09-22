@@ -116,20 +116,9 @@ fn execute_command(cmd: Console_Cmd, game_state: &mut Game_State) -> Option<(Str
         }
         Console_Cmd::Toggle_Cfg_Var { name } => {
             linfo!("Toggling {}", name);
-            let val = game_state
-                .config
-                .read_cfg(String_Id::from(name.as_str()))
-                .unwrap_or(&Cfg_Value::Nil)
-                .clone();
-            if let Cfg_Value::Bool(val) = val {
-                game_state
-                    .config
-                    .write_cfg(String_Id::from(name.as_str()), Cfg_Value::Bool(!val))
-                    .unwrap();
-                None
-            } else {
-                Some((format!("Cfg_Var {} is not a bool!", name), colors::RED))
-            }
+            game_state.config.toggle_cfg(String_Id::from(name.as_str()))
+                .err()
+                .map(|msg| (msg, colors::RED))
         }
         Console_Cmd::Trace_Fn { fn_name } => {
             inle_app::app::set_traced_fn(&mut game_state.debug_systems, fn_name);
