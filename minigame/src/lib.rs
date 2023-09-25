@@ -41,13 +41,14 @@ pub struct Game_State {
 
     default_font: inle_resources::gfx::Font_Handle,
 
-    debug_systems: inle_app::debug_systems::Debug_Systems,
-
     engine_cvars: inle_app::app::Engine_CVars,
 
     ui: inle_ui::Ui_Context,
 
     phase_mgr: Phase_Manager,
+
+    #[cfg(debug_assertions)]
+    debug_systems: inle_app::debug_systems::Debug_Systems,
 
     #[cfg(debug_assertions)]
     fps_counter: inle_debug::fps::Fps_Counter,

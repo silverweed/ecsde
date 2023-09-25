@@ -1,9 +1,11 @@
-use super::debug;
 use super::{Game_Resources, Game_State};
 use inle_cfg::Cfg_Var;
 use inle_input::core_actions::Core_Action;
 use crate::phases::Phase_Args;
 use std::time::Duration;
+
+#[cfg(debug_assertions)]
+use super::debug;
 
 //
 // Init
@@ -55,6 +57,7 @@ pub fn internal_game_init() -> Box<Game_State> {
     let seed = inle_core::rand::new_random_seed().unwrap();
     let rng = inle_core::rand::new_rng_with_seed(seed);
 
+    #[cfg(debug_assertions)]
     let mut debug_systems = inle_app::debug_systems::Debug_Systems::new(&config);
 
     let time = inle_core::time::Time::default();
@@ -81,10 +84,11 @@ pub fn internal_game_init() -> Box<Game_State> {
         frame_alloc,
         should_quit: false,
         default_font: None,
-        debug_systems,
         ui,
         engine_cvars,
         phase_mgr,
+        #[cfg(debug_assertions)]
+        debug_systems,
         #[cfg(debug_assertions)]
         fps_counter: inle_debug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(1)),
     })
@@ -103,6 +107,8 @@ pub fn create_game_resources() -> Box<Game_Resources> {
 
 // Used to initialize game state stuff that needs resources
 pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources) {
+    use crate::phases;
+
     let font_name = inle_cfg::Cfg_Var::<String>::new("engine/debug/ui/font", &game_state.config);
     game_state.default_font = game_res.gfx.load_font(&inle_resources::gfx::font_path(
         &game_state.env,
@@ -111,9 +117,9 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
 
     inle_ui::init_ui(&mut game_state.ui, &mut game_res.gfx, &game_state.env);
 
-    game_state.phase_mgr.register_phase(sid!("menu"), Box::new(crate::phases::menu::Main_Menu::new(&mut game_state.window)));
+    game_state.phase_mgr.register_phase(phases::Main_Menu::PHASE_ID, Box::new(phases::Main_Menu::new(&mut game_state.window)));
     let mut args = Phase_Args::new(game_state, game_res);
-    game_state.phase_mgr.push_phase(sid!("menu"), &mut args);
+    game_state.phase_mgr.push_phase(phases::Main_Menu::PHASE_ID, &mut args);
 
     #[cfg(debug_assertions)]
     {

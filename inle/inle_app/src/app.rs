@@ -11,10 +11,11 @@ use inle_core::tasks::Long_Task_Manager;
 use inle_core::time;
 use inle_resources::gfx::Gfx_Resources;
 use inle_resources::gfx::Shader_Cache;
+use inle_cfg::Cfg_Var;
 
 #[cfg(debug_assertions)]
 use {
-    crate::debug_systems::Debug_Systems, inle_cfg::Cfg_Var, inle_common::colors,
+    crate::debug_systems::Debug_Systems, inle_common::colors,
     inle_diagnostics::tracer, std::convert::TryInto, std::time::Duration,
 };
 

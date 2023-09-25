@@ -1,4 +1,5 @@
 use super::Phase_Args;
+use inle_common::stringid::{self, String_Id};
 use inle_app::phases::{Game_Phase, Phase_Transition};
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::rect::Rect;
@@ -25,10 +26,11 @@ pub struct Main_Menu {
 }
 
 impl Main_Menu {
+    pub const PHASE_ID: String_Id = stringid::const_sid_from_str("menu");
+
     pub fn new(window: &mut Render_Window_Handle) -> Self {
         Self { buttons: Self::create_buttons(window) }
     }
-
 
     fn create_buttons(window: &Render_Window_Handle) -> Vec<Menu_Button> {
         let mut buttons = vec![];

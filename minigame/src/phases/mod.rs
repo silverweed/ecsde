@@ -1,10 +1,9 @@
 use crate::{Game_State, Game_Resources};
 use std::cell::{Ref, RefMut, RefCell};
 
-//pub mod in_game_state;
-//pub mod pause_menu_state;
-//pub mod persistent;
 pub mod menu;
+
+pub use menu::*;
 
 pub struct Phase_Args {
     game_state: RefCell<*mut Game_State>,

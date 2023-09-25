@@ -15,6 +15,9 @@ extern crate inle_math;
 
 pub mod app;
 pub mod app_config;
-pub mod debug_overlays;
-pub mod debug_systems;
 pub mod phases;
+
+#[cfg(debug_assertions)]
+pub mod debug_systems;
+#[cfg(debug_assertions)]
+pub mod debug_overlays;
