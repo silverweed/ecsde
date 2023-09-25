@@ -3,27 +3,27 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::path::Path;
 
-pub trait Resource_Loader<'l, R> {
+pub trait Resource_Loader<R> {
     type Args: ?Sized;
 
-    fn load(&'l self, data: &Self::Args) -> Result<R, String>;
+    fn load(&self, data: &Self::Args) -> Result<R, String>;
 }
 
-pub struct Cache<'l, Res, Loader>
+pub struct Cache<Res, Loader>
 where
-    Loader: 'l + Resource_Loader<'l, Res, Args = Path>,
+    Loader: Resource_Loader<Res, Args = Path>,
 {
-    loader: &'l Loader,
+    loader: Loader,
     pub(super) cache: HashMap<String_Id, Res>,
 }
 
 pub(super) type Res_Handle = Option<String_Id>;
 
-impl<'l, Res, Loader> Cache<'l, Res, Loader>
+impl<Res, Loader> Cache<Res, Loader>
 where
-    Loader: 'l + Resource_Loader<'l, Res, Args = Path>,
+    Loader: Resource_Loader<Res, Args = Path>,
 {
-    pub fn new_with_loader(loader: &'l Loader) -> Self {
+    pub fn new_with_loader(loader: Loader) -> Self {
         Cache {
             cache: HashMap::new(),
             loader,
@@ -64,10 +64,10 @@ macro_rules! define_file_loader {
     ($loaded_res: ident, $loader_name: ident, $cache_name: ident, $load_fn: path) => {
         pub(super) struct $loader_name;
 
-        impl<'l> loaders::Resource_Loader<'l, $loaded_res<'l>> for $loader_name {
+        impl loaders::Resource_Loader<$loaded_res> for $loader_name {
             type Args = std::path::Path;
 
-            fn load(&'l self, fname: &std::path::Path) -> Result<$loaded_res<'l>, String> {
+            fn load(&self, fname: &std::path::Path) -> Result<$loaded_res, String> {
                 $load_fn(fname).map_err(|err| {
                     format!(
                         concat!(
@@ -82,11 +82,11 @@ macro_rules! define_file_loader {
             }
         }
 
-        pub(super) type $cache_name<'l> = loaders::Cache<'l, $loaded_res<'l>, $loader_name>;
+        pub(super) type $cache_name = loaders::Cache<$loaded_res, $loader_name>;
 
-        impl $cache_name<'_> {
+        impl $cache_name {
             pub fn new() -> Self {
-                Self::new_with_loader(&$loader_name {})
+                Self::new_with_loader($loader_name {})
             }
         }
     };

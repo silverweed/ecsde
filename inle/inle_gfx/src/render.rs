@@ -13,11 +13,11 @@ pub use inle_gfx_backend::render::{Primitive_Type, Uniform_Value};
 pub mod batcher;
 
 pub type Z_Index = i8;
-pub type Font<'a> = backend::Font<'a>;
+pub type Font = backend::Font;
 pub type Image = backend::Image;
-pub type Shader<'a> = backend::Shader<'a>;
+pub type Shader = backend::Shader;
 pub type Text = backend::Text;
-pub type Texture<'a> = backend::Texture<'a>;
+pub type Texture = backend::Texture;
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
 pub type Color_Type = backend::Color_Type;

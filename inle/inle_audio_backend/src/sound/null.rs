@@ -1,17 +1,15 @@
-use std::marker::PhantomData;
-
-pub struct Sound<'a>(PhantomData<&'a ()>);
-pub struct Sound_Buffer<'a>(PhantomData<&'a ()>);
+pub struct Sound;
+pub struct Sound_Buffer;
 
 static mut INSTANCE: () = ();
 
-impl Sound_Buffer<'_> {
+impl Sound_Buffer {
     pub fn from_file(_fname: &str) -> Option<Self> {
-        Some(Self(PhantomData))
+        Some(Self)
     }
 }
 
-impl std::ops::Deref for Sound_Buffer<'_> {
+impl std::ops::Deref for Sound_Buffer {
     type Target = ();
 
     fn deref(&self) -> &Self::Target {
@@ -19,7 +17,7 @@ impl std::ops::Deref for Sound_Buffer<'_> {
     }
 }
 
-impl std::ops::DerefMut for Sound_Buffer<'_> {
+impl std::ops::DerefMut for Sound_Buffer {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut INSTANCE }
     }
@@ -31,6 +29,6 @@ pub fn sound_playing(_sound: &Sound) -> bool {
     false
 }
 
-pub fn create_sound_with_buffer<'a>(_buf: &'a Sound_Buffer) -> Sound<'a> {
-    Sound(PhantomData)
+pub fn create_sound_with_buffer(_buf: &Sound_Buffer) -> Sound {
+    Sound
 }

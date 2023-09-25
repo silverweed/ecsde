@@ -17,7 +17,6 @@ use inle_math::vector::Vec2f;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
-use std::marker::PhantomData;
 use std::sync::Once;
 use std::{mem, ptr, str};
 
@@ -201,24 +200,20 @@ impl Image {
 }
 
 #[derive(Debug)]
-pub struct Texture<'a> {
+pub struct Texture {
     id: GLuint,
 
     width: u32,
     height: u32,
 
     pixel_type: GLenum,
-
-    _pd: PhantomData<&'a ()>,
 }
 
-pub struct Shader<'texture> {
+pub struct Shader {
     id: GLuint,
 
     // [uniform location => texture id]
     textures: HashMap<GLint, GLuint>,
-
-    _pd: PhantomData<&'texture ()>,
 }
 
 impl Uniform_Value for f32 {
@@ -288,7 +283,7 @@ impl Uniform_Value for Color3 {
     }
 }
 
-impl Uniform_Value for &Texture<'_> {
+impl Uniform_Value for &Texture {
     fn apply_to(self, shader: &mut Shader, name: &CStr) {
         use std::collections::hash_map::Entry;
 
@@ -320,8 +315,8 @@ pub fn use_shader(shader: &mut Shader) {
     }
 }
 
-pub struct Font<'a> {
-    pub atlas: Texture<'a>,
+pub struct Font {
+    pub atlas: Texture,
     pub metadata: Font_Metadata,
 }
 
@@ -526,11 +521,10 @@ pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) 
 }
 
 #[inline]
-pub fn new_shader<'a>(vert_src: &[u8], frag_src: &[u8], shader_name: Option<&str>) -> Shader<'a> {
+pub fn new_shader(vert_src: &[u8], frag_src: &[u8], shader_name: Option<&str>) -> Shader {
     Shader {
         id: new_shader_internal(vert_src, frag_src, shader_name.unwrap_or("(unnamed)")),
         textures: HashMap::default(),
-        _pd: PhantomData,
     }
 }
 
@@ -1136,10 +1130,7 @@ pub fn copy_texture_to_image(texture: &Texture) -> Image {
 }
 
 #[inline]
-pub fn new_texture_from_image<'img, 'tex>(
-    image: &'img Image,
-    _rect: Option<Rect<i32>>,
-) -> Texture<'tex> {
+pub fn new_texture_from_image(image: &Image, _rect: Option<Rect<i32>>) -> Texture {
     assert!(image.width < gl::MAX_TEXTURE_SIZE);
     assert!(image.height < gl::MAX_TEXTURE_SIZE);
 
@@ -1207,7 +1198,6 @@ pub fn new_texture_from_image<'img, 'tex>(
         width: image.width,
         height: image.height,
         pixel_type,
-        _pd: PhantomData,
     }
 }
 

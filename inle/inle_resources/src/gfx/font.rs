@@ -3,7 +3,7 @@ use inle_gfx_backend::render::{self, Font, Font_Metadata, Glyph_Bounds, Glyph_Da
 use std::error::Error;
 use std::path::{Path, PathBuf};
 
-pub fn load_font_from_file<'a>(fname: &Path) -> Result<Font<'a>, Box<dyn Error>> {
+pub fn load_font_from_file(fname: &Path) -> Result<Font, Box<dyn Error>> {
     let fname = fname
         .with_extension("")
         .into_os_string()

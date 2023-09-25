@@ -5,12 +5,12 @@ pub struct Audio_System_Config {
     pub max_concurrent_sounds: usize,
 }
 
-pub struct Audio_System<'r> {
+pub struct Audio_System {
     max_concurrent_sounds: usize,
-    sounds_playing: Vec<sound::Sound<'r>>,
+    sounds_playing: Vec<sound::Sound>,
 }
 
-impl<'r> Audio_System<'r> {
+impl Audio_System {
     pub fn new(cfg: &Audio_System_Config) -> Self {
         Audio_System {
             max_concurrent_sounds: cfg.max_concurrent_sounds,
@@ -30,10 +30,7 @@ impl<'r> Audio_System<'r> {
         }
     }
 
-    pub fn play_sound<'a>(&mut self, rsrc: &'a Audio_Resources<'a>, sound_handle: Sound_Handle)
-    where
-        'a: 'r,
-    {
+    pub fn play_sound(&mut self, rsrc: &Audio_Resources, sound_handle: Sound_Handle) {
         if self.sounds_playing.len() == self.max_concurrent_sounds {
             // @Incomplete: this is not necessarily what we'll want
             self.sounds_playing.swap_remove(0);

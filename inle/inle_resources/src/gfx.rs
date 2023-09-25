@@ -14,12 +14,12 @@ pub type Texture_Handle = loaders::Res_Handle;
 pub type Font_Handle = loaders::Res_Handle;
 pub type Shader_Handle = loaders::Res_Handle;
 
-pub struct Gfx_Resources<'l> {
-    textures: cache::Texture_Cache<'l>,
-    fonts: cache::Font_Cache<'l>,
+pub struct Gfx_Resources {
+    textures: cache::Texture_Cache,
+    fonts: cache::Font_Cache,
 }
 
-impl<'l> Gfx_Resources<'l> {
+impl Gfx_Resources {
     pub fn new() -> Self {
         if !render::shaders_are_available() {
             lwarn!("This platform does not support shaders.");
@@ -47,14 +47,11 @@ impl<'l> Gfx_Resources<'l> {
         self.textures.load(fname)
     }
 
-    pub fn get_texture(&self, handle: Texture_Handle) -> &Texture<'_> {
+    pub fn get_texture(&self, handle: Texture_Handle) -> &Texture {
         self.textures.must_get(handle)
     }
 
-    pub fn get_texture_mut<'a>(&'a mut self, handle: Texture_Handle) -> &'a mut Texture<'l>
-    where
-        'l: 'a,
-    {
+    pub fn get_texture_mut(&mut self, handle: Texture_Handle) -> &mut Texture {
         self.textures.must_get_mut(handle)
     }
 
@@ -66,15 +63,15 @@ impl<'l> Gfx_Resources<'l> {
         self.fonts.load(fname)
     }
 
-    pub fn get_font(&self, handle: Font_Handle) -> &Font<'_> {
+    pub fn get_font(&self, handle: Font_Handle) -> &Font {
         assert!(handle != None, "Invalid Font_Handle in get_font!");
         self.fonts.must_get(handle)
     }
 }
 
-pub struct Shader_Cache<'l>(cache::Shader_Cache<'l>);
+pub struct Shader_Cache(cache::Shader_Cache);
 
-impl<'l> Shader_Cache<'l> {
+impl Shader_Cache {
     pub fn new() -> Self {
         Self(cache::Shader_Cache::new())
     }
@@ -108,15 +105,12 @@ impl<'l> Shader_Cache<'l> {
         }
     }
 
-    pub fn get_shader(&self, handle: Shader_Handle) -> &Shader<'_> {
+    pub fn get_shader(&self, handle: Shader_Handle) -> &Shader {
         debug_assert!(render::shaders_are_available());
         self.0.must_get(handle)
     }
 
-    pub fn get_shader_mut<'a>(&'a mut self, handle: Shader_Handle) -> &'a mut Shader<'l>
-    where
-        'l: 'a,
-    {
+    pub fn get_shader_mut(&mut self, handle: Shader_Handle) -> &mut Shader {
         debug_assert!(render::shaders_are_available());
         self.0.must_get_mut(handle)
     }
@@ -174,7 +168,7 @@ const ERROR_SHADER_KEY: String_Id = cache::ERROR_SHADER_KEY;
 #[cfg(debug_assertions)]
 const BASIC_BATCHER_SHADER_KEY: String_Id = const_sid_from_str("__basic_batcher__");
 
-fn load_error_shader<'a>() -> Shader<'a> {
+fn load_error_shader() -> Shader {
     const ERROR_SHADER_VERT: &str = "
 		#version 330 core
 
@@ -205,7 +199,7 @@ fn load_error_shader<'a>() -> Shader<'a> {
 }
 
 #[cfg(debug_assertions)]
-fn load_basic_batcher_shader<'a>() -> Shader<'a> {
+fn load_basic_batcher_shader() -> Shader {
     const BASIC_BATCHER_SHADER_VERT: &str = "
 		#version 330 core
 

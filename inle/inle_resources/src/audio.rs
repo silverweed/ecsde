@@ -8,11 +8,11 @@ mod sound;
 
 pub type Sound_Handle = loaders::Res_Handle;
 
-pub struct Audio_Resources<'l> {
-    sounds: cache::Sound_Cache<'l>,
+pub struct Audio_Resources {
+    sounds: cache::Sound_Cache,
 }
 
-impl<'l> Audio_Resources<'l> {
+impl Audio_Resources {
     pub fn new() -> Self {
         Audio_Resources {
             sounds: cache::Sound_Cache::new(),

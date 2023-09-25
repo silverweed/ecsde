@@ -18,7 +18,7 @@ use {
     inle_diagnostics::tracer, std::convert::TryInto, std::time::Duration,
 };
 
-pub struct Engine_State<'r> {
+pub struct Engine_State {
     pub should_close: bool,
     // First frame is 1
     pub cur_frame: u64,
@@ -42,8 +42,6 @@ pub struct Engine_State<'r> {
 
     #[cfg(debug_assertions)]
     pub prev_frame_time: Duration,
-
-    _pd: std::marker::PhantomData<&'r ()>,
 }
 
 pub struct Engine_CVars {
@@ -120,12 +118,12 @@ pub fn create_engine_cvars(cfg: &inle_cfg::Config) -> Engine_CVars {
     }
 }
 
-pub fn create_engine_state<'r>(
+pub fn create_engine_state(
     env: Env_Info,
     config: inle_cfg::Config,
     app_config: App_Config,
     loggers: inle_diagnostics::log::Loggers,
-) -> Result<Engine_State<'r>, Box<dyn std::error::Error>> {
+) -> Result<Engine_State, Box<dyn std::error::Error>> {
     let time = time::Time::default();
     let seed;
     #[cfg(debug_assertions)]
@@ -155,7 +153,6 @@ pub fn create_engine_state<'r>(
         rng,
         frame_alloc: Temp_Allocator::with_capacity(megabytes(10)),
         long_task_mgr: Long_Task_Manager::default(),
-        _pd: std::marker::PhantomData,
         #[cfg(debug_assertions)]
         debug_systems,
         #[cfg(debug_assertions)]
@@ -210,7 +207,7 @@ pub fn init_engine_debug(
     debug_systems: &mut crate::debug_systems::Debug_Systems,
     app_config: &crate::app_config::App_Config,
     input_state: &inle_input::input_state::Input_State,
-    gfx_resources: &mut Gfx_Resources<'_>,
+    gfx_resources: &mut Gfx_Resources,
     cfg: inle_debug::debug_ui::Debug_Ui_System_Config,
 ) -> Maybe_Error {
     use inle_common::vis_align::Align;

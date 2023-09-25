@@ -24,10 +24,10 @@ define_file_loader!(
 // Maybe when variadic generics are stable we can do better.
 pub(super) struct Shader_Loader;
 
-impl<'l> loaders::Resource_Loader<'l, Shader<'l>> for Shader_Loader {
+impl loaders::Resource_Loader<Shader> for Shader_Loader {
     type Args = (String, String, Option<String>);
 
-    fn load(&'l self, args: &Self::Args) -> Result<Shader<'l>, String> {
+    fn load(&self, args: &Self::Args) -> Result<Shader, String> {
         let (vertex, fragment, geometry) = args;
         super::shader::load_shader_from_file(vertex, fragment).map_err(|err| {
             format!(
@@ -40,17 +40,17 @@ impl<'l> loaders::Resource_Loader<'l, Shader<'l>> for Shader_Loader {
 
 pub(super) const ERROR_SHADER_KEY: String_Id = const_sid_from_str("__error__");
 
-pub(super) struct Shader_Cache<'l> {
-    loader: &'l Shader_Loader,
-    pub(super) cache: HashMap<String_Id, Shader<'l>>,
+pub(super) struct Shader_Cache {
+    loader: Shader_Loader,
+    pub(super) cache: HashMap<String_Id, Shader>,
 }
 
-impl<'l> Shader_Cache<'l> {
+impl Shader_Cache {
     pub(super) fn new() -> Self {
-        Self::new_with_loader(&Shader_Loader {})
+        Self::new_with_loader(Shader_Loader {})
     }
 
-    pub(super) fn new_with_loader(loader: &'l Shader_Loader) -> Self {
+    pub(super) fn new_with_loader(loader: Shader_Loader) -> Self {
         Shader_Cache {
             loader,
             cache: HashMap::new(),
@@ -89,7 +89,7 @@ impl<'l> Shader_Cache<'l> {
         &self.cache[&handle.unwrap()]
     }
 
-    pub fn must_get_mut<'a>(&'a mut self, handle: Shader_Handle) -> &'a mut Shader<'l> {
+    pub fn must_get_mut(&mut self, handle: Shader_Handle) -> &mut Shader {
         let handle =
             handle.unwrap_or_else(|| fatal!("must_get_mut() called with an invalid Shader_Handle"));
         self.cache

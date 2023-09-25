@@ -15,20 +15,20 @@ pub use self::null as backend;
 pub use self::gl as backend;
 
 pub type Text = backend::Text;
-pub type Font<'a> = backend::Font<'a>;
+pub type Font = backend::Font;
 pub type Font_Metadata = backend::Font_Metadata;
-pub type Texture<'a> = backend::Texture<'a>;
-pub type Shader<'a> = backend::Shader<'a>;
+pub type Texture = backend::Texture;
+pub type Shader = backend::Shader;
 pub type Image = backend::Image;
 
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
 pub type Color_Type = backend::Color_Type;
 
-pub enum Render_Settings<'t> {
+pub enum Render_Settings<'a> {
     Basic,
-    With_Texture(&'t Texture<'t>),
-    With_Shader(&'t Shader<'t>),
+    With_Texture(&'a Texture),
+    With_Shader(&'a Shader),
 }
 
 // @Refactoring @Cleanup: we're currently exposing data that's supposed to be backend-specific.

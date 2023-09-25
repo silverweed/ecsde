@@ -359,14 +359,14 @@ pub fn update_traces(
     }
 }
 
-pub fn render_debug<'a, 'r>(
+pub fn render_debug(
     debug_systems: &mut Debug_Systems,
     window: &mut inle_gfx::render_window::Render_Window_Handle,
     input: &inle_input::input_state::Input_State,
     config: &inle_cfg::Config,
     temp_alloc: &mut inle_alloc::temp::Temp_Allocator,
     time: &mut inle_core::time::Time,
-    gres: &'a mut inle_resources::gfx::Gfx_Resources<'r>,
+    gres: &mut inle_resources::gfx::Gfx_Resources,
 ) {
     use inle_math::transform::Transform2D;
 

@@ -32,7 +32,7 @@ pub fn load_image_from_file(fname: &Path) -> Result<Image, Box<dyn Error>> {
     ))
 }
 
-pub fn load_texture_from_file<'a>(fname: &Path) -> Result<Texture<'a>, Box<dyn Error>> {
+pub fn load_texture_from_file(fname: &Path) -> Result<Texture, Box<dyn Error>> {
     let image = load_image_from_file(fname)?;
     Ok(render::new_texture_from_image(&image, None))
 }
