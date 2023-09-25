@@ -10,6 +10,7 @@ extern crate inle_common;
 extern crate inle_math;
 
 mod game;
+mod phases;
 mod input;
 
 #[cfg(debug_assertions)]
