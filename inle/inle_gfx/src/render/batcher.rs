@@ -456,7 +456,7 @@ pub fn draw_batches(
             let n_vertices = u32::try_from(n_vertices).unwrap();
             let n_shadow_vertices = u32::try_from(n_shadow_vertices).unwrap();
 
-            debug_assert!(!((n_shadow_vertices > 0) && !cast_shadows));
+            debug_assert!(n_shadow_vertices == 0 || cast_shadows);
 
             // Ensure the vbuffer has enough room to write in
             if n_vertices > super::vbuf_max_vertices(&vbuffer.vbuf) {

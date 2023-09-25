@@ -15,7 +15,7 @@ pub fn load_font_from_file(fname: &Path) -> Result<Font, Box<dyn Error>> {
     let atlas_img = image::load_image_from_file(&atlas_fname)?;
     let atlas = render::new_texture_from_image(&atlas_img, None);
 
-    let metadata_csv = std::fs::read_to_string(&metadata_fname)?;
+    let metadata_csv = std::fs::read_to_string(metadata_fname)?;
     let metadata = parse_font_metadata_from_csv(&metadata_csv, render::get_texture_size(&atlas));
 
     Ok(Font { atlas, metadata })

@@ -276,7 +276,7 @@ pub fn update_traces(
     if !scroller.manually_selected {
         debug_log.push_trace(&final_traces);
     }
-    let trace_realtime = Cfg_Var::<bool>::new("engine/debug/trace/realtime", &config).read(&config);
+    let trace_realtime = Cfg_Var::<bool>::new("engine/debug/trace/realtime", config).read(config);
 
     match debug_systems.show_overlay {
         Overlay_Shown::Trace => {
@@ -287,13 +287,13 @@ pub fn update_traces(
 
             if *t <= 0. {
                 let trace_view_flat =
-                    Cfg_Var::<bool>::new("engine/debug/trace/view_flat", &config).read(&config);
+                    Cfg_Var::<bool>::new("engine/debug/trace/view_flat", config).read(config);
                 if trace_view_flat {
                     tracer_drawing::update_trace_flat_overlay(debug_systems, config, frame_alloc);
                 } else {
                     tracer_drawing::update_trace_tree_overlay(debug_systems, config, frame_alloc);
                 }
-                debug_systems.trace_overlay_update_t = refresh_rate.read(&config);
+                debug_systems.trace_overlay_update_t = refresh_rate.read(config);
 
                 if !trace_realtime && time.paused {
                     // Don't bother refreshing this the next frame: we're paused.
@@ -323,8 +323,7 @@ pub fn update_traces(
                     [tracer_selected_idx]
                     .metadata
                     .get(&sid!("full_tag"))
-                    .map(|x| x.clone().try_into().ok())
-                    .flatten()
+                    .and_then(|x| x.clone().try_into().ok())
                     .unwrap_or_default();
                 set_traced_fn(debug_systems, fn_name);
             } else {
@@ -445,7 +444,7 @@ macro_rules! add_msg {
     };
 }
 
-fn handle_debug_actions(game_state: &mut Game_State, game_res: &mut Game_Resources) {
+fn handle_debug_actions(game_state: &mut Game_State, _game_res: &mut Game_Resources) {
     use inle_app::debug_systems::Overlay_Shown;
 
     let actions = &game_state.input.processed.game_actions;
@@ -529,8 +528,10 @@ fn handle_debug_actions(game_state: &mut Game_State, game_res: &mut Game_Resourc
             }
             (name, Action_Kind::Released) if *name == sid!("toggle_camera_on_player") => {}
             (name, Action_Kind::Pressed) if *name == sid!("toggle_overlays") => {
-                game_state.config.toggle_cfg(sid!("engine/debug/overlay/display")).
-                    unwrap_or_else(|err| lerr!("{}", err));
+                game_state
+                    .config
+                    .toggle_cfg(sid!("engine/debug/overlay/display"))
+                    .unwrap_or_else(|err| lerr!("{}", err));
             }
             _ => {}
         }

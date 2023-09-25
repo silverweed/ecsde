@@ -96,8 +96,8 @@ fn execute_command(cmd: Console_Cmd, game_state: &mut Game_State) -> Option<(Str
             game_state.should_quit = true;
             None
         }
-        Console_Cmd::Move_Camera { to } => None,
-        Console_Cmd::Zoom_Camera { amt, is_absolute } => None,
+        Console_Cmd::Move_Camera { .. } => None,
+        Console_Cmd::Zoom_Camera { .. } => None,
         Console_Cmd::Get_Cfg_Var { name } => Some((
             format!(
                 "{} = {:?}",
@@ -116,7 +116,9 @@ fn execute_command(cmd: Console_Cmd, game_state: &mut Game_State) -> Option<(Str
         }
         Console_Cmd::Toggle_Cfg_Var { name } => {
             linfo!("Toggling {}", name);
-            game_state.config.toggle_cfg(String_Id::from(name.as_str()))
+            game_state
+                .config
+                .toggle_cfg(String_Id::from(name.as_str()))
                 .err()
                 .map(|msg| (msg, colors::RED))
         }

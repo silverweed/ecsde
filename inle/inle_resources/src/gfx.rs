@@ -64,7 +64,7 @@ impl Gfx_Resources {
     }
 
     pub fn get_font(&self, handle: Font_Handle) -> &Font {
-        assert!(handle != None, "Invalid Font_Handle in get_font!");
+        assert!(handle.is_some(), "Invalid Font_Handle in get_font!");
         self.fonts.must_get(handle)
     }
 }

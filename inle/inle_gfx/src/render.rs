@@ -439,13 +439,12 @@ pub fn write_array_into_uniform_buffer<T: Std140>(
     data: &[T],
 ) -> usize {
     let align = std::mem::align_of::<T>();
-    let size = std::mem::size_of::<T>();
     unsafe {
         backend::write_into_uniform_buffer(
             ubo,
             offset,
             align,
-            size * data.len(),
+            std::mem::size_of_val(data),
             data.as_ptr() as *const u8,
         )
     }

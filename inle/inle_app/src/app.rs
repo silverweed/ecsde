@@ -3,6 +3,7 @@ pub mod tracer_drawing;
 
 use crate::app_config::App_Config;
 use inle_alloc::temp::Temp_Allocator;
+use inle_cfg::Cfg_Var;
 use inle_common::units::*;
 use inle_common::Maybe_Error;
 use inle_core::env::Env_Info;
@@ -11,12 +12,11 @@ use inle_core::tasks::Long_Task_Manager;
 use inle_core::time;
 use inle_resources::gfx::Gfx_Resources;
 use inle_resources::gfx::Shader_Cache;
-use inle_cfg::Cfg_Var;
 
 #[cfg(debug_assertions)]
 use {
-    crate::debug_systems::Debug_Systems, inle_common::colors,
-    inle_diagnostics::tracer, std::convert::TryInto, std::time::Duration,
+    crate::debug_systems::Debug_Systems, inle_common::colors, inle_diagnostics::tracer,
+    std::convert::TryInto, std::time::Duration,
 };
 
 pub struct Engine_State {
@@ -597,8 +597,7 @@ pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>
                     [tracer_selected_idx]
                     .metadata
                     .get(&sid!("full_tag"))
-                    .map(|x| x.clone().try_into().ok())
-                    .flatten()
+                    .and_then(|x| x.clone().try_into().ok())
                     .unwrap_or_default();
                 set_traced_fn(debug_systems, fn_name);
             } else {

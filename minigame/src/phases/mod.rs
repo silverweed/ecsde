@@ -1,5 +1,5 @@
-use crate::{Game_State, Game_Resources};
-use std::cell::{Ref, RefMut, RefCell};
+use crate::{Game_Resources, Game_State};
+use std::cell::{Ref, RefCell, RefMut};
 
 pub mod menu;
 
@@ -18,19 +18,19 @@ impl Phase_Args {
         }
     }
 
-    pub fn game_state<'a>(&'a self) -> Ref<'a, Game_State> {
+    pub fn game_state(&self) -> Ref<'_, Game_State> {
         Ref::map(self.game_state.borrow(), |ptr| unsafe { &**ptr })
     }
 
-    pub fn game_state_mut<'a>(&'a self) -> RefMut<'a, Game_State> {
+    pub fn game_state_mut(&self) -> RefMut<'_, Game_State> {
         RefMut::map(self.game_state.borrow_mut(), |ptr| unsafe { &mut **ptr })
     }
 
-    pub fn game_res<'a>(&'a self) -> Ref<'a, Game_Resources> {
+    pub fn game_res(&self) -> Ref<'_, Game_Resources> {
         Ref::map(self.game_res.borrow(), |ptr| unsafe { &**ptr })
     }
 
-    pub fn game_res_mut<'a>(&'a self) -> RefMut<'a, Game_Resources> {
+    pub fn game_res_mut(&self) -> RefMut<'_, Game_Resources> {
         RefMut::map(self.game_res.borrow_mut(), |ptr| unsafe { &mut **ptr })
     }
 }

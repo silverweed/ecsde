@@ -1,14 +1,9 @@
-#[derive(Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone, Debug)]
 pub enum Align {
+    #[default]
     Begin,
     Middle,
     End,
-}
-
-impl Default for Align {
-    fn default() -> Self {
-        Align::Begin
-    }
 }
 
 impl Align {

@@ -1,6 +1,5 @@
 use inle_common::colors;
 use inle_common::paint_props::Paint_Properties;
-use inle_common::stringid::String_Id;
 use inle_core::time;
 use inle_debug::painter::Debug_Painter;
 use inle_gfx::render_window::{self, Render_Window_Handle};
@@ -10,7 +9,6 @@ use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window;
 use std::convert::TryInto;
-use std::time::Duration;
 
 pub fn update_debug(
     cvars: &crate::app::Engine_CVars,
@@ -21,8 +19,6 @@ pub fn update_debug(
     fps_counter: &inle_debug::fps::Fps_Counter,
     input_state: &inle_input::input_state::Input_State,
 ) {
-    let dt = time.dt();
-
     // Overlays
     let display_overlays = cvars.display_overlays.read(config);
     let overlays_were_visible = debug_systems.debug_ui.is_overlay_enabled(sid!("time"));
@@ -150,7 +146,7 @@ fn update_joystick_debug_overlay(
                 let axis: joystick::Joystick_Axis = i.try_into().unwrap_or_else(|err| {
                     fatal!("Failed to convert {} to a valid Joystick_Axis: {}", i, err)
                 });
-                let deadzone = joy_state.joysticks[joy_id as usize]
+                let deadzone = joy_state.joysticks[joy_id]
                     .as_ref()
                     .unwrap()
                     .config

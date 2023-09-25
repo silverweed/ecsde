@@ -18,6 +18,6 @@ pub mod app_config;
 pub mod phases;
 
 #[cfg(debug_assertions)]
-pub mod debug_systems;
-#[cfg(debug_assertions)]
 pub mod debug_overlays;
+#[cfg(debug_assertions)]
+pub mod debug_systems;

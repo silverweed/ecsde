@@ -204,8 +204,8 @@ pub fn shutdown(window: &mut Render_Window_Handle) {
     let buf_ids = window
         .gl
         .uniform_buffers
-        .iter()
-        .map(|(_, buf)| buf.id)
+        .values()
+        .map(|buf| buf.id)
         .collect::<Vec<_>>();
     unsafe {
         glcheck!(gl::DeleteBuffers(buf_ids.len() as _, buf_ids.as_ptr()));

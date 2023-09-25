@@ -61,7 +61,7 @@ impl Iterator for Physics_Body_Cld_Iter<'_> {
     type Item = Collider_Handle;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let i = self.i as usize;
+        let i = self.i;
         self.i += 1;
         if i < self.body.rigidbody_colliders.len() {
             Some(self.body.rigidbody_colliders[i].0)

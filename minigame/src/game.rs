@@ -1,7 +1,7 @@
 use super::{Game_Resources, Game_State};
+use crate::phases::Phase_Args;
 use inle_cfg::Cfg_Var;
 use inle_input::core_actions::Core_Action;
-use crate::phases::Phase_Args;
 use std::time::Duration;
 
 #[cfg(debug_assertions)]
@@ -58,7 +58,7 @@ pub fn internal_game_init() -> Box<Game_State> {
     let rng = inle_core::rand::new_rng_with_seed(seed);
 
     #[cfg(debug_assertions)]
-    let mut debug_systems = inle_app::debug_systems::Debug_Systems::new(&config);
+    let debug_systems = inle_app::debug_systems::Debug_Systems::new(&config);
 
     let time = inle_core::time::Time::default();
     let frame_alloc =
@@ -117,9 +117,14 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
 
     inle_ui::init_ui(&mut game_state.ui, &mut game_res.gfx, &game_state.env);
 
-    game_state.phase_mgr.register_phase(phases::Main_Menu::PHASE_ID, Box::new(phases::Main_Menu::new(&mut game_state.window)));
+    game_state.phase_mgr.register_phase(
+        phases::Main_Menu::PHASE_ID,
+        Box::new(phases::Main_Menu::new(&mut game_state.window)),
+    );
     let mut args = Phase_Args::new(game_state, game_res);
-    game_state.phase_mgr.push_phase(phases::Main_Menu::PHASE_ID, &mut args);
+    game_state
+        .phase_mgr
+        .push_phase(phases::Main_Menu::PHASE_ID, &mut args);
 
     #[cfg(debug_assertions)]
     {

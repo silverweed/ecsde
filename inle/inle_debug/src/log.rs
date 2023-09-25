@@ -28,7 +28,7 @@ impl Debug_Log {
         self.cur_frame += 1;
         if self.hist_len == self.max_hist_len {
             if let Some(frame) = self.frames.pop_front() {
-                self.mem_used -= frame.traces.len() * std::mem::size_of::<Tracer_Node_Final>();
+                self.mem_used -= std::mem::size_of_val(&frame.traces);
             }
         } else {
             self.hist_len += 1;
@@ -54,7 +54,7 @@ impl Debug_Log {
     }
 
     pub fn push_trace(&mut self, trace: &[Tracer_Node_Final]) {
-        self.mem_used += trace.len() * std::mem::size_of::<Tracer_Node_Final>();
+        self.mem_used += std::mem::size_of_val(trace);
         self.frames
             .back_mut()
             .expect("No frames recorded! Did you forget to call start_frame()?")

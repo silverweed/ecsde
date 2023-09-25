@@ -21,7 +21,7 @@ pub(super) fn add_draw_commands<T>(ui: &mut Ui_Context, commands: T)
 where
     T: std::iter::IntoIterator<Item = Draw_Command>,
 {
-    ui.draw_cmd_queue.extend(commands.into_iter());
+    ui.draw_cmd_queue.extend(commands);
 }
 
 #[inline]

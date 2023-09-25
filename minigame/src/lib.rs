@@ -10,8 +10,8 @@ extern crate inle_common;
 extern crate inle_math;
 
 mod game;
-mod phases;
 mod input;
+mod phases;
 
 #[cfg(debug_assertions)]
 mod debug;
@@ -67,14 +67,11 @@ pub struct Game_Bundle {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn game_init(
-    _args: *const *const c_char,
-    _args_count: usize,
-) -> Game_Bundle {
+pub unsafe extern "C" fn game_init(_args: *const *const c_char, _args_count: usize) -> Game_Bundle {
     let mut game_res = game::create_game_resources();
     let mut game_state = game::internal_game_init();
 
-    game::game_post_init(&mut *game_state, &mut *game_res);
+    game::game_post_init(&mut game_state, &mut game_res);
 
     Game_Bundle {
         game_state: Box::into_raw(game_state),

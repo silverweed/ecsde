@@ -101,7 +101,7 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
         &mut self,
         phase_id: String_Id,
         phase: Box<dyn Game_Phase<Args = Phase_Args>>,
-        args: &mut Phase_Args
+        args: &mut Phase_Args,
     ) {
         self.register_phase(phase_id, phase);
         self.push_phase(phase_id, args);
