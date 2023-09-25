@@ -38,7 +38,7 @@ impl Main_Menu {
             font_size: 24,
             ..Default::default()
         };
-        let ease_duration = Duration::from_millis(400);
+        let ease_duration = Duration::from_millis(300);
         let size = v2!(200., 120.);
         let tgx = (ww - size.x) * 0.5;
         let tgy = (wh - size.y) * 0.5;

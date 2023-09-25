@@ -27,6 +27,7 @@ impl<Phase_Args> Default for Phase_Manager<Phase_Args> {
 
 impl<Phase_Args> Phase_Manager<Phase_Args> {
     // Returns true if the game should quit
+    #[must_use]
     pub fn update(&mut self, args: &mut Phase_Args) -> bool {
         for (_, phase) in &mut self.persistent_phases {
             phase.update(args);

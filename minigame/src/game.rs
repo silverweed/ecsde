@@ -213,7 +213,10 @@ fn handle_core_actions(
 //
 pub fn update(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     let mut args = Phase_Args::new(game_state, game_res);
-    game_state.phase_mgr.update(&mut args);
+    let should_quit = game_state.phase_mgr.update(&mut args);
+    if should_quit {
+        game_state.should_quit = should_quit;
+    }
 }
 
 //
