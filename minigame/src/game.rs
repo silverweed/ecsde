@@ -4,41 +4,6 @@ use inle_cfg::Cfg_Var;
 use inle_input::core_actions::Core_Action;
 use std::time::Duration;
 
-pub struct CVars {
-    pub gameplay_update_tick_ms: Cfg_Var<f32>,
-    pub gameplay_max_time_budget_ms: Cfg_Var<f32>,
-    pub vsync: Cfg_Var<bool>,
-    pub clear_color: Cfg_Var<u32>,
-    pub enable_shaders: Cfg_Var<bool>,
-    pub enable_shadows: Cfg_Var<bool>,
-    pub enable_particles: Cfg_Var<bool>,
-    pub ambient_intensity: Cfg_Var<f32>,
-    pub ambient_color: Cfg_Var<u32>,
-}
-
-#[cfg(debug_assertions)]
-pub struct Debug_CVars {
-    pub render_debug_visualization: Cfg_Var<String>,
-    pub draw_lights: Cfg_Var<bool>,
-    pub draw_particle_emitters: Cfg_Var<bool>,
-    pub trace_overlay_refresh_rate: Cfg_Var<f32>,
-    pub draw_colliders: Cfg_Var<bool>,
-    pub draw_entities: Cfg_Var<bool>,
-    pub draw_velocities: Cfg_Var<bool>,
-    pub draw_debug_grid: Cfg_Var<bool>,
-    pub debug_grid_square_size: Cfg_Var<f32>,
-    pub debug_grid_opacity: Cfg_Var<i32>,
-    pub debug_grid_font_size: Cfg_Var<u32>,
-    pub draw_fps_graph: Cfg_Var<bool>,
-    pub draw_prev_frame_t_graph: Cfg_Var<bool>,
-    pub draw_mouse_rulers: Cfg_Var<bool>,
-    pub draw_buf_alloc: Cfg_Var<bool>,
-    pub display_log_window: Cfg_Var<bool>,
-    pub display_overlays: Cfg_Var<bool>,
-    pub update_physics: Cfg_Var<bool>,
-    pub print_draw_stats: Cfg_Var<bool>,
-}
-
 //
 // Init
 //
@@ -118,7 +83,7 @@ pub fn internal_game_init() -> Box<Game_State> {
     })
 }
 
-pub fn create_game_resources<'a>() -> Box<Game_Resources<'a>> {
+pub fn create_game_resources() -> Box<Game_Resources> {
     let gfx = inle_resources::gfx::Gfx_Resources::new();
     let audio = inle_resources::audio::Audio_Resources::new();
     let shader_cache = inle_resources::gfx::Shader_Cache::new();
@@ -130,7 +95,7 @@ pub fn create_game_resources<'a>() -> Box<Game_Resources<'a>> {
 }
 
 // Used to initialize game state stuff that needs resources
-pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources<'_>) {
+pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     let font_name = inle_cfg::Cfg_Var::<String>::new("engine/debug/ui/font", &game_state.config);
     game_state.default_font = game_res.gfx.load_font(&inle_resources::gfx::font_path(
         &game_state.env,

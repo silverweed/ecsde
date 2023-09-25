@@ -47,23 +47,23 @@ pub struct Game_State {
     fps_counter: inle_debug::fps::Fps_Counter,
 }
 
-pub struct Game_Resources<'r> {
-    pub gfx: inle_resources::gfx::Gfx_Resources<'r>,
-    pub audio: inle_resources::audio::Audio_Resources<'r>,
-    pub shader_cache: inle_resources::gfx::Shader_Cache<'r>,
+pub struct Game_Resources {
+    pub gfx: inle_resources::gfx::Gfx_Resources,
+    pub audio: inle_resources::audio::Audio_Resources,
+    pub shader_cache: inle_resources::gfx::Shader_Cache,
 }
 
 #[repr(C)]
-pub struct Game_Bundle<'r> {
+pub struct Game_Bundle {
     pub game_state: *mut Game_State,
-    pub game_resources: *mut Game_Resources<'r>,
+    pub game_resources: *mut Game_Resources,
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn game_init<'a>(
+pub unsafe extern "C" fn game_init(
     _args: *const *const c_char,
     _args_count: usize,
-) -> Game_Bundle<'a> {
+) -> Game_Bundle {
     let mut game_res = game::create_game_resources();
     let mut game_state = game::internal_game_init();
 
@@ -78,7 +78,7 @@ pub unsafe extern "C" fn game_init<'a>(
 #[no_mangle]
 pub unsafe extern "C" fn game_update(
     game_state: *mut Game_State,
-    game_res: *mut Game_Resources<'_>,
+    game_res: *mut Game_Resources,
 ) -> bool {
     let game_state = &mut *game_state;
     let game_res = &mut *game_res;
