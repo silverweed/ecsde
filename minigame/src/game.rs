@@ -62,6 +62,10 @@ pub fn internal_game_init() -> Box<Game_State> {
 
     let engine_cvars = inle_app::app::create_engine_cvars(&config);
 
+    let ui = inle_ui::Ui_Context::default();
+
+    let phase_mgr = super::Phase_Manager::default();
+
     Box::new(Game_State {
         env,
         config,
@@ -77,7 +81,9 @@ pub fn internal_game_init() -> Box<Game_State> {
         should_quit: false,
         default_font: None,
         debug_systems,
+        ui,
         engine_cvars,
+        phase_mgr,
         #[cfg(debug_assertions)]
         fps_counter: inle_debug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(1)),
     })
@@ -101,6 +107,10 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
         &game_state.env,
         font_name.read(&game_state.config),
     ));
+
+    game_state.phase_mgr.register_phase(sid!("menu"), Box::new(crate::phases::menu::Main_Menu::new(&mut game_state.window)));
+    let mut args = crate::phases::Phase_Args::new(game_state, game_res);
+    game_state.phase_mgr.push_phase(sid!("menu"), &mut args);
 
     #[cfg(debug_assertions)]
     {

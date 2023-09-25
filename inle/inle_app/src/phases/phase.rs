@@ -13,8 +13,8 @@ pub enum Phase_Transition {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Phase_Id(String_Id);
 
-impl Phase_Id {
-    pub fn new(sid: String_Id) -> Self {
+impl From<String_Id> for Phase_Id {
+    fn from(sid: String_Id) -> Self {
         Self(sid)
     }
 }

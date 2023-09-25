@@ -18,6 +18,8 @@ mod debug;
 
 use std::ffi::c_char;
 
+type Phase_Manager = inle_app::phases::Phase_Manager<phases::Phase_Args>;
+
 pub struct Game_State {
     should_quit: bool,
     env: inle_core::env::Env_Info,
@@ -42,6 +44,10 @@ pub struct Game_State {
     debug_systems: inle_app::debug_systems::Debug_Systems,
 
     engine_cvars: inle_app::app::Engine_CVars,
+
+    ui: inle_ui::Ui_Context,
+
+    phase_mgr: Phase_Manager,
 
     #[cfg(debug_assertions)]
     fps_counter: inle_debug::fps::Fps_Counter,

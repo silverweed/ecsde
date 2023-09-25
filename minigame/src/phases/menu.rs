@@ -4,7 +4,7 @@ use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::rect::Rect;
 use inle_math::vector::{lerp_v, Vec2f};
 use inle_win::window;
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 use std::time::Duration;
 
 #[derive(Default)]
@@ -20,12 +20,16 @@ struct Menu_Button {
 }
 
 #[derive(Default)]
-pub struct Main_Menu<'s> {
+pub struct Main_Menu {
     buttons: Vec<Menu_Button>,
-    _pd: std::marker::PhantomData<&'s ()>,
 }
 
-impl Main_Menu<'_> {
+impl Main_Menu {
+    pub fn new(window: &mut Render_Window_Handle) -> Self {
+        Self { buttons: Self::create_buttons(window) }
+    }
+
+
     fn create_buttons(window: &Render_Window_Handle) -> Vec<Menu_Button> {
         let mut buttons = vec![];
         let (ww, wh) = window::get_window_target_size(window);
@@ -64,24 +68,21 @@ impl Main_Menu<'_> {
     }
 }
 
-impl<'s> Game_Phase for Main_Menu<'s> {
-    type Args = Phase_Args<'s>;
-
-    fn on_start(&mut self, args: &mut Self::Args) {
-        self.buttons = Self::create_buttons(args.window.borrow_mut().deref_mut());
-    }
+impl Game_Phase for Main_Menu {
+    type Args = Phase_Args;
 
     fn update(&mut self, args: &mut Self::Args) -> Phase_Transition {
-        let dt = args.time.borrow().dt();
+        let mut game_state = args.game_state_mut();
+        let gs = game_state.deref_mut();
+        let game_res = args.game_res();
+
+        let dt = gs.time.dt();
 
         for button in &mut self.buttons {
             button.ease_t += dt.as_secs_f32();
         }
 
-        let mut window = args.window.borrow_mut();
-        let gres = &args.game_res.gfx;
-        let mut ui_ctx = args.ui.borrow_mut();
-        let istate = args.input.borrow();
+        let gres = &game_res.gfx;
 
         let b = &self.buttons[0];
         let pos = lerp_v(
@@ -92,10 +93,10 @@ impl<'s> Game_Phase for Main_Menu<'s> {
         let rect = Rect::new(pos.x, pos.y, b.size.x, b.size.y);
         // Start game
         if inle_ui::button(
-            window.deref_mut(),
+            &mut gs.window,
             gres,
-            istate.deref(),
-            ui_ctx.deref_mut(),
+            &gs.input,
+            &mut gs.ui,
             b.id,
             b.text,
             rect,
@@ -116,10 +117,10 @@ impl<'s> Game_Phase for Main_Menu<'s> {
         let rect = Rect::new(pos.x, pos.y, b.size.x, b.size.y);
         // Quit game
         if inle_ui::button(
-            window.deref_mut(),
+            &mut gs.window,
             gres,
-            istate.deref(),
-            ui_ctx.deref_mut(),
+            &gs.input,
+            &mut gs.ui,
             b.id,
             b.text,
             rect,
