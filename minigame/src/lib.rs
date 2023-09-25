@@ -98,11 +98,13 @@ pub unsafe extern "C" fn game_update(
         //
         // Input
         //
-        game::process_input(game_state);
+        game::process_input(game_state, game_res);
 
         //
         // Update
         //
+        game::update(game_state, game_res);
+
         #[cfg(debug_assertions)]
         {
             debug::update_debug(game_state, game_res);

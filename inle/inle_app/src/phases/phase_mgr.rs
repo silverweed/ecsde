@@ -49,7 +49,6 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
         false
     }
 
-    /// Returns true if should quit
     pub fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Phase_Args) {
         if let Some(phase) = self.current_phase() {
             phase.handle_actions(actions, args);

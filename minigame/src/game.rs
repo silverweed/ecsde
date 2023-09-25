@@ -2,6 +2,7 @@ use super::debug;
 use super::{Game_Resources, Game_State};
 use inle_cfg::Cfg_Var;
 use inle_input::core_actions::Core_Action;
+use crate::phases::Phase_Args;
 use std::time::Duration;
 
 //
@@ -108,8 +109,10 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
         font_name.read(&game_state.config),
     ));
 
+    inle_ui::init_ui(&mut game_state.ui, &mut game_res.gfx, &game_state.env);
+
     game_state.phase_mgr.register_phase(sid!("menu"), Box::new(crate::phases::menu::Main_Menu::new(&mut game_state.window)));
-    let mut args = crate::phases::Phase_Args::new(game_state, game_res);
+    let mut args = Phase_Args::new(game_state, game_res);
     game_state.phase_mgr.push_phase(sid!("menu"), &mut args);
 
     #[cfg(debug_assertions)]
@@ -155,7 +158,7 @@ pub fn end_frame(game_state: &mut Game_State) {
 //
 // Input
 //
-pub fn process_input(game_state: &mut Game_State) {
+pub fn process_input(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     let process_game_actions;
     #[cfg(debug_assertions)]
     {
@@ -177,7 +180,12 @@ pub fn process_input(game_state: &mut Game_State) {
 
     if handle_core_actions(&mut game_state.window, &mut game_state.input) {
         game_state.should_quit = true;
+        return;
     }
+
+    let actions = game_state.input.processed.game_actions.clone();
+    let mut args = Phase_Args::new(game_state, game_res);
+    game_state.phase_mgr.handle_actions(&actions, &mut args);
 }
 
 fn handle_core_actions(
@@ -201,6 +209,14 @@ fn handle_core_actions(
 }
 
 //
+// Update
+//
+pub fn update(game_state: &mut Game_State, game_res: &mut Game_Resources) {
+    let mut args = Phase_Args::new(game_state, game_res);
+    game_state.phase_mgr.update(&mut args);
+}
+
+//
 // Render
 //
 pub fn render(game_state: &mut Game_State, game_res: &mut Game_Resources) {
@@ -214,6 +230,9 @@ pub fn render(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     let txt = inle_gfx::render::create_text(win, "Hello Minigame!", font, 42);
     inle_gfx::render::render_text(win, &txt, inle_common::colors::GREEN, v2!(100., 100.));
     //
+    //
+
+    inle_ui::draw_all_ui(win, &game_res.gfx, &mut game_state.ui);
 
     #[cfg(debug_assertions)]
     {
