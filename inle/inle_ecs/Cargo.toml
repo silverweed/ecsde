@@ -7,7 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anymap = { version = "0.12" }
 inle_alloc = { path = "../inle_alloc" }
 inle_common = { path = "../inle_common" }
 inle_debug = { path = "../inle_debug" }
@@ -15,3 +14,4 @@ inle_diagnostics = { path = "../inle_diagnostics" }
 inle_events = { path = "../inle_events" }
 inle_math = { path = "../inle_math" }
 smallvec = { workspace = true }
+anymap = { workspace = true }

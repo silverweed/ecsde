@@ -13,6 +13,4 @@ inle_ecs = { path = "../inle_ecs" }
 inle_events = { path = "../inle_events" }
 inle_math = { path = "../inle_math" }
 rayon = { workspace = true }
-
-[dependencies.smallvec]
-default-features = false
+smallvec = { workspace = true }

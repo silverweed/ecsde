@@ -8,4 +8,4 @@ edition = "2018"
 
 [dependencies]
 inle_diagnostics = { path = "../inle_diagnostics" }
-anymap = "0.12"
+anymap = { workspace = true }
