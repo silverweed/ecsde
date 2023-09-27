@@ -31,23 +31,29 @@ impl DerefMut for Anim_Sprite {
     }
 }
 
+impl From<Sprite> for Anim_Sprite {
+    fn from(sprite: Sprite) -> Self {
+        Self::from_sprite(sprite, (1, 1), Duration::default())
+    }
+}
+
 impl Anim_Sprite {
     pub fn new(gres: &Gfx_Resources, tex: Texture_Handle, frame_rect: Recti, frame_duration: Duration) -> Self {
         let mut sprite = Sprite::new(gres, tex);
-        Self::from_sprite(sprite, frame_rect, frame_duration)
+        Self::from_sprite_with_rect(sprite, frame_rect, frame_duration)
     }
 
-    pub fn from_tex_path(gres: &mut Gfx_Resources, path: &std::path::Path, frame_rect: Recti, frame_duration: Duration) -> Self {
+    pub fn from_tex_path_rect(gres: &mut Gfx_Resources, path: &std::path::Path, frame_rect: Recti, frame_duration: Duration) -> Self {
         let mut sprite = Sprite::from_tex_path(gres, path);
-        Self::from_sprite(sprite, frame_rect, frame_duration)
+        Self::from_sprite_with_rect(sprite, frame_rect, frame_duration)
     }
 
-    pub fn from_tex_path_n_frames(gres: &mut Gfx_Resources, path: &std::path::Path, n_frames: (u16, u16), frame_duration: Duration) -> Self {
+    pub fn from_tex_path(gres: &mut Gfx_Resources, path: &std::path::Path, n_frames: (u16, u16), frame_duration: Duration) -> Self {
         let mut sprite = Sprite::from_tex_path(gres, path);
-        Self::from_sprite_n_frames(sprite, n_frames, frame_duration)
+        Self::from_sprite(sprite, n_frames, frame_duration)
     }
 
-    pub fn from_sprite(mut sprite: Sprite, frame_rect: Recti, frame_duration: Duration) -> Self {
+    pub fn from_sprite_with_rect(mut sprite: Sprite, frame_rect: Recti, frame_duration: Duration) -> Self {
         let spritesheet_rect = sprite.rect;
         sprite.rect = frame_rect;
 
@@ -65,10 +71,10 @@ impl Anim_Sprite {
         }
     }
 
-    pub fn from_sprite_n_frames(mut sprite: Sprite, (n_cols, n_rows): (u16, u16), frame_duration: Duration) -> Self {
+    pub fn from_sprite(mut sprite: Sprite, (n_cols, n_rows): (u16, u16), frame_duration: Duration) -> Self {
         let spritesheet_rect = sprite.rect;
         let frame_rect = Rect::new(0, 0, spritesheet_rect.width / n_cols as i32, spritesheet_rect.height / n_rows as i32);
-        Self::from_sprite(sprite, frame_rect, frame_duration)
+        Self::from_sprite_with_rect(sprite, frame_rect, frame_duration)
     }
 }
 

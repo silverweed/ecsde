@@ -34,9 +34,8 @@ struct Falling_Block {
 pub struct Main_Menu {
     buttons: Vec<Menu_Button>,
 
-    sprites: Vec<Sprite>,
-    anim_sprites: Vec<Anim_Sprite>,
-    block_sprites_first_idx: usize,
+    sprites: Vec<Anim_Sprite>,
+    block_sprites_first_idx: usize, // idx into `sprites`
     falling_blocks: Vec<Falling_Block>,
 
     rays_sprite_idx: usize,
@@ -164,52 +163,52 @@ impl Game_Phase for Main_Menu {
             let tex_p = tex_path(env, "menu/main_menu_background.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
             sprite.z_index = -1;
-            self.sprites.push(sprite);
+            self.sprites.push(sprite.into());
 
             let tex_p = tex_path(env, "menu/main_menu_mountains.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
             sprite.rect = tex_rect;
-            self.sprites.push(sprite);
+            self.sprites.push(sprite.into());
 
             let tex_p = tex_path(env, "menu/game_logo.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
             sprite.transform.translate(0., -300.);
             sprite.z_index = 2;
-            self.sprites.push(sprite);
+            self.sprites.push(sprite.into());
 
             let tex_p = tex_path(env, "game/rays.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
             sprite.transform.set_scale(1.5, 1.5);
-            self.sprites.push(sprite);
+            self.sprites.push(sprite.into());
             self.rays_sprite_idx = self.sprites.len() - 1;
 
             let tex_p = tex_path(env, "game/sun_eyes_animation.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
             sprite.z_index = 2;
-            let mut anim_sprite = Anim_Sprite::from_sprite_n_frames(sprite, (4, 2), Duration::from_millis(120));
-            self.anim_sprites.push(anim_sprite);
+            let mut anim_sprite = Anim_Sprite::from_sprite(sprite, (4, 2), Duration::from_millis(120));
+            self.sprites.push(anim_sprite);
 
             // Block Sprites
-            self.block_sprites_first_idx = self.anim_sprites.len();
-            self.anim_sprites.push(Anim_Sprite::from_tex_path_n_frames(
+            self.block_sprites_first_idx = self.sprites.len();
+            self.sprites.push(Anim_Sprite::from_tex_path(
                 gres,
                 &tex_path(env, "block/block_standard.png"),
                 (1, 1),
                 Duration::default(),
             ));
-            self.anim_sprites.push(Anim_Sprite::from_tex_path_n_frames(
+            self.sprites.push(Anim_Sprite::from_tex_path(
                 gres,
                 &tex_path(env, "block/block_annoyed_eyes_animation.png"),
                 (8, 1),
                 Duration::from_millis(100),
             ));
-            self.anim_sprites.push(Anim_Sprite::from_tex_path_n_frames(
+            self.sprites.push(Anim_Sprite::from_tex_path(
                 gres,
                 &tex_path(env, "block/block_angry_eyes_animation.png"),
                 (8, 1),
                 Duration::from_millis(100),
             ));
-            self.anim_sprites.push(Anim_Sprite::from_tex_path_n_frames(
+            self.sprites.push(Anim_Sprite::from_tex_path(
                 gres,
                 &tex_path(env, "block/block_dummy_eyes_animation.png"),
                 (8, 1),
@@ -219,16 +218,16 @@ impl Game_Phase for Main_Menu {
             // Spawn falling blocks
             const N_FALLING_BLOCKS: usize = 10;
 
-            let first_falling_block_idx = self.anim_sprites.len();
+            let first_falling_block_idx = self.sprites.len();
 
             debug_assert!(self.falling_blocks.is_empty());
-            let block_template = self.anim_sprites[first_falling_block_idx - 1].clone();
-            self.anim_sprites.resize(first_falling_block_idx + N_FALLING_BLOCKS, block_template);
+            let block_template = self.sprites[first_falling_block_idx - 1].clone();
+            self.sprites.resize(first_falling_block_idx + N_FALLING_BLOCKS, block_template);
             self.falling_blocks.reserve_exact(N_FALLING_BLOCKS);
 
             for i in 0..N_FALLING_BLOCKS {
                 self.falling_blocks.push(replace_falling_block(
-                    &mut self.anim_sprites,
+                    &mut self.sprites,
                     first_falling_block_idx + i,
                     self.block_sprites_first_idx,
                     gs.app_config.target_win_size,
@@ -249,7 +248,7 @@ impl Game_Phase for Main_Menu {
             button.ease_t += dt;
         }
 
-        anim_sprites::update_anim_sprites(gs.time.dt(), &mut self.anim_sprites);
+        anim_sprites::update_anim_sprites(gs.time.dt(), &mut self.sprites);
 
         let gres = &game_res.gfx;
 
@@ -266,10 +265,6 @@ impl Game_Phase for Main_Menu {
         // Draw background
         //
         for sprite in &self.sprites {
-            inle_gfx::sprites::render_sprite(&mut gs.window, &mut gs.batches, sprite);
-        }
-
-        for sprite in &self.anim_sprites {
             anim_sprites::render_anim_sprite(&mut gs.window, &mut gs.batches, sprite);
         }
 
@@ -279,14 +274,14 @@ impl Game_Phase for Main_Menu {
         let win_x = gs.app_config.target_win_size.0 as f32 * 0.5;
         let win_h = gs.app_config.target_win_size.1 as f32 * 0.5;
         for block in &mut self.falling_blocks {
-            let sprite = &mut self.anim_sprites[block.sprite_idx];
+            let sprite = &mut self.sprites[block.sprite_idx];
             sprite
                 .transform
                 .translate(0., block.speed * dt);
             sprite.transform.rotate(block.ang_speed * dt);
             if sprite.transform.position().y > win_h + 20. {
                 let mut new_block = replace_falling_block(
-                    &mut self.anim_sprites,
+                    &mut self.sprites,
                     block.sprite_idx,
                     self.block_sprites_first_idx,
                     gs.app_config.target_win_size,
@@ -294,7 +289,7 @@ impl Game_Phase for Main_Menu {
                 );
                 std::mem::swap(&mut new_block, block);
             }
-            anim_sprites::render_anim_sprite(&mut gs.window, &mut gs.batches, &self.anim_sprites[block.sprite_idx]);
+            anim_sprites::render_anim_sprite(&mut gs.window, &mut gs.batches, &self.sprites[block.sprite_idx]);
         }
 
         //
