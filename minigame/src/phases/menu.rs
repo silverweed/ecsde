@@ -1,6 +1,7 @@
 use super::Phase_Args;
 use inle_app::phases::{Game_Phase, Phase_Id, Phase_Transition};
 use inle_core::rand;
+use crate::sprites::{self as anim_sprites, Anim_Sprite};
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_gfx::sprites::{self, Sprite};
 use inle_math::angle;
@@ -22,9 +23,11 @@ struct Menu_Button {
     pub ease_duration: Duration,
 }
 
+#[derive(Default)]
 struct Falling_Block {
-    pub sprite: Sprite,
+    pub sprite_idx: usize,
     pub speed: f32,
+    pub ang_speed: angle::Angle,
 }
 
 #[derive(Default)]
@@ -32,8 +35,11 @@ pub struct Main_Menu {
     buttons: Vec<Menu_Button>,
 
     sprites: Vec<Sprite>,
-    block_sprites: Vec<Sprite>,
+    anim_sprites: Vec<Anim_Sprite>,
+    block_sprites_first_idx: usize,
     falling_blocks: Vec<Falling_Block>,
+
+    rays_sprite_idx: usize,
 }
 
 impl Main_Menu {
@@ -57,7 +63,7 @@ impl Main_Menu {
         let ease_duration = Duration::from_millis(300);
         let size = v2!(200., 100.);
         let tgx = (ww - size.x) * 0.5;
-        let tgy = (wh - size.y) * 0.5 + 180.0;
+        let tgy = (wh - size.y) * 0.5 + 250.0;
         let spacing = 5.;
         buttons.push(Menu_Button {
             id: 1,
@@ -84,12 +90,18 @@ impl Main_Menu {
     }
 }
 
-fn new_falling_block(
-    sprites: &[Sprite],
+fn replace_falling_block(
+    // NOTE: sprites contains a bunch of long-lived sprites (background, sun, template falling
+    // blocks) and a bunch of short-lived ones (the falling blocks). The total amount of sprites
+    // never changes because falling blocks are created and destroyed simultaneously.
+    sprites: &mut [Anim_Sprite],
+    replaced_idx: usize, // this is the index (into `sprites`) we're replacing
+    block_sprites_first_idx: usize,
     win_size: (u32, u32),
     rng: &mut rand::Default_Rng,
 ) -> Falling_Block {
     const FALLING_BLOCK_SPEED_RANGE: (f32, f32) = (100., 250.);
+    const FALLING_BLOCK_ANG_SPEED_DEG: f32 = 200.;
 
     let win_w = win_size.0 as f32 * 0.5;
     let win_h = win_size.1 as f32 * 0.5;
@@ -103,9 +115,11 @@ fn new_falling_block(
     } else {
         0
     };
-    // 50% chance to be drawn atop of the mountains
-    let z_index = if rand::rand_01(rng) < 0.5 { -1 } else { 1 };
-    let mut block = sprites[block_type].clone();
+
+    sprites[replaced_idx] = sprites[block_sprites_first_idx + block_type].clone();
+    let block = &mut sprites[replaced_idx];
+
+    // Initial random position + rotation
     block.transform.translate(
         rand::rand_range(rng, -win_w, win_w),
         rand::rand_range(rng, -win_h * 2.0, -win_h),
@@ -113,15 +127,21 @@ fn new_falling_block(
     block
         .transform
         .rotate(angle::rad(rand::rand_range(rng, 0., angle::TAU)));
+    //
+    // 50% chance to be drawn atop of the mountains
+    let z_index = if rand::rand_01(rng) < 0.5 { -1 } else { 1 };
     block.z_index = z_index;
+
     let speed = rand::rand_range(
         rng,
         FALLING_BLOCK_SPEED_RANGE.0,
         FALLING_BLOCK_SPEED_RANGE.1,
     );
+    let ang_speed = angle::deg(rand::rand_range(rng, -FALLING_BLOCK_ANG_SPEED_DEG, FALLING_BLOCK_ANG_SPEED_DEG));
     Falling_Block {
-        sprite: block,
+        sprite_idx: replaced_idx,
         speed,
+        ang_speed,
     }
 }
 
@@ -153,42 +173,64 @@ impl Game_Phase for Main_Menu {
 
             let tex_p = tex_path(env, "menu/game_logo.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
-            sprite.transform.translate(0., -200.);
+            sprite.transform.translate(0., -300.);
+            sprite.z_index = 2;
             self.sprites.push(sprite);
 
-            let tex_p = tex_path(env, "game/sun.png");
+            let tex_p = tex_path(env, "game/rays.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
+            sprite.transform.set_scale(1.5, 1.5);
             self.sprites.push(sprite);
+            self.rays_sprite_idx = self.sprites.len() - 1;
+
+            let tex_p = tex_path(env, "game/sun_eyes_animation.png");
+            let mut sprite = Sprite::from_tex_path(gres, &tex_p);
+            sprite.z_index = 2;
+            let mut anim_sprite = Anim_Sprite::from_sprite_n_frames(sprite, (4, 2), Duration::from_millis(120));
+            self.anim_sprites.push(anim_sprite);
 
             // Block Sprites
-            debug_assert!(self.block_sprites.is_empty());
-
-            self.block_sprites.push(Sprite::from_tex_path(
+            self.block_sprites_first_idx = self.anim_sprites.len();
+            self.anim_sprites.push(Anim_Sprite::from_tex_path_n_frames(
                 gres,
                 &tex_path(env, "block/block_standard.png"),
+                (1, 1),
+                Duration::default(),
             ));
-            self.block_sprites.push(Sprite::from_tex_path(
+            self.anim_sprites.push(Anim_Sprite::from_tex_path_n_frames(
                 gres,
-                &tex_path(env, "block/block_annoyed.png"),
+                &tex_path(env, "block/block_annoyed_eyes_animation.png"),
+                (8, 1),
+                Duration::from_millis(100),
             ));
-            self.block_sprites.push(Sprite::from_tex_path(
+            self.anim_sprites.push(Anim_Sprite::from_tex_path_n_frames(
                 gres,
-                &tex_path(env, "block/block_angry.png"),
+                &tex_path(env, "block/block_angry_eyes_animation.png"),
+                (8, 1),
+                Duration::from_millis(100),
             ));
-            self.block_sprites.push(Sprite::from_tex_path(
+            self.anim_sprites.push(Anim_Sprite::from_tex_path_n_frames(
                 gres,
-                &tex_path(env, "block/block_dummy.png"),
+                &tex_path(env, "block/block_dummy_eyes_animation.png"),
+                (8, 1),
+                Duration::from_millis(100),
             ));
 
             // Spawn falling blocks
             const N_FALLING_BLOCKS: usize = 10;
 
+            let first_falling_block_idx = self.anim_sprites.len();
+
             debug_assert!(self.falling_blocks.is_empty());
+            let block_template = self.anim_sprites[first_falling_block_idx - 1].clone();
+            self.anim_sprites.resize(first_falling_block_idx + N_FALLING_BLOCKS, block_template);
             self.falling_blocks.reserve_exact(N_FALLING_BLOCKS);
 
-            for _i in 0..N_FALLING_BLOCKS {
-                self.falling_blocks.push(new_falling_block(
-                    &self.block_sprites,
+            for i in 0..N_FALLING_BLOCKS {
+                self.falling_blocks.push(replace_falling_block(
+                    &mut self.anim_sprites,
+                    first_falling_block_idx + i,
+                    self.block_sprites_first_idx,
                     gs.app_config.target_win_size,
                     &mut gs.rng,
                 ));
@@ -201,13 +243,24 @@ impl Game_Phase for Main_Menu {
         let gs = game_state.deref_mut();
         let game_res = args.game_res();
 
-        let dt = gs.time.dt();
+        let dt = gs.time.dt().as_secs_f32();
 
         for button in &mut self.buttons {
-            button.ease_t += dt.as_secs_f32();
+            button.ease_t += dt;
         }
 
+        anim_sprites::update_anim_sprites(gs.time.dt(), &mut self.anim_sprites);
+
         let gres = &game_res.gfx;
+
+        //
+        // Rotate sun rays
+        //
+        {
+            const RAYS_ANG_SPEED: angle::Angle = angle::rad(0.16);
+            let rays = &mut self.sprites[self.rays_sprite_idx];
+            rays.transform.rotate(dt * RAYS_ANG_SPEED);
+        }
 
         //
         // Draw background
@@ -216,25 +269,32 @@ impl Game_Phase for Main_Menu {
             inle_gfx::sprites::render_sprite(&mut gs.window, &mut gs.batches, sprite);
         }
 
+        for sprite in &self.anim_sprites {
+            anim_sprites::render_anim_sprite(&mut gs.window, &mut gs.batches, sprite);
+        }
+
         //
         // Update and draw falling blocks
         //
         let win_x = gs.app_config.target_win_size.0 as f32 * 0.5;
         let win_h = gs.app_config.target_win_size.1 as f32 * 0.5;
         for block in &mut self.falling_blocks {
-            block
-                .sprite
+            let sprite = &mut self.anim_sprites[block.sprite_idx];
+            sprite
                 .transform
-                .translate(0., block.speed * dt.as_secs_f32());
-            if block.sprite.transform.position().y > win_h + 20. {
-                let mut new_block = new_falling_block(
-                    &self.block_sprites,
+                .translate(0., block.speed * dt);
+            sprite.transform.rotate(block.ang_speed * dt);
+            if sprite.transform.position().y > win_h + 20. {
+                let mut new_block = replace_falling_block(
+                    &mut self.anim_sprites,
+                    block.sprite_idx,
+                    self.block_sprites_first_idx,
                     gs.app_config.target_win_size,
                     &mut gs.rng,
                 );
                 std::mem::swap(&mut new_block, block);
             }
-            inle_gfx::sprites::render_sprite(&mut gs.window, &mut gs.batches, &block.sprite);
+            anim_sprites::render_anim_sprite(&mut gs.window, &mut gs.batches, &self.anim_sprites[block.sprite_idx]);
         }
 
         //
