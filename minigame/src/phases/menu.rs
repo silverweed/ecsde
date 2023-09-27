@@ -1,4 +1,5 @@
 use super::Phase_Args;
+use inle_gfx::sprites;
 use inle_app::phases::{Game_Phase, Phase_Transition};
 use inle_common::stringid::{self, String_Id};
 use inle_gfx::render_window::Render_Window_Handle;
@@ -25,7 +26,7 @@ struct Menu_Button {
 pub struct Main_Menu {
     buttons: Vec<Menu_Button>,
 
-    tex_bg: Texture_Handle,
+    sprites: Vec<sprites::Sprite>,
 }
 
 impl Main_Menu {
@@ -47,9 +48,9 @@ impl Main_Menu {
             ..Default::default()
         };
         let ease_duration = Duration::from_millis(300);
-        let size = v2!(200., 120.);
+        let size = v2!(200., 100.);
         let tgx = (ww - size.x) * 0.5;
-        let tgy = (wh - size.y) * 0.5;
+        let tgy = (wh - size.y) * 0.5 + 180.0;
         let spacing = 5.;
         buttons.push(Menu_Button {
             id: 1,
@@ -80,12 +81,33 @@ impl Game_Phase for Main_Menu {
     type Args = Phase_Args;
 
     fn on_start(&mut self, args: &mut Self::Args) {
-        if self.tex_bg.is_none() {
-            let mut res = args.game_res_mut();
-            let env = &args.game_state().env;
+        if self.sprites.is_empty() {
+            let gs = args.game_state();
+            let (win_w, win_h) = gs.app_config.target_win_size;
+            let tex_rect = inle_math::rect::Rect::new(0, 0, win_w as _, win_h as _);
 
-            let bg_tex = inle_resources::gfx::tex_path(env, "menu/main_menu_background.png");
-            self.tex_bg = res.gfx.load_texture(&bg_tex);
+            let mut res = args.game_res_mut();
+            let gres = &mut res.gfx;
+            let env = &gs.env;
+
+            let tex_path = inle_resources::gfx::tex_path(env, "menu/main_menu_background.png");
+            let mut sprite = sprites::Sprite::from_tex_path(gres, &tex_path);
+            sprite.z_index = -1;
+            self.sprites.push(sprite);
+
+            let tex_path = inle_resources::gfx::tex_path(env, "menu/main_menu_mountains.png");
+            let mut sprite = sprites::Sprite::from_tex_path(gres, &tex_path);
+            sprite.rect = tex_rect;
+            self.sprites.push(sprite);
+
+            let tex_path = inle_resources::gfx::tex_path(env, "menu/game_logo.png");
+            let mut sprite = sprites::Sprite::from_tex_path(gres, &tex_path);
+            sprite.transform.translate(0., -200.);
+            self.sprites.push(sprite);
+
+            let tex_path = inle_resources::gfx::tex_path(env, "game/sun.png");
+            let mut sprite = sprites::Sprite::from_tex_path(gres, &tex_path);
+            self.sprites.push(sprite);
         }
     }
 
@@ -102,18 +124,13 @@ impl Game_Phase for Main_Menu {
 
         let gres = &game_res.gfx;
 
-        let (win_w, win_h) = gs.app_config.target_win_size;
-        let material = inle_gfx::material::Material::with_texture(self.tex_bg);
-        let tex_rect = inle_math::rect::Rect::new(0, 0, win_w as _, win_h as _);
-        inle_gfx::render::render_texture_ws(
-            &mut gs.window,
-            &mut gs.batches,
-            &material,
-            &tex_rect,
-            inle_common::colors::WHITE,
-            &inle_math::transform::Transform2D::default(),
-            0,
-        );
+        for sprite in &self.sprites {
+            inle_gfx::sprites::render_sprite(
+                &mut gs.window,
+                &mut gs.batches,
+                sprite,
+            );
+        }
 
         let b = &self.buttons[0];
         let pos = lerp_v(

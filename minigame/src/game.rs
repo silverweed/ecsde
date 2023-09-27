@@ -245,13 +245,6 @@ pub fn render(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     let win = &mut game_state.window;
     inle_gfx::render_window::clear(win);
 
-    // TEMP
-    let font = game_res.gfx.get_font(game_state.default_font);
-    let txt = inle_gfx::render::create_text(win, "Hello Minigame!", font, 42);
-    inle_gfx::render::render_text(win, &txt, inle_common::colors::GREEN, v2!(100., 100.));
-    //
-    //
-
     let cam_xform = inle_math::transform::Transform2D::default();
     let draw_params = inle_gfx::render::batcher::Batcher_Draw_Params::default();
     inle_gfx::render::batcher::draw_batches(
