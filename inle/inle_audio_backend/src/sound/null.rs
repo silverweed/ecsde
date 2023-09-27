@@ -1,5 +1,6 @@
 pub struct Sound;
 pub struct Sound_Buffer;
+pub struct Audio_Context;
 
 static mut INSTANCE: () = ();
 
@@ -32,3 +33,5 @@ pub fn sound_playing(_sound: &Sound) -> bool {
 pub fn create_sound_with_buffer(_buf: &Sound_Buffer) -> Sound {
     Sound
 }
+
+pub fn init_audio() -> Audio_Context { Audio_Context }

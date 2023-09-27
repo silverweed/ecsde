@@ -132,7 +132,7 @@ mod libc {
     #[link(name = "c")]
     extern "C" {
         pub fn fread(ptr: *mut c_void, size: usize, nmemb: usize, stream: *mut c_void) -> usize;
-        pub fn ftell(ptr: *mut c_void) -> i64;
+        pub fn ftell(ptr: *mut c_void) -> ffi::c_long;
     }
 }
 
