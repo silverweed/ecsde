@@ -17,7 +17,7 @@ use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
 use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
 use smallvec::SmallVec;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 const SHADOWS_PER_ENTITY: usize = 4;
@@ -33,7 +33,7 @@ struct Sprite_Batch {
 
 #[derive(Default)]
 pub struct Batches {
-    textures_ws: BTreeMap<super::Z_Index, HashMap<Material, Sprite_Batch>>,
+    textures_ws: Vec<(super::Z_Index, HashMap<Material, Sprite_Batch>)>,
     point_lights_near_camera: SmallVec<[Point_Light; MAX_POINT_LIGHTS]>,
     rect_lights_near_camera: SmallVec<[Rect_Light; MAX_RECT_LIGHTS]>,
 }
@@ -68,10 +68,13 @@ pub(super) fn add_texture_ws(
 ) {
     let z_index_texmap = {
         trace!("get_z_texmap");
-        batches
-            .textures_ws
-            .entry(z_index)
-            .or_insert_with(HashMap::new)
+        match batches.textures_ws.binary_search_by(|(z, _)| z.cmp(&z_index)) {
+            Ok(idx) => &mut batches.textures_ws[idx].1,
+            Err(idx) => {
+                batches.textures_ws.insert(idx, (z_index, HashMap::new()));
+                &mut batches.textures_ws[idx].1
+            }
+        }
     };
 
     let sprite_batches = {
@@ -119,8 +122,8 @@ pub fn clear_batches(batches: &mut Batches) {
     trace!("clear_batches");
     batches
         .textures_ws
-        .values_mut()
-        .for_each(|m| m.values_mut().for_each(|batch| batch.sprites.clear()));
+        .iter_mut()
+        .for_each(|(_, m)| m.values_mut().for_each(|batch| batch.sprites.clear()));
 }
 
 #[inline(always)]
@@ -388,7 +391,8 @@ pub fn draw_batches(
     let rect_lights_near_camera = &batches.rect_lights_near_camera;
 
     // for each Z-index...
-    for sprite_map in batches.textures_ws.values_mut() {
+    for (_, sprite_map) in batches.textures_ws.iter_mut() 
+    {
         // for each material...
         for (material, batch) in sprite_map {
             let vbuffer = &mut batch.vbuffer;
