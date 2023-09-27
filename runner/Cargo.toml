@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "ecs"
+name = "inle_runner"
 version = "0.1.0"
 authors = ["silverweed <silverweed1991@gmail.com>"]
 

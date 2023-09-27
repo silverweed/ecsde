@@ -1,10 +1,6 @@
 [workspace]
-#members = ["ecs_runner", "ecs_game"]
-members = ["ecs_runner", "minigame"]
+members = ["runner", "minigame"]
 resolver = "1"
-
-#[profile.dev]
-#opt-level = 3
 
 [profile.profile]
 inherits = "dev"
