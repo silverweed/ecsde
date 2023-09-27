@@ -1,11 +1,12 @@
-use inle_resources::gfx::{Gfx_Resources,Texture_Handle};
-use std::path::Path;
 use super::material::Material;
-use inle_math::rect::{Rect, Recti};
-use inle_math::transform::Transform2D;
 use super::render;
 use inle_common::colors;
+use inle_math::rect::{Rect, Recti};
+use inle_math::transform::Transform2D;
+use inle_resources::gfx::{Gfx_Resources, Texture_Handle};
+use std::path::Path;
 
+#[derive(Clone)]
 pub struct Sprite {
     pub material: Material,
     pub rect: Recti,
@@ -41,7 +42,12 @@ pub fn render_sprite(
     sprite: &Sprite,
 ) {
     render::render_texture_ws(
-        window, batches, &sprite.material, &sprite.rect, sprite.color, &sprite.transform, sprite.z_index,
+        window,
+        batches,
+        &sprite.material,
+        &sprite.rect,
+        sprite.color,
+        &sprite.transform,
+        sprite.z_index,
     );
 }
-

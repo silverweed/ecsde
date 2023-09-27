@@ -1,6 +1,7 @@
 [workspace]
 #members = ["ecs_runner", "ecs_game"]
 members = ["ecs_runner", "minigame"]
+resolver = "1"
 
 #[profile.dev]
 #opt-level = 3

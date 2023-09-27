@@ -125,10 +125,9 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
         phases::Main_Menu::PHASE_ID,
         Box::new(phases::Main_Menu::new(&mut game_state.window)),
     );
-    game_state.phase_mgr.register_phase(
-        phases::In_Game::PHASE_ID,
-        Box::new(phases::In_Game::new()),
-    );
+    game_state
+        .phase_mgr
+        .register_phase(phases::In_Game::PHASE_ID, Box::new(phases::In_Game::new()));
     let mut args = Phase_Args::new(game_state, game_res);
     game_state
         .phase_mgr

@@ -1,5 +1,5 @@
 [package]
-edition = "2018"
+edition = "2021"
 name = "ecs"
 version = "0.1.0"
 authors = ["silverweed <silverweed1991@gmail.com>"]
