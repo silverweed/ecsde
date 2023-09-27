@@ -135,11 +135,11 @@ macro_rules! create_shader_from {
         const FRAG_SHADER_SRC: &str =
             include_str!(concat!("./gl/builtin_shaders/", $frag, ".frag"));
 
-        crate::render::new_shader_internal(
+        crate::render::new_shader(
             VERT_SHADER_SRC.as_bytes(),
             FRAG_SHADER_SRC.as_bytes(),
-            concat!($vert, "+", $frag),
-        )
+            Some(concat!($vert, "+", $frag)),
+        ).id
     }};
 }
 

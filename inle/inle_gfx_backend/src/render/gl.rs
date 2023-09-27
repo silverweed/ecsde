@@ -1,4 +1,4 @@
-use super::{Primitive_Type, Uniform_Value};
+use super::{Primitive_Type, Uniform_Value, Color_Type, Font_Metadata};
 use crate::backend_common::alloc::{
     Buffer_Allocator_Id, Buffer_Allocator_Ptr, Buffer_Handle, EMPTY_BUFFER_HANDLE,
 };
@@ -139,16 +139,6 @@ fn check_vbuf_valid(vbuf: &Vertex_Buffer) {
     );
 }
 
-#[derive(Copy, Clone, Debug)]
-#[allow(clippy::upper_case_acronyms)]
-pub enum Color_Type {
-    Grayscale,
-    RGB,
-    Indexed,
-    Grayscale_Alpha,
-    RGBA,
-}
-
 pub struct Image {
     bytes: Vec<u8>,
 
@@ -210,7 +200,7 @@ pub struct Texture {
 }
 
 pub struct Shader {
-    id: GLuint,
+    pub(crate) id: GLuint,
 
     // [uniform location => texture id]
     textures: HashMap<GLint, GLuint>,
@@ -316,86 +306,8 @@ pub fn use_shader(shader: &mut Shader) {
 }
 
 pub struct Font {
-    pub atlas: Texture,
-    pub metadata: Font_Metadata,
-}
-
-pub struct Font_Metadata {
-    // @Temporary: we want to support more than ASCII
-    glyph_data: [Glyph_Data; 256],
-    pub atlas_size: (u32, u32),
-    pub max_glyph_height: f32,
-}
-
-impl Font_Metadata {
-    pub fn with_atlas_size(width: u32, height: u32) -> Self {
-        Self {
-            atlas_size: (width, height),
-            glyph_data: [Glyph_Data::default(); 256],
-            max_glyph_height: 0.,
-        }
-    }
-
-    pub fn add_glyph_data(&mut self, glyph_id: char, data: Glyph_Data) {
-        if (glyph_id as usize) < 256 {
-            self.glyph_data[glyph_id as usize] = data;
-            if data.plane_bounds.height() > self.max_glyph_height {
-                self.max_glyph_height = data.plane_bounds.height();
-            }
-        } else {
-            lwarn!("We currently don't support non-ASCII characters: discarding glyph data for {} (0x{:X})"
-                , glyph_id, glyph_id as usize);
-        }
-    }
-
-    fn get_glyph_data(&self, glyph: char) -> Option<&Glyph_Data> {
-        // @Temporary
-        if (glyph as usize) < self.glyph_data.len() {
-            Some(&self.glyph_data[glyph as usize])
-        } else {
-            None
-        }
-    }
-
-    /// plane_bounds * scale_factor = size_of_glyph_in_pixel
-    fn scale_factor(&self, font_size: f32) -> f32 {
-        let base_line_height = self.max_glyph_height;
-        debug_assert!(base_line_height > 0.);
-
-        // NOTE: this scale factor is chosen so the maximum possible text height is equal to font_size px.
-        // We may want to change this and use font_size as the "main corpus" size,
-        // but for now it seems like a reasonable choice.
-        font_size / base_line_height
-    }
-}
-
-#[derive(Copy, Clone, Debug, Default)]
-pub struct Glyph_Data {
-    pub advance: f32,
-
-    /// Bounding box relative to the baseline
-    pub plane_bounds: Glyph_Bounds,
-
-    /// Normalized coordinates (uv) inside atlas
-    pub normalized_atlas_bounds: Glyph_Bounds,
-}
-
-#[derive(Copy, Clone, Debug, Default)]
-pub struct Glyph_Bounds {
-    pub left: f32,
-    pub bot: f32,
-    pub right: f32,
-    pub top: f32,
-}
-
-impl Glyph_Bounds {
-    fn width(&self) -> f32 {
-        self.right - self.left
-    }
-
-    fn height(&self) -> f32 {
-        self.top - self.bot
-    }
+    atlas: Texture,
+    metadata: Font_Metadata,
 }
 
 pub struct Text {
@@ -410,6 +322,11 @@ impl Drop for Text {
     fn drop(&mut self) {
         dealloc_vbuf(&mut self.vertices);
     }
+}
+
+#[inline]
+pub fn new_font(atlas: Texture, metadata: Font_Metadata) -> Font {
+    Font { atlas, metadata }
 }
 
 #[inline]

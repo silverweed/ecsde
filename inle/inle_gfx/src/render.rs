@@ -8,7 +8,7 @@ use inle_math::shapes::Circle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
 
-pub use inle_gfx_backend::render::{Primitive_Type, Uniform_Value};
+pub use inle_gfx_backend::render::{Primitive_Type, Uniform_Value, Color_Type, Font_Metadata};
 
 pub mod batcher;
 
@@ -20,7 +20,6 @@ pub type Text = backend::Text;
 pub type Texture = backend::Texture;
 pub type Vertex_Buffer = backend::Vertex_Buffer;
 pub type Vertex = backend::Vertex;
-pub type Color_Type = backend::Color_Type;
 pub type Uniform_Buffer = backend::Uniform_Buffer;
 
 //////////////////////////// DRAWING //////////////////////////////////
@@ -210,6 +209,10 @@ pub fn vbuf_max_vertices(vbuf: &Vertex_Buffer) -> u32 {
 }
 
 ///////////////////////////////// CREATING ///////////////////////////////////
+#[inline]
+pub fn new_font(atlas: Texture, metadata: Font_Metadata) -> Font {
+    backend::new_font(atlas, metadata)
+}
 
 #[inline]
 pub fn create_text(

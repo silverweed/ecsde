@@ -18,7 +18,7 @@ pub fn load_font_from_file(fname: &Path) -> Result<Font, Box<dyn Error>> {
     let metadata_csv = std::fs::read_to_string(metadata_fname)?;
     let metadata = parse_font_metadata_from_csv(&metadata_csv, render::get_texture_size(&atlas));
 
-    Ok(Font { atlas, metadata })
+    Ok(render::new_font(atlas, metadata))
 }
 
 fn parse_font_metadata_from_csv(csv: &str, atlas_size: (u32, u32)) -> Font_Metadata {

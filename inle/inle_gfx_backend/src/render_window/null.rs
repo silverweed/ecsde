@@ -30,7 +30,7 @@ pub fn clear(_window: &mut Render_Window_Handle) {}
 
 pub fn set_viewport(_window: &mut Render_Window_Handle, _viewport: &Rectf, _view_rect: &Rectf) {}
 
-pub fn raw_unproject_screen_pos(
+pub fn unproject_screen_pos(
     _screen_pos: Vec2i,
     _window: &Render_Window_Handle,
     _camera: &Transform2D,
@@ -38,10 +38,19 @@ pub fn raw_unproject_screen_pos(
     Vec2f::default()
 }
 
-pub fn raw_project_world_pos(
+pub fn project_world_pos(
     _world_pos: Vec2f,
     _window: &Render_Window_Handle,
     _camera: &Transform2D,
 ) -> Vec2i {
     Vec2i::default()
 }
+
+pub fn start_new_frame(_window: &mut Render_Window_Handle) {
+}
+
+pub fn shutdown(_window: &mut Render_Window_Handle) {}
+
+pub fn n_draw_calls_prev_frame(_window: &Render_Window_Handle) -> u32 { 0}
+
+pub fn recreate_render_window(_window: &mut Render_Window_Handle) {}
