@@ -37,6 +37,9 @@ pub struct Game_State {
     frame_alloc: inle_alloc::temp::Temp_Allocator,
 
     window: inle_gfx::render_window::Render_Window_Handle,
+    batches: inle_gfx::render::batcher::Batches,
+    lights: inle_gfx::light::Lights,
+
     input: inle_input::input_state::Input_State,
 
     default_font: inle_resources::gfx::Font_Handle,
@@ -123,6 +126,7 @@ pub unsafe extern "C" fn game_update(
 
 #[no_mangle]
 pub unsafe extern "C" fn game_shutdown(game_state: *mut Game_State, game_res: *mut Game_Resources) {
+    inle_gfx::render::batcher::clear_batches(&mut (*game_state).batches);
     inle_gfx::render_window::shutdown(&mut (*game_state).window);
 
     std::ptr::drop_in_place(game_state);

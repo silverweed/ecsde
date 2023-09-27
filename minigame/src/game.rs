@@ -46,8 +46,10 @@ pub fn internal_game_init() -> Box<Game_State> {
         );
         inle_gfx::render_window::create_render_window(window)
     };
-
     inle_gfx::render_window::set_clear_color(&mut window, inle_common::colors::rgb(30, 30, 30));
+
+    let batches = inle_gfx::render::batcher::Batches::default();
+    let lights = inle_gfx::light::Lights::default();
 
     let mut input = inle_input::input_state::create_input_state(&env);
     inle_input::joystick::init_joysticks(&window, &env, &mut input.raw.joy_state);
@@ -75,6 +77,8 @@ pub fn internal_game_init() -> Box<Game_State> {
         config,
         app_config,
         window,
+        batches,
+        lights,
         loggers,
         time,
         prev_frame_time: Duration::default(),
@@ -223,6 +227,8 @@ fn handle_core_actions(
 // Update
 //
 pub fn update(game_state: &mut Game_State, game_res: &mut Game_Resources) {
+    inle_gfx::render::batcher::clear_batches(&mut game_state.batches);
+
     let mut args = Phase_Args::new(game_state, game_res);
     let should_quit = game_state.phase_mgr.update(&mut args);
     if should_quit {
@@ -245,6 +251,19 @@ pub fn render(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     inle_gfx::render::render_text(win, &txt, inle_common::colors::GREEN, v2!(100., 100.));
     //
     //
+
+    let cam_xform = inle_math::transform::Transform2D::default();
+    let draw_params = inle_gfx::render::batcher::Batcher_Draw_Params::default();
+    inle_gfx::render::batcher::draw_batches(
+        win,
+        &game_res.gfx,
+        &mut game_state.batches,
+        &mut game_res.shader_cache,
+        &cam_xform,
+        &mut game_state.lights,
+        draw_params,
+        &mut game_state.frame_alloc,
+    );
 
     inle_ui::draw_all_ui(win, &game_res.gfx, &mut game_state.ui);
 

@@ -4,6 +4,7 @@ use inle_common::stringid::{self, String_Id};
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::rect::Rect;
 use inle_math::vector::{lerp_v, Vec2f};
+use inle_resources::gfx::Texture_Handle;
 use inle_win::window;
 use std::ops::DerefMut;
 use std::time::Duration;
@@ -23,6 +24,8 @@ struct Menu_Button {
 #[derive(Default)]
 pub struct Main_Menu {
     buttons: Vec<Menu_Button>,
+
+    tex_bg: Texture_Handle,
 }
 
 impl Main_Menu {
@@ -31,6 +34,7 @@ impl Main_Menu {
     pub fn new(window: &mut Render_Window_Handle) -> Self {
         Self {
             buttons: Self::create_buttons(window),
+            ..Default::default()
         }
     }
 
@@ -75,6 +79,16 @@ impl Main_Menu {
 impl Game_Phase for Main_Menu {
     type Args = Phase_Args;
 
+    fn on_start(&mut self, args: &mut Self::Args) {
+        if self.tex_bg.is_none() {
+            let mut res = args.game_res_mut();
+            let env = &args.game_state().env;
+
+            let bg_tex = inle_resources::gfx::tex_path(env, "menu/main_menu_background.png");
+            self.tex_bg = res.gfx.load_texture(&bg_tex);
+        }
+    }
+
     fn update(&mut self, args: &mut Self::Args) -> Phase_Transition {
         let mut game_state = args.game_state_mut();
         let gs = game_state.deref_mut();
@@ -87,6 +101,19 @@ impl Game_Phase for Main_Menu {
         }
 
         let gres = &game_res.gfx;
+
+        let (win_w, win_h) = gs.app_config.target_win_size;
+        let material = inle_gfx::material::Material::with_texture(self.tex_bg);
+        let tex_rect = inle_math::rect::Rect::new(0, 0, win_w as _, win_h as _);
+        inle_gfx::render::render_texture_ws(
+            &mut gs.window,
+            &mut gs.batches,
+            &material,
+            &tex_rect,
+            inle_common::colors::WHITE,
+            &inle_math::transform::Transform2D::default(),
+            0,
+        );
 
         let b = &self.buttons[0];
         let pos = lerp_v(
