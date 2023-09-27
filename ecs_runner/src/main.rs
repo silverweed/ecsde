@@ -132,7 +132,7 @@ fn main_with_hotload(
             unsafe {
                 (game_api.unload.unwrap())(game_state, game_resources);
             }
-            game_lib = lib_reload(&game_dll_abs_path, &mut unique_lib_path);
+            game_lib = lib_reload(game_dll_abs_path, &mut unique_lib_path);
             unsafe {
                 game_api = game_load(&game_lib).unwrap();
                 (game_api.reload.unwrap())(game_state, game_resources);

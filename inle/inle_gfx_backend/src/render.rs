@@ -50,6 +50,7 @@ pub trait Uniform_Value: Copy {
 
 pub use backend::geom_shaders_are_available;
 pub use backend::get_texture_size;
+pub use backend::new_font;
 pub use backend::new_image;
 pub use backend::new_image_with_data;
 pub use backend::new_shader;
@@ -57,7 +58,6 @@ pub use backend::new_texture_from_image;
 pub use backend::set_image_pixel;
 pub use backend::set_texture_repeated;
 pub use backend::shaders_are_available;
-pub use backend::new_font;
 
 #[derive(Copy, Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
@@ -146,7 +146,6 @@ impl Glyph_Bounds {
         self.top - self.bot
     }
 }
-
 
 //pub(crate) use backend::new_shader_internal;
 

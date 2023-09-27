@@ -1,14 +1,14 @@
-use super::{Uniform_Value, Primitive_Type};
+use super::{Primitive_Type, Uniform_Value};
 use crate::render::{Color_Type, Font_Metadata};
 use crate::render_window::Render_Window_Handle;
 use inle_common::colors::{self, Color, Color3};
-use inle_math::matrix::Matrix3;
 use inle_common::paint_props::Paint_Properties;
-use std::ffi::CStr;
+use inle_math::matrix::Matrix3;
 use inle_math::rect::Rect;
 use inle_math::shapes;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
+use std::ffi::CStr;
 use std::marker::PhantomData;
 
 pub struct Vertex_Buffer {
@@ -24,22 +24,19 @@ impl Vertex {
         colors::WHITE
     }
 
-    pub fn set_color(&mut self, _c: Color) {
-    }
+    pub fn set_color(&mut self, _c: Color) {}
 
     pub fn position(&self) -> Vec2f {
         Vec2f::default()
     }
 
-    pub fn set_position(&mut self, _v: Vec2f) {
-    }
+    pub fn set_position(&mut self, _v: Vec2f) {}
 
     pub fn tex_coords(&self) -> Vec2f {
         Vec2f::default()
     }
 
-    pub fn set_tex_coords(&mut self, _tc: Vec2f) {
-    }
+    pub fn set_tex_coords(&mut self, _tc: Vec2f) {}
 }
 
 pub struct Image;
@@ -73,12 +70,24 @@ impl Shader {
     }
 }
 
-impl Uniform_Value for f32 { fn apply_to(self, _shader: &mut Shader, _name: &CStr) { } }
-impl Uniform_Value for Vec2f { fn apply_to(self, _shader: &mut Shader, _name: &CStr) { } }
-impl Uniform_Value for &Matrix3<f32> { fn apply_to(self, _shader: &mut Shader, _name: &CStr) { } }
-impl Uniform_Value for Color { fn apply_to(self, _shader: &mut Shader, _name: &CStr) { } }
-impl Uniform_Value for Color3 { fn apply_to(self, _shader: &mut Shader, _name: &CStr) { } }
-impl Uniform_Value for &Texture { fn apply_to(self, _shader: &mut Shader, _name: &CStr) { } }
+impl Uniform_Value for f32 {
+    fn apply_to(self, _shader: &mut Shader, _name: &CStr) {}
+}
+impl Uniform_Value for Vec2f {
+    fn apply_to(self, _shader: &mut Shader, _name: &CStr) {}
+}
+impl Uniform_Value for &Matrix3<f32> {
+    fn apply_to(self, _shader: &mut Shader, _name: &CStr) {}
+}
+impl Uniform_Value for Color {
+    fn apply_to(self, _shader: &mut Shader, _name: &CStr) {}
+}
+impl Uniform_Value for Color3 {
+    fn apply_to(self, _shader: &mut Shader, _name: &CStr) {}
+}
+impl Uniform_Value for &Texture {
+    fn apply_to(self, _shader: &mut Shader, _name: &CStr) {}
+}
 
 pub fn fill_color_rect<R>(
     _window: &mut Render_Window_Handle,
@@ -166,8 +175,11 @@ pub fn new_image_with_data(
     Image
 }
 
-
-pub fn new_vbuf(_window: &mut Render_Window_Handle, primitive: Primitive_Type, n_vertices: u32) -> Vertex_Buffer {
+pub fn new_vbuf(
+    _window: &mut Render_Window_Handle,
+    primitive: Primitive_Type,
+    n_vertices: u32,
+) -> Vertex_Buffer {
     Vertex_Buffer {
         cur_vertices: 0,
         max_vertices: n_vertices,
@@ -268,13 +280,15 @@ pub fn use_shader(_shader: &mut Shader) {}
 
 pub fn bind_uniform_buffer(_ubo: &Uniform_Buffer) {}
 
-pub fn uniform_buffer_needs_transfer_to_gpu(_ubo: &Uniform_Buffer) -> bool { false }
+pub fn uniform_buffer_needs_transfer_to_gpu(_ubo: &Uniform_Buffer) -> bool {
+    false
+}
 
 pub fn create_or_get_uniform_buffer<'window>(
     _window: &'window mut Render_Window_Handle,
     _shader: &Shader,
     _name: &'static CStr,
-) -> &'window mut Uniform_Buffer { 
+) -> &'window mut Uniform_Buffer {
     static mut UB: Uniform_Buffer = Uniform_Buffer;
     unsafe { &mut UB }
 }
@@ -285,7 +299,9 @@ pub unsafe fn write_into_uniform_buffer(
     _align: usize,
     _size: usize,
     _data: *const u8,
-) -> usize { 0 }
+) -> usize {
+    0
+}
 
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     Vertex
@@ -333,13 +349,20 @@ pub fn new_font(_atlas: Texture, _metadata: Font_Metadata) -> Font {
     Font
 }
 
-pub fn create_text(window: &mut Render_Window_Handle, _string: &str, _font: &Font, _size: u16) -> Text {
+pub fn create_text(
+    window: &mut Render_Window_Handle,
+    _string: &str,
+    _font: &Font,
+    _size: u16,
+) -> Text {
     Text
 }
 
 pub fn render_line(_window: &mut Render_Window_Handle, _start: &Vertex, _end: &Vertex) {}
 
-pub fn copy_texture_to_image(_texture: &Texture) -> Image { Image }
+pub fn copy_texture_to_image(_texture: &Texture) -> Image {
+    Image
+}
 
 pub fn new_texture_from_image(_image: &Image, _rect: Option<Rect<i32>>) -> Texture {
     Texture

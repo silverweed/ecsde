@@ -24,17 +24,12 @@ impl Env_Info {
         // Find out if we're in a dev environment and, if so, set the working dir to the repository
         // root (so we don't have to symlink/copy assets, cfg etc).
         // @Cleanup: this should be a dev-only thing, maybe turn it on with a feature flag?
-        let cur_dir = working_dir
-            .as_path()
-            .file_name()
-            .map(OsStr::to_str)
-            .flatten();
+        let cur_dir = working_dir.as_path().file_name().and_then(OsStr::to_str);
         let parent_dir = working_dir
             .as_path()
             .parent()
             .and_then(Path::file_name)
-            .map(OsStr::to_str)
-            .flatten();
+            .and_then(OsStr::to_str);
         if matches!(cur_dir, Some("debug" | "release" | "profile"))
             && matches!(parent_dir, Some("target"))
         {

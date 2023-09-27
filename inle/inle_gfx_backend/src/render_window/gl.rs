@@ -139,7 +139,8 @@ macro_rules! create_shader_from {
             VERT_SHADER_SRC.as_bytes(),
             FRAG_SHADER_SRC.as_bytes(),
             Some(concat!($vert, "+", $frag)),
-        ).id
+        )
+        .id
     }};
 }
 

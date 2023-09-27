@@ -75,14 +75,14 @@ pub unsafe fn unregister_loggers() {
 
 pub fn add_default_logger(loggers: &mut Loggers) {
     let mut loggers = loggers.lock().unwrap();
-    loggers.insert(0, Box::new(Println_Logger::default()));
+    loggers.insert(0, Box::<Println_Logger>::default());
 }
 
 pub fn set_log_file_line(loggers: &mut Loggers, idx: usize, log_file_line: bool) {
     let mut loggers = loggers.lock().unwrap();
-    loggers
-        .get_mut(idx)
-        .map(|l| l.set_log_file_line(log_file_line));
+    if let Some(l) = loggers.get_mut(idx) {
+        l.set_log_file_line(log_file_line);
+    }
 }
 
 pub fn add_logger(loggers: &mut Loggers, logger: Box<dyn Logger>) {

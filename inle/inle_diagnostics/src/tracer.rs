@@ -317,7 +317,7 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
     // Note: `hash` is computed from the entire call stack (we can't just use the tag,
     // or the trace will only show the call under the first caller).
     let mut tag_map =
-        HashMap::with_capacity_and_hasher(saved_traces.len(), Passthrough_Build_Hasher::default());
+        HashMap::with_capacity_and_hasher(saved_traces.len(), Passthrough_Build_Hasher);
 
     #[inline(always)]
     fn hash_node(nodes: &[Tracer_Node], node: &Tracer_Node) -> u32 {
@@ -355,7 +355,7 @@ pub fn collate_traces(saved_traces: &[Tracer_Node]) -> Vec<Tracer_Node_Final> {
     // Used to iterate the tag_map in insertion order
     let mut tags_ordered = Vec::with_capacity(saved_traces.len());
     let mut idx_map =
-        HashMap::with_capacity_and_hasher(saved_traces.len(), Passthrough_Build_Hasher::default());
+        HashMap::with_capacity_and_hasher(saved_traces.len(), Passthrough_Build_Hasher);
     for (i, node) in saved_traces.iter().enumerate() {
         let hash = hashes[i];
         let entry = tag_map.entry(hash).or_insert_with(|| Tag_Map_Info {
@@ -413,7 +413,7 @@ pub fn flatten_traces(
             accum.info.tot_duration() + trace.info.tot_duration(),
         );
     }
-    flat_traces.into_iter().map(|(_, v)| v)
+    flat_traces.into_values()
 }
 
 /// Construct a forest of Trace_Trees from the saved_traces array.

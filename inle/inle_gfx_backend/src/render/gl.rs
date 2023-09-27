@@ -1,4 +1,4 @@
-use super::{Primitive_Type, Uniform_Value, Color_Type, Font_Metadata};
+use super::{Color_Type, Font_Metadata, Primitive_Type, Uniform_Value};
 use crate::backend_common::alloc::{
     Buffer_Allocator_Id, Buffer_Allocator_Ptr, Buffer_Handle, EMPTY_BUFFER_HANDLE,
 };

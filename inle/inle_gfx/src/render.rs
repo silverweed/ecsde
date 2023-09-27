@@ -8,7 +8,7 @@ use inle_math::shapes::Circle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
 
-pub use inle_gfx_backend::render::{Primitive_Type, Uniform_Value, Color_Type, Font_Metadata};
+pub use inle_gfx_backend::render::{Color_Type, Font_Metadata, Primitive_Type, Uniform_Value};
 
 pub mod batcher;
 
