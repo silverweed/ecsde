@@ -60,7 +60,7 @@ pub fn internal_game_init() -> Box<Game_State> {
     let rng = inle_core::rand::new_rng_with_seed(seed);
 
     #[cfg(debug_assertions)]
-    let debug_systems = inle_app::debug_systems::Debug_Systems::new(&config);
+    let debug_systems = inle_app::debug::systems::Debug_Systems::new(&config);
 
     let time = inle_core::time::Time::default();
     let frame_alloc =

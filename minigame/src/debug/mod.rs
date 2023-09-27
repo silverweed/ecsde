@@ -1,7 +1,7 @@
 mod console_executor;
 
 use super::{Game_Resources, Game_State};
-use inle_app::debug_systems::Debug_Systems;
+use inle_app::debug::systems::{Debug_Systems, Overlay_Shown};
 use inle_cfg::Cfg_Var;
 use inle_debug::console::Console_Status;
 use inle_input::input_state::Action_Kind;
@@ -144,7 +144,7 @@ pub fn update_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) 
 
     game_state.fps_counter.tick(&game_state.time.dt());
 
-    inle_app::debug_overlays::update_debug(
+    inle_app::debug::overlays::update_debug(
         &game_state.engine_cvars,
         &game_state.config,
         &mut game_state.window,
@@ -225,7 +225,6 @@ pub fn update_traces(
     frame_alloc: &mut inle_alloc::temp::Temp_Allocator,
 ) {
     use inle_app::app::tracer_drawing;
-    use inle_app::debug_systems::Overlay_Shown;
     use inle_diagnostics::{prelude, tracer::Tracer_Node};
     use std::thread::ThreadId;
 
@@ -445,8 +444,6 @@ macro_rules! add_msg {
 }
 
 fn handle_debug_actions(game_state: &mut Game_State, _game_res: &mut Game_Resources) {
-    use inle_app::debug_systems::Overlay_Shown;
-
     let actions = &game_state.input.processed.game_actions;
     // @Speed: eventually we want to replace all the *name == sid with a const sid function, to allow doing
     // (sid!("game_speed_up"), Action_Kind::Pressed) => { ... }

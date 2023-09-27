@@ -15,7 +15,7 @@ use inle_resources::gfx::Shader_Cache;
 
 #[cfg(debug_assertions)]
 use {
-    crate::debug_systems::Debug_Systems, inle_common::colors, inle_diagnostics::tracer,
+    crate::debug::systems::Debug_Systems, inle_common::colors, inle_diagnostics::tracer,
     std::convert::TryInto, std::time::Duration,
 };
 
@@ -54,6 +54,12 @@ pub struct Engine_CVars {
     pub enable_shadows: Cfg_Var<bool>,
     pub enable_particles: Cfg_Var<bool>,
 
+    #[cfg(debug_assertions)]
+    pub debug: Engine_Debug_CVars,
+}
+
+#[cfg(debug_assertions)]
+pub struct Engine_Debug_CVars {
     pub draw_lights: Cfg_Var<bool>,
     pub draw_particle_emitters: Cfg_Var<bool>,
     pub trace_overlay_refresh_rate: Cfg_Var<f32>,
@@ -79,6 +85,21 @@ pub fn create_engine_cvars(cfg: &inle_cfg::Config) -> Engine_CVars {
     let enable_shadows = Cfg_Var::new("engine/rendering/enable_shadows", cfg);
     let enable_particles = Cfg_Var::new("engine/rendering/enable_particles", cfg);
 
+    Engine_CVars {
+        gameplay_update_tick_ms,
+        gameplay_max_time_budget_ms,
+        vsync,
+        clear_color,
+        enable_shaders,
+        enable_shadows,
+        enable_particles,
+        #[cfg(debug_assertions)]
+        debug: create_engine_debug_cvars(cfg),
+    }
+}
+
+#[cfg(debug_assertions)]
+pub fn create_engine_debug_cvars(cfg: &inle_cfg::Config) -> Engine_Debug_CVars {
     let draw_lights = Cfg_Var::new("engine/debug/rendering/draw_lights", cfg);
     let draw_particle_emitters = Cfg_Var::new("engine/debug/rendering/draw_particle_emitters", cfg);
     let trace_overlay_refresh_rate = Cfg_Var::new("engine/debug/trace/refresh_rate", cfg);
@@ -94,14 +115,7 @@ pub fn create_engine_cvars(cfg: &inle_cfg::Config) -> Engine_CVars {
     let update_physics = Cfg_Var::new("engine/debug/physics/update", cfg);
     let draw_buf_alloc = Cfg_Var::new("engine/debug/rendering/draw_buf_alloc", cfg);
 
-    Engine_CVars {
-        gameplay_update_tick_ms,
-        gameplay_max_time_budget_ms,
-        vsync,
-        clear_color,
-        enable_shaders,
-        enable_shadows,
-        enable_particles,
+    Engine_Debug_CVars {
         draw_lights,
         draw_particle_emitters,
         trace_overlay_refresh_rate,
@@ -112,10 +126,10 @@ pub fn create_engine_cvars(cfg: &inle_cfg::Config) -> Engine_CVars {
         draw_fps_graph,
         draw_prev_frame_t_graph,
         draw_mouse_rulers,
-        draw_buf_alloc,
         display_log_window,
         display_overlays,
         update_physics,
+        draw_buf_alloc,
     }
 }
 
@@ -205,7 +219,7 @@ pub fn init_engine_systems(
 pub fn init_engine_debug(
     env: &inle_core::env::Env_Info,
     config: &inle_cfg::Config,
-    debug_systems: &mut crate::debug_systems::Debug_Systems,
+    debug_systems: &mut Debug_Systems,
     app_config: &crate::app_config::App_Config,
     input_state: &inle_input::input_state::Input_State,
     gfx_resources: &mut Gfx_Resources,
@@ -480,7 +494,7 @@ pub fn handle_core_actions(
 
 #[cfg(debug_assertions)]
 pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
-    use crate::debug_systems::Overlay_Shown;
+    use crate::debug::systems::Overlay_Shown;
     use inle_diagnostics::{prelude, tracer::Tracer_Node};
     use std::thread::ThreadId;
 

@@ -1,3 +1,4 @@
+use super::systems::Debug_Systems;
 use inle_common::colors;
 use inle_common::paint_props::Paint_Properties;
 use inle_core::time;
@@ -14,13 +15,13 @@ pub fn update_debug(
     cvars: &crate::app::Engine_CVars,
     config: &inle_cfg::Config,
     window: &mut Render_Window_Handle,
-    debug_systems: &mut crate::debug_systems::Debug_Systems,
+    debug_systems: &mut Debug_Systems,
     time: &time::Time,
     fps_counter: &inle_debug::fps::Fps_Counter,
     input_state: &inle_input::input_state::Input_State,
 ) {
     // Overlays
-    let display_overlays = cvars.display_overlays.read(config);
+    let display_overlays = cvars.debug.display_overlays.read(config);
     let overlays_were_visible = debug_systems.debug_ui.is_overlay_enabled(sid!("time"));
     if display_overlays {
         if !overlays_were_visible {
@@ -47,7 +48,7 @@ pub fn update_debug(
         config,
     );
 
-    let draw_mouse_rulers = cvars.draw_mouse_rulers.read(config);
+    let draw_mouse_rulers = cvars.debug.draw_mouse_rulers.read(config);
     // NOTE: this must be always cleared or the mouse position will remain after enabling and disabling the cfg var
     debug_systems.debug_ui.get_overlay(sid!("mouse")).clear();
     if draw_mouse_rulers {
@@ -75,7 +76,7 @@ pub fn update_debug(
     }
     */
 
-    let draw_fps_graph = cvars.draw_fps_graph.read(config);
+    let draw_fps_graph = cvars.debug.draw_fps_graph.read(config);
     debug_systems
         .debug_ui
         .set_graph_enabled(sid!("fps"), draw_fps_graph);
@@ -87,7 +88,7 @@ pub fn update_debug(
         );
     }
 
-    let draw_prev_frame_t_graph = cvars.draw_prev_frame_t_graph.read(config);
+    let draw_prev_frame_t_graph = cvars.debug.draw_prev_frame_t_graph.read(config);
     debug_systems
         .debug_ui
         .set_graph_enabled(sid!("prev_frame_time"), draw_prev_frame_t_graph);
@@ -98,12 +99,12 @@ pub fn update_debug(
         );
     }
 
-    let draw_grid = cvars.draw_debug_grid.read(config);
+    let draw_grid = cvars.debug.draw_debug_grid.read(config);
     if draw_grid {
         let camera_xform = Transform2D::default();
-        let square_size = cvars.debug_grid_square_size.read(config);
-        let opacity = cvars.debug_grid_opacity.read(config);
-        let font_size = cvars.debug_grid_font_size.read(config);
+        let square_size = cvars.debug.debug_grid_square_size.read(config);
+        let opacity = cvars.debug.debug_grid_opacity.read(config);
+        let font_size = cvars.debug.debug_grid_font_size.read(config);
         let win_size = window::get_window_real_size(window);
         debug_draw_grid(
             &mut debug_systems.global_painter,
@@ -116,7 +117,7 @@ pub fn update_debug(
     }
 
     // @Cleanup
-    if cvars.draw_buf_alloc.read(config) {
+    if cvars.debug.draw_buf_alloc.read(config) {
         inle_debug::backend_specific_debugs::draw_backend_specific_debug(
             window,
             &mut debug_systems.global_painter,
@@ -124,7 +125,6 @@ pub fn update_debug(
     }
 }
 
-#[cfg(debug_assertions)]
 fn update_joystick_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     joy_state: &inle_input::joystick::Joystick_State,
@@ -164,7 +164,6 @@ fn update_joystick_debug_overlay(
     }
 }
 
-#[cfg(debug_assertions)]
 fn update_time_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     time: &time::Time,
@@ -182,7 +181,6 @@ fn update_time_debug_overlay(
         .with_color(colors::rgb(100, 200, 200));
 }
 
-#[cfg(debug_assertions)]
 fn update_fps_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     fps: &inle_debug::fps::Fps_Counter,
@@ -200,7 +198,6 @@ fn update_fps_debug_overlay(
         .with_color(colors::rgba(180, 180, 180, 200));
 }
 
-#[cfg(debug_assertions)]
 fn update_mouse_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     painter: &mut Debug_Painter,
@@ -253,7 +250,6 @@ fn update_mouse_debug_overlay(
     );
 }
 
-#[cfg(debug_assertions)]
 fn update_win_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     window: &Render_Window_Handle,
@@ -269,7 +265,6 @@ fn update_win_debug_overlay(
         .with_color(colors::rgba(110, 190, 250, 220));
 }
 
-#[cfg(debug_assertions)]
 fn update_camera_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     camera: &Transform2D,
@@ -285,7 +280,6 @@ fn update_camera_debug_overlay(
         .with_color(colors::rgba(220, 180, 100, 220));
 }
 
-#[cfg(debug_assertions)]
 fn update_physics_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     collision_data: &inle_physics::physics::Collision_System_Debug_Data,
@@ -299,7 +293,6 @@ fn update_physics_debug_overlay(
         .with_color(colors::rgba(0, 173, 90, 220));
 }
 
-#[cfg(debug_assertions)]
 fn update_record_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     recording: bool,
@@ -317,7 +310,6 @@ fn update_record_debug_overlay(
     }
 }
 
-#[cfg(debug_assertions)]
 fn debug_draw_lights(
     screenspace_debug_painter: &mut Debug_Painter,
     debug_painter: &mut Debug_Painter,
@@ -422,7 +414,6 @@ fn debug_draw_lights(
 }
 
 /// Draws a grid made of squares, each of size `square_size`.
-#[cfg(debug_assertions)]
 fn debug_draw_grid(
     debug_painter: &mut Debug_Painter,
     camera_transform: &Transform2D,
@@ -480,7 +471,6 @@ fn debug_draw_grid(
     }
 }
 
-#[cfg(debug_assertions)]
 fn update_graph_fps(
     graph: &mut inle_debug::graph::Debug_Graph_View,
     time: &time::Time,
@@ -492,7 +482,6 @@ fn update_graph_fps(
     inle_debug::graph::add_point_and_scroll(graph, time.real_time(), TIME_LIMIT, fps);
 }
 
-#[cfg(debug_assertions)]
 fn update_graph_prev_frame_t(graph: &mut inle_debug::graph::Debug_Graph_View, time: &time::Time) {
     const TIME_LIMIT: f32 = 10.0;
 
@@ -504,7 +493,6 @@ fn update_graph_prev_frame_t(graph: &mut inle_debug::graph::Debug_Graph_View, ti
     );
 }
 
-#[cfg(debug_assertions)]
 fn set_debug_hud_enabled(debug_ui: &mut inle_debug::debug_ui::Debug_Ui_System, enabled: bool) {
     debug_ui.set_overlay_enabled(sid!("time"), enabled);
     debug_ui.set_overlay_enabled(sid!("fps"), enabled);
@@ -516,7 +504,6 @@ fn set_debug_hud_enabled(debug_ui: &mut inle_debug::debug_ui::Debug_Ui_System, e
     debug_ui.frame_scroller.hidden = !enabled;
 }
 
-#[cfg(debug_assertions)]
 fn debug_draw_particle_emitters(
     painter: &mut Debug_Painter,
     particle_mgr: &inle_gfx::particles::Particle_Manager,

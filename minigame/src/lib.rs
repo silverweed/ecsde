@@ -52,7 +52,7 @@ pub struct Game_State {
     phase_mgr: Phase_Manager,
 
     #[cfg(debug_assertions)]
-    debug_systems: inle_app::debug_systems::Debug_Systems,
+    debug_systems: inle_app::debug::systems::Debug_Systems,
 
     #[cfg(debug_assertions)]
     fps_counter: inle_debug::fps::Fps_Counter,
