@@ -12,8 +12,7 @@ inle_diagnostics = { path = "../inle_diagnostics" }
 inle_ecs = { path = "../inle_ecs" }
 inle_events = { path = "../inle_events" }
 inle_math = { path = "../inle_math" }
-rayon = "1.3"
+rayon = { workspace = true }
 
 [dependencies.smallvec]
 default-features = false
-version = "1.8"

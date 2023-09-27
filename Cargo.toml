@@ -5,3 +5,9 @@ resolver = "1"
 [profile.profile]
 inherits = "dev"
 opt-level = 3
+
+[workspace.dependencies]
+notify = "4.0"
+rayon = "1.8"
+smallvec = { version = "1.8", default-features = false }
+lazy_static = "1.3"

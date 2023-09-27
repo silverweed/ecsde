@@ -12,8 +12,8 @@ inle_core = { path = "../inle_core" }
 inle_diagnostics = { path = "../inle_diagnostics" }
 inle_fs = { path = "../inle_fs" }
 
-# Debug only
-notify = "4.0"
+notify = { workspace = true }
 
 [dev-dependencies]
 inle_test = { path = "../inle_test" }
+

@@ -19,8 +19,5 @@ inle_gfx_backend = { path = "../inle_gfx_backend" }
 inle_math = { path = "../inle_math" }
 inle_resources = { path = "../inle_resources" }
 inle_win = { path = "../inle_win" }
-rayon = "1.3"
-
-[dependencies.smallvec]
-default-features = false
-version = "1.8"
+rayon = { workspace = true }
+smallvec = { workspace = true }
