@@ -1,5 +1,5 @@
 use super::loaders;
-use inle_audio_backend::sound::Sound_Buffer;
+use inle_audio_backend::sound::{Audio_Context, Sound_Buffer};
 use inle_core::env::{asset_path, Env_Info};
 use std::path::Path;
 
@@ -9,12 +9,15 @@ mod sound;
 pub type Sound_Handle = loaders::Res_Handle;
 
 pub struct Audio_Resources {
+    audio_ctx: Audio_Context,
     sounds: cache::Sound_Cache,
 }
 
 impl Audio_Resources {
     pub fn new() -> Self {
+        let audio_ctx = inle_audio_backend::sound::init_audio();
         Audio_Resources {
+            audio_ctx,
             sounds: cache::Sound_Cache::new(),
         }
     }

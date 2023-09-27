@@ -8,7 +8,10 @@ edition = "2018"
 
 [features]
 audio-null = []
-default = ["audio-null"]
+audio-openal = []
+default = ["audio-openal"]
+#default = ["audio-null"]
 
 [dependencies]
 inle_common = { path = "../inle_common" }
+inle_diagnostics = { path = "../inle_diagnostics" }

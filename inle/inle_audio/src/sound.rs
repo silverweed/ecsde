@@ -1,5 +1,6 @@
 use inle_audio_backend::sound::backend;
 
+// A Sound stands to a Sound_Buffer like a Sprite to a Texture.
 pub type Sound = backend::Sound;
 pub type Sound_Buffer = backend::Sound_Buffer;
 
