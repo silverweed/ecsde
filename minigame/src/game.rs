@@ -23,6 +23,13 @@ pub fn internal_game_init() -> Box<Game_State> {
         inle_app::app::start_config_watch(&env, &mut config)
             .unwrap_or_else(|err| lerr!("Failed to start config watch: {}", err));
     }
+    let sleep_granularity = inle_core::sleep::init_sleep().map_or_else(
+        |err| {
+            lerr!("Failed to init sleep: {:?}", err);
+            None
+        },
+        Option::Some,
+    );
 
     let app_config = {
         let win_width: Cfg_Var<i32> = Cfg_Var::new("engine/window/width", &config);
@@ -46,7 +53,6 @@ pub fn internal_game_init() -> Box<Game_State> {
         );
         inle_gfx::render_window::create_render_window(window)
     };
-    inle_gfx::render_window::set_clear_color(&mut window, inle_common::colors::rgb(30, 30, 30));
 
     let batches = inle_gfx::render::batcher::Batches::default();
     let lights = inle_gfx::light::Lights::default();
@@ -76,6 +82,7 @@ pub fn internal_game_init() -> Box<Game_State> {
         env,
         config,
         app_config,
+        sleep_granularity,
         window,
         batches,
         lights,
@@ -245,7 +252,17 @@ pub fn update(game_state: &mut Game_State, game_res: &mut Game_Resources) {
 pub fn render(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     trace!("render");
 
+    let cur_vsync = inle_win::window::has_vsync(&game_state.window);
+    let desired_vsync = game_state.engine_cvars.vsync.read(&game_state.config);
+    if cur_vsync != desired_vsync {
+        inle_win::window::set_vsync(&mut game_state.window, desired_vsync);
+    }
+
     let win = &mut game_state.window;
+    let clear_color = inle_common::colors::color_from_hex_no_alpha(
+        game_state.engine_cvars.clear_color.read(&game_state.config),
+    );
+    inle_gfx::render_window::set_clear_color(win, clear_color);
     inle_gfx::render_window::clear(win);
 
     let cam_xform = inle_math::transform::Transform2D::default();

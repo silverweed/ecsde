@@ -492,6 +492,36 @@ pub fn handle_core_actions(
 }
 */
 
+pub fn limit_framerate(
+    t_before_work: std::time::Instant,
+    target_time_per_frame: Duration,
+    sleep_granularity: Option<Duration>,
+    cur_frame: u64,
+) {
+    let mut t_elapsed_for_work = t_before_work.elapsed();
+    if t_elapsed_for_work < target_time_per_frame {
+        while t_elapsed_for_work < target_time_per_frame {
+            if let Some(granularity) = sleep_granularity {
+                if granularity < target_time_per_frame - t_elapsed_for_work {
+                    let gra_ns = granularity.as_nanos();
+                    let rem_ns = (target_time_per_frame - t_elapsed_for_work).as_nanos();
+                    let time_to_sleep = Duration::from_nanos((rem_ns / gra_ns).try_into().unwrap());
+                    inle_core::sleep::sleep(time_to_sleep);
+                }
+            }
+
+            t_elapsed_for_work = t_before_work.elapsed();
+        }
+    } else {
+        lverbose!(
+            "Frame budget exceeded! At frame {}: {} / {} ms",
+            cur_frame,
+            inle_core::time::to_ms_frac(&t_elapsed_for_work),
+            inle_core::time::to_ms_frac(&target_time_per_frame)
+        );
+    }
+}
+
 #[cfg(debug_assertions)]
 pub fn update_traces(engine_state: &mut Engine_State, refresh_rate: Cfg_Var<f32>) {
     use crate::debug::systems::Overlay_Shown;

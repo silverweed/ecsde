@@ -18,6 +18,7 @@ mod sprites;
 mod debug;
 
 use std::ffi::c_char;
+use std::time::Duration;
 
 type Phase_Manager = inle_app::phases::Phase_Manager<phases::Phase_Args>;
 
@@ -26,6 +27,7 @@ pub struct Game_State {
     env: inle_core::env::Env_Info,
     config: inle_cfg::config::Config,
     app_config: inle_app::app_config::App_Config,
+    sleep_granularity: Option<Duration>,
 
     loggers: inle_diagnostics::log::Loggers,
 
@@ -125,6 +127,22 @@ pub unsafe extern "C" fn game_update(
     game_state.prev_frame_time = t_before_work.elapsed();
 
     game::end_frame(game_state);
+
+    if !inle_win::window::has_vsync(&game_state.window) {
+        let target_time_per_frame = Duration::from_micros(
+            (game_state
+                .engine_cvars
+                .gameplay_update_tick_ms
+                .read(&game_state.config)
+                * 1000.0) as u64,
+        );
+        inle_app::app::limit_framerate(
+            t_before_work,
+            target_time_per_frame,
+            game_state.sleep_granularity,
+            game_state.cur_frame,
+        );
+    }
 
     !game_state.should_quit
 }

@@ -89,6 +89,7 @@ pub fn create_window(
         glfw::OpenGlProfileHint::Core,
     ));
     glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(true));
+    glfw.window_hint(glfw::WindowHint::DoubleBuffer(true));
 
     // @Incomplete: allow setting mode?
     let (mut window, events) = glfw

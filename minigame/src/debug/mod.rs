@@ -49,7 +49,8 @@ fn init_game_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     {
         // Frame scroller
         let scroller = &mut debug_ui.frame_scroller;
-        let fps = 60;
+        let ms_per_frame = game_state.engine_cvars.gameplay_update_tick_ms.read(cfg);
+        let fps = 1000. / ms_per_frame;
         let log_len = game_state.debug_systems.log.max_hist_len;
         scroller.n_frames = fps as _;
         scroller.n_seconds = (log_len / fps as u32) as _;
@@ -143,6 +144,7 @@ pub fn update_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) 
     handle_debug_actions(game_state, game_res);
 
     game_state.fps_counter.tick(&game_state.time.dt());
+    game_state.config.update();
 
     inle_app::debug::overlays::update_debug(
         &game_state.engine_cvars,

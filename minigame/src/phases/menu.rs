@@ -189,8 +189,7 @@ impl Game_Phase for Main_Menu {
             let tex_p = tex_path(env, "game/sun_eyes_animation.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
             sprite.z_index = 2;
-            let mut anim_sprite =
-                Anim_Sprite::from_sprite(sprite, (4, 2), Duration::from_millis(120));
+            let anim_sprite = Anim_Sprite::from_sprite(sprite, (4, 2), Duration::from_millis(120));
             self.sprites.push(anim_sprite);
 
             // Block Sprites
