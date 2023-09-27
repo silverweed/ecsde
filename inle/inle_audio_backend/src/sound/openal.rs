@@ -129,7 +129,7 @@ mod al {
 mod libc {
     use std::ffi::{self, c_void};
 
-    #[link(name = "libc")]
+    #[link(name = "c")]
     extern "C" {
         pub fn fread(ptr: *mut c_void, size: usize, nmemb: usize, stream: *mut c_void) -> usize;
         pub fn ftell(ptr: *mut c_void) -> i64;
