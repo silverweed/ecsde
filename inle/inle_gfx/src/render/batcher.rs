@@ -68,7 +68,10 @@ pub(super) fn add_texture_ws(
 ) {
     let z_index_texmap = {
         trace!("get_z_texmap");
-        match batches.textures_ws.binary_search_by(|(z, _)| z.cmp(&z_index)) {
+        match batches
+            .textures_ws
+            .binary_search_by(|(z, _)| z.cmp(&z_index))
+        {
             Ok(idx) => &mut batches.textures_ws[idx].1,
             Err(idx) => {
                 batches.textures_ws.insert(idx, (z_index, HashMap::new()));
@@ -391,8 +394,7 @@ pub fn draw_batches(
     let rect_lights_near_camera = &batches.rect_lights_near_camera;
 
     // for each Z-index...
-    for (_, sprite_map) in batches.textures_ws.iter_mut() 
-    {
+    for (_, sprite_map) in batches.textures_ws.iter_mut() {
         // for each material...
         for (material, batch) in sprite_map {
             let vbuffer = &mut batch.vbuffer;

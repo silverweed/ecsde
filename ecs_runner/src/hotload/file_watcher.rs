@@ -9,7 +9,6 @@ pub trait File_Watcher_Event_Handler: Send {
 }
 
 pub struct File_Watch_Config {
-    pub recursive_mode: RecursiveMode,
     pub interval: Duration,
 }
 
@@ -35,7 +34,7 @@ fn file_watch_listen(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (tx, rx) = channel();
     let mut watcher = watcher(tx, config.interval).unwrap();
-    watcher.watch(path.to_str().unwrap(), config.recursive_mode)?;
+    watcher.watch(path.to_str().unwrap(), RecursiveMode::NonRecursive)?;
     eprintln!("Started watching {:?}", path);
 
     loop {

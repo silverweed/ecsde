@@ -3,20 +3,17 @@
 #![allow(non_camel_case_types)]
 
 mod game_api;
+#[cfg(feature = "hotload")]
 mod hotload;
 
 use game_api::Game_Api;
+#[cfg(feature = "hotload")]
+use hotload::*;
 use libloading as ll;
 use std::ffi::{c_char, CString};
 use std::io;
 use std::path::{Path, PathBuf};
-
-use {hotload::*, std::sync::mpsc::Receiver};
-
-#[cfg(debug_assertions)]
-const GAME_DLL_FOLDER: &str = "target/debug";
-#[cfg(not(debug_assertions))]
-const GAME_DLL_FOLDER: &str = "target/release";
+use std::sync::mpsc::Receiver;
 
 #[cfg(target_os = "linux")]
 const GAME_DLL_FILE: &str = "libminigame.so";
@@ -44,7 +41,10 @@ fn main() -> io::Result<()> {
     // Convert rust args to C args, since our game API expects that.
     get_argc_argv!(argc, argv);
 
-    let game_dll_abs_path = format!("{}/{}", GAME_DLL_FOLDER, GAME_DLL_FILE);
+    // Look for game DLL in the same path as the runner
+    let mut game_dll_abs_path = std::fs::canonicalize(std::env::current_exe()?)?;
+    game_dll_abs_path.pop();
+    game_dll_abs_path.push(GAME_DLL_FILE);
 
     let create_temp = cfg!(feature = "hotload");
     match lib_load(&game_dll_abs_path, create_temp) {
@@ -110,10 +110,11 @@ fn main() -> io::Result<()> {
     }
 }
 
+#[cfg(feature = "hotload")]
 fn main_with_hotload(
     argc: usize,
     argv: *const *const c_char,
-    game_dll_abs_path: &str,
+    game_dll_abs_path: &Path,
     mut game_lib: ll::Library,
     mut unique_lib_path: PathBuf,
 ) -> io::Result<()> {
@@ -125,7 +126,7 @@ fn main_with_hotload(
         game_resources,
     } = unsafe { (game_api.init)(argv, argc) };
 
-    let reload_pending_recv = start_hotload(PathBuf::from(game_dll_abs_path.clone()))?;
+    let reload_pending_recv = start_hotload(game_dll_abs_path.to_path_buf())?;
 
     loop {
         if reload_pending_recv.try_recv().is_ok() {
@@ -166,6 +167,17 @@ fn main_with_hotload(
     }
 
     Ok(())
+}
+
+#[cfg(not(feature = "hotload"))]
+fn main_with_hotload(
+    argc: usize,
+    argv: *const *const c_char,
+    _game_dll_abs_path: &Path,
+    game_lib: ll::Library,
+    _unique_lib_path: PathBuf,
+) -> io::Result<()> {
+    main_without_hotload(argc, argv, game_lib)
 }
 
 fn main_without_hotload(
@@ -231,8 +243,8 @@ impl std::fmt::Debug for Lib_Load_Err {
     }
 }
 
-fn lib_load(lib_path: &str, create_temp: bool) -> Result<Lib_Load_Res, Lib_Load_Err> {
-    eprintln!("[ INFO ] Game lib is {}", lib_path);
+fn lib_load(lib_path: &Path, create_temp: bool) -> Result<Lib_Load_Res, Lib_Load_Err> {
+    eprintln!("[ INFO ] Game lib is {}", lib_path.display());
 
     let loaded_path = if create_temp {
         let unique_name = {
@@ -240,8 +252,9 @@ fn lib_load(lib_path: &str, create_temp: bool) -> Result<Lib_Load_Res, Lib_Load_
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_secs();
-            let index = lib_path.rfind('.').unwrap();
-            let (before, after) = lib_path.split_at(index);
+            let path = lib_path.as_os_str().to_str().unwrap();
+            let index = path.rfind('.').unwrap();
+            let (before, after) = path.split_at(index);
             format!("{}-{}{}", before, timestamp, after)
         };
         std::fs::copy(&lib_path, &unique_name)
@@ -264,24 +277,21 @@ fn lib_load(lib_path: &str, create_temp: bool) -> Result<Lib_Load_Res, Lib_Load_
         })
 }
 
+#[cfg(feature = "hotload")]
 fn start_hotload(game_dll_path: PathBuf) -> io::Result<Receiver<()>> {
     use std::sync::mpsc::sync_channel;
 
     let (reload_pending_send, reload_pending_recv) = sync_channel(1);
 
     let dll_watcher = Box::new(Game_Dll_File_Watcher::new(
-        game_dll_path,
+        game_dll_path.clone(),
         reload_pending_send,
     ));
     let dll_watcher_cfg = file_watcher::File_Watch_Config {
         interval: std::time::Duration::from_secs(1),
-        recursive_mode: notify::RecursiveMode::NonRecursive,
     };
-    file_watcher::start_file_watch(
-        std::path::PathBuf::from(GAME_DLL_FOLDER),
-        dll_watcher_cfg,
-        vec![dll_watcher],
-    )?;
+    let dll_folder = game_dll_path.parent().unwrap();
+    file_watcher::start_file_watch(dll_folder.to_path_buf(), dll_watcher_cfg, vec![dll_watcher])?;
 
     Ok(reload_pending_recv)
 }

@@ -1,8 +1,9 @@
 pub mod file_watcher;
 
 use libloading as ll;
-
-use {notify::DebouncedEvent, std::path::PathBuf, std::sync::mpsc::SyncSender};
+use notify::DebouncedEvent;
+use std::path::{Path, PathBuf};
+use std::sync::mpsc::SyncSender;
 
 pub struct Game_Dll_File_Watcher {
     file: PathBuf,
@@ -41,7 +42,7 @@ impl file_watcher::File_Watcher_Event_Handler for Game_Dll_File_Watcher {
     }
 }
 
-pub fn lib_reload(lib_path: &str, unique_path: &mut PathBuf) -> ll::Library {
+pub fn lib_reload(lib_path: &Path, unique_path: &mut PathBuf) -> ll::Library {
     if let Err(err) = std::fs::remove_file(&unique_path) {
         eprintln!(
             "[ WARNING ] Failed to remove old lib {:?}: {:?}",

@@ -1,7 +1,7 @@
 use super::Phase_Args;
+use crate::sprites::{self as anim_sprites, Anim_Sprite};
 use inle_app::phases::{Game_Phase, Phase_Id, Phase_Transition};
 use inle_core::rand;
-use crate::sprites::{self as anim_sprites, Anim_Sprite};
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_gfx::sprites::{self, Sprite};
 use inle_math::angle;
@@ -136,7 +136,11 @@ fn replace_falling_block(
         FALLING_BLOCK_SPEED_RANGE.0,
         FALLING_BLOCK_SPEED_RANGE.1,
     );
-    let ang_speed = angle::deg(rand::rand_range(rng, -FALLING_BLOCK_ANG_SPEED_DEG, FALLING_BLOCK_ANG_SPEED_DEG));
+    let ang_speed = angle::deg(rand::rand_range(
+        rng,
+        -FALLING_BLOCK_ANG_SPEED_DEG,
+        FALLING_BLOCK_ANG_SPEED_DEG,
+    ));
     Falling_Block {
         sprite_idx: replaced_idx,
         speed,
@@ -185,7 +189,8 @@ impl Game_Phase for Main_Menu {
             let tex_p = tex_path(env, "game/sun_eyes_animation.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
             sprite.z_index = 2;
-            let mut anim_sprite = Anim_Sprite::from_sprite(sprite, (4, 2), Duration::from_millis(120));
+            let mut anim_sprite =
+                Anim_Sprite::from_sprite(sprite, (4, 2), Duration::from_millis(120));
             self.sprites.push(anim_sprite);
 
             // Block Sprites
@@ -222,7 +227,8 @@ impl Game_Phase for Main_Menu {
 
             debug_assert!(self.falling_blocks.is_empty());
             let block_template = self.sprites[first_falling_block_idx - 1].clone();
-            self.sprites.resize(first_falling_block_idx + N_FALLING_BLOCKS, block_template);
+            self.sprites
+                .resize(first_falling_block_idx + N_FALLING_BLOCKS, block_template);
             self.falling_blocks.reserve_exact(N_FALLING_BLOCKS);
 
             for i in 0..N_FALLING_BLOCKS {
@@ -275,9 +281,7 @@ impl Game_Phase for Main_Menu {
         let win_h = gs.app_config.target_win_size.1 as f32 * 0.5;
         for block in &mut self.falling_blocks {
             let sprite = &mut self.sprites[block.sprite_idx];
-            sprite
-                .transform
-                .translate(0., block.speed * dt);
+            sprite.transform.translate(0., block.speed * dt);
             sprite.transform.rotate(block.ang_speed * dt);
             if sprite.transform.position().y > win_h + 20. {
                 let mut new_block = replace_falling_block(
@@ -289,7 +293,11 @@ impl Game_Phase for Main_Menu {
                 );
                 std::mem::swap(&mut new_block, block);
             }
-            anim_sprites::render_anim_sprite(&mut gs.window, &mut gs.batches, &self.sprites[block.sprite_idx]);
+            anim_sprites::render_anim_sprite(
+                &mut gs.window,
+                &mut gs.batches,
+                &self.sprites[block.sprite_idx],
+            );
         }
 
         //

@@ -1,8 +1,8 @@
-use std::time::Duration;
 use inle_gfx::sprites::Sprite;
 use inle_math::rect::{Rect, Recti};
 use inle_resources::gfx::{Gfx_Resources, Texture_Handle};
-use std::ops::{DerefMut, Deref};
+use std::ops::{Deref, DerefMut};
+use std::time::Duration;
 
 #[derive(Clone)]
 pub struct Anim_Sprite {
@@ -38,22 +38,41 @@ impl From<Sprite> for Anim_Sprite {
 }
 
 impl Anim_Sprite {
-    pub fn new(gres: &Gfx_Resources, tex: Texture_Handle, frame_rect: Recti, frame_duration: Duration) -> Self {
+    pub fn new(
+        gres: &Gfx_Resources,
+        tex: Texture_Handle,
+        frame_rect: Recti,
+        frame_duration: Duration,
+    ) -> Self {
         let mut sprite = Sprite::new(gres, tex);
         Self::from_sprite_with_rect(sprite, frame_rect, frame_duration)
     }
 
-    pub fn from_tex_path_rect(gres: &mut Gfx_Resources, path: &std::path::Path, frame_rect: Recti, frame_duration: Duration) -> Self {
+    pub fn from_tex_path_rect(
+        gres: &mut Gfx_Resources,
+        path: &std::path::Path,
+        frame_rect: Recti,
+        frame_duration: Duration,
+    ) -> Self {
         let mut sprite = Sprite::from_tex_path(gres, path);
         Self::from_sprite_with_rect(sprite, frame_rect, frame_duration)
     }
 
-    pub fn from_tex_path(gres: &mut Gfx_Resources, path: &std::path::Path, n_frames: (u16, u16), frame_duration: Duration) -> Self {
+    pub fn from_tex_path(
+        gres: &mut Gfx_Resources,
+        path: &std::path::Path,
+        n_frames: (u16, u16),
+        frame_duration: Duration,
+    ) -> Self {
         let mut sprite = Sprite::from_tex_path(gres, path);
         Self::from_sprite(sprite, n_frames, frame_duration)
     }
 
-    pub fn from_sprite_with_rect(mut sprite: Sprite, frame_rect: Recti, frame_duration: Duration) -> Self {
+    pub fn from_sprite_with_rect(
+        mut sprite: Sprite,
+        frame_rect: Recti,
+        frame_duration: Duration,
+    ) -> Self {
         let spritesheet_rect = sprite.rect;
         sprite.rect = frame_rect;
 
@@ -71,9 +90,18 @@ impl Anim_Sprite {
         }
     }
 
-    pub fn from_sprite(mut sprite: Sprite, (n_cols, n_rows): (u16, u16), frame_duration: Duration) -> Self {
+    pub fn from_sprite(
+        mut sprite: Sprite,
+        (n_cols, n_rows): (u16, u16),
+        frame_duration: Duration,
+    ) -> Self {
         let spritesheet_rect = sprite.rect;
-        let frame_rect = Rect::new(0, 0, spritesheet_rect.width / n_cols as i32, spritesheet_rect.height / n_rows as i32);
+        let frame_rect = Rect::new(
+            0,
+            0,
+            spritesheet_rect.width / n_cols as i32,
+            spritesheet_rect.height / n_rows as i32,
+        );
         Self::from_sprite_with_rect(sprite, frame_rect, frame_duration)
     }
 }
@@ -82,7 +110,9 @@ pub fn update_anim_sprites(dt: Duration, anim_sprites: &mut [Anim_Sprite]) {
     let dt_secs = dt.as_secs_f32();
 
     for sprite in anim_sprites {
-        if sprite.frame_duration == Duration::default() || sprite.n_frame_cols * sprite.n_frame_rows <= 1 {
+        if sprite.frame_duration == Duration::default()
+            || sprite.n_frame_cols * sprite.n_frame_rows <= 1
+        {
             continue;
         }
         sprite.frame_time += dt;
@@ -100,11 +130,20 @@ pub fn update_anim_sprites(dt: Duration, anim_sprites: &mut [Anim_Sprite]) {
             }
 
             let r = sprite.sprite.rect;
-            sprite.sprite.rect = Rect::new(sprite.cur_frame_col as i32 * r.width, sprite.cur_frame_row as i32 * r.height, r.width, r.height);
+            sprite.sprite.rect = Rect::new(
+                sprite.cur_frame_col as i32 * r.width,
+                sprite.cur_frame_row as i32 * r.height,
+                r.width,
+                r.height,
+            );
         }
     }
 }
 
-pub fn render_anim_sprite(window: &mut inle_gfx::render_window::Render_Window_Handle, batches: &mut inle_gfx::render::batcher::Batches, sprite: &Anim_Sprite) {
+pub fn render_anim_sprite(
+    window: &mut inle_gfx::render_window::Render_Window_Handle,
+    batches: &mut inle_gfx::render::batcher::Batches,
+    sprite: &Anim_Sprite,
+) {
     inle_gfx::sprites::render_sprite(window, batches, &sprite.sprite);
 }
