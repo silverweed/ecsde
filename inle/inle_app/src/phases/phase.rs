@@ -1,4 +1,4 @@
-use inle_common::stringid::String_Id;
+use inle_common::stringid::{self, String_Id};
 use inle_input::input_state::Game_Action;
 
 pub enum Phase_Transition {
@@ -12,6 +12,12 @@ pub enum Phase_Transition {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Phase_Id(String_Id);
+
+impl Phase_Id {
+    pub const fn new(s: &str) -> Self {
+        Self(stringid::const_sid_from_str(s))
+    }
+}
 
 impl From<String_Id> for Phase_Id {
     fn from(sid: String_Id) -> Self {

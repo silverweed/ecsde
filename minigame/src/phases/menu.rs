@@ -1,11 +1,9 @@
 use super::Phase_Args;
 use inle_gfx::sprites;
-use inle_app::phases::{Game_Phase, Phase_Transition};
-use inle_common::stringid::{self, String_Id};
+use inle_app::phases::{Game_Phase, Phase_Transition, Phase_Id};
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::rect::Rect;
 use inle_math::vector::{lerp_v, Vec2f};
-use inle_resources::gfx::Texture_Handle;
 use inle_win::window;
 use std::ops::DerefMut;
 use std::time::Duration;
@@ -30,7 +28,7 @@ pub struct Main_Menu {
 }
 
 impl Main_Menu {
-    pub const PHASE_ID: String_Id = stringid::const_sid_from_str("menu");
+    pub const PHASE_ID: Phase_Id = Phase_Id::new("menu");
 
     pub fn new(window: &mut Render_Window_Handle) -> Self {
         Self {
@@ -150,10 +148,7 @@ impl Game_Phase for Main_Menu {
             rect,
             &b.props,
         ) {
-            return Phase_Transition::None;
-            //return Phase_Transition::Push(
-            //    Box::new(super::in_game_state::In_Game_State::default()),
-            //);
+            return Phase_Transition::Push(super::In_Game::PHASE_ID);
         }
 
         let b = &self.buttons[1];

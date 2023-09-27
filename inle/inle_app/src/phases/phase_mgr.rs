@@ -1,5 +1,4 @@
 use super::phase::{Game_Phase, Persistent_Game_Phase, Phase_Id, Phase_Transition};
-use inle_common::stringid::String_Id;
 use inle_input::input_state::Game_Action;
 
 /// Manages a PDA of Game_Phases.
@@ -82,29 +81,18 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
 
     pub fn register_phase(
         &mut self,
-        phase_id: String_Id,
+        phase_id: Phase_Id,
         phase: Box<dyn Game_Phase<Args = Phase_Args>>,
     ) {
-        self.phases.push((Phase_Id::from(phase_id), phase));
+        self.phases.push((phase_id, phase));
     }
 
-    pub fn push_phase<P: Into<Phase_Id>>(&mut self, phase_id: P, args: &mut Phase_Args) {
+    pub fn push_phase(&mut self, phase_id: Phase_Id, args: &mut Phase_Args) {
         if let Some(s) = self.current_phase() {
             s.on_pause(args);
         }
-        let phase_id = phase_id.into();
         self.get_phase(phase_id).on_start(args);
         self.phase_stack.push(phase_id);
-    }
-
-    pub fn register_and_push_phase(
-        &mut self,
-        phase_id: String_Id,
-        phase: Box<dyn Game_Phase<Args = Phase_Args>>,
-        args: &mut Phase_Args,
-    ) {
-        self.register_phase(phase_id, phase);
-        self.push_phase(phase_id, args);
     }
 
     fn get_phase(&mut self, phase_id: Phase_Id) -> &mut Box<dyn Game_Phase<Args = Phase_Args>> {
