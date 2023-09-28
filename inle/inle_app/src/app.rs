@@ -12,12 +12,11 @@ use inle_core::tasks::Long_Task_Manager;
 use inle_core::time;
 use inle_resources::gfx::Gfx_Resources;
 use inle_resources::gfx::Shader_Cache;
+use std::convert::TryInto;
+use std::time::Duration;
 
 #[cfg(debug_assertions)]
-use {
-    crate::debug::systems::Debug_Systems, inle_common::colors, inle_diagnostics::tracer,
-    std::convert::TryInto, std::time::Duration,
-};
+use {crate::debug::systems::Debug_Systems, inle_common::colors, inle_diagnostics::tracer};
 
 pub struct Engine_State {
     pub should_close: bool,

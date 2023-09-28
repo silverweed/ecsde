@@ -74,8 +74,8 @@ pub struct Game_Bundle {
     pub game_resources: *mut Game_Resources,
 }
 
-// # Safety
-// args should not be null and should contain a number of strings consistent with args_count
+/// # Safety
+/// args should not be null and should contain a number of strings consistent with args_count
 #[no_mangle]
 pub unsafe extern "C" fn game_init(_args: *const *const c_char, _args_count: usize) -> Game_Bundle {
     let mut game_res = game::create_game_resources();
@@ -89,8 +89,8 @@ pub unsafe extern "C" fn game_init(_args: *const *const c_char, _args_count: usi
     }
 }
 
-// # Safety
-// game_state and game_res must be non-null
+/// # Safety
+/// game_state and game_res must be non-null
 #[no_mangle]
 pub unsafe extern "C" fn game_update(
     game_state: *mut Game_State,
@@ -149,8 +149,8 @@ pub unsafe extern "C" fn game_update(
     !game_state.should_quit
 }
 
-// # Safety
-// game_state and game_res must be non-null
+/// # Safety
+/// game_state and game_res must be non-null
 #[no_mangle]
 pub unsafe extern "C" fn game_shutdown(game_state: *mut Game_State, game_res: *mut Game_Resources) {
     inle_gfx::render::batcher::clear_batches(&mut (*game_state).batches);
@@ -169,16 +169,16 @@ pub unsafe extern "C" fn game_shutdown(game_state: *mut Game_State, game_res: *m
     );
 }
 
-// # Safety
-// game_state and game_res must be non-null
+/// # Safety
+/// game_state and game_res must be non-null
 #[cfg(debug_assertions)]
 #[no_mangle]
 pub unsafe extern "C" fn game_unload(_game_state: *mut Game_State, _game_res: *mut Game_Resources) {
     inle_diagnostics::log::unregister_loggers();
 }
 
-// # Safety
-// game_state and game_res must be non-null
+/// # Safety
+/// game_state and game_res must be non-null
 #[cfg(debug_assertions)]
 #[no_mangle]
 pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mut Game_Resources) {

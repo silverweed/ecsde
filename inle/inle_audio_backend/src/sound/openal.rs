@@ -82,9 +82,7 @@ pub fn init_audio() -> Audio_Context {
         if context.is_null() {
             lerr!("Failed to create OpenAL context");
         } else {
-            let ok = unsafe {
-                al::alcMakeContextCurrent(context)
-            };
+            let ok = unsafe { al::alcMakeContextCurrent(context) };
             if ok != al::ALC_TRUE {
                 lerr!("Failed to make OpenAL context current");
             }
@@ -106,36 +104,29 @@ pub fn shutdown_audio(ctx: &mut Audio_Context) {
     }
     if !ctx.device.is_null() {
         let ok = unsafe { al::alcCloseDevice(ctx.device) };
-        if ok == al::ALC_TRUE {
-            lok!("Successfully closed OpenAL device.");
-        } else {
+        if ok != al::ALC_TRUE {
             lerr!("Failed to close OpenAL device!");
         }
         ctx.device = std::ptr::null_mut();
     }
 }
 
-
 pub fn create_sound_buffer(file: &Path) -> Result<Sound_Buffer, String> {
     // load audio file
     let mut decoded_file = read_and_decode_ogg_file(file).map_err(|err| err.to_string())?;
-    
-    let sound_buf = new_sound_buf(decoded_file.buffers.len())?;
+
+    let sound_buf = new_sound_buf(1)?;
 
     // put data into the buffers
     let err = unsafe {
-        ldebug!("Filling {} OpenAL buffers with data. Format = {:?}, freq = {}", sound_buf.bufs.len(), decoded_file.format, decoded_file.freq);
-        //for (buf, data) in std::iter::zip(sound_buf.bufs.iter(), decoded_file.buffers.iter_mut()) {
-        assert!(sound_buf.bufs.len() == decoded_file.buffers.len());
-        for i in 0..sound_buf.bufs.len() {
-            al::alBufferData(
-                sound_buf.bufs[i],
-                decoded_file.format,
-                decoded_file.buffers[i].as_mut_ptr() as *mut _,
-                std::mem::size_of_val(&decoded_file.buffers[i]) as _,
-                decoded_file.freq,
-            );
-        }
+        let size = std::mem::size_of::<i16>() * decoded_file.buffers.len();
+        al::alBufferData(
+            sound_buf.bufs[0],
+            decoded_file.format,
+            decoded_file.buffers.as_mut_ptr() as *mut _,
+            size as _,
+            decoded_file.freq,
+        );
         al::alGetError()
     };
 
@@ -171,9 +162,9 @@ pub fn create_sound_with_buffer(buf: &Sound_Buffer) -> Sound {
     // alSourceQueueBuffers probably doesn't really need a mutable pointer, but that's
     // what the signature asks for, so we comply.
     let mut bufs = buf.bufs.clone();
+    debug_assert!(unsafe { al::alIsBuffer(bufs[0]) == al::AL_TRUE });
     let err = unsafe {
-        //al::alSourcei(sound.source, al::AL_BUFFER, buf.buf as _);
-        al::alSourceQueueBuffers(sound.source, bufs.len() as _, bufs.as_mut_ptr());
+        al::alSourcei(sound.source, al::AL_BUFFER, bufs[0] as _);
         al::alGetError()
     };
     if err != al::AL_NO_ERROR {
@@ -204,13 +195,18 @@ fn new_sound() -> Result<Sound, String> {
 }
 
 pub fn play_sound(sound: &mut Sound) {
-    //if sound.source == 0 {
-    //    lwarn!("Sound wasn't played because source is invalid.");
-    //    return;
-    //}
+    if sound.source == 0 {
+        lwarn!("Sound wasn't played because source is invalid.");
+        return;
+    }
+
+    let mut gain: al::ALfloat = 0.0;
+    unsafe {
+        al::alGetSourcef(sound.source, al::AL_GAIN, &mut gain);
+    }
+    ldebug!("Gain: {}", gain);
 
     let err = unsafe {
-        // reset error state
         al::alGetError();
         al::alSourcePlay(sound.source);
         al::alGetError()
@@ -229,15 +225,18 @@ pub fn sound_playing(sound: &Sound) -> bool {
         al::alGetError()
     };
     if err != al::AL_NO_ERROR {
-        lerr!("Error retrieving sound source state: OpenAL errcode {}", err);
+        lerr!(
+            "Error retrieving sound source state: OpenAL errcode {}",
+            err
+        );
         false
     } else {
-        state == al::AL_PLAYING
+        dbg!(state) == al::AL_PLAYING
     }
 }
 
 struct Decoded_Ogg {
-    pub buffers: Vec<Vec<i16>>,
+    pub buffers: Vec<i16>,
     pub format: al::ALenum,
     pub freq: al::ALsizei,
 }
@@ -263,6 +262,7 @@ fn read_and_decode_ogg_file(path: &Path) -> io::Result<Decoded_Ogg> {
     }
 
     let format = match ogg_reader.ident_hdr.audio_channels {
+        // @Incomplete: how to differentiate 8/16 bits?
         1 => al::AL_FORMAT_MONO16,
         2 => al::AL_FORMAT_STEREO16,
         n => {
@@ -276,7 +276,7 @@ fn read_and_decode_ogg_file(path: &Path) -> io::Result<Decoded_Ogg> {
     ldebug!("Decoded OGG file of length {play_length} s, sample rate {freq} Hz, format {format:?}");
 
     Ok(Decoded_Ogg {
-        buffers: vec![buffers],
+        buffers,
         format,
         freq,
     })
@@ -301,7 +301,7 @@ mod al {
 
     // Note: al.h comment says it should be an ALint, but then it doesn't typecheck correctly.
     pub const AL_BUFFER: ALenum = 0x1009;
-
+    pub const AL_GAIN: ALenum = 0x100A;
     pub const AL_SOURCE_STATE: ALenum = 0x1010;
     pub const AL_PLAYING: ALenum = 0x1012;
 
@@ -318,6 +318,7 @@ mod al {
     pub type ALenum = ffi::c_int;
     pub type ALvoid = ffi::c_void;
     pub type ALboolean = ffi::c_char;
+    pub type ALfloat = ffi::c_float;
 
     #[link(name = "openal")]
     extern "C" {
@@ -338,15 +339,16 @@ mod al {
             size: ALsizei,
             freq: ALsizei,
         );
+        pub fn alIsBuffer(buf: ALuint) -> ALboolean;
 
         pub fn alGenSources(n: ALsizei, sources: *mut ALuint);
         pub fn alDeleteSources(n: ALsizei, sources: *mut ALuint);
         pub fn alSourcei(source: ALuint, pname: ALenum, value: ALint);
+        pub fn alSourcef(source: ALuint, pname: ALenum, value: ALfloat);
         pub fn alGetSourcei(source: ALuint, pname: ALenum, value: *mut ALint);
+        pub fn alGetSourcef(source: ALuint, pname: ALenum, value: *mut ALfloat);
         pub fn alSourcePlay(source: ALuint);
         pub fn alSourceQueueBuffers(source: ALuint, n: ALsizei, buffers: *mut ALuint);
         pub fn alIsSource(source: ALuint) -> ALboolean;
     }
 }
-
-

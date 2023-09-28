@@ -257,8 +257,7 @@ fn lib_load(lib_path: &Path, create_temp: bool) -> Result<Lib_Load_Res, Lib_Load
             let (before, after) = path.split_at(index);
             format!("{}-{}{}", before, timestamp, after)
         };
-        std::fs::copy(&lib_path, &unique_name)
-            .expect("[ ERROR ] Failed to copy lib to unique path");
+        std::fs::copy(lib_path, &unique_name).expect("[ ERROR ] Failed to copy lib to unique path");
         Path::new(&unique_name).canonicalize().unwrap()
     } else {
         PathBuf::from(lib_path)
