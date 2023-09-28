@@ -34,4 +34,6 @@ pub fn create_sound_with_buffer(_buf: &Sound_Buffer) -> Sound {
     Sound
 }
 
-pub fn init_audio() -> Audio_Context { Audio_Context }
+pub fn init_audio() -> Audio_Context {
+    Audio_Context
+}

@@ -125,6 +125,7 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
         &game_state.env,
         font_name.read(&game_state.config),
     ));
+    game_res.audio.load_sound(&inle_resources::audio::sound_path(&game_state.env, "coin.ogg"));
 
     inle_ui::init_ui(&mut game_state.ui, &mut game_res.gfx, &game_state.env);
 

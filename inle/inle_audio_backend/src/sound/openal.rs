@@ -1,3 +1,4 @@
+use std::io;
 use std::path::Path;
 
 struct OpenAL_Error {
@@ -23,10 +24,33 @@ impl std::fmt::Display for OpenAL_Error {
     }
 }
 
-pub struct Sound;
+#[derive(Default)]
+pub struct Sound {
+    source: al::ALuint,
+}
+
+impl Drop for Sound {
+    fn drop(&mut self) {
+        if self.source > 0 {
+            unsafe {
+                al::alDeleteSources(1, &mut self.source);
+            }
+        }
+    }
+}
 
 pub struct Sound_Buffer {
     buf: al::ALuint,
+}
+
+impl Drop for Sound_Buffer {
+    fn drop(&mut self) {
+        if self.buf > 0 {
+            unsafe {
+                al::alDeleteBuffers(1, &mut self.buf);
+            }
+        }
+    }
 }
 
 pub struct Audio_Context {
@@ -52,10 +76,55 @@ pub fn sound_playing(_sound: &Sound) -> bool {
 }
 
 pub fn create_sound_with_buffer(_buf: &Sound_Buffer) -> Sound {
-    Sound
+    let sound = new_sound().unwrap_or_default();
+    sound
+}
+
+fn new_sound() -> Result<Sound, String> {
+    unsafe {
+        // reset error state
+        al::alGetError();
+    }
+
+    let mut source: al::ALuint = 0;
+    let err = unsafe {
+        al::alGenSources(1, &mut source);
+        al::alGetError()
+    };
+
+    if err == al::AL_NO_ERROR {
+        Ok(Sound { source })
+    } else {
+        Err(OpenAL_Error::new(err).to_string())
+    }
 }
 
 pub fn create_sound_buffer(file: &Path) -> Result<Sound_Buffer, String> {
+    let buf = new_sound_buf()?;
+
+    // load audio file
+    let mut decoded_file = read_and_decode_ogg_file(file).map_err(|err| err.to_string())?;
+
+    // put data into the buffer
+    let err = unsafe {
+        al::alBufferData(
+            buf.buf,
+            decoded_file.format,
+            decoded_file.samples.as_mut_ptr() as *mut _,
+            std::mem::size_of_val(&decoded_file.samples) as _,
+            decoded_file.freq,
+        );
+        al::alGetError()
+    };
+
+    if err == al::AL_NO_ERROR {
+        Ok(buf)
+    } else {
+        Err(OpenAL_Error::new(err).to_string())
+    }
+}
+
+fn new_sound_buf() -> Result<Sound_Buffer, String> {
     unsafe {
         // reset error state
         al::alGetError();
@@ -72,8 +141,6 @@ pub fn create_sound_buffer(file: &Path) -> Result<Sound_Buffer, String> {
     } else {
         Err(OpenAL_Error::new(err).to_string())
     }
-
-    // TODO: load audio file, put data into the buffer
 }
 
 pub fn init_audio() -> Audio_Context {
@@ -100,6 +167,49 @@ pub fn shutdown_audio(ctx: &mut Audio_Context) {
     }
 }
 
+struct Decoded_Ogg {
+    pub samples: Vec<i16>,
+    pub format: al::ALenum,
+    pub freq: al::ALsizei,
+}
+
+fn read_and_decode_ogg_file(path: &Path) -> io::Result<Decoded_Ogg> {
+    use io::Read;
+    use lewton::inside_ogg as ogg;
+    use std::fs;
+
+    let file_reader = fs::File::open(path)?;
+    let mut ogg_reader = ogg::OggStreamReader::new(file_reader)
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+    let mut samples: Vec<i16> = vec![];
+    while let Some(packets) = ogg_reader
+        .read_dec_packet()
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?
+    {
+        for packet in packets {
+            samples.extend(packet);
+        }
+    }
+
+    let format = match ogg_reader.ident_hdr.audio_channels {
+        1 => al::AL_FORMAT_MONO16,
+        2 => al::AL_FORMAT_STEREO16,
+        n => {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Unsupported number of channels {}", n),
+            ))
+        }
+    };
+    let freq = ogg_reader.ident_hdr.audio_sample_rate as _;
+
+    Ok(Decoded_Ogg {
+        samples,
+        format,
+        freq,
+    })
+}
+
 mod al {
     use std::ffi;
 
@@ -108,6 +218,11 @@ mod al {
 
     pub const AL_NO_ERROR: ALenum = 0;
 
+    pub const AL_FORMAT_MONO8: ALenum = 0x1100;
+    pub const AL_FORMAT_MONO16: ALenum = 0x1101;
+    pub const AL_FORMAT_STEREO8: ALenum = 0x1102;
+    pub const AL_FORMAT_STEREO16: ALenum = 0x1103;
+
     pub type ALCchar = ffi::c_char;
     pub type ALCdevice = ffi::c_void;
     pub type ALCboolean = ffi::c_char;
@@ -115,6 +230,7 @@ mod al {
     pub type ALuint = ffi::c_uint;
     pub type ALsizei = ffi::c_int;
     pub type ALenum = ffi::c_int;
+    pub type ALvoid = ffi::c_void;
 
     #[link(name = "openal")]
     extern "C" {
@@ -123,53 +239,18 @@ mod al {
 
         pub fn alGetError() -> ALenum;
         pub fn alGenBuffers(n: ALsizei, buffers: *mut ALuint);
-    }
-}
-
-mod libc {
-    use std::ffi::{self, c_void};
-
-    #[link(name = "c")]
-    extern "C" {
-        pub fn fread(ptr: *mut c_void, size: usize, nmemb: usize, stream: *mut c_void) -> usize;
-        pub fn ftell(ptr: *mut c_void) -> ffi::c_long;
-    }
-}
-
-mod ov {
-    use std::ffi::{self, c_int, c_void};
-
-    #[repr(C)]
-    pub struct ov_callbacks {
-        pub read_func:
-            Option<unsafe extern "C" fn(*mut c_void, usize, usize, *mut c_void) -> usize>,
-        pub seek_func: Option<unsafe extern "C" fn(*mut c_void, i64, ffi::c_int) -> ffi::c_int>,
-        pub close_func: Option<unsafe extern "C" fn(*mut c_void) -> ffi::c_int>,
-        pub tell_func: Option<unsafe extern "C" fn(*mut c_void) -> ffi::c_long>,
-    }
-
-    pub fn get_ov_callbacks_default() -> ov_callbacks {
-        use super::libc;
-
-        ov_callbacks {
-            read_func: Some(libc::fread),
-            seek_func: Some(_ov_header_fseek_wrap),
-            close_func: None,
-            tell_func: Some(libc::ftell),
-        }
-    }
-
-    pub type OggVorbis_File = c_void;
-
-    #[link(name = "vorbis")]
-    extern "C" {
-        pub fn ov_open_callbacks(
-            datasource: *mut c_void,
-            vf: *mut OggVorbis_File,
-            ibytes: ffi::c_long,
-            callbacks: ov_callbacks,
+        pub fn alDeleteBuffers(n: ALsizei, buffers: *mut ALuint);
+        pub fn alBufferData(
+            buffer: ALuint,
+            format: ALenum,
+            data: *mut ALvoid,
+            size: ALsizei,
+            freq: ALsizei,
         );
 
-        fn _ov_header_fseek_wrap(f: *mut c_void, off: i64, whence: ffi::c_int) -> ffi::c_int;
+        pub fn alGenSources(n: ALsizei, sources: *mut ALuint);
+        pub fn alDeleteSources(n: ALsizei, sources: *mut ALuint);
     }
 }
+
+
