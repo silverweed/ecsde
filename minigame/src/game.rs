@@ -135,7 +135,7 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
         .audio
         .load_sound(&inle_resources::audio::sound_path(
             &game_state.env,
-            "gameover.ogg",
+            "coin.ogg",
         ));
 
     game_state.audio_system.play_sound(&game_res.audio, snd);

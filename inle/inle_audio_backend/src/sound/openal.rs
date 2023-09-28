@@ -200,12 +200,6 @@ pub fn play_sound(sound: &mut Sound) {
         return;
     }
 
-    let mut gain: al::ALfloat = 0.0;
-    unsafe {
-        al::alGetSourcef(sound.source, al::AL_GAIN, &mut gain);
-    }
-    ldebug!("Gain: {}", gain);
-
     let err = unsafe {
         al::alGetError();
         al::alSourcePlay(sound.source);
