@@ -75,8 +75,12 @@ pub fn sound_playing(_sound: &Sound) -> bool {
     false
 }
 
-pub fn create_sound_with_buffer(_buf: &Sound_Buffer) -> Sound {
+pub fn create_sound_with_buffer(buf: &Sound_Buffer) -> Sound {
     let sound = new_sound().unwrap_or_default();
+    let err = unsafe {
+        al::alSourcei(sound.source, al::AL_BUFFER, buf.buf);
+        al::alGetError()
+    };
     sound
 }
 
@@ -223,11 +227,15 @@ mod al {
     pub const AL_FORMAT_STEREO8: ALenum = 0x1102;
     pub const AL_FORMAT_STEREO16: ALenum = 0x1103;
 
+    // Note: al.h comment says it should be an ALint, but then it doesn't typecheck correctly.
+    pub const AL_BUFFER: ALenum = 0x1009;
+
     pub type ALCchar = ffi::c_char;
     pub type ALCdevice = ffi::c_void;
     pub type ALCboolean = ffi::c_char;
 
     pub type ALuint = ffi::c_uint;
+    pub type ALint = ffi::c_int;
     pub type ALsizei = ffi::c_int;
     pub type ALenum = ffi::c_int;
     pub type ALvoid = ffi::c_void;
@@ -250,6 +258,7 @@ mod al {
 
         pub fn alGenSources(n: ALsizei, sources: *mut ALuint);
         pub fn alDeleteSources(n: ALsizei, sources: *mut ALuint);
+        pub fn alSourcei(source: ALuint, pname: ALenum, value: ALint);
     }
 }
 
