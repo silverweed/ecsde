@@ -78,6 +78,11 @@ pub fn internal_game_init() -> Box<Game_State> {
 
     let phase_mgr = super::Phase_Manager::default();
 
+    let audio_config  = inle_audio::audio_system::Audio_System_Config {
+        max_concurrent_sounds: 6,
+    };
+    let audio_system = inle_audio::audio_system::Audio_System::new(&audio_config);
+
     Box::new(Game_State {
         env,
         config,
@@ -86,6 +91,7 @@ pub fn internal_game_init() -> Box<Game_State> {
         window,
         batches,
         lights,
+        audio_system,
         loggers,
         time,
         prev_frame_time: Duration::default(),
@@ -125,7 +131,12 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
         &game_state.env,
         font_name.read(&game_state.config),
     ));
-    game_res.audio.load_sound(&inle_resources::audio::sound_path(&game_state.env, "coin.ogg"));
+    let snd = game_res.audio.load_sound(&inle_resources::audio::sound_path(&game_state.env, "coin.ogg"));
+
+    game_state.audio_system.play_sound(&game_res.audio, snd);
+
+    // DEBUG
+ //   game_state.should_quit = true;
 
     inle_ui::init_ui(&mut game_state.ui, &mut game_res.gfx, &game_state.env);
 

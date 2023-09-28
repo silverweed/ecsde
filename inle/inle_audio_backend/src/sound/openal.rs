@@ -14,7 +14,7 @@ impl OpenAL_Error {
 impl std::fmt::Debug for OpenAL_Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         // TODO: proper error string
-        write!(f, "errcode {:?}", self.code)
+        write!(f, "OpenAL errcode {:?}", self.code)
     }
 }
 
@@ -40,21 +40,20 @@ impl Drop for Sound {
 }
 
 pub struct Sound_Buffer {
-    buf: al::ALuint,
+    bufs: Vec<al::ALuint>,
 }
 
 impl Drop for Sound_Buffer {
     fn drop(&mut self) {
-        if self.buf > 0 {
-            unsafe {
-                al::alDeleteBuffers(1, &mut self.buf);
-            }
+        unsafe {
+            al::alDeleteBuffers(self.bufs.len() as _, self.bufs.as_mut_ptr());
         }
     }
 }
 
 pub struct Audio_Context {
     device: *mut al::ALCdevice,
+    context: *mut al::ALCcontext,
 }
 
 impl Drop for Audio_Context {
@@ -69,18 +68,117 @@ impl Sound_Buffer {
     }
 }
 
-pub fn play_sound(_sound: &mut Sound) {}
+pub fn init_audio() -> Audio_Context {
+    let mut context = std::ptr::null_mut();
 
-pub fn sound_playing(_sound: &Sound) -> bool {
-    false
+    // Request default device
+    let device = unsafe { al::alcOpenDevice(std::ptr::null()) };
+    if device.is_null() {
+        lerr!("Failed to get OpenAL device");
+    } else {
+        lok!("Successfully opened OpenAL device");
+
+        context = unsafe { al::alcCreateContext(device, std::ptr::null_mut()) };
+        if context.is_null() {
+            lerr!("Failed to create OpenAL context");
+        } else {
+            let ok = unsafe {
+                al::alcMakeContextCurrent(context)
+            };
+            if ok != al::ALC_TRUE {
+                lerr!("Failed to make OpenAL context current");
+            }
+        }
+    }
+
+    let err = unsafe { al::alcGetError(device) };
+    if err != al::ALC_NO_ERROR {
+        lerr!("Error initting audio: ALC errcode {}", err);
+    }
+
+    Audio_Context { device, context }
+}
+
+pub fn shutdown_audio(ctx: &mut Audio_Context) {
+    if !ctx.context.is_null() {
+        unsafe { al::alcDestroyContext(ctx.context) };
+        ctx.context = std::ptr::null_mut();
+    }
+    if !ctx.device.is_null() {
+        let ok = unsafe { al::alcCloseDevice(ctx.device) };
+        if ok == al::ALC_TRUE {
+            lok!("Successfully closed OpenAL device.");
+        } else {
+            lerr!("Failed to close OpenAL device!");
+        }
+        ctx.device = std::ptr::null_mut();
+    }
+}
+
+
+pub fn create_sound_buffer(file: &Path) -> Result<Sound_Buffer, String> {
+    // load audio file
+    let mut decoded_file = read_and_decode_ogg_file(file).map_err(|err| err.to_string())?;
+    
+    let sound_buf = new_sound_buf(decoded_file.buffers.len())?;
+
+    // put data into the buffers
+    let err = unsafe {
+        ldebug!("Filling {} OpenAL buffers with data. Format = {:?}, freq = {}", sound_buf.bufs.len(), decoded_file.format, decoded_file.freq);
+        //for (buf, data) in std::iter::zip(sound_buf.bufs.iter(), decoded_file.buffers.iter_mut()) {
+        assert!(sound_buf.bufs.len() == decoded_file.buffers.len());
+        for i in 0..sound_buf.bufs.len() {
+            al::alBufferData(
+                sound_buf.bufs[i],
+                decoded_file.format,
+                decoded_file.buffers[i].as_mut_ptr() as *mut _,
+                std::mem::size_of_val(&decoded_file.buffers[i]) as _,
+                decoded_file.freq,
+            );
+        }
+        al::alGetError()
+    };
+
+    if err == al::AL_NO_ERROR {
+        Ok(sound_buf)
+    } else {
+        Err(OpenAL_Error::new(err).to_string())
+    }
+}
+
+fn new_sound_buf(n_internal_buffers: usize) -> Result<Sound_Buffer, String> {
+    unsafe {
+        // reset error state
+        al::alGetError();
+    }
+
+    let mut bufs = vec![0; n_internal_buffers];
+    let err = unsafe {
+        al::alGenBuffers(n_internal_buffers as _, bufs.as_mut_ptr());
+        al::alGetError()
+    };
+
+    if err == al::AL_NO_ERROR {
+        Ok(Sound_Buffer { bufs })
+    } else {
+        Err(OpenAL_Error::new(err).to_string())
+    }
 }
 
 pub fn create_sound_with_buffer(buf: &Sound_Buffer) -> Sound {
     let sound = new_sound().unwrap_or_default();
+    // @Speed: we clone the buffer handles so we don't have to pass `buf` as mutable.
+    // alSourceQueueBuffers probably doesn't really need a mutable pointer, but that's
+    // what the signature asks for, so we comply.
+    let mut bufs = buf.bufs.clone();
     let err = unsafe {
-        al::alSourcei(sound.source, al::AL_BUFFER, buf.buf);
+        //al::alSourcei(sound.source, al::AL_BUFFER, buf.buf as _);
+        al::alSourceQueueBuffers(sound.source, bufs.len() as _, bufs.as_mut_ptr());
         al::alGetError()
     };
+    if err != al::AL_NO_ERROR {
+        lerr!("Error creating sound: OpenAL errcode {}", err);
+    }
     sound
 }
 
@@ -97,102 +195,71 @@ fn new_sound() -> Result<Sound, String> {
     };
 
     if err == al::AL_NO_ERROR {
+        ldebug!("Created sound with OpenAL source {}.", source);
+        debug_assert!(unsafe { al::alIsSource(source) == al::AL_TRUE });
         Ok(Sound { source })
     } else {
         Err(OpenAL_Error::new(err).to_string())
     }
 }
 
-pub fn create_sound_buffer(file: &Path) -> Result<Sound_Buffer, String> {
-    let buf = new_sound_buf()?;
+pub fn play_sound(sound: &mut Sound) {
+    //if sound.source == 0 {
+    //    lwarn!("Sound wasn't played because source is invalid.");
+    //    return;
+    //}
 
-    // load audio file
-    let mut decoded_file = read_and_decode_ogg_file(file).map_err(|err| err.to_string())?;
-
-    // put data into the buffer
     let err = unsafe {
-        al::alBufferData(
-            buf.buf,
-            decoded_file.format,
-            decoded_file.samples.as_mut_ptr() as *mut _,
-            std::mem::size_of_val(&decoded_file.samples) as _,
-            decoded_file.freq,
-        );
-        al::alGetError()
-    };
-
-    if err == al::AL_NO_ERROR {
-        Ok(buf)
-    } else {
-        Err(OpenAL_Error::new(err).to_string())
-    }
-}
-
-fn new_sound_buf() -> Result<Sound_Buffer, String> {
-    unsafe {
         // reset error state
         al::alGetError();
-    }
-
-    let mut buf: al::ALuint = 0;
-    let err = unsafe {
-        al::alGenBuffers(1, &mut buf);
+        al::alSourcePlay(sound.source);
         al::alGetError()
     };
 
-    if err == al::AL_NO_ERROR {
-        Ok(Sound_Buffer { buf })
-    } else {
-        Err(OpenAL_Error::new(err).to_string())
+    if err != al::AL_NO_ERROR {
+        lerr!("Error playing sound: OpenAL errcode {}", err);
     }
 }
 
-pub fn init_audio() -> Audio_Context {
-    // Request default device
-    let device = unsafe { al::alcOpenDevice(std::ptr::null()) };
-    if device.is_null() {
-        lerr!("Failed to get OpenAL device");
+pub fn sound_playing(sound: &Sound) -> bool {
+    let mut state: al::ALint = 0;
+    let err = unsafe {
+        al::alGetError();
+        al::alGetSourcei(sound.source, al::AL_SOURCE_STATE, &mut state);
+        al::alGetError()
+    };
+    if err != al::AL_NO_ERROR {
+        lerr!("Error retrieving sound source state: OpenAL errcode {}", err);
+        false
     } else {
-        lok!("Successfully opened OpenAL device");
-    }
-
-    Audio_Context { device }
-}
-
-pub fn shutdown_audio(ctx: &mut Audio_Context) {
-    if !ctx.device.is_null() {
-        let ok = unsafe { al::alcCloseDevice(ctx.device) };
-        if ok == al::ALC_TRUE {
-            lok!("Successfully closed OpenAL device.");
-        } else {
-            lerr!("Failed to close OpenAL device!");
-        }
-        ctx.device = std::ptr::null_mut();
+        state == al::AL_PLAYING
     }
 }
 
 struct Decoded_Ogg {
-    pub samples: Vec<i16>,
+    pub buffers: Vec<Vec<i16>>,
     pub format: al::ALenum,
     pub freq: al::ALsizei,
 }
 
 fn read_and_decode_ogg_file(path: &Path) -> io::Result<Decoded_Ogg> {
-    use io::Read;
     use lewton::inside_ogg as ogg;
     use std::fs;
 
     let file_reader = fs::File::open(path)?;
     let mut ogg_reader = ogg::OggStreamReader::new(file_reader)
         .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
-    let mut samples: Vec<i16> = vec![];
+    let mut buffers = vec![];
+    let mut play_length = 0.;
+    let header = &ogg_reader.ident_hdr;
+    let sample_channels = header.audio_channels as f32 * header.audio_sample_rate as f32;
+    let freq = header.audio_sample_rate as _;
     while let Some(packets) = ogg_reader
-        .read_dec_packet()
+        .read_dec_packet_itl()
         .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?
     {
-        for packet in packets {
-            samples.extend(packet);
-        }
+        play_length += packets.len() as f32 / sample_channels;
+        buffers.extend(packets);
     }
 
     let format = match ogg_reader.ident_hdr.audio_channels {
@@ -205,10 +272,11 @@ fn read_and_decode_ogg_file(path: &Path) -> io::Result<Decoded_Ogg> {
             ))
         }
     };
-    let freq = ogg_reader.ident_hdr.audio_sample_rate as _;
+
+    ldebug!("Decoded OGG file of length {play_length} s, sample rate {freq} Hz, format {format:?}");
 
     Ok(Decoded_Ogg {
-        samples,
+        buffers: vec![buffers],
         format,
         freq,
     })
@@ -220,6 +288,10 @@ mod al {
     pub const ALC_TRUE: ALCboolean = 1;
     pub const ALC_FALSE: ALCboolean = 0;
 
+    pub const AL_TRUE: ALboolean = 1;
+    pub const AL_FALSE: ALboolean = 0;
+
+    pub const ALC_NO_ERROR: ALCenum = ALC_FALSE as _;
     pub const AL_NO_ERROR: ALenum = 0;
 
     pub const AL_FORMAT_MONO8: ALenum = 0x1100;
@@ -230,20 +302,31 @@ mod al {
     // Note: al.h comment says it should be an ALint, but then it doesn't typecheck correctly.
     pub const AL_BUFFER: ALenum = 0x1009;
 
-    pub type ALCchar = ffi::c_char;
+    pub const AL_SOURCE_STATE: ALenum = 0x1010;
+    pub const AL_PLAYING: ALenum = 0x1012;
+
     pub type ALCdevice = ffi::c_void;
+    pub type ALCcontext = ffi::c_void;
+    pub type ALCchar = ffi::c_char;
     pub type ALCboolean = ffi::c_char;
+    pub type ALCint = ffi::c_int;
+    pub type ALCenum = ffi::c_int;
 
     pub type ALuint = ffi::c_uint;
     pub type ALint = ffi::c_int;
     pub type ALsizei = ffi::c_int;
     pub type ALenum = ffi::c_int;
     pub type ALvoid = ffi::c_void;
+    pub type ALboolean = ffi::c_char;
 
     #[link(name = "openal")]
     extern "C" {
+        pub fn alcGetError(device: *mut ALCdevice) -> ALCenum;
         pub fn alcOpenDevice(devicename: *const ALCchar) -> *mut ALCdevice;
         pub fn alcCloseDevice(device: *mut ALCdevice) -> ALCboolean;
+        pub fn alcCreateContext(device: *mut ALCdevice, attrlist: *mut ALCint) -> *mut ALCcontext;
+        pub fn alcDestroyContext(context: *mut ALCcontext);
+        pub fn alcMakeContextCurrent(context: *mut ALCcontext) -> ALCboolean;
 
         pub fn alGetError() -> ALenum;
         pub fn alGenBuffers(n: ALsizei, buffers: *mut ALuint);
@@ -259,6 +342,10 @@ mod al {
         pub fn alGenSources(n: ALsizei, sources: *mut ALuint);
         pub fn alDeleteSources(n: ALsizei, sources: *mut ALuint);
         pub fn alSourcei(source: ALuint, pname: ALenum, value: ALint);
+        pub fn alGetSourcei(source: ALuint, pname: ALenum, value: *mut ALint);
+        pub fn alSourcePlay(source: ALuint);
+        pub fn alSourceQueueBuffers(source: ALuint, n: ALsizei, buffers: *mut ALuint);
+        pub fn alIsSource(source: ALuint) -> ALboolean;
     }
 }
 

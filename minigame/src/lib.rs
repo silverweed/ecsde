@@ -43,6 +43,8 @@ pub struct Game_State {
     batches: inle_gfx::render::batcher::Batches,
     lights: inle_gfx::light::Lights,
 
+    audio_system: inle_audio::audio_system::Audio_System,
+
     input: inle_input::input_state::Input_State,
 
     default_font: inle_resources::gfx::Font_Handle,

@@ -30,8 +30,12 @@ impl Audio_Resources {
         self.sounds.n_loaded()
     }
 
-    pub fn get_sound(&self, handle: Sound_Handle) -> &Sound_Buffer {
+    pub fn get_sound_buffer(&self, handle: Sound_Handle) -> &Sound_Buffer {
         self.sounds.must_get(handle)
+    }
+
+    pub fn get_sound_buffer_mut(&mut self, handle: Sound_Handle) -> &mut Sound_Buffer {
+        self.sounds.must_get_mut(handle)
     }
 }
 

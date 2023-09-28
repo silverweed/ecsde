@@ -35,9 +35,13 @@ impl Audio_System {
             // @Incomplete: this is not necessarily what we'll want
             self.sounds_playing.swap_remove(0);
         }
-        let sound_buf = rsrc.get_sound(sound_handle);
+        let sound_buf = rsrc.get_sound_buffer(sound_handle);
         let mut sound = sound::create_sound_with_buffer(sound_buf);
         sound::play_sound(&mut sound);
+        while crate::sound::sound_playing(&sound) {
+            println!("sound playing");
+            std::thread::sleep_ms(100);
+        }
         self.sounds_playing.push(sound);
     }
 
