@@ -1,5 +1,5 @@
-use crate::loaders;
-use inle_audio_backend::sound::Sound_Buffer;
+use crate::sound::Sound_Buffer;
+use inle_resources::loaders;
 
 define_file_loader!(
     Sound_Buffer,

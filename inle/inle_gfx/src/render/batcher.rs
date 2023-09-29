@@ -1,6 +1,7 @@
 use crate::light::{Lights, Point_Light, Rect_Light};
 use crate::material::Material;
 use crate::render::{self, Primitive_Type};
+use crate::res::{Gfx_Resources, Shader_Cache};
 use crate::vbuf_holder::Vertex_Buffer_Holder;
 use inle_alloc::temp;
 use inle_alloc::temp::excl_temp_array::Exclusive_Temp_Array;
@@ -15,7 +16,6 @@ use inle_math::rect;
 use inle_math::rect::{Rect, Rectf};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use inle_resources::gfx::{Gfx_Resources, Shader_Cache};
 use smallvec::SmallVec;
 use std::collections::HashMap;
 use std::convert::TryFrom;

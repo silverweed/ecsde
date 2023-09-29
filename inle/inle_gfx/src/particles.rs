@@ -1,6 +1,7 @@
 use crate::render::Shader;
 use crate::render::{self, Primitive_Type};
 use crate::render_window::Render_Window_Handle;
+use crate::res::{shader_path, Gfx_Resources, Shader_Cache, Shader_Handle, Texture_Handle};
 use crate::vbuf_holder::Vertex_Buffer_Holder;
 use inle_alloc::temp;
 use inle_cfg::{self, Cfg_Var};
@@ -11,9 +12,6 @@ use inle_math::angle::{self, Angle};
 use inle_math::rect::{self, Rectf};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use inle_resources::gfx::{
-    shader_path, Gfx_Resources, Shader_Cache, Shader_Handle, Texture_Handle,
-};
 use rayon::prelude::*;
 use std::ops::Range;
 use std::time::Duration;

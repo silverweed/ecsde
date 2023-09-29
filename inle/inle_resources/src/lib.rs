@@ -10,8 +10,4 @@ extern crate inle_common;
 #[macro_use]
 extern crate inle_diagnostics;
 
-#[macro_use]
 pub mod loaders;
-
-pub mod audio;
-pub mod gfx;

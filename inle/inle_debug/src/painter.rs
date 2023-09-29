@@ -3,12 +3,12 @@ use inle_common::paint_props::Paint_Properties;
 use inle_core::env::Env_Info;
 use inle_gfx::render::{self, Font, Vertex_Buffer_Triangles};
 use inle_gfx::render_window::Render_Window_Handle;
+use inle_gfx::res;
 use inle_math::angle::rad;
 use inle_math::rect::{Rect, Rectf};
 use inle_math::shapes::{Arrow, Circle, Line};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use inle_resources::gfx;
 use std::convert::TryFrom;
 
 #[derive(Default)]
@@ -18,14 +18,14 @@ pub struct Debug_Painter {
     texts: Vec<(String, Vec2f, u16, Paint_Properties)>,
     arrows: Vec<(Arrow, Paint_Properties)>,
     lines: Vec<(Line, Paint_Properties)>,
-    font: gfx::Font_Handle,
+    font: res::Font_Handle,
 }
 
 const FONT_NAME: &str = "Hack-Regular.ttf";
 
 impl Debug_Painter {
-    pub fn init(&mut self, gres: &mut gfx::Gfx_Resources, env: &Env_Info) {
-        self.font = gres.load_font(&gfx::font_path(env, FONT_NAME));
+    pub fn init(&mut self, gres: &mut res::Gfx_Resources, env: &Env_Info) {
+        self.font = gres.load_font(&res::font_path(env, FONT_NAME));
     }
 
     pub fn add_rect<T>(&mut self, size: Vec2f, transform: &Transform2D, props: T)
@@ -127,7 +127,7 @@ impl Debug_Painter {
     pub fn draw(
         &self,
         window: &mut Render_Window_Handle,
-        gres: &mut gfx::Gfx_Resources,
+        gres: &mut res::Gfx_Resources,
         camera: &Transform2D,
     ) {
         trace!("painter::draw");

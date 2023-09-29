@@ -152,7 +152,7 @@ impl Game_Phase for Main_Menu {
     type Args = Phase_Args;
 
     fn on_start(&mut self, args: &mut Self::Args) {
-        use inle_resources::gfx::tex_path;
+        use inle_gfx::res::tex_path;
 
         let mut gs = args.game_state_mut();
         let mut res = args.game_res_mut();

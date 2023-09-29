@@ -1,5 +1,5 @@
 use super::sound;
-use inle_resources::audio::{Audio_Resources, Sound_Handle};
+use crate::res::{Audio_Resources, Sound_Handle};
 
 pub struct Audio_System_Config {
     pub max_concurrent_sounds: usize,
@@ -49,13 +49,12 @@ impl Audio_System {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use inle_resources::audio::sound_path;
-    use inle_test::test_common;
+    use crate::res::sound_path;
 
-    #[ignore] // until we fix create_test_resources_and_env
     #[test]
     fn max_concurrent_sounds() {
-        let (_, mut ares, env) = test_common::create_test_resources_and_env();
+        let env = inle_core::env::Env_Info::gather().unwrap();
+        let mut ares = Audio_Resources::new();
         let snd_handle = ares.load_sound(&sound_path(&env, "coin.ogg"));
 
         {

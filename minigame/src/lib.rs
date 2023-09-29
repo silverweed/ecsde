@@ -47,7 +47,7 @@ pub struct Game_State {
 
     input: inle_input::input_state::Input_State,
 
-    default_font: inle_resources::gfx::Font_Handle,
+    default_font: inle_gfx::res::Font_Handle,
 
     engine_cvars: inle_app::app::Engine_CVars,
 
@@ -63,9 +63,9 @@ pub struct Game_State {
 }
 
 pub struct Game_Resources {
-    pub gfx: inle_resources::gfx::Gfx_Resources,
-    pub audio: inle_resources::audio::Audio_Resources,
-    pub shader_cache: inle_resources::gfx::Shader_Cache,
+    pub gfx: inle_gfx::res::Gfx_Resources,
+    pub audio: inle_audio::res::Audio_Resources,
+    pub shader_cache: inle_gfx::res::Shader_Cache,
 }
 
 #[repr(C)]

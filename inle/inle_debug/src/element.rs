@@ -1,8 +1,8 @@
 use inle_alloc::temp;
 use inle_cfg::Config;
 use inle_gfx::render_window::Render_Window_Handle;
+use inle_gfx::res::Gfx_Resources;
 use inle_input::input_state::Input_State;
-use inle_resources::gfx::Gfx_Resources;
 use std::time::Duration;
 
 pub struct Update_Args<'a> {

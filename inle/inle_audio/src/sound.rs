@@ -3,6 +3,7 @@ use inle_audio_backend::sound::backend;
 // A Sound stands to a Sound_Buffer like a Sprite to a Texture.
 pub type Sound = backend::Sound;
 pub type Sound_Buffer = backend::Sound_Buffer;
+pub type Audio_Context = backend::Audio_Context;
 
 pub fn play_sound(sound: &mut Sound) {
     backend::play_sound(sound);

@@ -1,4 +1,5 @@
-use inle_gfx_backend::render::{self, Color_Type, Image, Texture};
+use crate::render::{Color_Type, Image, Texture};
+use inle_gfx_backend::render;
 use std::error::Error;
 use std::fs::File;
 use std::path::Path;

@@ -5,9 +5,9 @@ use super::widgets::*;
 use inle_common::paint_props::Paint_Properties;
 use inle_gfx::render;
 use inle_gfx::render_window::Render_Window_Handle;
+use inle_gfx::res::Gfx_Resources;
 use inle_math::rect::Rectf;
 use inle_math::vector::Vec2f;
-use inle_resources::gfx::Gfx_Resources;
 
 fn select_ac<T>(by_ac: &By_Activeness<T>, active: bool, hot: bool) -> &T {
     if active {

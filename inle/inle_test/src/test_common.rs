@@ -1,9 +1,6 @@
-#[rustfmt::skip]
-use {
-    inle_core::env::Env_Info,
-    inle_resources::audio::Audio_Resources,
-    inle_resources::gfx::Gfx_Resources,
-};
+use inle_audio::res::Audio_Resources;
+use inle_core::env::Env_Info;
+use inle_gfx::res::Gfx_Resources;
 
 // Used for setting up tests which need resources
 pub fn create_test_resources_and_env() -> (Gfx_Resources, Audio_Resources, Env_Info) {

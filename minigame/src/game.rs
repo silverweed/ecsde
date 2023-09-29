@@ -112,9 +112,9 @@ pub fn internal_game_init() -> Box<Game_State> {
 }
 
 pub fn create_game_resources() -> Box<Game_Resources> {
-    let gfx = inle_resources::gfx::Gfx_Resources::new();
-    let audio = inle_resources::audio::Audio_Resources::new();
-    let shader_cache = inle_resources::gfx::Shader_Cache::new();
+    let gfx = inle_gfx::res::Gfx_Resources::new();
+    let audio = inle_audio::res::Audio_Resources::new();
+    let shader_cache = inle_gfx::res::Shader_Cache::new();
     Box::new(Game_Resources {
         gfx,
         audio,
@@ -127,16 +127,13 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
     use crate::phases;
 
     let font_name = inle_cfg::Cfg_Var::<String>::new("engine/debug/ui/font", &game_state.config);
-    game_state.default_font = game_res.gfx.load_font(&inle_resources::gfx::font_path(
+    game_state.default_font = game_res.gfx.load_font(&inle_gfx::res::font_path(
         &game_state.env,
         font_name.read(&game_state.config),
     ));
     let snd = game_res
         .audio
-        .load_sound(&inle_resources::audio::sound_path(
-            &game_state.env,
-            "coin.ogg",
-        ));
+        .load_sound(&inle_audio::res::sound_path(&game_state.env, "coin.ogg"));
 
     game_state.audio_system.play_sound(&game_res.audio, snd);
 

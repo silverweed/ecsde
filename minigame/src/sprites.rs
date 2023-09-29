@@ -1,6 +1,6 @@
+use inle_gfx::res::{Gfx_Resources, Texture_Handle};
 use inle_gfx::sprites::Sprite;
 use inle_math::rect::{Rect, Recti};
-use inle_resources::gfx::{Gfx_Resources, Texture_Handle};
 use std::ops::{Deref, DerefMut};
 use std::time::Duration;
 

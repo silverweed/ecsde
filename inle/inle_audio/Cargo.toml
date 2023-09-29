@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 inle_audio_backend = { path = "../inle_audio_backend" }
+# Only used for error!() macro...consider removing.
+inle_common = { path = "../inle_common" }
+inle_core = { path = "../inle_core" }
 inle_resources = { path = "../inle_resources" }
-
-[dev-dependencies]
-inle_test = { path = "../inle_test" }

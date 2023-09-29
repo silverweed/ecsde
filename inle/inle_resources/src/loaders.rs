@@ -14,10 +14,10 @@ where
     Loader: Resource_Loader<Res, Args = Path>,
 {
     loader: Loader,
-    pub(super) cache: HashMap<String_Id, Res>,
+    pub cache: HashMap<String_Id, Res>,
 }
 
-pub(super) type Res_Handle = Option<String_Id>;
+pub type Res_Handle = Option<String_Id>;
 
 impl<Res, Loader> Cache<Res, Loader>
 where
@@ -82,11 +82,25 @@ macro_rules! define_file_loader {
             }
         }
 
-        pub(super) type $cache_name = loaders::Cache<$loaded_res, $loader_name>;
+        pub(super) struct $cache_name($crate::loaders::Cache<$loaded_res, $loader_name>);
 
         impl $cache_name {
             pub fn new() -> Self {
-                Self::new_with_loader($loader_name {})
+                Self($crate::loaders::Cache::new_with_loader($loader_name {}))
+            }
+        }
+
+        impl std::ops::Deref for $cache_name {
+            type Target = $crate::loaders::Cache<$loaded_res, $loader_name>;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl std::ops::DerefMut for $cache_name {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
             }
         }
     };

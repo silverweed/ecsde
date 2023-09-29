@@ -1,5 +1,7 @@
 use super::image;
-use inle_gfx_backend::render::{self, Font, Font_Metadata, Glyph_Bounds, Glyph_Data};
+use crate::render::{self, Font, Font_Metadata};
+// @Refactor: these should probably be defined in this crate too
+use inle_gfx_backend::render::{Glyph_Bounds, Glyph_Data};
 use std::error::Error;
 use std::path::{Path, PathBuf};
 

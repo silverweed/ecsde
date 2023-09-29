@@ -13,11 +13,15 @@ extern crate inle_diagnostics;
 #[macro_use]
 extern crate inle_math;
 
-pub mod components;
+#[macro_use]
+extern crate inle_resources;
+
+//pub mod components;
 pub mod light;
 pub mod material;
 pub mod particles;
 pub mod render;
 pub mod render_window;
+pub mod res;
 pub mod sprites;
 pub mod vbuf_holder;

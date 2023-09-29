@@ -10,8 +10,8 @@ use inle_core::env::Env_Info;
 use inle_core::rand;
 use inle_core::tasks::Long_Task_Manager;
 use inle_core::time;
-use inle_resources::gfx::Gfx_Resources;
-use inle_resources::gfx::Shader_Cache;
+use inle_gfx::res::Gfx_Resources;
+use inle_gfx::res::Shader_Cache;
 use std::convert::TryInto;
 use std::time::Duration;
 
@@ -228,10 +228,7 @@ pub fn init_engine_debug(
     use inle_debug::{graph, overlay};
     use inle_math::vector::{Vec2f, Vec2u};
 
-    let font = gfx_resources.load_font(&inle_resources::gfx::font_path(
-        env,
-        cfg.font_name.read(config),
-    ));
+    let font = gfx_resources.load_font(&inle_gfx::res::font_path(env, cfg.font_name.read(config)));
 
     debug_systems.global_painter.init(gfx_resources, env);
 

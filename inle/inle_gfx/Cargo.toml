@@ -8,6 +8,8 @@ edition = "2018"
 
 [features]
 #gfx-null = []
+load-png = ["png"]
+default = ["load-png"]
 
 [dependencies]
 inle_alloc = { path = "../inle_alloc" }
@@ -21,3 +23,7 @@ inle_resources = { path = "../inle_resources" }
 inle_win = { path = "../inle_win" }
 rayon = { workspace = true }
 smallvec = { workspace = true }
+
+[dependencies.png]
+optional = true
+version = "0.16"

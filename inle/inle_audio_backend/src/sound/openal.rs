@@ -33,6 +33,7 @@ impl Drop for Sound {
     fn drop(&mut self) {
         if self.source > 0 {
             unsafe {
+                al::alSourceStop(self.source);
                 al::alDeleteSources(1, &mut self.source);
             }
         }
@@ -59,12 +60,6 @@ pub struct Audio_Context {
 impl Drop for Audio_Context {
     fn drop(&mut self) {
         shutdown_audio(self);
-    }
-}
-
-impl Sound_Buffer {
-    pub fn from_file(fname: &str) -> Option<Self> {
-        create_sound_buffer(&Path::new(fname)).ok()
     }
 }
 
@@ -342,6 +337,7 @@ mod al {
         pub fn alGetSourcei(source: ALuint, pname: ALenum, value: *mut ALint);
         pub fn alGetSourcef(source: ALuint, pname: ALenum, value: *mut ALfloat);
         pub fn alSourcePlay(source: ALuint);
+        pub fn alSourceStop(source: ALuint);
         pub fn alSourceQueueBuffers(source: ALuint, n: ALsizei, buffers: *mut ALuint);
         pub fn alIsSource(source: ALuint) -> ALboolean;
     }

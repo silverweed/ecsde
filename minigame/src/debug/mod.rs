@@ -42,7 +42,7 @@ fn init_game_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     let font_name = debug_ui.cfg.font_name.read(cfg);
     let font = game_res
         .gfx
-        .load_font(&inle_resources::gfx::font_path(&game_state.env, font_name));
+        .load_font(&inle_gfx::res::font_path(&game_state.env, font_name));
 
     let (win_w, win_h) = game_state.app_config.target_win_size;
 
@@ -366,7 +366,7 @@ pub fn render_debug(
     config: &inle_cfg::Config,
     temp_alloc: &mut inle_alloc::temp::Temp_Allocator,
     time: &mut inle_core::time::Time,
-    gres: &mut inle_resources::gfx::Gfx_Resources,
+    gres: &mut inle_gfx::res::Gfx_Resources,
 ) {
     use inle_math::transform::Transform2D;
 

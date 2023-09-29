@@ -1,9 +1,9 @@
 use super::material::Material;
 use super::render;
+use crate::res::{Gfx_Resources, Texture_Handle};
 use inle_common::colors;
 use inle_math::rect::{Rect, Recti};
 use inle_math::transform::Transform2D;
-use inle_resources::gfx::{Gfx_Resources, Texture_Handle};
 use std::path::Path;
 
 #[derive(Clone)]

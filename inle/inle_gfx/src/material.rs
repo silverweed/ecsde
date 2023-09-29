@@ -1,5 +1,5 @@
+use crate::res::{Shader_Handle, Texture_Handle};
 use inle_common::colors;
-use inle_resources::gfx::{Shader_Handle, Texture_Handle};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Default)]
 pub struct Material {

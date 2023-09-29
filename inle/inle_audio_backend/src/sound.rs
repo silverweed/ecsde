@@ -14,4 +14,5 @@ pub type Sound_Buffer = backend::Sound_Buffer;
 pub type Sound = backend::Sound;
 pub type Audio_Context = backend::Audio_Context;
 
+pub use backend::create_sound_buffer;
 pub use backend::init_audio;
