@@ -158,6 +158,7 @@ impl Game_Phase for Main_Menu {
         let mut res = args.game_res_mut();
         let (win_w, win_h) = gs.app_config.target_win_size;
 
+        // Currently we create the whole scene once and then we keep it in memory forever.
         if self.sprites.is_empty() {
             let tex_rect = inle_math::rect::Rect::new(0, 0, win_w as _, win_h as _);
 
@@ -267,14 +268,7 @@ impl Game_Phase for Main_Menu {
         }
 
         //
-        // Draw background
-        //
-        for sprite in &self.sprites {
-            anim_sprites::render_anim_sprite(&mut gs.window, &mut gs.batches, sprite);
-        }
-
-        //
-        // Update and draw falling blocks
+        // Update falling blocks
         //
         let win_x = gs.app_config.target_win_size.0 as f32 * 0.5;
         let win_h = gs.app_config.target_win_size.1 as f32 * 0.5;
@@ -292,11 +286,13 @@ impl Game_Phase for Main_Menu {
                 );
                 std::mem::swap(&mut new_block, block);
             }
-            anim_sprites::render_anim_sprite(
-                &mut gs.window,
-                &mut gs.batches,
-                &self.sprites[block.sprite_idx],
-            );
+        }
+
+        //
+        // Draw sprites 
+        //
+        for sprite in &self.sprites {
+            anim_sprites::render_anim_sprite(&mut gs.window, &mut gs.batches, sprite);
         }
 
         //
