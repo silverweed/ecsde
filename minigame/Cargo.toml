@@ -16,8 +16,8 @@ inle_core = { path = "../inle/inle_core" }
 inle_common = { path = "../inle/inle_common" }
 inle_debug = { path = "../inle/inle_debug" }
 inle_diagnostics = { path = "../inle/inle_diagnostics" }
-inle_events = { path = "../inle/inle_events" }
-inle_fs = { path = "../inle/inle_fs" }
+#inle_events = { path = "../inle/inle_events" }
+#inle_fs = { path = "../inle/inle_fs" }
 inle_gfx = { path = "../inle/inle_gfx" }
 inle_input = { path = "../inle/inle_input" }
 inle_math = { path = "../inle/inle_math" }
