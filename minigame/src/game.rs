@@ -1,5 +1,6 @@
 use super::{Game_Resources, Game_State};
 use crate::phases::Phase_Args;
+use inle_audio::audio_system::Sound_Handle;
 use inle_cfg::Cfg_Var;
 use inle_input::core_actions::Core_Action;
 use std::time::Duration;
@@ -7,10 +8,46 @@ use std::time::Duration;
 #[cfg(debug_assertions)]
 use super::debug;
 
+pub struct Game_Args {
+    pub starting_phase: inle_app::phases::Phase_Id,
+}
+
 //
 // Init
 //
-pub fn internal_game_init() -> Box<Game_State> {
+pub fn parse_game_args(args: &[String]) -> Game_Args {
+    use crate::phases::*;
+
+    let mut game_args = Game_Args {
+        starting_phase: Main_Menu::PHASE_ID,
+    };
+
+    let mut i = 1; // skip executable name
+    while i < args.len() {
+        let arg = &args[i];
+        match arg.as_str() {
+            "--phase" => {
+                if i < args.len() - 1 {
+                    let phase = &args[i + 1];
+                    i += 1;
+                    match phase.as_str() {
+                        "menu" => game_args.starting_phase = Main_Menu::PHASE_ID,
+                        "game" => game_args.starting_phase = In_Game::PHASE_ID,
+                        _ => fatal!("unexpected phase {}", phase),
+                    }
+                }
+            }
+            _ => {
+                lwarn!("Ignoring command line argument {}", arg);
+            }
+        }
+        i += 1;
+    }
+
+    game_args
+}
+
+pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
     use inle_core::env::Env_Info;
 
     let mut loggers = unsafe { inle_diagnostics::log::create_loggers() };
@@ -104,6 +141,7 @@ pub fn internal_game_init() -> Box<Game_State> {
         ui,
         engine_cvars,
         phase_mgr,
+        bg_music: Sound_Handle::INVALID,
         #[cfg(debug_assertions)]
         debug_systems,
         #[cfg(debug_assertions)]
@@ -123,7 +161,11 @@ pub fn create_game_resources() -> Box<Game_Resources> {
 }
 
 // Used to initialize game state stuff that needs resources
-pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources) {
+pub fn game_post_init(
+    game_state: &mut Game_State,
+    game_res: &mut Game_Resources,
+    game_args: &Game_Args,
+) {
     use crate::phases;
 
     let font_name = inle_cfg::Cfg_Var::<String>::new("engine/debug/ui/font", &game_state.config);
@@ -131,13 +173,17 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
         &game_state.env,
         font_name.read(&game_state.config),
     ));
-    let snd_buf = game_res.audio.load_sound(&inle_audio::res::sound_path(
-        &game_state.env,
-        "blockster_theme.ogg",
-    ));
-    let snd = game_state.audio_system.play_sound(&game_res.audio, snd_buf);
-    if let Some(snd) = game_state.audio_system.get_sound_mut(snd) {
-        inle_audio::sound::set_sound_looping(snd, true);
+
+    let enable_audio = inle_cfg::Cfg_Var::<bool>::new("game/audio/enable", &game_state.config);
+    if enable_audio.read(&game_state.config) {
+        let snd_buf = game_res.audio.load_sound(&inle_audio::res::sound_path(
+            &game_state.env,
+            "blockster_theme.ogg",
+        ));
+        game_state.bg_music = game_state.audio_system.play_sound(&game_res.audio, snd_buf);
+        if let Some(snd) = game_state.audio_system.get_sound_mut(game_state.bg_music) {
+            inle_audio::sound::set_sound_looping(snd, true);
+        }
     }
 
     // DEBUG
@@ -149,13 +195,14 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
         phases::Main_Menu::PHASE_ID,
         Box::new(phases::Main_Menu::new(&mut game_state.window)),
     );
-    game_state
-        .phase_mgr
-        .register_phase(phases::In_Game::PHASE_ID, Box::new(phases::In_Game::new()));
+    game_state.phase_mgr.register_phase(
+        phases::In_Game::PHASE_ID,
+        Box::new(phases::In_Game::default()),
+    );
     let mut args = Phase_Args::new(game_state, game_res);
     game_state
         .phase_mgr
-        .push_phase(phases::Main_Menu::PHASE_ID, &mut args);
+        .push_phase(game_args.starting_phase, &mut args);
 
     #[cfg(debug_assertions)]
     {

@@ -4,12 +4,6 @@ pub struct Audio_Context;
 
 static mut INSTANCE: () = ();
 
-impl Sound_Buffer {
-    pub fn from_file(_fname: &str) -> Option<Self> {
-        Some(Self)
-    }
-}
-
 impl std::ops::Deref for Sound_Buffer {
     type Target = ();
 
@@ -37,3 +31,9 @@ pub fn create_sound_with_buffer(_buf: &Sound_Buffer) -> Sound {
 pub fn init_audio() -> Audio_Context {
     Audio_Context
 }
+
+pub fn create_sound_buffer(_file: &std::path::Path) -> Result<Sound_Buffer, String> {
+    Ok(Sound_Buffer)
+}
+
+pub fn set_sound_looping(_snd: &mut Sound, _looping: bool) {}

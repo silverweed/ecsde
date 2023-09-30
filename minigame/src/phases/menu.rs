@@ -289,7 +289,7 @@ impl Game_Phase for Main_Menu {
         }
 
         //
-        // Draw sprites 
+        // Draw sprites
         //
         for sprite in &self.sprites {
             anim_sprites::render_anim_sprite(&mut gs.window, &mut gs.batches, sprite);

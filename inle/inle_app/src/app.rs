@@ -680,3 +680,29 @@ pub fn set_traced_fn(debug_systems: &mut Debug_Systems, fn_name: String) {
     graph.data.points.clear();
     graph.selected_point = None;
 }
+
+/// Given a c_char pointer, returns a String allocated from the raw string it points to,
+/// or an empty string if the conversion fails.
+fn new_string_from_c_char_ptr(c_char_ptr: *const std::ffi::c_char) -> String {
+    let cstr = unsafe { std::ffi::CStr::from_ptr(c_char_ptr) };
+    let str_slice = cstr.to_str().unwrap_or_else(|_| {
+        lerr!("Failed to convert argument {:?} to a valid String.", cstr);
+        ""
+    });
+    String::from(str_slice)
+}
+
+/// # Safety
+/// raw_args should be an array of at least args_count elements.
+pub unsafe fn args_to_string_vec(
+    raw_args: *const *const std::ffi::c_char,
+    args_count: usize,
+) -> Vec<String> {
+    let mut args: Vec<String> = Vec::with_capacity(args_count);
+    for i in 0..args_count {
+        let arg = raw_args.add(i);
+        assert!(!(*arg).is_null(), "{}-th cmdline argument is null!", i);
+        args.push(new_string_from_c_char_ptr(*arg));
+    }
+    args
+}

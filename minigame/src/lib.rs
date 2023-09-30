@@ -55,6 +55,8 @@ pub struct Game_State {
 
     phase_mgr: Phase_Manager,
 
+    bg_music: inle_audio::audio_system::Sound_Handle,
+
     #[cfg(debug_assertions)]
     debug_systems: inle_app::debug::systems::Debug_Systems,
 
@@ -77,11 +79,13 @@ pub struct Game_Bundle {
 /// # Safety
 /// args should not be null and should contain a number of strings consistent with args_count
 #[no_mangle]
-pub unsafe extern "C" fn game_init(_args: *const *const c_char, _args_count: usize) -> Game_Bundle {
+pub unsafe extern "C" fn game_init(args: *const *const c_char, args_count: usize) -> Game_Bundle {
+    let args = inle_app::app::args_to_string_vec(args, args_count);
+    let args = game::parse_game_args(&args);
     let mut game_res = game::create_game_resources();
-    let mut game_state = game::internal_game_init();
+    let mut game_state = game::internal_game_init(&args);
 
-    game::game_post_init(&mut game_state, &mut game_res);
+    game::game_post_init(&mut game_state, &mut game_res, &args);
 
     Game_Bundle {
         game_state: Box::into_raw(game_state),
