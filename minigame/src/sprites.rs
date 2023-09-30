@@ -109,7 +109,7 @@ impl Anim_Sprite {
         sprite.add_animation(
             sid!("default"),
             (0, 0),
-            (n_frame_cols as _, n_frame_rows as _),
+            (n_frame_cols as u16 - 1, n_frame_rows as u16 - 1),
             frame_duration,
         );
         sprite
@@ -200,6 +200,7 @@ pub fn update_anim_sprites<'a>(
                 anim.frame_time -= anim.frame_duration;
 
                 sprite.cur_frame_col += 1;
+
                 if sprite.cur_frame_col == sprite.n_frame_cols {
                     sprite.cur_frame_col = 0;
                     sprite.cur_frame_row += 1;

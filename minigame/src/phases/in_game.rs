@@ -80,7 +80,6 @@ impl Game_Phase for In_Game {
             self.entities.push(left_mountain);
             self.entities.push(right_mountain);
 
-            self.entities.clear();
             // Players
             let mut player = create_player(env, gres);
             player.sprites[0].color = inle_common::colors::color_from_hex_no_alpha(0xdd98844);
