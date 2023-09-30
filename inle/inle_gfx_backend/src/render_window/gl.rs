@@ -160,8 +160,8 @@ fn init_gl() -> Gl {
         glcheck!(gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA));
         glcheck!(gl::Enable(gl::BLEND));
 
-        glcheck!(gl::FrontFace(gl::CW));
-        glcheck!(gl::Enable(gl::CULL_FACE));
+        // Disable face culling otherwise sprites with negative scales would not get drawn.
+        glcheck!(gl::Disable(gl::CULL_FACE));
     }
 
     #[cfg(debug_assertions)]
