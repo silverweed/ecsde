@@ -224,6 +224,23 @@ pub fn sound_playing(sound: &Sound) -> bool {
     }
 }
 
+pub fn set_sound_looping(snd: &mut Sound, looping: bool) {
+    let err = unsafe {
+        let looping = looping as al::ALint;
+        al::alGetError();
+        al::alSourcei(snd.source, al::AL_LOOPING, looping);
+        al::alGetError()
+    };
+
+    if err != al::AL_NO_ERROR {
+        lerr!(
+            "Error setting sound looping ({}): OpenAL errcode {}",
+            looping,
+            err
+        );
+    }
+}
+
 struct Decoded_Ogg {
     pub buffers: Vec<i16>,
     pub format: al::ALenum,
@@ -283,16 +300,17 @@ mod al {
     pub const ALC_NO_ERROR: ALCenum = ALC_FALSE as _;
     pub const AL_NO_ERROR: ALenum = 0;
 
-    pub const AL_FORMAT_MONO8: ALenum = 0x1100;
-    pub const AL_FORMAT_MONO16: ALenum = 0x1101;
-    pub const AL_FORMAT_STEREO8: ALenum = 0x1102;
-    pub const AL_FORMAT_STEREO16: ALenum = 0x1103;
-
     // Note: al.h comment says it should be an ALint, but then it doesn't typecheck correctly.
+    pub const AL_LOOPING: ALenum = 0x1007;
     pub const AL_BUFFER: ALenum = 0x1009;
     pub const AL_GAIN: ALenum = 0x100A;
     pub const AL_SOURCE_STATE: ALenum = 0x1010;
     pub const AL_PLAYING: ALenum = 0x1012;
+
+    pub const AL_FORMAT_MONO8: ALenum = 0x1100;
+    pub const AL_FORMAT_MONO16: ALenum = 0x1101;
+    pub const AL_FORMAT_STEREO8: ALenum = 0x1102;
+    pub const AL_FORMAT_STEREO16: ALenum = 0x1103;
 
     pub type ALCdevice = ffi::c_void;
     pub type ALCcontext = ffi::c_void;

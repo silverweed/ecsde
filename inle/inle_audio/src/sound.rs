@@ -16,3 +16,7 @@ pub fn sound_playing(sound: &Sound) -> bool {
 pub fn create_sound_with_buffer(buf: &Sound_Buffer) -> Sound {
     backend::create_sound_with_buffer(buf)
 }
+
+pub fn set_sound_looping(sound: &mut Sound, looping: bool) {
+    backend::set_sound_looping(sound, looping);
+}

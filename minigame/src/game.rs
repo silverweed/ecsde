@@ -131,11 +131,14 @@ pub fn game_post_init(game_state: &mut Game_State, game_res: &mut Game_Resources
         &game_state.env,
         font_name.read(&game_state.config),
     ));
-    let snd = game_res
-        .audio
-        .load_sound(&inle_audio::res::sound_path(&game_state.env, "coin.ogg"));
-
-    game_state.audio_system.play_sound(&game_res.audio, snd);
+    let snd_buf = game_res.audio.load_sound(&inle_audio::res::sound_path(
+        &game_state.env,
+        "blockster_theme.ogg",
+    ));
+    let snd = game_state.audio_system.play_sound(&game_res.audio, snd_buf);
+    if let Some(snd) = game_state.audio_system.get_sound_mut(snd) {
+        inle_audio::sound::set_sound_looping(snd, true);
+    }
 
     // DEBUG
     //   game_state.should_quit = true;
