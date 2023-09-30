@@ -9,6 +9,10 @@ extern crate inle_common;
 #[macro_use]
 extern crate inle_math;
 
+#[macro_use]
+extern crate smallvec;
+
+mod entity;
 mod game;
 mod input;
 mod phases;

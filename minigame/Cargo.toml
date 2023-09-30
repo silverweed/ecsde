@@ -24,3 +24,5 @@ inle_math = { path = "../inle/inle_math" }
 inle_physics = { path = "../inle/inle_physics" }
 inle_ui = { path = "../inle/inle_ui" }
 inle_win = { path = "../inle/inle_win" }
+
+smallvec = { workspace = true }

@@ -47,13 +47,14 @@ impl Transform2D {
     pub fn new_from_matrix(m: &Matrix3<f32>) -> Transform2D {
         let sx = m[0][0].hypot(m[0][1]);
         let sy = m[1][0].hypot(m[1][1]);
+        let sign_det = m.determinant().signum();
         let rot = m[0][1].atan2(m[0][0]);
         let tx = m[2][0];
         let ty = m[2][1];
         Transform2D {
             position: Vec2f::new(tx, ty),
             rotation: rad(rot),
-            scale: Vec2f::new(sx, sy),
+            scale: Vec2f::new(sx, sign_det * sy),
         }
     }
 
