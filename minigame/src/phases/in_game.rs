@@ -125,7 +125,7 @@ fn create_mountain(env: &Env_Info, gres: &mut Gfx_Resources) -> Entity {
 
     let tex_p = tex_path(env, "game/mountain_top_eyes_animation.png");
     let mut sprite = Sprite::from_tex_path(gres, &tex_p);
-    sprite.transform.translate(0., y - 2. * h + 2.);
+    sprite.transform.translate(0., y - 2. * h + 6.);
     sprite.z_index = Z_MOUNTAINS;
     let sprite = Anim_Sprite::from_sprite(sprite, (2, 2), Duration::from_millis(170));
     mountain.sprites.push(sprite.into());
