@@ -191,6 +191,7 @@ impl In_Game {
             }
         }
 
+        #[cfg(debug_assertions)]
         let mut debug_data = inle_physics::physics::Collision_System_Debug_Data::default();
         inle_physics::physics::update_collisions(
             &self.entities,
@@ -198,6 +199,7 @@ impl In_Game {
             &self.phys_settings,
             None,
             &mut game_state.frame_alloc,
+            #[cfg(debug_assertions)]
             &mut debug_data,
         );
 
