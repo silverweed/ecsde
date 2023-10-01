@@ -36,6 +36,9 @@ pub struct Generational_Allocator {
 
 impl Generational_Allocator {
     pub fn new(initial_size: usize) -> Generational_Allocator {
+        // TODO: lift this restriction
+        assert!(initial_size > 0, "Initial size must be positive!");
+
         let mut alloc = Generational_Allocator {
             gens: vec![],
             free_slots: vec![],
@@ -47,6 +50,12 @@ impl Generational_Allocator {
         alloc.free_slots = (0..initial_size).rev().collect();
 
         alloc
+    }
+
+    pub fn deallocate_all(&mut self) {
+        self.gens.fill(1);
+        self.alive.fill(false);
+        self.free_slots = (0..self.gens.len()).rev().collect();
     }
 
     /// Returns the maximum number of generational indices that can be allocated before resizing.
@@ -310,6 +319,32 @@ mod tests {
         assert!(!alloc.is_valid(e2));
         assert!(!alloc.is_valid(e3));
         assert_invariant_free_slots_alive(&alloc);
+    }
+
+    #[test]
+    fn gen_alloc_dealloc_all() {
+        let mut alloc = Generational_Allocator::new(2);
+        let e1 = alloc.allocate();
+        let e2 = alloc.allocate();
+        let e3 = alloc.allocate();
+        assert!(alloc.is_valid(e1));
+        assert!(alloc.is_valid(e2));
+        assert!(alloc.is_valid(e3));
+        assert_eq!(alloc.live_size(), 3);
+        alloc.deallocate(e2);
+        assert!(!alloc.is_valid(e2));
+        let e2 = alloc.allocate();
+        assert!(alloc.is_valid(e2));
+
+        alloc.deallocate_all();
+        assert_eq!(alloc.live_size(), 0);
+        assert!(!alloc.is_valid(e1));
+        assert!(!alloc.is_valid(e2));
+        assert!(!alloc.is_valid(e3));
+
+        let e1 = alloc.allocate();
+        assert!(alloc.is_valid(e1));
+        assert_eq!(alloc.live_size(), 1);
     }
 
     #[test]

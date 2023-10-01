@@ -2,13 +2,15 @@ use crate::sprites::{self as anim_sprites, Anim_Sprite};
 use inle_gfx::render::batcher::Batches;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::transform::Transform2D;
+use inle_math::vector::Vec2f;
 use inle_physics::collider::{Collider, Collision_Shape};
-use inle_physics::phys_world::{Phys_Data, Physics_Body_Handle, Physics_World};
+use inle_physics::phys_world::{Collider_Handle, Phys_Data, Physics_Body_Handle, Physics_World};
 use smallvec::SmallVec;
 
 #[derive(Default, Clone)]
 pub struct Entity {
     pub transform: Transform2D,
+    pub velocity: Vec2f,
     pub sprites: SmallVec<[Anim_Sprite; 4]>,
     pub phys_body: Physics_Body_Handle,
 }
@@ -19,6 +21,7 @@ impl Entity {
             transform: Transform2D::default(),
             sprites: smallvec![sprite],
             phys_body: Physics_Body_Handle::default(),
+            velocity: v2!(0., 0.),
         }
     }
 
@@ -53,6 +56,15 @@ impl Entity {
 pub struct Entity_Handle {
     index: u32,
     gen: u32,
+}
+
+impl Default for Entity_Handle {
+    fn default() -> Self {
+        Self {
+            index: u32::MAX,
+            gen: INVALID_GEN,
+        }
+    }
 }
 
 const INVALID_GEN: u32 = u32::MAX;
@@ -121,6 +133,11 @@ impl Entity_Container {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.entities.clear();
+        self.entity_gens.clear();
+    }
+
     pub fn get(&self, handle: Entity_Handle) -> Option<&Entity> {
         debug_assert_eq!(self.entities.len(), self.entity_gens.len());
 
@@ -153,6 +170,13 @@ impl Entity_Container {
         self.entities.is_empty()
     }
 
+    pub fn n_live(&self) -> usize {
+        self.entity_gens
+            .iter()
+            .filter(|&&g| g != INVALID_GEN)
+            .count()
+    }
+
     pub fn iter(&self) -> <&Self as IntoIterator>::IntoIter {
         self.into_iter()
     }
@@ -169,5 +193,24 @@ impl Entity_Container {
             }
         }
         None
+    }
+}
+
+// @Temporary: the dumbest spatial accelerator possible
+impl inle_physics::spatial::Spatial_Accelerator<Collider_Handle> for Entity_Container {
+    fn get_neighbours<R>(
+        &self,
+        pos: Vec2f,
+        extent: Vec2f,
+        phys_world: &Physics_World,
+        result: &mut R,
+    ) where
+        R: Extend<Collider_Handle>,
+    {
+        result.extend(self.iter().flat_map(|e| {
+            phys_world
+                .get_all_phys_body_colliders_with_handles(e.phys_body)
+                .map(|(_, hdl)| hdl)
+        }));
     }
 }

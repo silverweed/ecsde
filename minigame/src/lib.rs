@@ -167,10 +167,12 @@ pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, game_res: *mut
     // Recreate phases (otherwise they'll not be hot reloaded properly, I guess due to them
     // being trait objects or something)
     let cur_phase_stack = game_state.phase_mgr.current_phase_stack().to_vec();
-    game_state.phase_mgr = inle_app::phases::Phase_Manager::default();
+    let mut phase_args = phases::Phase_Args::new(game_state, game_res);
+    game_state.phase_mgr.teardown(&mut phase_args);
+
     game::register_game_phases(game_state);
-    let mut args = crate::phases::Phase_Args::new(game_state, game_res);
+
     for phase_id in cur_phase_stack {
-        game_state.phase_mgr.push_phase(phase_id, &mut args);
+        game_state.phase_mgr.push_phase(phase_id, &mut phase_args);
     }
 }

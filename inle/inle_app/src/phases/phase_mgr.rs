@@ -73,6 +73,15 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
         &self.phase_stack
     }
 
+    pub fn teardown(&mut self, args: &mut Phase_Args) {
+        while !self.phase_stack.is_empty() {
+            self.pop_phase(args);
+        }
+        while let Some((_phase_id, mut phase)) = self.persistent_phases.pop() {
+            phase.on_end(args);
+        }
+    }
+
     #[inline]
     fn current_phase(&mut self) -> Option<&mut dyn Game_Phase<Args = Phase_Args>> {
         let len = self.phase_stack.len();

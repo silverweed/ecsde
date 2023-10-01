@@ -274,7 +274,7 @@ where
         let a_partial_cb = COLLISION_CB_TABLE[a_shape];
 
         let mut neighbours = excl_temp_array(temp_alloc);
-        accelerator.get_neighbours(a.position, a_extent, &mut neighbours);
+        accelerator.get_neighbours(a.position, a_extent, phys_world, &mut neighbours);
 
         for &b_handle in &neighbours {
             let b = phys_world.get_collider(b_handle).unwrap();
@@ -394,6 +394,8 @@ fn positional_correction(
     let correction =
         (penetration - slop).max(0.0) / (a_inv_mass + b_inv_mass) * correction_perc * normal;
 
+    dbg!(correction);
+
     objects.get_mut(&a_idx).unwrap().position -= a_inv_mass * correction;
     objects.get_mut(&b_idx).unwrap().position += b_inv_mass * correction;
 }
@@ -422,7 +424,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
     accelerator: &T_Spatial_Accelerator,
     phys_world: &mut Physics_World,
     settings: &Physics_Settings,
-    evt_register: &mut Event_Register,
+    evt_register: Option<&mut Event_Register>,
     temp_alloc: &mut Temp_Allocator,
     #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
 ) where
@@ -431,8 +433,6 @@ pub fn update_collisions<T_Spatial_Accelerator>(
     trace!("update_collisions");
 
     phys_world.clear_collisions();
-
-    //   update_colliders_spatial(ecs_world, phys_world);
 
     let infos = detect_collisions(
         phys_world,
@@ -487,12 +487,14 @@ pub fn update_collisions<T_Spatial_Accelerator>(
 
     // Note: we do this last to avoid polluting the cache (we don't know how many observers are
     // subscribed to this event).
-    let data: Vec<&Collision_Data> = phys_world
-        .collisions
-        .values()
-        .flat_map(|v| v.as_slice())
-        .collect();
-    evt_register.raise_batch::<Evt_Collision_Happened>(&data);
+    if let Some(evt_register) = evt_register {
+        let data: Vec<&Collision_Data> = phys_world
+            .collisions
+            .values()
+            .flat_map(|v| v.as_slice())
+            .collect();
+        evt_register.raise_batch::<Evt_Collision_Happened>(&data);
+    }
 }
 
 // fn update_colliders_spatial(ecs_world: &mut Ecs_World, phys_world: &mut Physics_World) {

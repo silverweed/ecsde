@@ -403,6 +403,15 @@ impl Physics_World {
             &EMPTY_COLLISIONS
         }
     }
+
+    /// Removes all colliders and physics bodies from the phys world.
+    pub fn clear_all(&mut self) {
+        self.colliders.clear();
+        self.cld_index_table.clear();
+        self.bodies.clear();
+        self.cld_alloc.deallocate_all();
+        self.bodies_alloc.deallocate_all();
+    }
 }
 
 #[cfg(test)]
@@ -412,13 +421,12 @@ mod tests {
 
     #[test]
     fn add_collider() {
-        let mut phys_world = Physics_World::new();
+        let mut phys_world = Physics_World::default();
         let c = Collider {
             shape: Collision_Shape::Circle { radius: 24. },
             ..Default::default()
         };
-        let e = Entity::INVALID;
-        let h1 = phys_world.add_collider(c, e);
+        let h1 = phys_world.add_collider(c);
         let c = Collider {
             shape: Collision_Shape::Rect {
                 width: 2.,
@@ -426,7 +434,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let h2 = phys_world.add_collider(c, e);
+        let h2 = phys_world.add_collider(c);
 
         assert_eq!(
             phys_world.get_collider(h1).unwrap().shape,
@@ -443,7 +451,7 @@ mod tests {
 
     #[test]
     fn remove_collider() {
-        let mut phys_world = Physics_World::new();
+        let mut phys_world = Physics_World::default();
 
         assert!(phys_world
             .get_collider(Collider_Handle(Generational_Index { index: 0, gen: 0 }))
@@ -453,8 +461,7 @@ mod tests {
             shape: Collision_Shape::Circle { radius: 24. },
             ..Default::default()
         };
-        let e = Entity::INVALID;
-        let h1 = phys_world.add_collider(c, e);
+        let h1 = phys_world.add_collider(c);
         let c = Collider {
             shape: Collision_Shape::Rect {
                 width: 2.,
@@ -462,14 +469,14 @@ mod tests {
             },
             ..Default::default()
         };
-        let h2 = phys_world.add_collider(c.clone(), e);
+        let h2 = phys_world.add_collider(c.clone());
 
         phys_world.remove_collider(h1);
 
         assert!(phys_world.get_collider(h1).is_none());
         assert!(phys_world.get_collider(h2).is_some());
 
-        let h3 = phys_world.add_collider(c, e);
+        let h3 = phys_world.add_collider(c);
         assert!(phys_world.get_collider(h1).is_none());
         assert!(phys_world.get_collider(h3).is_some());
     }

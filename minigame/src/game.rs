@@ -265,7 +265,7 @@ pub fn register_game_phases(game_state: &mut Game_State) {
     );
     game_state.phase_mgr.register_phase(
         phases::In_Game::PHASE_ID,
-        Box::new(phases::In_Game::default()),
+        Box::new(phases::In_Game::new(&game_state.config)),
     );
 }
 
