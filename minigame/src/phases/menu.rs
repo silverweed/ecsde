@@ -325,6 +325,7 @@ impl Game_Phase for Main_Menu {
             b.target_pos,
             (b.ease_t / b.ease_duration.as_secs_f32()).min(1.0),
         );
+
         let rect = Rect::new(pos.x, pos.y, b.size.x, b.size.y);
         // Quit game
         if inle_ui::button(

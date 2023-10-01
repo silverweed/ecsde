@@ -11,6 +11,8 @@ use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window;
 use std::convert::TryInto;
 
+// @Refactoring: maybe we should not have a monolithic function on the engine side,
+// but only expose the various sub-functions and have the game call them.
 pub fn update_debug(
     cvars: &crate::app::Engine_CVars,
     config: &inle_cfg::Config,
@@ -19,6 +21,7 @@ pub fn update_debug(
     time: &time::Time,
     fps_counter: &inle_debug::fps::Fps_Counter,
     input_state: &inle_input::input_state::Input_State,
+    phys_world: &inle_physics::phys_world::Physics_World,
 ) {
     // Overlays
     let display_overlays = cvars.debug.display_overlays.read(config);
@@ -114,6 +117,11 @@ pub fn update_debug(
             opacity as _,
             font_size as _,
         );
+    }
+
+    let draw_colliders = cvars.debug.draw_colliders.read(config);
+    if draw_colliders {
+        debug_draw_colliders(&mut debug_systems.global_painter, phys_world);
     }
 
     // @Cleanup
@@ -540,6 +548,92 @@ fn debug_draw_particle_emitters(
                 arrow_size: 20.,
             },
             colors::rgb(0, 141, 94),
+        );
+    }
+}
+
+fn debug_draw_colliders(
+    debug_painter: &mut Debug_Painter,
+    phys_world: &inle_physics::phys_world::Physics_World,
+) {
+    use inle_physics::collider::Collision_Shape;
+
+    for collider in phys_world.get_all_colliders() {
+        // Note: since our collision detector doesn't handle rotation, draw the colliders with rot = 0
+        // @Incomplete: scale?
+        let mut transform = Transform2D::from_pos_rot_scale(
+            collider.position,
+            inle_math::angle::rad(0.),
+            v2!(1., 1.),
+        );
+
+        debug_painter.add_text(
+            &format!("lr {}", collider.layer),
+            collider.position,
+            10,
+            colors::BLACK,
+        );
+
+        let mut cld_color = colors::rgba(255, 255, 0, 100);
+
+        let colliding_with = phys_world.get_collisions(collider.handle);
+        if !colliding_with.is_empty() {
+            cld_color = colors::rgba(255, 0, 0, 100);
+        }
+
+        for cls_data in colliding_with {
+            let oth_cld = phys_world.get_collider(cls_data.other_collider).unwrap();
+            debug_painter.add_arrow(
+                Arrow {
+                    center: collider.position,
+                    direction: oth_cld.position - collider.position,
+                    thickness: 1.,
+                    arrow_size: 5.,
+                },
+                colors::GREEN,
+            );
+            debug_painter.add_arrow(
+                Arrow {
+                    center: collider.position, // @Incomplete: it'd be nice to have the exact collision position
+                    direction: cls_data.info.normal * 20.0,
+                    thickness: 1.,
+                    arrow_size: 5.,
+                },
+                colors::PINK,
+            );
+        }
+
+        match collider.shape {
+            Collision_Shape::Rect { width, height } => {
+                transform.translate(-width * 0.5, -height * 0.5);
+                debug_painter.add_rect(Vec2f::new(width, height), &transform, cld_color);
+            }
+            Collision_Shape::Circle { radius } => {
+                transform.translate(-radius * 0.5, -radius * 0.5);
+                debug_painter.add_circle(
+                    Circle {
+                        center: collider.position,
+                        radius,
+                    },
+                    cld_color,
+                );
+            }
+            _ => {}
+        }
+
+        debug_painter.add_circle(
+            Circle {
+                center: collider.position,
+                radius: 2.,
+            },
+            colors::ORANGE,
+        );
+
+        debug_painter.add_text(
+            &format!("{},{}", collider.handle.gen, collider.handle.index),
+            collider.position + v2!(2., -3.),
+            5,
+            colors::ORANGE,
         );
     }
 }

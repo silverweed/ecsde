@@ -1,4 +1,3 @@
-use super::{Game_Resources, Game_State};
 use crate::phases::Phase_Args;
 use inle_audio::audio_system::Sound_Handle;
 use inle_cfg::Cfg_Var;
@@ -7,6 +6,57 @@ use std::time::Duration;
 
 #[cfg(debug_assertions)]
 use super::debug;
+
+pub type Phase_Manager = inle_app::phases::Phase_Manager<crate::phases::Phase_Args>;
+
+pub struct Game_State {
+    pub should_quit: bool,
+    pub env: inle_core::env::Env_Info,
+    pub config: inle_cfg::config::Config,
+    pub app_config: inle_app::app_config::App_Config,
+    pub sleep_granularity: Option<Duration>,
+    pub loggers: inle_diagnostics::log::Loggers,
+    pub rng: inle_core::rand::Default_Rng,
+
+    pub time: inle_core::time::Time,
+    pub cur_frame: u64,
+    pub prev_frame_time: std::time::Duration,
+
+    pub frame_alloc: inle_alloc::temp::Temp_Allocator,
+
+    pub window: inle_gfx::render_window::Render_Window_Handle,
+    pub batches: inle_gfx::render::batcher::Batches,
+    pub lights: inle_gfx::light::Lights,
+
+    pub audio_system: inle_audio::audio_system::Audio_System,
+
+    pub input: inle_input::input_state::Input_State,
+
+    pub phys_world: inle_physics::phys_world::Physics_World,
+    pub entities: crate::entity::Entity_Container,
+
+    // XXX: ??
+    pub default_font: inle_gfx::res::Font_Handle,
+
+    pub engine_cvars: inle_app::app::Engine_CVars,
+
+    pub ui: inle_ui::Ui_Context,
+
+    pub phase_mgr: Phase_Manager,
+
+    pub bg_music: inle_audio::audio_system::Sound_Handle,
+
+    #[cfg(debug_assertions)]
+    pub debug_systems: inle_app::debug::systems::Debug_Systems,
+    #[cfg(debug_assertions)]
+    pub fps_counter: inle_debug::fps::Fps_Counter,
+}
+
+pub struct Game_Resources {
+    pub gfx: inle_gfx::res::Gfx_Resources,
+    pub audio: inle_audio::res::Audio_Resources,
+    pub shader_cache: inle_gfx::res::Shader_Cache,
+}
 
 pub struct Game_Args {
     pub starting_phase: inle_app::phases::Phase_Id,
@@ -113,12 +163,15 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
 
     let ui = inle_ui::Ui_Context::default();
 
-    let phase_mgr = super::Phase_Manager::default();
+    let phase_mgr = Phase_Manager::default();
 
     let audio_config = inle_audio::audio_system::Audio_System_Config {
         max_concurrent_sounds: 6,
     };
     let audio_system = inle_audio::audio_system::Audio_System::new(&audio_config);
+
+    let phys_world = inle_physics::phys_world::Physics_World::default();
+    let entities = crate::entity::Entity_Container::default();
 
     Box::new(Game_State {
         env,
@@ -139,6 +192,8 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
         should_quit: false,
         default_font: None,
         ui,
+        phys_world,
+        entities,
         engine_cvars,
         phase_mgr,
         bg_music: Sound_Handle::INVALID,
@@ -166,8 +221,6 @@ pub fn game_post_init(
     game_res: &mut Game_Resources,
     game_args: &Game_Args,
 ) {
-    use crate::phases;
-
     let font_name = inle_cfg::Cfg_Var::<String>::new("engine/debug/ui/font", &game_state.config);
     game_state.default_font = game_res.gfx.load_font(&inle_gfx::res::font_path(
         &game_state.env,
@@ -191,14 +244,7 @@ pub fn game_post_init(
 
     inle_ui::init_ui(&mut game_state.ui, &mut game_res.gfx, &game_state.env);
 
-    game_state.phase_mgr.register_phase(
-        phases::Main_Menu::PHASE_ID,
-        Box::new(phases::Main_Menu::new(&mut game_state.window)),
-    );
-    game_state.phase_mgr.register_phase(
-        phases::In_Game::PHASE_ID,
-        Box::new(phases::In_Game::default()),
-    );
+    register_game_phases(game_state);
     let mut args = Phase_Args::new(game_state, game_res);
     game_state
         .phase_mgr
@@ -208,6 +254,19 @@ pub fn game_post_init(
     {
         debug::init_debug(game_state, game_res);
     }
+}
+
+pub fn register_game_phases(game_state: &mut Game_State) {
+    use crate::phases;
+
+    game_state.phase_mgr.register_phase(
+        phases::Main_Menu::PHASE_ID,
+        Box::new(phases::Main_Menu::new(&mut game_state.window)),
+    );
+    game_state.phase_mgr.register_phase(
+        phases::In_Game::PHASE_ID,
+        Box::new(phases::In_Game::default()),
+    );
 }
 
 pub fn start_frame(game_state: &mut Game_State) {

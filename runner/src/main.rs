@@ -131,12 +131,13 @@ fn main_with_hotload(
     loop {
         if reload_pending_recv.try_recv().is_ok() {
             unsafe {
-                (game_api.unload.unwrap())(game_state, game_resources);
+                (game_api.unload.as_mut().unwrap())(game_state, game_resources);
             }
+            game_lib.close().unwrap();
             game_lib = lib_reload(game_dll_abs_path, &mut unique_lib_path);
             unsafe {
                 game_api = game_load(&game_lib).unwrap();
-                (game_api.reload.unwrap())(game_state, game_resources);
+                (game_api.reload.as_mut().unwrap())(game_state, game_resources);
                 eprintln!(
                     "[ OK ] Reloaded API and game state from {:?}.",
                     unique_lib_path

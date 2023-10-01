@@ -35,7 +35,10 @@ fn file_watch_listen(
     let (tx, rx) = channel();
     let mut watcher = watcher(tx, config.interval).unwrap();
     watcher.watch(path.to_str().unwrap(), RecursiveMode::NonRecursive)?;
-    eprintln!("Started watching {:?}", path);
+    eprintln!(
+        "[ INFO ] Game runner started watching {:?} for hotload",
+        path
+    );
 
     loop {
         notify_handlers(&mut event_handlers, rx.recv()?);

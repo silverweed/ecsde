@@ -7,8 +7,6 @@ use super::phys_world::{
 use super::spatial::Spatial_Accelerator;
 use crate::collider::{Collider, Collision_Shape};
 use inle_alloc::temp::{excl_temp_array, Temp_Allocator};
-use inle_ecs::components::base::C_Spatial2D;
-use inle_ecs::ecs_world::{Ecs_World, Entity};
 use inle_events::evt_register::{Event, Event_Register};
 use inle_math::math::clamp;
 use inle_math::vector::{sanity_check_v, Vec2f};
@@ -31,7 +29,6 @@ pub struct Physics_Settings {
 #[derive(Debug, Clone)]
 struct Rigidbody {
     pub shape: Collision_Shape,
-    pub entity: Entity,
     pub position: Vec2f,
     pub offset: Vec2f,
     pub velocity: Vec2f,
@@ -275,15 +272,13 @@ where
         let a_extent = a.shape.extent();
         let a_shape = collision_shape_type_index(&a.shape);
         let a_partial_cb = COLLISION_CB_TABLE[a_shape];
-        let ent_a = a.entity;
 
         let mut neighbours = excl_temp_array(temp_alloc);
         accelerator.get_neighbours(a.position, a_extent, &mut neighbours);
 
         for &b_handle in &neighbours {
             let b = phys_world.get_collider(b_handle).unwrap();
-            let ent_b = b.entity;
-            if ent_a == ent_b {
+            if a as *const _ == b as *const _ {
                 continue;
             }
             let b_shape = collision_shape_type_index(&b.shape);
@@ -424,7 +419,6 @@ fn solve_collisions(objects: &mut Rigidbodies, infos: &[&Collision_Info_Internal
 }
 
 pub fn update_collisions<T_Spatial_Accelerator>(
-    ecs_world: &mut Ecs_World,
     accelerator: &T_Spatial_Accelerator,
     phys_world: &mut Physics_World,
     settings: &Physics_Settings,
@@ -438,7 +432,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
 
     phys_world.clear_collisions();
 
-    update_colliders_spatial(ecs_world, phys_world);
+    //   update_colliders_spatial(ecs_world, phys_world);
 
     let infos = detect_collisions(
         phys_world,
@@ -466,6 +460,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
     solve_collisions(&mut objects, &rb_infos);
 
     // Copy back positions and velocities
+    /*
     let mut processed = std::collections::HashSet::new();
     for info in &rb_infos {
         let Collision_Info_Internal { cld1, cld2, .. } = info;
@@ -488,6 +483,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
             }
         }
     }
+    */
 
     // Note: we do this last to avoid polluting the cache (we don't know how many observers are
     // subscribed to this event).
@@ -499,20 +495,20 @@ pub fn update_collisions<T_Spatial_Accelerator>(
     evt_register.raise_batch::<Evt_Collision_Happened>(&data);
 }
 
-fn update_colliders_spatial(ecs_world: &mut Ecs_World, phys_world: &mut Physics_World) {
-    trace!("update_colliders_spatial");
+// fn update_colliders_spatial(ecs_world: &mut Ecs_World, phys_world: &mut Physics_World) {
+//     trace!("update_colliders_spatial");
 
-    if let Some(mut spatials) = ecs_world.write_component_storage::<C_Spatial2D>() {
-        for collider in &mut phys_world.colliders {
-            let mut spatial = spatials.must_get_mut(collider.entity);
-            let pos = spatial.transform.position();
-            spatial.frame_starting_pos = pos;
+//     if let Some(mut spatials) = ecs_world.write_component_storage::<C_Spatial2D>() {
+//         for collider in &mut phys_world.colliders {
+//             let mut spatial = spatials.must_get_mut(collider.entity);
+//             let pos = spatial.transform.position();
+//             spatial.frame_starting_pos = pos;
 
-            collider.position = pos + collider.offset;
-            collider.velocity = spatial.velocity;
-        }
-    }
-}
+//             collider.position = pos + collider.offset;
+//             collider.velocity = spatial.velocity;
+//         }
+//     }
+// }
 
 /// Returns { collider => rigidbody }
 /// Note that some entities may have non-physical colliders (i.e. trigger colliders),
@@ -530,7 +526,6 @@ fn gather_rigidbodies(phys_world: &mut Physics_World) -> Rigidbodies {
                 objects.insert(
                     cld_handle,
                     Rigidbody {
-                        entity: rb_cld.entity,
                         position: rb_cld.position,
                         offset: rb_cld.offset,
                         velocity: rb_cld.velocity,

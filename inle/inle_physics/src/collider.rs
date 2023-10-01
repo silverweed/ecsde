@@ -1,6 +1,5 @@
 use super::layers::Collision_Layer;
 use super::phys_world::{Collider_Handle, Physics_Body_Handle};
-use inle_ecs::ecs_world::Entity;
 use inle_math::vector::Vec2f;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -31,7 +30,6 @@ pub struct Collider {
     pub offset: Vec2f,
     pub is_static: bool,
     pub layer: Collision_Layer,
-    pub entity: Entity,
 
     // This is written by the Physics_World when the collider is added
     pub handle: Collider_Handle,
@@ -39,9 +37,4 @@ pub struct Collider {
     // These should not be written except by the physics system.
     pub position: Vec2f,
     pub velocity: Vec2f,
-}
-
-#[derive(Copy, Clone, Debug, Default)]
-pub struct C_Collider {
-    pub phys_body_handle: Physics_Body_Handle,
 }

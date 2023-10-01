@@ -26,10 +26,13 @@ impl file_watcher::File_Watcher_Event_Handler for Game_Dll_File_Watcher {
         match event {
             DebouncedEvent::Write(path)
             | DebouncedEvent::Create(path)
-            | DebouncedEvent::Chmod(path)
-            | DebouncedEvent::Remove(path) => match path.canonicalize() {
+            | DebouncedEvent::Chmod(path) => match path.canonicalize() {
                 Ok(canon_path) => {
                     if canon_path == self.file {
+                        eprintln!(
+                            "[ INFO ] Watched file {} changed: sending event.",
+                            self.file.display()
+                        );
                         let _ = self.reload_pending.try_send(());
                     }
                 }
@@ -48,6 +51,8 @@ pub fn lib_reload(lib_path: &Path, unique_path: &mut PathBuf) -> ll::Library {
             "[ WARNING ] Failed to remove old lib {:?}: {:?}",
             unique_path, err
         );
+    } else {
+        eprintln!("[ OK ] Removed old lib {}", unique_path.display());
     }
     let super::Lib_Load_Res { lib, path } = super::lib_load(lib_path, true).unwrap();
     *unique_path = path;

@@ -69,6 +69,10 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
         self.persistent_phases.push((phase_id, phase));
     }
 
+    pub fn current_phase_stack(&self) -> &[Phase_Id] {
+        &self.phase_stack
+    }
+
     #[inline]
     fn current_phase(&mut self) -> Option<&mut dyn Game_Phase<Args = Phase_Args>> {
         let len = self.phase_stack.len();

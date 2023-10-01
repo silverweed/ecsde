@@ -1,6 +1,5 @@
 use super::collider::Collider;
 use inle_alloc::gen_alloc::{Generational_Allocator, Generational_Index};
-use inle_ecs::ecs_world::Entity;
 use inle_math::vector::Vec2f;
 use smallvec::SmallVec;
 use std::collections::HashMap;
@@ -35,6 +34,37 @@ pub struct Phys_Data {
     pub restitution: f32,
     pub static_friction: f32,
     pub dyn_friction: f32,
+}
+
+impl Phys_Data {
+    pub fn with_mass(self, mass: f32) -> Self {
+        assert!(mass > 0., "Mass must be positive!");
+        Self {
+            inv_mass: 1.0 / mass,
+            ..self
+        }
+    }
+
+    pub fn with_restitution(self, restitution: f32) -> Self {
+        Self {
+            restitution,
+            ..self
+        }
+    }
+
+    pub fn with_static_friction(self, static_friction: f32) -> Self {
+        Self {
+            static_friction,
+            ..self
+        }
+    }
+
+    pub fn with_dyn_friction(self, dyn_friction: f32) -> Self {
+        Self {
+            dyn_friction,
+            ..self
+        }
+    }
 }
 
 /// A Physics_Body can contain any number of Colliders, and it's what is associated
@@ -102,8 +132,8 @@ pub struct Physics_World {
     pub(super) collisions: HashMap<Collider_Handle, SmallVec<[Collision_Data; 4]>>,
 }
 
-impl Physics_World {
-    pub fn new() -> Self {
+impl Default for Physics_World {
+    fn default() -> Self {
         Self {
             cld_alloc: Generational_Allocator::new(INITIAL_SIZE),
             cld_index_table: vec![],
@@ -113,7 +143,9 @@ impl Physics_World {
             collisions: HashMap::default(),
         }
     }
+}
 
+impl Physics_World {
     #[inline]
     pub fn is_valid_collider_handle(&self, handle: Collider_Handle) -> bool {
         self.cld_alloc.is_valid(*handle)
@@ -134,10 +166,9 @@ impl Physics_World {
     pub fn new_physics_body_with_rigidbody(
         &mut self,
         cld: Collider,
-        entity: Entity,
         phys_data: Phys_Data,
     ) -> Physics_Body_Handle {
-        let cld_handle = self.add_collider(cld, entity);
+        let cld_handle = self.add_collider(cld);
         let handle = self.new_physics_body();
         let body = self.get_physics_body_mut(handle).unwrap();
         body.rigidbody_colliders.push((cld_handle, phys_data));
@@ -180,13 +211,12 @@ impl Physics_World {
     }
 
     #[inline]
-    pub fn add_collider(&mut self, mut cld: Collider, entity: Entity) -> Collider_Handle {
+    pub fn add_collider(&mut self, mut cld: Collider) -> Collider_Handle {
         let handle = self.cld_alloc.allocate();
         debug_assert!((handle.index as usize) < std::u32::MAX as usize);
         let index = self.colliders.len();
         let handle = Collider_Handle(handle);
         cld.handle = handle;
-        cld.entity = entity;
         self.colliders.push(cld);
         self.cld_index_table.push(index);
         handle
@@ -257,7 +287,12 @@ impl Physics_World {
     }
 
     #[inline]
-    pub fn get_all_colliders(
+    pub fn get_all_colliders(&self) -> impl Iterator<Item = &Collider> {
+        self.colliders.iter()
+    }
+
+    #[inline]
+    pub fn get_all_phys_body_colliders(
         &self,
         handle: Physics_Body_Handle,
     ) -> impl Iterator<Item = &Collider> {
@@ -280,7 +315,7 @@ impl Physics_World {
     }
 
     #[inline]
-    pub fn get_all_colliders_with_handles(
+    pub fn get_all_phys_body_colliders_with_handles(
         &self,
         handle: Physics_Body_Handle,
     ) -> impl Iterator<Item = (&Collider, Collider_Handle)> {

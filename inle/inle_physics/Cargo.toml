@@ -9,7 +9,6 @@ edition = "2018"
 [dependencies]
 inle_alloc = { path = "../inle_alloc" }
 inle_diagnostics = { path = "../inle_diagnostics" }
-inle_ecs = { path = "../inle_ecs" }
 inle_events = { path = "../inle_events" }
 inle_math = { path = "../inle_math" }
 rayon = { workspace = true }

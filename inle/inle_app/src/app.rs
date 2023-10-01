@@ -73,6 +73,7 @@ pub struct Engine_Debug_CVars {
     pub display_log_window: Cfg_Var<bool>,
     pub display_overlays: Cfg_Var<bool>,
     pub update_physics: Cfg_Var<bool>,
+    pub draw_colliders: Cfg_Var<bool>,
 }
 
 pub fn create_engine_cvars(cfg: &inle_cfg::Config) -> Engine_CVars {
@@ -113,6 +114,7 @@ pub fn create_engine_debug_cvars(cfg: &inle_cfg::Config) -> Engine_Debug_CVars {
     let display_overlays = Cfg_Var::new("engine/debug/overlay/display", cfg);
     let update_physics = Cfg_Var::new("engine/debug/physics/update", cfg);
     let draw_buf_alloc = Cfg_Var::new("engine/debug/rendering/draw_buf_alloc", cfg);
+    let draw_colliders = Cfg_Var::new("engine/debug/physics/draw_colliders", cfg);
 
     Engine_Debug_CVars {
         draw_lights,
@@ -129,6 +131,7 @@ pub fn create_engine_debug_cvars(cfg: &inle_cfg::Config) -> Engine_Debug_CVars {
         display_overlays,
         update_physics,
         draw_buf_alloc,
+        draw_colliders,
     }
 }
 

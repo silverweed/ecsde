@@ -154,6 +154,7 @@ pub fn update_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) 
         &game_state.time,
         &game_state.fps_counter,
         &game_state.input,
+        &game_state.phys_world,
     );
 }
 

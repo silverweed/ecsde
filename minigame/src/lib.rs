@@ -21,58 +21,9 @@ mod sprites;
 #[cfg(debug_assertions)]
 mod debug;
 
+pub use game::{Game_Resources, Game_State};
 use std::ffi::c_char;
 use std::time::Duration;
-
-type Phase_Manager = inle_app::phases::Phase_Manager<phases::Phase_Args>;
-
-pub struct Game_State {
-    should_quit: bool,
-    env: inle_core::env::Env_Info,
-    config: inle_cfg::config::Config,
-    app_config: inle_app::app_config::App_Config,
-    sleep_granularity: Option<Duration>,
-
-    loggers: inle_diagnostics::log::Loggers,
-
-    rng: inle_core::rand::Default_Rng,
-
-    time: inle_core::time::Time,
-    cur_frame: u64,
-    prev_frame_time: std::time::Duration,
-
-    frame_alloc: inle_alloc::temp::Temp_Allocator,
-
-    window: inle_gfx::render_window::Render_Window_Handle,
-    batches: inle_gfx::render::batcher::Batches,
-    lights: inle_gfx::light::Lights,
-
-    audio_system: inle_audio::audio_system::Audio_System,
-
-    input: inle_input::input_state::Input_State,
-
-    default_font: inle_gfx::res::Font_Handle,
-
-    engine_cvars: inle_app::app::Engine_CVars,
-
-    ui: inle_ui::Ui_Context,
-
-    phase_mgr: Phase_Manager,
-
-    bg_music: inle_audio::audio_system::Sound_Handle,
-
-    #[cfg(debug_assertions)]
-    debug_systems: inle_app::debug::systems::Debug_Systems,
-
-    #[cfg(debug_assertions)]
-    fps_counter: inle_debug::fps::Fps_Counter,
-}
-
-pub struct Game_Resources {
-    pub gfx: inle_gfx::res::Gfx_Resources,
-    pub audio: inle_audio::res::Audio_Resources,
-    pub shader_cache: inle_gfx::res::Shader_Cache,
-}
 
 #[repr(C)]
 pub struct Game_Bundle {
@@ -161,6 +112,13 @@ pub unsafe extern "C" fn game_update(
 /// game_state and game_res must be non-null
 #[no_mangle]
 pub unsafe extern "C" fn game_shutdown(game_state: *mut Game_State, game_res: *mut Game_Resources) {
+    let gs = &mut *game_state;
+    #[cfg(debug_assertions)]
+    {
+        inle_debug::console::save_console_hist(&gs.debug_systems.console.lock().unwrap(), &gs.env)
+            .unwrap_or_else(|err| lwarn!("Failed to save console history: {}", err));
+    }
+
     inle_gfx::render::batcher::clear_batches(&mut (*game_state).batches);
     inle_gfx::render_window::shutdown(&mut (*game_state).window);
 
@@ -189,8 +147,9 @@ pub unsafe extern "C" fn game_unload(_game_state: *mut Game_State, _game_res: *m
 /// game_state and game_res must be non-null
 #[cfg(debug_assertions)]
 #[no_mangle]
-pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mut Game_Resources) {
+pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, game_res: *mut Game_Resources) {
     let game_state = &mut *game_state;
+    let game_res = &mut *game_res;
 
     inle_diagnostics::log::register_loggers(&game_state.loggers);
 
@@ -204,4 +163,14 @@ pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, _game_res: *mu
 
     inle_win::window::recreate_window(&mut game_state.window);
     inle_gfx::render_window::recreate_render_window(&mut game_state.window);
+
+    // Recreate phases (otherwise they'll not be hot reloaded properly, I guess due to them
+    // being trait objects or something)
+    let cur_phase_stack = game_state.phase_mgr.current_phase_stack().to_vec();
+    game_state.phase_mgr = inle_app::phases::Phase_Manager::default();
+    game::register_game_phases(game_state);
+    let mut args = crate::phases::Phase_Args::new(game_state, game_res);
+    for phase_id in cur_phase_stack {
+        game_state.phase_mgr.push_phase(phase_id, &mut args);
+    }
 }
