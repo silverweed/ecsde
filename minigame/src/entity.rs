@@ -7,7 +7,27 @@ use inle_physics::collider::{Collider, Collision_Shape, Phys_Data};
 use inle_physics::phys_world::{Collider_Handle, Physics_Body_Handle, Physics_World};
 use smallvec::SmallVec;
 
-#[derive(Default, Clone)]
+#[repr(u8)]
+pub enum Game_Collision_Layer {
+    Player,
+    Terrain,
+}
+
+impl From<Game_Collision_Layer> for inle_physics::layers::Collision_Layer {
+    fn from(other: Game_Collision_Layer) -> Self {
+        const_assert!(std::mem::size_of::<Game_Collision_Layer>() == std::mem::size_of::<u8>());
+        // Safe because they have the same representation
+        unsafe { std::mem::transmute(other) }
+    }
+}
+
+#[derive(PartialEq, Eq)]
+pub enum Phys_Type {
+    Static,
+    Dynamic,
+}
+
+#[derive(Default)]
 pub struct Entity {
     pub transform: Transform2D,
     pub velocity: Vec2f,
@@ -25,21 +45,34 @@ impl Entity {
         }
     }
 
-    pub fn register_to_physics(&mut self, phys_world: &mut Physics_World) {
+    pub fn clone(&self, phys_world: &mut Physics_World) -> Self {
+        let mut cloned = Self {
+            transform: self.transform.clone(),
+            velocity: self.velocity,
+            sprites: self.sprites.clone(),
+            phys_body: Physics_Body_Handle::default(),
+        };
+        cloned.phys_body = phys_world.clone_physics_body(self.phys_body);
+        cloned
+    }
+
+    pub fn register_to_physics(
+        &mut self,
+        phys_world: &mut Physics_World,
+        phys_data: &Phys_Data,
+        layer: Game_Collision_Layer,
+        phys_type: Phys_Type,
+    ) {
         // @Temporary
         let width = self.sprites[0].rect.width as f32;
         let height = self.sprites[0].rect.height as f32;
         let cld = Collider {
             shape: Collision_Shape::Rect { width, height },
-            layer: 0,
+            layer: layer as _,
+            is_static: phys_type == Phys_Type::Static,
             ..Default::default()
         };
-        let phys_data = Phys_Data::default()
-            .with_mass(1.)
-            .with_restitution(0.9)
-            .with_static_friction(0.5)
-            .with_dyn_friction(0.3);
-        let phys_body = phys_world.new_physics_body_with_rigidbody(cld, phys_data);
+        let phys_body = phys_world.new_physics_body_with_rigidbody(cld, phys_data.clone());
         self.phys_body = phys_body;
     }
 
@@ -123,8 +156,10 @@ impl Entity_Container {
 
         if self.entity_gens[handle.index as usize] == handle.gen {
             self.entity_gens[handle.index as usize] = INVALID_GEN;
-            // NOTE: currently we don't actually delete the entity.
-            debug_assert!(!std::mem::needs_drop::<Entity>());
+            // Safe as long as we don't access the entity while gen is invalid
+            unsafe {
+                std::ptr::drop_in_place(&mut self.entities[handle.index as usize]);
+            }
         } else {
             lwarn!(
                 "Failed to remove entity {:?}: handle is obsolete or invalid.",

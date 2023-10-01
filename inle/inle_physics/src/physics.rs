@@ -96,17 +96,24 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Interna
 
     const OVERLAP_EPSILON: f32 = f32::EPSILON;
 
-    let (a_width, a_height) = if let Collision_Shape::Rect { width, height } = a.shape {
-        (width, height)
-    } else {
+    let Collision_Shape::Rect {
+        width: a_width,
+        height: a_height,
+    } = a.shape
+    else {
         panic!("Failed to unwrap Rect!")
     };
-    let (b_width, b_height) = if let Collision_Shape::Rect { width, height } = b.shape {
-        (width, height)
-    } else {
+    let Collision_Shape::Rect {
+        width: b_width,
+        height: b_height,
+    } = b.shape
+    else {
         panic!("Failed to unwrap Rect!")
     };
     let diff = b.position - a.position;
+    dbg!(diff);
+
+    ldebug!("{:?} vs {:?}", a.shape, b.shape);
 
     let a_half_ext_x = a_width * 0.5;
     let b_half_ext_x = b_width * 0.5;
@@ -125,6 +132,8 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Interna
     if y_overlap <= OVERLAP_EPSILON {
         return None;
     }
+
+    dbg!((x_overlap, y_overlap));
 
     // Find least penetration axis
     if x_overlap < y_overlap {
@@ -262,10 +271,12 @@ where
     let mut collision_infos = vec![];
     let mut storage: HashSet<(*const Collider, *const Collider)> = HashSet::default();
 
+    ldebug!("-----");
     // @Speed: maybe we should iterate on the chunks? Can we do that in parallel?
     for a in phys_world.colliders.iter().filter(|cld| !cld.is_static) {
         trace!("iterate_colliders");
 
+        ldebug!("iter");
         let a_extent = a.shape.extent();
         let a_shape = collision_shape_type_index(&a.shape);
         let a_partial_cb = COLLISION_CB_TABLE[a_shape];
@@ -284,6 +295,7 @@ where
             let pb: *const Collider = b as *const _;
 
             if !collision_matrix.layers_collide(a.layer, b.layer) || storage.contains(&(pb, pa)) {
+                ldebug!("skipping {:p} {:p}", pa, pb);
                 continue;
             }
 
@@ -295,6 +307,7 @@ where
             }
 
             if let Some(info) = info {
+                ldebug!("colliding {:p} {:p}", pa, pb);
                 collision_infos.push(info);
                 storage.insert((pa, pb));
             }
@@ -366,6 +379,7 @@ fn positional_correction(a: &mut Collider, b: &mut Collider, normal: Vec2f, pene
     let b_inv_mass = b.phys_data.unwrap().inv_mass;
 
     if a_inv_mass + b_inv_mass == 0. {
+        // Both infinite-mass objects.
         return;
     }
 
@@ -375,16 +389,13 @@ fn positional_correction(a: &mut Collider, b: &mut Collider, normal: Vec2f, pene
     let correction =
         (penetration - slop).max(0.0) / (a_inv_mass + b_inv_mass) * correction_perc * normal;
 
-    ldebug!("{:p} before correction: {:?}", a as *const _, a.position);
     a.position -= a_inv_mass * correction;
     b.position += b_inv_mass * correction;
-    ldebug!("{:p} after correction: {:?}", a as *const _, a.position);
 }
 
 fn solve_collisions(phys_world: &mut Physics_World, infos: &[Collision_Info_Internal]) {
     trace!("physics::solve_collisions");
 
-    ldebug!("n collisions: {}", infos.len());
     for info in infos {
         let Collision_Info_Internal {
             cld1,

@@ -1,5 +1,7 @@
 use super::Phase_Args;
-use crate::entity::{Entity, Entity_Container, Entity_Handle};
+use crate::entity::{
+    Entity, Entity_Container, Entity_Handle, Game_Collision_Layer as GCL, Phys_Type,
+};
 use crate::game::Game_State;
 use crate::sprites::{self as anim_sprites, Anim_Sprite};
 use inle_app::phases::{Game_Phase, Phase_Id, Phase_Transition};
@@ -12,6 +14,7 @@ use inle_gfx::res::Gfx_Resources;
 use inle_gfx::sprites::Sprite;
 use inle_math::rect::Rect;
 use inle_math::vector::{lerp_v, Vec2f};
+use inle_physics::collider::Phys_Data;
 use inle_physics::phys_world::Physics_World;
 use inle_physics::physics;
 use inle_physics::spatial::Spatial_Accelerator;
@@ -94,21 +97,15 @@ impl Game_Phase for In_Game {
         sprite.color.a = 120;
         self.entities.push(Entity::new(sprite.into()));
 
-        let tex_p = tex_path(env, "game/terrain.png");
-        let mut sprite = Sprite::from_tex_path(gres, &tex_p);
-        sprite.z_index = Z_TERRAIN;
-        sprite.rect = win_rect;
-        let mut terrain = Entity::new(sprite.into());
-        terrain.transform.translate(0., 270.);
-        // terrain.register_to_physics(physw);
+        let terrain = create_terrain(env, gres, physw);
         self.entities.push(terrain);
 
         // Mountains
-        let mountain_off_x = win_hw - 90.;
+        let mountain_off_x = win_hw - 100.;
         let mountain_off_y = 280.;
 
         let mut left_mountain = create_mountain(env, gres, physw);
-        let mut right_mountain = left_mountain.clone();
+        let mut right_mountain = left_mountain.clone(physw);
         left_mountain
             .transform
             .translate(-mountain_off_x, mountain_off_y);
@@ -117,8 +114,8 @@ impl Game_Phase for In_Game {
             .transform
             .translate(mountain_off_x, mountain_off_y);
 
-        self.entities.push(left_mountain);
-        self.entities.push(right_mountain);
+        // self.entities.push(left_mountain);
+        // self.entities.push(right_mountain);
 
         // Players
         let mut player = create_player(env, gres, physw);
@@ -158,10 +155,16 @@ impl Game_Phase for In_Game {
     }
 }
 
+fn create_collision_matrix() -> inle_physics::layers::Collision_Matrix {
+    let mut collision_matrix = inle_physics::layers::Collision_Matrix::default();
+    collision_matrix.set_layers_collide(GCL::Player, GCL::Terrain);
+    collision_matrix.set_layers_collide(GCL::Player, GCL::Player);
+    collision_matrix
+}
+
 impl In_Game {
     pub fn new(cfg: &inle_cfg::Config) -> Self {
-        let mut collision_matrix = inle_physics::layers::Collision_Matrix::default();
-        collision_matrix.set_layers_collide(0, 0);
+        let collision_matrix = create_collision_matrix();
         let phys_settings = physics::Physics_Settings { collision_matrix };
 
         Self {
@@ -240,6 +243,32 @@ impl In_Game {
     }
 }
 
+fn create_terrain(
+    env: &Env_Info,
+    gres: &mut Gfx_Resources,
+    phys_world: &mut Physics_World,
+) -> Entity {
+    let tex_p = tex_path(env, "game/terrain.png");
+    let mut sprite = Sprite::from_tex_path(gres, &tex_p);
+    sprite.z_index = Z_TERRAIN;
+    let mut terrain = Entity::new(sprite.into());
+    terrain.transform.translate(0., 450.);
+
+    let phys_data = Phys_Data::default()
+        .with_infinite_mass()
+        .with_restitution(0.9)
+        .with_static_friction(0.5)
+        .with_dyn_friction(0.3);
+    // FIXME: if Phys_Type is set to Static, weird things happen on collision.
+    // Figure out why that happens.
+    // Seems related to detect_rect_rect giving the wrong normal in the case of dynamic player vs static terrain.
+    // Oddly, if you do static player vs dynamic terrain it works fine.
+    // Basically it only works properly if the detection is done with (a = terrain, b = player) and not the other way around.
+    terrain.register_to_physics(phys_world, &phys_data, GCL::Terrain, Phys_Type::Dynamic);
+
+    terrain
+}
+
 fn create_mountain(
     env: &Env_Info,
     gres: &mut Gfx_Resources,
@@ -267,7 +296,12 @@ fn create_mountain(
     let sprite = Anim_Sprite::from_sprite(sprite, (2, 2), Duration::from_millis(170));
     mountain.sprites.push(sprite.into());
 
-    mountain.register_to_physics(phys_world);
+    let phys_data = Phys_Data::default()
+        .with_infinite_mass()
+        .with_restitution(0.9)
+        .with_static_friction(0.5)
+        .with_dyn_friction(0.3);
+    mountain.register_to_physics(phys_world, &phys_data, GCL::Terrain, Phys_Type::Static);
 
     mountain
 }
@@ -292,7 +326,12 @@ fn create_player(
     sprite.play(sid!("idle"));
 
     let mut player = Entity::new(sprite);
-    player.register_to_physics(phys_world);
+    let phys_data = Phys_Data::default()
+        .with_mass(1.)
+        .with_restitution(0.9)
+        .with_static_friction(0.5)
+        .with_dyn_friction(0.3);
+    player.register_to_physics(phys_world, &phys_data, GCL::Player, Phys_Type::Dynamic);
 
     player
 }

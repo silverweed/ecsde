@@ -80,6 +80,8 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
         while let Some((_phase_id, mut phase)) = self.persistent_phases.pop() {
             phase.on_end(args);
         }
+
+        self.phases.clear();
     }
 
     #[inline]

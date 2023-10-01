@@ -106,6 +106,7 @@ pub(super) fn framework_to_engine_key(key: Framework_Key) -> Option<Key> {
         Framework_Key::F14 => Some(Key::F14),
         Framework_Key::F15 => Some(Key::F15),
         Framework_Key::Pause => Some(Key::Pause),
+        Framework_Key::CapsLock => Some(Key::CapsLock),
         _ => None,
     }
 }
@@ -214,5 +215,6 @@ fn engine_to_framework_key(key: Key) -> Framework_Key {
         Key::F14 => Framework_Key::F14,
         Key::F15 => Framework_Key::F15,
         Key::Pause => Framework_Key::Pause,
+        Key::CapsLock => Framework_Key::CapsLock,
     }
 }

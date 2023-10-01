@@ -41,6 +41,13 @@ impl Phys_Data {
         }
     }
 
+    pub fn with_infinite_mass(self) -> Self {
+        Self {
+            inv_mass: 0.,
+            ..self
+        }
+    }
+
     pub fn with_restitution(self, restitution: f32) -> Self {
         Self {
             restitution,

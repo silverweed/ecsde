@@ -113,6 +113,27 @@ impl Physics_World {
         handle
     }
 
+    pub fn clone_physics_body(&mut self, handle: Physics_Body_Handle) -> Physics_Body_Handle {
+        if let Some(phys_body) = self.get_physics_body(handle).cloned() {
+            let cloned_phys_body_hdl = self.new_physics_body();
+            let mut colliders = SmallVec::with_capacity(phys_body.colliders.len());
+            for cld_hdl in phys_body.clone().all_colliders() {
+                if let Some(cld) = self.get_collider(cld_hdl) {
+                    let cloned_cld = cld.clone();
+                    colliders.push(self.add_collider(cloned_cld));
+                }
+            }
+
+            let cloned_phys_body = self.get_physics_body_mut(cloned_phys_body_hdl).unwrap();
+            cloned_phys_body.colliders = colliders;
+
+            cloned_phys_body_hdl
+        } else {
+            lerr!("Failed to clone physics body {:?}: not found.", handle);
+            Physics_Body_Handle::default()
+        }
+    }
+
     #[inline]
     pub fn get_physics_body(&self, handle: Physics_Body_Handle) -> Option<&Physics_Body> {
         if !self.bodies_alloc.is_valid(*handle) {

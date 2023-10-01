@@ -26,7 +26,9 @@ impl Collision_Matrix {
     }
 
     #[allow(unused_parens)]
-    pub fn set_layers_collide(&mut self, a: Collision_Layer, b: Collision_Layer) {
+    pub fn set_layers_collide<T: Into<Collision_Layer>>(&mut self, a: T, b: T) {
+        let a = a.into();
+        let b = b.into();
         debug_assert!(a < MAX_LAYERS);
         debug_assert!(b < MAX_LAYERS);
 

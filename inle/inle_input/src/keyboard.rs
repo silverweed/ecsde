@@ -140,6 +140,7 @@ pub enum Key {
     F14,
     F15,
     Pause,
+    CapsLock,
 }
 
 pub fn num_to_key(num: Key_Underlying_Type) -> Option<Key> {
