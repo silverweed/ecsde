@@ -3,8 +3,8 @@ use inle_gfx::render::batcher::Batches;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use inle_physics::collider::{Collider, Collision_Shape};
-use inle_physics::phys_world::{Collider_Handle, Phys_Data, Physics_Body_Handle, Physics_World};
+use inle_physics::collider::{Collider, Collision_Shape, Phys_Data};
+use inle_physics::phys_world::{Collider_Handle, Physics_Body_Handle, Physics_World};
 use smallvec::SmallVec;
 
 #[derive(Default, Clone)]

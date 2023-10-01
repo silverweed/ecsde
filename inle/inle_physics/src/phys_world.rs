@@ -1,4 +1,4 @@
-use super::collider::Collider;
+use super::collider::{Collider, Phys_Data};
 use inle_alloc::gen_alloc::{Generational_Allocator, Generational_Index};
 use inle_math::vector::Vec2f;
 use smallvec::SmallVec;
@@ -26,81 +26,16 @@ impl std::ops::Deref for Physics_Body_Handle {
     }
 }
 
-const INITIAL_SIZE: usize = 64;
-
-#[derive(Copy, Clone, Debug, Default)]
-pub struct Phys_Data {
-    pub inv_mass: f32,
-    pub restitution: f32,
-    pub static_friction: f32,
-    pub dyn_friction: f32,
-}
-
-impl Phys_Data {
-    pub fn with_mass(self, mass: f32) -> Self {
-        assert!(mass > 0., "Mass must be positive!");
-        Self {
-            inv_mass: 1.0 / mass,
-            ..self
-        }
-    }
-
-    pub fn with_restitution(self, restitution: f32) -> Self {
-        Self {
-            restitution,
-            ..self
-        }
-    }
-
-    pub fn with_static_friction(self, static_friction: f32) -> Self {
-        Self {
-            static_friction,
-            ..self
-        }
-    }
-
-    pub fn with_dyn_friction(self, dyn_friction: f32) -> Self {
-        Self {
-            dyn_friction,
-            ..self
-        }
-    }
-}
-
 /// A Physics_Body can contain any number of Colliders, and it's what is associated
-/// to a single Entity. Note that the association between a Physics_Body and its
-/// Colliders is done externally, and the Physics_World is unaware of it.
+/// to a single Entity.
 #[derive(Default, Debug, Clone)]
 pub struct Physics_Body {
-    pub rigidbody_colliders: SmallVec<[(Collider_Handle, Phys_Data); 1]>,
-    pub trigger_colliders: Vec<Collider_Handle>,
+    colliders: SmallVec<[Collider_Handle; 1]>,
 }
 
 impl Physics_Body {
     pub fn all_colliders(&self) -> impl Iterator<Item = Collider_Handle> + '_ {
-        Physics_Body_Cld_Iter { body: self, i: 0 }
-    }
-}
-
-struct Physics_Body_Cld_Iter<'a> {
-    body: &'a Physics_Body,
-    i: usize,
-}
-
-impl Iterator for Physics_Body_Cld_Iter<'_> {
-    type Item = Collider_Handle;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let i = self.i;
-        self.i += 1;
-        if i < self.body.rigidbody_colliders.len() {
-            Some(self.body.rigidbody_colliders[i].0)
-        } else {
-            self.body
-                .trigger_colliders
-                .get(i - self.body.rigidbody_colliders.len())
-                .copied()
-        }
+        self.colliders.iter().copied()
     }
 }
 
@@ -134,6 +69,7 @@ pub struct Physics_World {
 
 impl Default for Physics_World {
     fn default() -> Self {
+        const INITIAL_SIZE: usize = 64;
         Self {
             cld_alloc: Generational_Allocator::new(INITIAL_SIZE),
             cld_index_table: vec![],
@@ -165,13 +101,15 @@ impl Physics_World {
 
     pub fn new_physics_body_with_rigidbody(
         &mut self,
-        cld: Collider,
+        mut cld: Collider,
         phys_data: Phys_Data,
     ) -> Physics_Body_Handle {
+        cld.phys_data = Some(phys_data);
         let cld_handle = self.add_collider(cld);
         let handle = self.new_physics_body();
         let body = self.get_physics_body_mut(handle).unwrap();
-        body.rigidbody_colliders.push((cld_handle, phys_data));
+        body.colliders.push(cld_handle);
+
         handle
     }
 
@@ -287,6 +225,47 @@ impl Physics_World {
     }
 
     #[inline]
+    pub fn get_collider_pair_mut(
+        &mut self,
+        h1: Collider_Handle,
+        h2: Collider_Handle,
+    ) -> Option<(&mut Collider, &mut Collider)> {
+        assert_ne!(h1, h2);
+        if !self.cld_alloc.is_valid(*h1) || !self.cld_alloc.is_valid(*h2) {
+            return None;
+        }
+
+        assert!(
+            (h1.index as usize) < self.cld_index_table.len(),
+            "Handle {:?} is out of bounds for cld_index_table of len {}!",
+            h1,
+            self.cld_index_table.len()
+        );
+        let mut index1 = self.cld_index_table[h1.index as usize];
+        assert!(
+            (h2.index as usize) < self.cld_index_table.len(),
+            "Handle {:?} is out of bounds for cld_index_table of len {}!",
+            h2,
+            self.cld_index_table.len()
+        );
+        let mut index2 = self.cld_index_table[h2.index as usize];
+
+        if index1 > index2 {
+            std::mem::swap(&mut index1, &mut index2);
+        }
+
+        debug_assert!(index1 < self.colliders.len());
+        debug_assert!(index2 < self.colliders.len());
+        debug_assert_ne!(index1, index2);
+
+        let (a, b) = self.colliders.split_at_mut(index1 + 1);
+        let c1 = &mut a[index1];
+        let c2 = &mut b[index2 - index1 - 1];
+
+        Some((c1, c2))
+    }
+
+    #[inline]
     pub fn get_all_colliders(&self) -> impl Iterator<Item = &Collider> {
         self.colliders.iter()
     }
@@ -339,11 +318,16 @@ impl Physics_World {
 
     #[inline]
     pub fn get_first_rigidbody_collider(&self, handle: Physics_Body_Handle) -> Option<&Collider> {
-        self.get_physics_body(handle).and_then(|body| {
-            body.rigidbody_colliders
-                .get(0)
-                .and_then(|(h, _)| self.get_collider(*h))
-        })
+        if let Some(body) = self.get_physics_body(handle) {
+            for &cld_hdl in &body.colliders {
+                if let Some(cld) = self.get_collider(cld_hdl) {
+                    if cld.phys_data.is_some() {
+                        return Some(cld);
+                    }
+                }
+            }
+        }
+        None
     }
 
     #[inline]
@@ -351,11 +335,9 @@ impl Physics_World {
         &self,
         handle: Physics_Body_Handle,
     ) -> impl Iterator<Item = &Collider> + '_ {
-        let mut maybe_iter = self.get_physics_body(handle).map(move |body| {
-            body.rigidbody_colliders
-                .iter()
-                .map(move |(h, _)| self.get_collider(*h))
-        });
+        let mut maybe_iter = self
+            .get_physics_body(handle)
+            .map(move |body| body.colliders.iter().map(move |h| self.get_collider(*h)));
         std::iter::from_fn(move || {
             if let Some(iter) = &mut maybe_iter {
                 iter.next()?

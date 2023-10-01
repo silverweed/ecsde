@@ -1,16 +1,13 @@
 // reference: https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331
 
 use super::layers::Collision_Matrix;
-use super::phys_world::{
-    Collider_Handle, Collision_Data, Collision_Info, Phys_Data, Physics_World,
-};
+use super::phys_world::{Collider_Handle, Collision_Data, Collision_Info, Physics_World};
 use super::spatial::Spatial_Accelerator;
-use crate::collider::{Collider, Collision_Shape};
+use crate::collider::{Collider, Collision_Shape, Phys_Data};
 use inle_alloc::temp::{excl_temp_array, Temp_Allocator};
 use inle_events::evt_register::{Event, Event_Register};
 use inle_math::math::clamp;
 use inle_math::vector::{sanity_check_v, Vec2f};
-use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 type Rigidbodies = HashMap<Collider_Handle, Rigidbody>;
@@ -277,16 +274,16 @@ where
         accelerator.get_neighbours(a.position, a_extent, phys_world, &mut neighbours);
 
         for &b_handle in &neighbours {
-            let b = phys_world.get_collider(b_handle).unwrap();
-            if a as *const _ == b as *const _ {
+            if a.handle == b_handle {
                 continue;
             }
+            let b = phys_world.get_collider(b_handle).unwrap();
             let b_shape = collision_shape_type_index(&b.shape);
 
             let pa: *const Collider = a as *const _;
             let pb: *const Collider = b as *const _;
 
-            if !collision_matrix.layers_collide(a.layer, b.layer) || storage.contains(&(pa, pb)) {
+            if !collision_matrix.layers_collide(a.layer, b.layer) || storage.contains(&(pb, pa)) {
                 continue;
             }
 
@@ -307,18 +304,12 @@ where
     collision_infos
 }
 
-fn solve_collision_velocities(
-    objects: &mut Rigidbodies,
-    a_idx: Collider_Handle,
-    b_idx: Collider_Handle,
-    normal: Vec2f,
-) {
+fn solve_collision_velocities(a: &mut Collider, b: &mut Collider, normal: Vec2f) {
     trace!("physics::solve_collisions_velocities");
 
-    let a = objects[&a_idx].clone();
-    let b = objects[&b_idx].clone();
-
-    if a.phys_data.inv_mass + b.phys_data.inv_mass == 0. {
+    let a_phys = a.phys_data.unwrap();
+    let b_phys = b.phys_data.unwrap();
+    if a_phys.inv_mass + b_phys.inv_mass == 0. {
         // Both infinite-mass objects
         return;
     }
@@ -335,19 +326,15 @@ fn solve_collision_velocities(
     sanity_check_v(rel_vel);
     debug_assert!(!vel_along_normal.is_nan());
 
-    let e = a.phys_data.restitution.min(b.phys_data.restitution);
+    let e = a_phys.restitution.min(b_phys.restitution);
 
     // Impulse scalar
-    let j = -(1. + e) * vel_along_normal / (a.phys_data.inv_mass + b.phys_data.inv_mass);
+    let j = -(1. + e) * vel_along_normal / (a_phys.inv_mass + b_phys.inv_mass);
     debug_assert!(!j.is_nan());
 
     let impulse = j * normal;
-    objects.get_mut(&a_idx).unwrap().velocity -= 1. * a.phys_data.inv_mass * impulse;
-    objects.get_mut(&b_idx).unwrap().velocity += 1. * b.phys_data.inv_mass * impulse;
-
-    // @Speed: cloning
-    let a = objects[&a_idx].clone();
-    let b = objects[&b_idx].clone();
+    a.velocity -= 1. * a_phys.inv_mass * impulse;
+    a.velocity += 1. * b_phys.inv_mass * impulse;
 
     // apply friction
     let new_rel_vel = b.velocity - a.velocity;
@@ -357,32 +344,26 @@ fn solve_collision_velocities(
 
     let tangent = (new_rel_vel - new_rel_vel.dot(normal) * normal).normalized_or_zero();
 
-    let jt = -new_rel_vel.dot(tangent) / (a.phys_data.inv_mass * b.phys_data.inv_mass);
+    let jt = -new_rel_vel.dot(tangent) / (a_phys.inv_mass * b_phys.inv_mass);
 
-    let mu = (a.phys_data.static_friction + b.phys_data.static_friction) * 0.5;
+    let mu = (a_phys.static_friction + b_phys.static_friction) * 0.5;
 
     let friction_impulse = if jt.abs() < j * mu {
         jt * tangent
     } else {
-        let dyn_friction = (a.phys_data.dyn_friction + b.phys_data.dyn_friction) * 0.5;
+        let dyn_friction = (a_phys.dyn_friction + b_phys.dyn_friction) * 0.5;
         -j * tangent * dyn_friction
     };
 
-    objects.get_mut(&a_idx).unwrap().velocity -= 1. * a.phys_data.inv_mass * friction_impulse;
-    objects.get_mut(&b_idx).unwrap().velocity += 1. * b.phys_data.inv_mass * friction_impulse;
+    a.velocity -= 1. * a_phys.inv_mass * friction_impulse;
+    b.velocity += 1. * b_phys.inv_mass * friction_impulse;
 }
 
-fn positional_correction(
-    objects: &mut Rigidbodies,
-    a_idx: Collider_Handle,
-    b_idx: Collider_Handle,
-    normal: Vec2f,
-    penetration: f32,
-) {
+fn positional_correction(a: &mut Collider, b: &mut Collider, normal: Vec2f, penetration: f32) {
     trace!("physics::positional_correction");
 
-    let a_inv_mass = objects[&a_idx].phys_data.inv_mass;
-    let b_inv_mass = objects[&b_idx].phys_data.inv_mass;
+    let a_inv_mass = a.phys_data.unwrap().inv_mass;
+    let b_inv_mass = b.phys_data.unwrap().inv_mass;
 
     if a_inv_mass + b_inv_mass == 0. {
         return;
@@ -394,15 +375,16 @@ fn positional_correction(
     let correction =
         (penetration - slop).max(0.0) / (a_inv_mass + b_inv_mass) * correction_perc * normal;
 
-    dbg!(correction);
-
-    objects.get_mut(&a_idx).unwrap().position -= a_inv_mass * correction;
-    objects.get_mut(&b_idx).unwrap().position += b_inv_mass * correction;
+    ldebug!("{:p} before correction: {:?}", a as *const _, a.position);
+    a.position -= a_inv_mass * correction;
+    b.position += b_inv_mass * correction;
+    ldebug!("{:p} after correction: {:?}", a as *const _, a.position);
 }
 
-fn solve_collisions(objects: &mut Rigidbodies, infos: &[&Collision_Info_Internal]) {
+fn solve_collisions(phys_world: &mut Physics_World, infos: &[Collision_Info_Internal]) {
     trace!("physics::solve_collisions");
 
+    ldebug!("n collisions: {}", infos.len());
     for info in infos {
         let Collision_Info_Internal {
             cld1,
@@ -413,10 +395,13 @@ fn solve_collisions(objects: &mut Rigidbodies, infos: &[&Collision_Info_Internal
                     penetration,
                     ..
                 },
-        } = **info;
+        } = *info;
 
-        solve_collision_velocities(objects, cld1, cld2, normal);
-        positional_correction(objects, cld1, cld2, normal, penetration);
+        let (cld1, cld2) = phys_world.get_collider_pair_mut(cld1, cld2).unwrap();
+        if cld1.phys_data.is_some() && cld2.phys_data.is_some() {
+            solve_collision_velocities(cld1, cld2, normal);
+            positional_correction(cld1, cld2, normal, penetration);
+        }
     }
 }
 
@@ -450,40 +435,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
         });
     }
 
-    let mut objects = gather_rigidbodies(phys_world);
-
-    let rb_infos = infos
-        .par_iter()
-        .filter(|info| objects.contains_key(&info.cld1) && objects.contains_key(&info.cld2))
-        .collect::<Vec<_>>();
-
-    solve_collisions(&mut objects, &rb_infos);
-
-    // Copy back positions and velocities
-    /*
-    let mut processed = std::collections::HashSet::new();
-    for info in &rb_infos {
-        let Collision_Info_Internal { cld1, cld2, .. } = info;
-
-        for cld in &[*cld1, *cld2] {
-            if !processed.contains(cld) {
-                processed.insert(*cld);
-
-                let Rigidbody {
-                    position,
-                    velocity,
-                    entity,
-                    offset,
-                    ..
-                } = objects[cld];
-
-                let mut spatial = ecs_world.get_component_mut::<C_Spatial2D>(entity).unwrap();
-                spatial.transform.set_position_v(position - offset);
-                spatial.velocity = velocity;
-            }
-        }
-    }
-    */
+    solve_collisions(phys_world, &infos);
 
     // Note: we do this last to avoid polluting the cache (we don't know how many observers are
     // subscribed to this event).
@@ -495,49 +447,4 @@ pub fn update_collisions<T_Spatial_Accelerator>(
             .collect();
         evt_register.raise_batch::<Evt_Collision_Happened>(&data);
     }
-}
-
-// fn update_colliders_spatial(ecs_world: &mut Ecs_World, phys_world: &mut Physics_World) {
-//     trace!("update_colliders_spatial");
-
-//     if let Some(mut spatials) = ecs_world.write_component_storage::<C_Spatial2D>() {
-//         for collider in &mut phys_world.colliders {
-//             let mut spatial = spatials.must_get_mut(collider.entity);
-//             let pos = spatial.transform.position();
-//             spatial.frame_starting_pos = pos;
-
-//             collider.position = pos + collider.offset;
-//             collider.velocity = spatial.velocity;
-//         }
-//     }
-// }
-
-/// Returns { collider => rigidbody }
-/// Note that some entities may have non-physical colliders (i.e. trigger colliders),
-/// but each entity must have at most 1 physical collider. // :MultipleRigidbodies: lift this restriction!
-fn gather_rigidbodies(phys_world: &mut Physics_World) -> Rigidbodies {
-    trace!("gather_rigidbodies");
-
-    // @Speed: try to use an array rather than a HashMap
-    let mut objects = HashMap::new();
-
-    for body in &phys_world.bodies {
-        // @Incomplete :MultipleRigidbodies: handle multiple rigidbody colliders
-        if let Some(&(cld_handle, phys_data)) = body.rigidbody_colliders.get(0) {
-            if let Some(rb_cld) = phys_world.get_collider(cld_handle) {
-                objects.insert(
-                    cld_handle,
-                    Rigidbody {
-                        position: rb_cld.position,
-                        offset: rb_cld.offset,
-                        velocity: rb_cld.velocity,
-                        shape: rb_cld.shape,
-                        phys_data,
-                    },
-                );
-            }
-        }
-    }
-
-    objects
 }

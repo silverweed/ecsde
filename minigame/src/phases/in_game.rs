@@ -100,7 +100,7 @@ impl Game_Phase for In_Game {
         sprite.rect = win_rect;
         let mut terrain = Entity::new(sprite.into());
         terrain.transform.translate(0., 270.);
-        terrain.register_to_physics(physw);
+        // terrain.register_to_physics(physw);
         self.entities.push(terrain);
 
         // Mountains

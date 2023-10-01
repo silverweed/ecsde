@@ -24,17 +24,61 @@ impl Default for Collision_Shape {
     }
 }
 
+#[derive(Copy, Clone, Debug, Default)]
+pub struct Phys_Data {
+    pub inv_mass: f32,
+    pub restitution: f32,
+    pub static_friction: f32,
+    pub dyn_friction: f32,
+}
+
+impl Phys_Data {
+    pub fn with_mass(self, mass: f32) -> Self {
+        assert!(mass > 0., "Mass must be positive!");
+        Self {
+            inv_mass: 1.0 / mass,
+            ..self
+        }
+    }
+
+    pub fn with_restitution(self, restitution: f32) -> Self {
+        Self {
+            restitution,
+            ..self
+        }
+    }
+
+    pub fn with_static_friction(self, static_friction: f32) -> Self {
+        Self {
+            static_friction,
+            ..self
+        }
+    }
+
+    pub fn with_dyn_friction(self, dyn_friction: f32) -> Self {
+        Self {
+            dyn_friction,
+            ..self
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Collider {
     pub shape: Collision_Shape,
-    pub offset: Vec2f,
     pub is_static: bool,
     pub layer: Collision_Layer,
 
-    // This is written by the Physics_World when the collider is added
+    // XXX: remove?
+    pub offset: Vec2f,
+
+    // XXX: it'd be nice to get rid of this
     pub handle: Collider_Handle,
 
-    // These should not be written except by the physics system.
+    // physics::update_collisions() will read and update these values
     pub position: Vec2f,
     pub velocity: Vec2f,
+
+    // @Speed: evaluate whether this would be better off in a different array
+    pub phys_data: Option<Phys_Data>,
 }
