@@ -14,6 +14,7 @@ use inle_math::rect::Rect;
 use inle_math::shapes;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
+use inle_win::window::Camera;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
@@ -488,7 +489,7 @@ pub fn fill_color_rect_ws<T>(
     paint_props: &Paint_Properties,
     rect: T,
     transform: &Transform2D,
-    camera: &Transform2D,
+    camera: &Camera,
 ) where
     T: std::convert::Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
 {
@@ -570,9 +571,9 @@ pub fn fill_color_circle_ws(
     window: &mut Render_Window_Handle,
     paint_props: &Paint_Properties,
     circle: shapes::Circle,
-    camera: &Transform2D,
+    camera: &Camera,
 ) {
-    let mvp = get_mvp_matrix(window, &Transform2D::default(), camera);
+    let mvp = get_mvp_matrix(&Transform2D::default(), camera);
     fill_color_circle_internal(window, paint_props, circle, &mvp);
 }
 
@@ -599,13 +600,13 @@ pub fn render_text_ws(
     text: &Text,
     paint_props: &Paint_Properties,
     transform: &Transform2D,
-    camera: &Transform2D,
+    camera: &Camera,
 ) {
     if text.string.is_empty() {
         return;
     }
 
-    let mvp = get_mvp_matrix(window, transform, camera);
+    let mvp = get_mvp_matrix(transform, camera);
     use_text_shader(window, paint_props, &mvp);
 
     render_text_internal(window, text);
@@ -935,7 +936,7 @@ pub fn render_vbuf_ws(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
-    camera: &Transform2D,
+    camera: &Camera,
 ) {
     if vbuf_cur_vertices(vbuf) == 0 {
         return;
@@ -950,7 +951,7 @@ pub fn render_vbuf_ws_with_texture(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
-    camera: &Transform2D,
+    camera: &Camera,
     texture: &Texture,
 ) {
     if vbuf_cur_vertices(vbuf) == 0 {
@@ -1435,9 +1436,9 @@ fn use_rect_ws_shader(
     color: Color,
     rect: &Rect<f32>,
     transform: &Transform2D,
-    camera: &Transform2D,
+    camera: &Camera,
 ) {
-    let mvp = get_mvp_matrix(window, transform, camera);
+    let mvp = get_mvp_matrix(transform, camera);
     use_rect_shader_internal(color, rect, &mvp, window.gl.rect_shader);
 }
 
@@ -1480,10 +1481,10 @@ fn use_vbuf_shader(window: &mut Render_Window_Handle, transform: &Transform2D) {
 fn use_vbuf_ws_shader(
     window: &mut Render_Window_Handle,
     transform: &Transform2D,
-    camera: &Transform2D,
+    camera: &Camera,
     shader: GLuint,
 ) {
-    let mvp = get_mvp_matrix(window, transform, camera);
+    let mvp = get_mvp_matrix(transform, camera);
     unsafe {
         glcheck!(gl::UseProgram(shader));
 
@@ -1580,6 +1581,7 @@ fn get_uniform_loc(shader: GLuint, name: &CStr) -> GLint {
 
 /// This is the equivalent of get_mvp_matrix() with a camera with scale 1, no rotation
 /// and positioned in (win_target_size.x / 2, win_target_size.y / 2).
+// XXX: should this use get_camera_viewport like get_mvp_matrix()?
 fn get_mvp_screen_matrix(window: &Render_Window_Handle, transform: &Transform2D) -> Matrix3<f32> {
     let (width, height) = inle_win::window::get_window_target_size(window);
     let view_projection = Matrix3::new(

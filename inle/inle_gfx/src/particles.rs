@@ -12,6 +12,7 @@ use inle_math::angle::{self, Angle};
 use inle_math::rect::{self, Rectf};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
+use inle_win::window::Camera;
 use rayon::prelude::*;
 use std::ops::Range;
 use std::time::Duration;
@@ -202,7 +203,7 @@ pub fn render_particles(
     window: &mut Render_Window_Handle,
     gres: &Gfx_Resources,
     shader: &mut Shader,
-    camera: &Transform2D,
+    camera: &Camera,
     vbuf: &mut Vertex_Buffer_Holder,
     frame_alloc: &mut temp::Temp_Allocator,
 ) {
@@ -231,7 +232,7 @@ pub fn render_particles(
     if let Some(texture) = texture {
         render::set_uniform(shader, c_str!("tex"), texture);
     }
-    let mvp = inle_gfx_backend::render::get_mvp_matrix(window, &emitter.transform, camera);
+    let mvp = inle_gfx_backend::render::get_mvp_matrix(&emitter.transform, camera);
     render::set_uniform(shader, c_str!("mvp"), &mvp);
     render::render_vbuf_with_shader(window, &vbuf.vbuf, shader);
 }
@@ -324,7 +325,7 @@ impl Particle_Manager {
         window: &mut Render_Window_Handle,
         gres: &Gfx_Resources,
         shader_cache: &mut Shader_Cache,
-        camera: &Transform2D,
+        camera: &Camera,
         frame_alloc: &mut temp::Temp_Allocator,
     ) {
         if !render::shaders_are_available() {
@@ -335,9 +336,13 @@ impl Particle_Manager {
         let (ww, wh) = inle_win::window::get_window_real_size(window);
 
         render::use_shader(shader);
-        render::set_uniform(shader, c_str!("camera_scale"), 1.0 / camera.scale().x);
+        render::set_uniform(
+            shader,
+            c_str!("camera_scale"),
+            1.0 / camera.transform.scale().x,
+        );
 
-        let visible_viewport = inle_win::window::get_camera_viewport(window, camera);
+        let visible_viewport = inle_win::window::get_camera_viewport(camera);
 
         for (particles, vbuf) in self
             .active_emitters

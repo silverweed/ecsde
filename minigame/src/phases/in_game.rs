@@ -140,6 +140,16 @@ impl Game_Phase for In_Game {
 
         self.update_players(gs);
 
+        /*
+        gs.camera.transform.set_position_v(
+            self.entities
+                .get(self.players[0])
+                .unwrap()
+                .transform
+                .position(),
+        );
+        */
+
         anim_sprites::update_anim_sprites(
             gs.time.dt(),
             self.entities.iter_mut().map(|e| &mut e.sprites).flatten(),

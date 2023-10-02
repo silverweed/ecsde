@@ -410,8 +410,8 @@ fn solve_collisions(phys_world: &mut Physics_World, infos: &[Collision_Info_Inte
 
         let (cld1, cld2) = phys_world.get_collider_pair_mut(cld1, cld2).unwrap();
         if cld1.phys_data.is_some() && cld2.phys_data.is_some() {
-            solve_collision_velocities(cld1, cld2, normal);
-            positional_correction(cld1, cld2, normal, penetration);
+            //solve_collision_velocities(cld1, cld2, normal);
+            //positional_correction(cld1, cld2, normal, penetration);
         }
     }
 }

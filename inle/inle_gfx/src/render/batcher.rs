@@ -16,6 +16,7 @@ use inle_math::rect;
 use inle_math::rect::{Rect, Rectf};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
+use inle_win::window::Camera;
 use smallvec::SmallVec;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -112,7 +113,6 @@ pub(super) fn add_texture_ws(
     };
 
     {
-        trace!("push_tex");
         sprite_batches.push(Sprite {
             tex_rect: *tex_rect,
             color,
@@ -340,15 +340,15 @@ pub fn draw_batches(
     gres: &Gfx_Resources,
     batches: &mut Batches,
     shader_cache: &mut Shader_Cache,
-    camera: &Transform2D,
+    camera: &Camera,
     lights: &mut Lights,
     draw_params: Batcher_Draw_Params,
     frame_alloc: &mut temp::Temp_Allocator,
 ) {
     trace!("draw_all_batches");
 
-    let view_projection = get_vp_matrix(window, camera);
-    let visible_viewport = inle_win::window::get_camera_viewport(window, camera);
+    let view_projection = get_vp_matrix(camera);
+    let visible_viewport = inle_win::window::get_camera_viewport(camera);
 
     let mut lights_ubo_needs_update = lights.process_commands();
 
@@ -360,7 +360,7 @@ pub fn draw_batches(
         );
         // @Speed: should lights be spatially accelerated?
         lights.get_all_point_lights_sorted_by_distance_within(
-            camera.position(),
+            camera.transform.position(),
             visible_viewport.width * 2.0,
             &mut batches.point_lights_near_camera,
             MAX_POINT_LIGHTS,
@@ -378,7 +378,7 @@ pub fn draw_batches(
         );
         // @Speed: should lights be spatially accelerated?
         lights.get_all_rect_lights_sorted_by_distance_within(
-            camera.position(),
+            camera.transform.position(),
             visible_viewport.width * 2.0,
             &mut batches.rect_lights_near_camera,
             MAX_POINT_LIGHTS,
@@ -551,7 +551,7 @@ fn fill_vertices(
             tex_rect.height as f32 / th,
         );
         let sprite_size = v2!(tex_rect.width as f32, tex_rect.height as f32);
-        let render_transform = *transform;
+        let mut render_transform = *transform;
 
         // Note: beware of the order of multiplications!
         // Scaling the local positions must be done BEFORE multiplying the matrix!

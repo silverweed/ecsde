@@ -1,11 +1,17 @@
 use inle_common::colors::Color;
 use inle_gfx_backend::render_window::backend;
-use inle_math::rect::Rect;
+use inle_math::rect::{Rect, Rectf};
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
-use inle_win::window::{self, Window_Handle};
+use inle_win::window::{self, Camera, Window_Handle};
 
 pub type Render_Window_Handle = backend::Render_Window_Handle;
+
+#[derive(Default)]
+pub struct View {
+    pub viewport: Rectf,
+    pub transform: Transform2D,
+}
 
 pub fn create_render_window(window: Window_Handle) -> Render_Window_Handle {
     backend::create_render_window(window)
@@ -49,8 +55,7 @@ pub fn resize_keep_ratio(window: &mut Render_Window_Handle, new_width: u32, new_
         _ => {}
     }
 
-    let view = Rect::new(0., 0., target_width as f32, target_height as f32);
-    backend::set_viewport(window, &viewport, &view);
+    backend::set_viewport(window, &viewport);
 }
 
 /// Converts screen coordinates (where (0,0) is top-left of the _viewport_) to world coordinates
@@ -58,7 +63,7 @@ pub fn resize_keep_ratio(window: &mut Render_Window_Handle, new_width: u32, new_
 pub fn unproject_screen_pos(
     screen_pos: Vec2i,
     window: &Render_Window_Handle,
-    camera: &Transform2D,
+    camera: &Camera,
 ) -> Vec2f {
     backend::unproject_screen_pos(screen_pos, window, camera)
 }
@@ -68,7 +73,7 @@ pub fn unproject_screen_pos(
 pub fn project_world_pos(
     world_pos: Vec2f,
     window: &Render_Window_Handle,
-    camera: &Transform2D,
+    camera: &Camera,
 ) -> Vec2i {
     backend::project_world_pos(world_pos, window, camera)
 }
@@ -76,7 +81,7 @@ pub fn project_world_pos(
 pub fn mouse_pos_in_world(
     window: &Render_Window_Handle,
     mouse_pos: Vec2i,
-    camera: &Transform2D,
+    camera: &Camera,
 ) -> Vec2f {
     unproject_screen_pos(mouse_pos, window, camera)
 }

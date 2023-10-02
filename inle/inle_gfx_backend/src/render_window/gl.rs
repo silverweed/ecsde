@@ -8,7 +8,7 @@ use inle_common::colors::Color;
 use inle_math::rect::{Rect, Rectf, Recti};
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
-use inle_win::window::Window_Handle;
+use inle_win::window::{Camera, Window_Handle};
 use std::collections::HashMap;
 use std::{mem, ptr, str};
 
@@ -28,7 +28,12 @@ macro_rules! glcheck {
 
 pub struct Render_Window_Handle {
     window: Window_Handle,
+
+    // Unnormalized viewport, the same used in glViewport().
+    // Specifies the transformation from NDC to window coordinates.
+    // Initially it's equal to the window size, but that can change if the window is resized.
     viewport: Recti,
+
     pub gl: Gl,
     pub temp_allocator: temp::Temp_Allocator,
 
@@ -56,7 +61,7 @@ pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
     let win_size = inle_win::window::get_window_target_size(&window);
     Render_Window_Handle {
         window,
-        viewport: Recti::new(0, 0, win_size.0 as _, win_size.1 as _),
+        viewport: Rect::new(0, 0, win_size.0 as _, win_size.1 as _),
         gl: init_gl(),
         temp_allocator: temp::Temp_Allocator::with_capacity(inle_common::units::megabytes(10)),
         #[cfg(debug_assertions)]
@@ -252,17 +257,17 @@ pub fn clear(window: &mut Render_Window_Handle) {
     }
 }
 
-pub fn set_viewport(window: &mut Render_Window_Handle, viewport: &Rectf, _view_rect: &Rectf) {
+pub fn set_viewport(window: &mut Render_Window_Handle, normalized_viewport: &Rectf) {
     let win_size = inle_win::window::get_window_real_size(window);
     let width = win_size.0 as f32;
     let height = win_size.1 as f32;
 
     // de-normalize the viewport
     let viewport = Rect::new(
-        (0.5 + width * viewport.x) as i32,
-        (0.5 + height * viewport.y) as i32,
-        (0.5 + width * viewport.width) as i32,
-        (0.5 + height * viewport.height) as i32,
+        (0.5 + width * normalized_viewport.x) as i32,
+        (0.5 + height * normalized_viewport.y) as i32,
+        (0.5 + width * normalized_viewport.width) as i32,
+        (0.5 + height * normalized_viewport.height) as i32,
     );
 
     window.viewport = viewport;
@@ -282,9 +287,9 @@ pub fn set_viewport(window: &mut Render_Window_Handle, viewport: &Rectf, _view_r
 pub fn unproject_screen_pos(
     screen_pos: Vec2i,
     window: &Render_Window_Handle,
-    camera: &Transform2D,
+    camera: &Camera,
 ) -> Vec2f {
-    let vp = get_vp_matrix(window, camera);
+    let vp = get_vp_matrix(camera);
     let ndc = v2!(
         2. * (screen_pos.x as f32 - window.viewport.x as f32) / window.viewport.width as f32 - 1.,
         1. - 2. * (screen_pos.y as f32 - window.viewport.y as f32) / window.viewport.height as f32,
@@ -298,9 +303,9 @@ pub fn unproject_screen_pos(
 pub fn project_world_pos(
     world_pos: Vec2f,
     window: &Render_Window_Handle,
-    camera: &Transform2D,
+    camera: &Camera,
 ) -> Vec2i {
-    let vp = get_vp_matrix(window, camera);
+    let vp = get_vp_matrix(camera);
     let clip = &vp * v3!(world_pos.x, world_pos.y, 1.0);
     let ndc = v2!(clip.x / clip.z, -clip.y / clip.z);
     let (win_w, win_h) = inle_win::window::get_window_target_size(window);

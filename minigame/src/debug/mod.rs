@@ -5,6 +5,7 @@ use inle_app::debug::systems::{Debug_Systems, Overlay_Shown};
 use inle_cfg::Cfg_Var;
 use inle_debug::console::Console_Status;
 use inle_input::input_state::Action_Kind;
+use inle_win::window::Camera;
 use std::convert::TryInto;
 
 pub fn init_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) {
@@ -117,12 +118,6 @@ pub fn start_debug_frame(
     time: &inle_core::time::Time,
     cur_frame: u64,
 ) {
-    inle_diagnostics::prelude::DEBUG_TRACERS
-        .lock()
-        .unwrap()
-        .values_mut()
-        .for_each(|t| t.lock().unwrap().start_frame());
-
     let log = &mut debug_systems.log;
 
     if !time.paused {
@@ -155,6 +150,7 @@ pub fn update_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) 
         &game_state.fps_counter,
         &game_state.input,
         &game_state.phys_world,
+        &game_state.camera,
     );
 }
 
@@ -368,6 +364,7 @@ pub fn render_debug(
     temp_alloc: &mut inle_alloc::temp::Temp_Allocator,
     time: &mut inle_core::time::Time,
     gres: &mut inle_gfx::res::Gfx_Resources,
+    camera: &Camera,
 ) {
     use inle_math::transform::Transform2D;
 
@@ -376,19 +373,14 @@ pub fn render_debug(
     // Draw debug calipers
     {
         let calipers = &debug_systems.calipers;
-        // @Incomplete: use level camera transform
-        let camera_xform = Transform2D::default();
-        calipers.draw(
-            window,
-            &mut debug_systems.global_painter,
-            &camera_xform,
-            input,
-        );
+        // @Incomplete: use level camera
+        let camera = Camera::default();
+        calipers.draw(window, &mut debug_systems.global_painter, &camera, input);
     }
 
     // Draw global debug painter
     let painter = &mut debug_systems.global_painter;
-    painter.draw(window, gres, &Transform2D::default());
+    painter.draw(window, gres, camera);
     painter.clear();
 
     // Draw debug UI
@@ -453,10 +445,11 @@ fn handle_debug_actions(game_state: &mut Game_State, _game_res: &mut Game_Resour
     for action in actions {
         match action {
             (name, Action_Kind::Pressed) if *name == sid!("calipers") => {
-                let camera_xform = inle_math::transform::Transform2D::default();
+                // @Incomplete
+                let camera = Camera::default();
                 game_state.debug_systems.calipers.start_measuring_dist(
                     &game_state.window,
-                    &camera_xform,
+                    &camera,
                     &game_state.input,
                 );
             }

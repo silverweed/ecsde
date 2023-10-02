@@ -34,6 +34,7 @@ pub struct Game_State {
 
     pub phys_world: inle_physics::phys_world::Physics_World,
     pub entities: crate::entity::Entity_Container,
+    pub camera: inle_win::window::Camera,
 
     // XXX: ??
     pub default_font: inle_gfx::res::Font_Handle,
@@ -141,13 +142,20 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
         inle_gfx::render_window::create_render_window(window)
     };
 
+    let camera = {
+        let view_width = Cfg_Var::<f32>::new("game/camera/width", &config);
+        let view_height = Cfg_Var::<f32>::new("game/camera/height", &config);
+        inle_win::window::Camera {
+            size: v2!(view_width.read(&config), view_height.read(&config)),
+            transform: inle_math::transform::Transform2D::default(),
+        }
+    };
+
     let batches = inle_gfx::render::batcher::Batches::default();
     let lights = inle_gfx::light::Lights::default();
 
     let mut input = inle_input::input_state::create_input_state(&env);
     inle_input::joystick::init_joysticks(&window, &env, &mut input.raw.joy_state);
-
-    //inle_ui::init_ui(&mut engine_state.systems.ui, gres, &engine_state.env);
 
     let seed = inle_core::rand::new_random_seed().unwrap();
     let rng = inle_core::rand::new_rng_with_seed(seed);
@@ -194,6 +202,7 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
         ui,
         phys_world,
         entities,
+        camera,
         engine_cvars,
         phase_mgr,
         bg_music: Sound_Handle::INVALID,
@@ -393,7 +402,6 @@ pub fn render(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     let mut args = Phase_Args::new(game_state, game_res);
     game_state.phase_mgr.draw(&mut args);
 
-    let cam_xform = inle_math::transform::Transform2D::default();
     let draw_params = inle_gfx::render::batcher::Batcher_Draw_Params::default();
     let win = &mut game_state.window;
     inle_gfx::render::batcher::draw_batches(
@@ -401,7 +409,7 @@ pub fn render(game_state: &mut Game_State, game_res: &mut Game_Resources) {
         &game_res.gfx,
         &mut game_state.batches,
         &mut game_res.shader_cache,
-        &cam_xform,
+        &game_state.camera,
         &mut game_state.lights,
         draw_params,
         &mut game_state.frame_alloc,
@@ -419,6 +427,7 @@ pub fn render(game_state: &mut Game_State, game_res: &mut Game_Resources) {
             &mut game_state.frame_alloc,
             &mut game_state.time,
             &mut game_res.gfx,
+            &game_state.camera,
         );
     }
 

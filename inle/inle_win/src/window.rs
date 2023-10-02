@@ -21,6 +21,20 @@ pub type Window_Handle = backend::Window_Handle;
 pub type Create_Window_Args = backend::Create_Window_Args;
 pub type Event = backend::Event;
 
+pub struct Camera {
+    pub transform: Transform2D,
+    pub size: Vec2f,
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        Self {
+            size: Vec2f::new(1920., 1080.),
+            transform: Transform2D::default(),
+        }
+    }
+}
+
 impl AsRef<Window_Handle> for Window_Handle {
     fn as_ref(&self) -> &Self {
         self
@@ -74,9 +88,12 @@ pub fn get_window_real_size<W: AsRef<Window_Handle>>(window: &W) -> (u32, u32) {
 }
 
 #[inline]
-pub fn get_camera_viewport<W: AsRef<Window_Handle>>(window: &W, camera: &Transform2D) -> Rectf {
-    let viewport = Vec2f::from(Vec2u::from(get_window_target_size(window)));
-    let mut visible = Rect::from_topleft_size(camera.position(), viewport * camera.scale());
+pub fn get_camera_viewport(camera: &Camera) -> Rectf {
+    let viewport = camera.size;
+    let mut visible = Rect::from_topleft_size(
+        camera.transform.position(),
+        camera.size * camera.transform.scale(),
+    );
     visible = visible - visible.size() * 0.5;
     visible
 }

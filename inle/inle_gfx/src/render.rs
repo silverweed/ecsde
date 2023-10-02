@@ -7,6 +7,7 @@ use inle_math::rect::Rect;
 use inle_math::shapes::Circle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
+use inle_win::window::Camera;
 
 pub use inle_gfx_backend::render::{Color_Type, Font_Metadata, Primitive_Type, Uniform_Value};
 
@@ -41,7 +42,7 @@ pub fn render_rect_ws<R, P>(
     rect: R,
     paint_props: P,
     transform: &Transform2D,
-    camera: &Transform2D,
+    camera: &Camera,
 ) where
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
     P: Into<Paint_Properties>,
@@ -65,7 +66,7 @@ pub fn render_circle_ws<P>(
     window: &mut Render_Window_Handle,
     circle: Circle,
     paint_props: P,
-    camera: &Transform2D,
+    camera: &Camera,
 ) where
     P: Into<Paint_Properties>,
 {
@@ -106,7 +107,7 @@ pub fn render_text_ws<P>(
     text: &Text,
     paint_props: P,
     world_transform: &Transform2D,
-    camera: &Transform2D,
+    camera: &Camera,
 ) where
     P: Into<Paint_Properties>,
 {
@@ -127,7 +128,7 @@ pub fn render_vbuf_ws(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
-    camera: &Transform2D,
+    camera: &Camera,
 ) {
     trace!("render_vbuf_ws");
     backend::render_vbuf_ws(window, vbuf, transform, camera);
@@ -137,7 +138,7 @@ pub fn render_vbuf_ws_with_texture(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
     transform: &Transform2D,
-    camera: &Transform2D,
+    camera: &Camera,
     texture: &Texture,
 ) {
     trace!("render_vbuf_ws_with_texture");

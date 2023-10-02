@@ -9,6 +9,7 @@ use inle_math::shapes::{Arrow, Circle, Line};
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window;
+use inle_win::window::Camera;
 use std::convert::TryInto;
 
 // @Refactoring: maybe we should not have a monolithic function on the engine side,
@@ -22,6 +23,7 @@ pub fn update_debug(
     fps_counter: &inle_debug::fps::Fps_Counter,
     input_state: &inle_input::input_state::Input_State,
     phys_world: &inle_physics::phys_world::Physics_World,
+    camera: &Camera,
 ) {
     // Overlays
     let display_overlays = cvars.debug.display_overlays.read(config);
@@ -60,7 +62,7 @@ pub fn update_debug(
             debug_systems.debug_ui.get_overlay(sid!("mouse")),
             painter,
             window,
-            None,
+            camera,
             input_state,
         );
     }
@@ -104,14 +106,13 @@ pub fn update_debug(
 
     let draw_grid = cvars.debug.draw_debug_grid.read(config);
     if draw_grid {
-        let camera_xform = Transform2D::default();
         let square_size = cvars.debug.debug_grid_square_size.read(config);
         let opacity = cvars.debug.debug_grid_opacity.read(config);
         let font_size = cvars.debug.debug_grid_font_size.read(config);
         let win_size = window::get_window_real_size(window);
         debug_draw_grid(
             &mut debug_systems.global_painter,
-            &camera_xform,
+            &camera.transform,
             win_size,
             square_size,
             opacity as _,
@@ -210,7 +211,7 @@ fn update_mouse_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
     painter: &mut Debug_Painter,
     window: &Render_Window_Handle,
-    camera: Option<Transform2D>,
+    camera: &Camera,
     input_state: &inle_input::input_state::Input_State,
 ) {
     let (win_w, win_h) = window::get_window_target_size(window);
@@ -225,15 +226,13 @@ fn update_mouse_debug_overlay(
     debug_overlay
         .add_line(&format!("s {},{}", pos.x, pos.y))
         .with_color(colors::rgba(220, 220, 220, 220));
-    if let Some(camera) = camera {
-        let mpos = Vec2i::from(Vec2f::from(mouse::raw_mouse_pos(
-            &input_state.raw.mouse_state,
-        )));
-        let wpos = render_window::mouse_pos_in_world(window, mpos, &camera);
-        debug_overlay
-            .add_line(&format!("w {:.2},{:.2}", wpos.x, wpos.y,))
-            .with_color(colors::rgba(200, 200, 200, 220));
-    }
+    let mpos = Vec2i::from(Vec2f::from(mouse::raw_mouse_pos(
+        &input_state.raw.mouse_state,
+    )));
+    let wpos = render_window::mouse_pos_in_world(window, mpos, &camera);
+    debug_overlay
+        .add_line(&format!("w {:.2},{:.2}", wpos.x, wpos.y,))
+        .with_color(colors::rgba(200, 200, 200, 220));
 
     let color = colors::rgba(255, 255, 255, 150);
     let from_horiz = Vec2f::from(v2!(-win_w / 2, pos.y - win_h / 2));

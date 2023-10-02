@@ -1,6 +1,8 @@
 use crate::render_window::Render_Window_Handle;
 use inle_math::matrix::Matrix3;
+use inle_math::rect::Recti;
 use inle_math::transform::Transform2D;
+use inle_win::window::Camera;
 
 #[cfg(feature = "gfx-null")]
 pub mod null;
@@ -154,24 +156,20 @@ pub fn set_uniform<T: Uniform_Value>(shader: &mut Shader, name: &std::ffi::CStr,
 }
 
 #[inline]
-pub fn get_mvp_matrix(
-    window: &Render_Window_Handle,
-    transform: &Transform2D,
-    camera: &Transform2D,
-) -> Matrix3<f32> {
-    get_vp_matrix(window, camera) * transform.get_matrix()
+pub fn get_mvp_matrix(transform: &Transform2D, camera: &Camera) -> Matrix3<f32> {
+    get_vp_matrix(camera) * transform.get_matrix()
 }
 
 #[inline]
-pub fn get_vp_matrix(window: &Render_Window_Handle, camera: &Transform2D) -> Matrix3<f32> {
-    let (width, height) = inle_win::window::get_window_target_size(window);
-    let view = get_view_matrix(camera);
+pub fn get_vp_matrix(camera: &Camera) -> Matrix3<f32> {
+    let view_rect = inle_win::window::get_camera_viewport(camera);
+    let view = get_view_matrix(&camera.transform);
     let projection = Matrix3::new(
-        2. / (width as f32 * camera.scale().x),
+        2. / view_rect.width,
         0.,
         0.,
         0.,
-        -2. / (height as f32 * camera.scale().y),
+        -2. / view_rect.height,
         0.,
         0.,
         0.,

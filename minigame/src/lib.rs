@@ -59,6 +59,13 @@ pub unsafe extern "C" fn game_update(
     let game_res = &mut *game_res;
 
     let t_before_work = std::time::Instant::now();
+
+    inle_diagnostics::prelude::DEBUG_TRACERS
+        .lock()
+        .unwrap()
+        .values_mut()
+        .for_each(|t| t.lock().unwrap().start_frame());
+
     {
         trace!("game_update");
 

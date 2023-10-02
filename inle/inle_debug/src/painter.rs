@@ -9,6 +9,7 @@ use inle_math::rect::{Rect, Rectf};
 use inle_math::shapes::{Arrow, Circle, Line};
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
+use inle_win::window::Camera;
 use std::convert::TryFrom;
 
 #[derive(Default)]
@@ -128,11 +129,11 @@ impl Debug_Painter {
         &self,
         window: &mut Render_Window_Handle,
         gres: &mut res::Gfx_Resources,
-        camera: &Transform2D,
+        camera: &Camera,
     ) {
         trace!("painter::draw");
 
-        let visible_viewport = inle_win::window::get_camera_viewport(window, camera);
+        let visible_viewport = inle_win::window::get_camera_viewport(camera);
 
         let tot_circle_points_needed = 3 * self
             .circles
@@ -329,7 +330,7 @@ fn draw_text(
     font: &Font,
     font_size: u16,
     props: &Paint_Properties,
-    camera: &Transform2D,
+    camera: &Camera,
     visible_viewport: &Rectf,
 ) {
     // @Speed: batch the texts!

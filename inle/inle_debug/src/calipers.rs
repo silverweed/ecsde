@@ -6,6 +6,7 @@ use inle_input::mouse;
 use inle_math::shapes::Arrow;
 use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
+use inle_win::window::Camera;
 
 // Measures distances
 #[derive(Default)]
@@ -18,7 +19,7 @@ impl Debug_Calipers {
     pub fn start_measuring_dist(
         &mut self,
         window: &Render_Window_Handle,
-        camera: &Transform2D,
+        camera: &Camera,
         input_state: &Input_State,
     ) {
         let mpos = Vec2i::from(Vec2f::from(mouse::raw_mouse_pos(
@@ -37,7 +38,7 @@ impl Debug_Calipers {
         &self,
         window: &Render_Window_Handle,
         painter: &mut Debug_Painter,
-        camera: &Transform2D,
+        camera: &Camera,
         input_state: &Input_State,
     ) {
         if !self.dragging {
@@ -49,7 +50,7 @@ impl Debug_Calipers {
         )));
         let end_world_pos = render_window::unproject_screen_pos(end_screen_pos, window, camera);
         let delta = end_world_pos - self.start_world_pos;
-        let scale = camera.scale().x;
+        let scale = camera.transform.scale().x;
         let arrow = Arrow {
             center: self.start_world_pos,
             direction: delta,
