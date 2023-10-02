@@ -32,7 +32,7 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
             phase.update(args);
         }
 
-        if let Some(phase) = self.current_phase() {
+        if let Some(phase) = self.current_phase_mut() {
             match phase.update(args) {
                 Phase_Transition::None => {}
                 Phase_Transition::Push(new_phase) => self.push_phase(new_phase, args),
@@ -49,8 +49,18 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
         false
     }
 
-    pub fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Phase_Args) {
+    pub fn draw(&self, args: &mut Phase_Args) {
+        for (_, phase) in &self.persistent_phases {
+            phase.draw(args);
+        }
+
         if let Some(phase) = self.current_phase() {
+            phase.draw(args);
+        }
+    }
+
+    pub fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Phase_Args) {
+        if let Some(phase) = self.current_phase_mut() {
             phase.handle_actions(actions, args);
         }
 
@@ -85,10 +95,20 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
     }
 
     #[inline]
-    fn current_phase(&mut self) -> Option<&mut dyn Game_Phase<Args = Phase_Args>> {
+    fn current_phase(&self) -> Option<&dyn Game_Phase<Args = Phase_Args>> {
         let len = self.phase_stack.len();
         if len > 0 {
-            Some(&mut **self.get_phase(self.phase_stack[len - 1]))
+            Some(&**self.get_phase(self.phase_stack[len - 1]))
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn current_phase_mut(&mut self) -> Option<&mut dyn Game_Phase<Args = Phase_Args>> {
+        let len = self.phase_stack.len();
+        if len > 0 {
+            Some(&mut **self.get_phase_mut(self.phase_stack[len - 1]))
         } else {
             None
         }
@@ -103,14 +123,23 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
     }
 
     pub fn push_phase(&mut self, phase_id: Phase_Id, args: &mut Phase_Args) {
-        if let Some(s) = self.current_phase() {
+        if let Some(s) = self.current_phase_mut() {
             s.on_pause(args);
         }
-        self.get_phase(phase_id).on_start(args);
+        self.get_phase_mut(phase_id).on_start(args);
         self.phase_stack.push(phase_id);
     }
 
-    fn get_phase(&mut self, phase_id: Phase_Id) -> &mut Box<dyn Game_Phase<Args = Phase_Args>> {
+    fn get_phase(&self, phase_id: Phase_Id) -> &Box<dyn Game_Phase<Args = Phase_Args>> {
+        let new_phase_idx = self
+            .phases
+            .iter()
+            .position(|(id, _)| *id == phase_id)
+            .unwrap();
+        &self.phases[new_phase_idx].1
+    }
+
+    fn get_phase_mut(&mut self, phase_id: Phase_Id) -> &mut Box<dyn Game_Phase<Args = Phase_Args>> {
         let new_phase_idx = self
             .phases
             .iter()
@@ -121,31 +150,31 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
 
     fn pop_phase(&mut self, args: &mut Phase_Args) {
         if let Some(prev_phase_id) = self.phase_stack.pop() {
-            self.get_phase(prev_phase_id).on_end(args);
+            self.get_phase_mut(prev_phase_id).on_end(args);
         } else {
             lerr!("Tried to pop phase, but phase stack is empty!");
         }
 
-        if let Some(phase) = self.current_phase() {
+        if let Some(phase) = self.current_phase_mut() {
             phase.on_resume(args);
         }
     }
 
     fn replace_phase(&mut self, phase_id: Phase_Id, args: &mut Phase_Args) {
         if let Some(prev_phase) = self.phase_stack.pop() {
-            self.get_phase(prev_phase).on_end(args);
+            self.get_phase_mut(prev_phase).on_end(args);
         }
 
-        self.get_phase(phase_id).on_start(args);
+        self.get_phase_mut(phase_id).on_start(args);
         self.phase_stack.push(phase_id);
     }
 
     fn flush_all_and_replace(&mut self, phase_id: Phase_Id, args: &mut Phase_Args) {
         while let Some(prev_phase) = self.phase_stack.pop() {
-            self.get_phase(prev_phase).on_end(args);
+            self.get_phase_mut(prev_phase).on_end(args);
         }
 
-        self.get_phase(phase_id).on_start(args);
+        self.get_phase_mut(phase_id).on_start(args);
         self.phase_stack.push(phase_id);
     }
 }

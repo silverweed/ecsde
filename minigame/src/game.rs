@@ -362,10 +362,12 @@ fn handle_core_actions(
 pub fn update(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     inle_gfx::render::batcher::clear_batches(&mut game_state.batches);
 
-    let mut args = Phase_Args::new(game_state, game_res);
-    let should_quit = game_state.phase_mgr.update(&mut args);
-    if should_quit {
-        game_state.should_quit = should_quit;
+    if !game_state.time.paused {
+        let mut args = Phase_Args::new(game_state, game_res);
+        let should_quit = game_state.phase_mgr.update(&mut args);
+        if should_quit {
+            game_state.should_quit = should_quit;
+        }
     }
 }
 
@@ -388,8 +390,12 @@ pub fn render(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     inle_gfx::render_window::set_clear_color(win, clear_color);
     inle_gfx::render_window::clear(win);
 
+    let mut args = Phase_Args::new(game_state, game_res);
+    game_state.phase_mgr.draw(&mut args);
+
     let cam_xform = inle_math::transform::Transform2D::default();
     let draw_params = inle_gfx::render::batcher::Batcher_Draw_Params::default();
+    let win = &mut game_state.window;
     inle_gfx::render::batcher::draw_batches(
         win,
         &game_res.gfx,

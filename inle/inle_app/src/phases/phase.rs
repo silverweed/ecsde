@@ -34,6 +34,7 @@ pub trait Game_Phase {
     fn on_end(&mut self, _args: &mut Self::Args) {}
 
     fn update(&mut self, _args: &mut Self::Args) -> Phase_Transition;
+    fn draw(&self, _args: &mut Self::Args) {}
 
     fn handle_actions(&mut self, _actions: &[Game_Action], _args: &mut Self::Args) {}
 }
@@ -44,6 +45,7 @@ pub trait Persistent_Game_Phase {
     fn on_start(&mut self, _args: &mut Self::Args) {}
     fn on_end(&mut self, _args: &mut Self::Args) {}
     fn update(&mut self, _args: &mut Self::Args) {}
+    fn draw(&self, _args: &mut Self::Args) {}
 
     fn handle_actions(&mut self, _actions: &[Game_Action], _args: &mut Self::Args) {}
 }

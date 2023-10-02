@@ -147,7 +147,7 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Interna
             cld2: b.handle,
             info: Collision_Info {
                 normal,
-                penetration: x_overlap,
+                penetration: x_overlap.abs(),
             },
         })
     } else {

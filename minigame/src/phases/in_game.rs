@@ -147,11 +147,16 @@ impl Game_Phase for In_Game {
 
         self.update_phys_world(gs);
 
+        Phase_Transition::None
+    }
+
+    fn draw(&self, args: &mut Self::Args) {
+        let mut game_state = args.game_state_mut();
+        let gs = game_state.deref_mut();
+
         for entity in &self.entities {
             entity.draw(&mut gs.window, &mut gs.batches);
         }
-
-        Phase_Transition::None
     }
 }
 
@@ -266,7 +271,7 @@ fn create_terrain(
     // Seems related to detect_rect_rect giving the wrong normal in the case of dynamic player vs static terrain.
     // Oddly, if you do static player vs dynamic terrain it works fine.
     // Basically it only works properly if the detection is done with (a = terrain, b = player) and not the other way around.
-    terrain.register_to_physics(phys_world, &phys_data, GCL::Terrain, Phys_Type::Dynamic);
+    terrain.register_to_physics(phys_world, &phys_data, GCL::Terrain, Phys_Type::Static);
 
     terrain
 }
