@@ -4,6 +4,7 @@ use crate::entity::{
 };
 use crate::game::Game_State;
 use crate::sprites::{self as anim_sprites, Anim_Sprite};
+use inle_input::input_state::Action_Kind;
 use inle_app::phases::{Game_Phase, Phase_Id, Phase_Transition};
 use inle_cfg::Cfg_Var;
 use inle_core::env::Env_Info;
@@ -24,9 +25,11 @@ use std::time::Duration;
 
 struct Player_Cfg {
     pub accel: Cfg_Var<f32>,
-    pub horiz_max_speed: Cfg_Var<f32>,
-    pub vert_max_speed: Cfg_Var<f32>,
-    pub dampening: Cfg_Var<f32>,
+    //pub horiz_max_speed: Cfg_Var<f32>,
+    //pub vert_max_speed: Cfg_Var<f32>,
+    pub horiz_dampening: Cfg_Var<f32>,
+    pub ascending_vert_dampening: Cfg_Var<f32>,
+    pub descending_vert_dampening: Cfg_Var<f32>,
     pub gravity: Cfg_Var<f32>,
     pub jump_impulse: Cfg_Var<f32>,
 }
@@ -34,18 +37,22 @@ struct Player_Cfg {
 impl Player_Cfg {
     pub fn new(cfg: &inle_cfg::Config) -> Self {
         let accel = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/acceleration", cfg);
-        let horiz_max_speed =
-            inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/horiz_max_speed", cfg);
-        let vert_max_speed =
-            inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/vert_max_speed", cfg);
-        let dampening = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/dampening", cfg);
+    //    let horiz_max_speed =
+    //        inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/horiz_max_speed", cfg);
+    //    let vert_max_speed =
+    //        inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/vert_max_speed", cfg);
+        let horiz_dampening = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/horiz_dampening", cfg);
+        let ascending_vert_dampening = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/ascending_vert_dampening", cfg);
+        let descending_vert_dampening = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/descending_vert_dampening", cfg);
         let gravity = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/gravity", cfg);
         let jump_impulse = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/jump_impulse", cfg);
         Self {
             accel,
-            horiz_max_speed,
-            vert_max_speed,
-            dampening,
+            //horiz_max_speed,
+            //vert_max_speed,
+            horiz_dampening,
+            ascending_vert_dampening,
+            descending_vert_dampening,
             gravity,
             jump_impulse,
         }
@@ -180,7 +187,11 @@ fn create_collision_matrix() -> inle_physics::layers::Collision_Matrix {
 impl In_Game {
     pub fn new(cfg: &inle_cfg::Config) -> Self {
         let collision_matrix = create_collision_matrix();
-        let phys_settings = physics::Physics_Settings { collision_matrix };
+        let positional_correction_percent = Cfg_Var::new("game/physics/positional_correction_percent", cfg);
+        let phys_settings = physics::Physics_Settings {
+            collision_matrix, 
+            positional_correction_percent,
+        };
 
         Self {
             player_cfg: Player_Cfg::new(cfg),
@@ -216,6 +227,7 @@ impl In_Game {
             &self.phys_settings,
             None,
             &mut game_state.frame_alloc,
+            &game_state.config,
             #[cfg(debug_assertions)]
             &mut debug_data,
         );
@@ -254,22 +266,39 @@ impl In_Game {
         let mut accel = movement * accel_magn;
 
         // gravity
-        let g = p_cfg.gravity.read(cfg);
-        accel += v2!(0., g);
-
-        linfo_once!("dt", "{}", dt);
+        let physw = &game_state.phys_world;
+        let cld = physw.get_first_rigidbody_collider(player.phys_body).unwrap();
+        let mut collided = physw.get_collisions(cld.handle).iter().filter_map(|data| Some((physw.get_collider(data.other_collider)?, data.info.normal)));
+        let collides_with_ground = collided.find(|(other, normal)|
+                                                        normal.y < -0.9 && other.layer == GCL::Terrain as u8).is_some();
+        if !collides_with_ground {
+            let g = p_cfg.gravity.read(cfg);
+            accel += v2!(0., g);
+        }
 
         player.velocity += accel * dt;
 
+        // jump
+        if input.processed.game_actions.contains(&(sid!("jump"), Action_Kind::Pressed)) {
+            let jump_impulse = p_cfg.jump_impulse.read(cfg);
+            player.velocity += v2!(0., -jump_impulse);
+        }
+
         // dampening
-        let dampening = p_cfg.dampening.read(cfg);
-        let vel_norm = player.velocity.normalized_or_zero();
-        let speed = player.velocity.magnitude();
-        player.velocity -= vel_norm * dampening * speed * dt;
+        let horiz_dampening = p_cfg.horiz_dampening.read(cfg);
+        let vert_dampening = if player.velocity.y > 0. {
+            p_cfg.descending_vert_dampening.read(cfg)
+        } else {
+            p_cfg.ascending_vert_dampening.read(cfg)
+        };
+        player.velocity.x -= player.velocity.x * horiz_dampening * dt;
+        player.velocity.y -= player.velocity.y * vert_dampening * dt;
 
         player.transform.translate_v(player.velocity * dt);
     }
 }
+
+const PHYS_RESTITUTION: f32 = 1.0;
 
 fn create_terrain(
     env: &Env_Info,
@@ -284,14 +313,9 @@ fn create_terrain(
 
     let phys_data = Phys_Data::default()
         .with_infinite_mass()
-        .with_restitution(0.9)
+        .with_restitution(PHYS_RESTITUTION)
         .with_static_friction(0.5)
         .with_dyn_friction(0.3);
-    // FIXME: if Phys_Type is set to Static, weird things happen on collision.
-    // Figure out why that happens.
-    // Seems related to detect_rect_rect giving the wrong normal in the case of dynamic player vs static terrain.
-    // Oddly, if you do static player vs dynamic terrain it works fine.
-    // Basically it only works properly if the detection is done with (a = terrain, b = player) and not the other way around.
     terrain.register_to_physics(phys_world, &phys_data, GCL::Terrain, Phys_Type::Static);
 
     terrain
@@ -326,7 +350,7 @@ fn create_mountain(
 
     let phys_data = Phys_Data::default()
         .with_infinite_mass()
-        .with_restitution(0.9)
+        .with_restitution(PHYS_RESTITUTION)
         .with_static_friction(0.5)
         .with_dyn_friction(0.3);
     mountain.register_to_physics(phys_world, &phys_data, GCL::Terrain, Phys_Type::Static);
@@ -356,7 +380,7 @@ fn create_player(
     let mut player = Entity::new(sprite);
     let phys_data = Phys_Data::default()
         .with_mass(1.)
-        .with_restitution(0.9)
+        .with_restitution(PHYS_RESTITUTION)
         .with_static_friction(0.5)
         .with_dyn_friction(0.3);
     player.register_to_physics(phys_world, &phys_data, GCL::Player, Phys_Type::Dynamic);

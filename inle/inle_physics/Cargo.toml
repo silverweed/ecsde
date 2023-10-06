@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 inle_alloc = { path = "../inle_alloc" }
+inle_cfg = { path = "../inle_cfg" }
 inle_diagnostics = { path = "../inle_diagnostics" }
 inle_events = { path = "../inle_events" }
 inle_math = { path = "../inle_math" }

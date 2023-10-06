@@ -4,6 +4,7 @@ use super::layers::Collision_Matrix;
 use super::phys_world::{Collider_Handle, Collision_Data, Collision_Info, Physics_World};
 use super::spatial::Spatial_Accelerator;
 use crate::collider::{Collider, Collision_Shape, Phys_Data};
+use inle_cfg::{Config, Cfg_Var};
 use inle_alloc::temp::{excl_temp_array, Temp_Allocator};
 use inle_events::evt_register::{Event, Event_Register};
 use inle_math::math::clamp;
@@ -16,9 +17,19 @@ impl Event for Evt_Collision_Happened {
     type Args = Collision_Data;
 }
 
-#[derive(Default)]
 pub struct Physics_Settings {
     pub collision_matrix: Collision_Matrix,
+    // Should be within (0, 1]
+    pub positional_correction_percent: Cfg_Var<f32>,
+}
+
+impl Default for Physics_Settings {
+    fn default() -> Self {
+        Self {
+            collision_matrix: Collision_Matrix::default(),
+            positional_correction_percent: Cfg_Var::new_from_val(0.5),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -360,7 +371,7 @@ fn solve_collision_velocities(a: &mut Collider, b: &mut Collider, normal: Vec2f)
     b.velocity += 1. * b_phys.inv_mass * friction_impulse;
 }
 
-fn positional_correction(a: &mut Collider, b: &mut Collider, normal: Vec2f, penetration: f32) {
+fn positional_correction(a: &mut Collider, b: &mut Collider, normal: Vec2f, penetration: f32, settings: &Physics_Settings, cfg: &Config) {
     trace!("physics::positional_correction");
 
     let a_inv_mass = a.phys_data.unwrap().inv_mass;
@@ -371,7 +382,7 @@ fn positional_correction(a: &mut Collider, b: &mut Collider, normal: Vec2f, pene
         return;
     }
 
-    let correction_perc = 0.2;
+    let correction_perc = settings.positional_correction_percent.read(cfg);
     let slop = 0.01;
 
     let correction =
@@ -381,7 +392,7 @@ fn positional_correction(a: &mut Collider, b: &mut Collider, normal: Vec2f, pene
     b.position += b_inv_mass * correction;
 }
 
-fn solve_collisions(phys_world: &mut Physics_World, infos: &[Collision_Info_Internal]) {
+fn solve_collisions(phys_world: &mut Physics_World, settings: &Physics_Settings, cfg: &Config, infos: &[Collision_Info_Internal]) {
     trace!("physics::solve_collisions");
 
     for info in infos {
@@ -399,7 +410,7 @@ fn solve_collisions(phys_world: &mut Physics_World, infos: &[Collision_Info_Inte
         let (cld1, cld2) = phys_world.get_collider_pair_mut(cld1, cld2).unwrap();
         if cld1.phys_data.is_some() && cld2.phys_data.is_some() {
             solve_collision_velocities(cld1, cld2, normal);
-            positional_correction(cld1, cld2, normal, penetration);
+            positional_correction(cld1, cld2, normal, penetration, settings, cfg);
         }
     }
 }
@@ -410,6 +421,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
     settings: &Physics_Settings,
     evt_register: Option<&mut Event_Register>,
     temp_alloc: &mut Temp_Allocator,
+    config: &Config,
     #[cfg(debug_assertions)] debug_data: &mut Collision_System_Debug_Data,
 ) where
     T_Spatial_Accelerator: Spatial_Accelerator<Collider_Handle>,
@@ -434,7 +446,7 @@ pub fn update_collisions<T_Spatial_Accelerator>(
         });
     }
 
-    solve_collisions(phys_world, &infos);
+    solve_collisions(phys_world, settings, config, &infos);
 
     // Note: we do this last to avoid polluting the cache (we don't know how many observers are
     // subscribed to this event).

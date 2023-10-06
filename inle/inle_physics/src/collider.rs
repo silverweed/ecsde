@@ -76,7 +76,6 @@ pub struct Collider {
     pub is_static: bool,
     pub layer: Collision_Layer,
 
-    // XXX: remove?
     pub offset: Vec2f,
 
     // XXX: it'd be nice to get rid of this
