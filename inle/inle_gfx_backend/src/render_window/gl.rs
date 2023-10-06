@@ -6,7 +6,6 @@ use gl::types::*;
 use inle_alloc::temp;
 use inle_common::colors::Color;
 use inle_math::rect::{Rect, Rectf, Recti};
-use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::{Camera, Window_Handle};
 use std::collections::HashMap;

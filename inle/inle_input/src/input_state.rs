@@ -220,7 +220,7 @@ fn handle_axis_released(
     }
 }
 
-#[inline(always)]
+#[inline]
 fn remove_modifier(
     original: Input_Action_Modifiers,
     to_remove: keyboard::Key,
@@ -244,11 +244,11 @@ fn process_event_game_actions(
                 handle_actions(
                     &mut processed.game_actions,
                     Action_Kind::Pressed,
-                    names.into_iter().cloned(),
+                    names.iter().cloned(),
                 );
             }
             if let Some(names) = bindings.get_key_emulated_axes(code) {
-                handle_axis_pressed(&mut processed.virtual_axes, names.into_iter().cloned());
+                handle_axis_pressed(&mut processed.virtual_axes, names.iter().cloned());
             }
         }
         Input_Raw_Event::Key_Released { code } => {
@@ -257,11 +257,11 @@ fn process_event_game_actions(
                 handle_actions(
                     &mut processed.game_actions,
                     Action_Kind::Released,
-                    names.into_iter().cloned(),
+                    names.iter().cloned(),
                 );
             }
             if let Some(names) = bindings.get_key_emulated_axes(code) {
-                handle_axis_released(&mut processed.virtual_axes, names.into_iter().cloned());
+                handle_axis_released(&mut processed.virtual_axes, names.iter().cloned());
             }
         }
         Input_Raw_Event::Joy_Button_Pressed {
@@ -291,11 +291,11 @@ fn process_event_game_actions(
                 handle_actions(
                     &mut processed.game_actions,
                     Action_Kind::Pressed,
-                    names.into_iter().cloned(),
+                    names.iter().cloned(),
                 );
             }
             if let Some(names) = bindings.get_mouse_emulated_axes(button) {
-                handle_axis_pressed(&mut processed.virtual_axes, names.into_iter().cloned());
+                handle_axis_pressed(&mut processed.virtual_axes, names.iter().cloned());
             }
         }
         Input_Raw_Event::Mouse_Button_Released { button } => {
@@ -303,11 +303,11 @@ fn process_event_game_actions(
                 handle_actions(
                     &mut processed.game_actions,
                     Action_Kind::Released,
-                    names.into_iter().cloned(),
+                    names.iter().cloned(),
                 );
             }
             if let Some(names) = bindings.get_mouse_emulated_axes(button) {
-                handle_axis_released(&mut processed.virtual_axes, names.into_iter().cloned());
+                handle_axis_released(&mut processed.virtual_axes, names.iter().cloned());
             }
         }
         Input_Raw_Event::Mouse_Wheel_Scrolled { delta } => {
@@ -316,11 +316,11 @@ fn process_event_game_actions(
                 handle_actions(
                     &mut processed.game_actions,
                     Action_Kind::Pressed,
-                    names.into_iter().cloned(),
+                    names.iter().cloned(),
                 );
             }
             if let Some(names) = bindings.get_mouse_wheel_emulated_axes(delta > 0.) {
-                handle_axis_pressed(&mut processed.virtual_axes, names.into_iter().cloned());
+                handle_axis_pressed(&mut processed.virtual_axes, names.iter().cloned());
             }
         }
         _ => {

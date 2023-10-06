@@ -60,28 +60,28 @@ pub fn recreate_window<W: AsMut<Window_Handle>>(window: &mut W) {
     backend::recreate_window(window.as_mut());
 }
 
-#[inline(always)]
+#[inline]
 pub fn has_vsync<W: AsRef<Window_Handle>>(window: &W) -> bool {
     backend::has_vsync(window.as_ref())
 }
 
-#[inline(always)]
+#[inline]
 pub fn set_vsync<W: AsMut<Window_Handle>>(window: &mut W, vsync: bool) {
     backend::set_vsync(window.as_mut(), vsync);
 }
 
-#[inline(always)]
+#[inline]
 pub fn display<W: AsMut<Window_Handle>>(window: &mut W) {
     backend::display(window.as_mut());
 }
 
-#[inline(always)]
+#[inline]
 pub fn get_window_target_size<W: AsRef<Window_Handle>>(window: &W) -> (u32, u32) {
     trace!("get_window_target_size");
     backend::get_window_target_size(window.as_ref())
 }
 
-#[inline(always)]
+#[inline]
 pub fn get_window_real_size<W: AsRef<Window_Handle>>(window: &W) -> (u32, u32) {
     trace!("get_window_real_size");
     backend::get_window_real_size(window.as_ref())
@@ -89,7 +89,6 @@ pub fn get_window_real_size<W: AsRef<Window_Handle>>(window: &W) -> (u32, u32) {
 
 #[inline]
 pub fn get_camera_viewport(camera: &Camera) -> Rectf {
-    let viewport = camera.size;
     let mut visible = Rect::from_topleft_size(
         camera.transform.position(),
         camera.size * camera.transform.scale(),
@@ -98,12 +97,12 @@ pub fn get_camera_viewport(camera: &Camera) -> Rectf {
     visible
 }
 
-#[inline(always)]
+#[inline]
 pub fn prepare_poll_events<W: AsMut<Window_Handle>>(window: &mut W) {
     backend::prepare_poll_events(window.as_mut())
 }
 
-#[inline(always)]
+#[inline]
 pub fn poll_event<W: AsMut<Window_Handle>>(window: &mut W) -> Option<Event> {
     backend::poll_event(window.as_mut())
 }
@@ -144,7 +143,7 @@ pub fn correct_mouse_pos_in_window<W: AsRef<Window_Handle>>(window: &W, raw_pos:
     Vec2i::new(x as _, y as _)
 }
 
-#[inline(always)]
+#[inline]
 pub fn set_key_repeat_enabled<W: AsMut<Window_Handle>>(window: &mut W, enabled: bool) {
     backend::set_key_repeat_enabled(window.as_mut(), enabled);
 }

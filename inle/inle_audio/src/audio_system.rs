@@ -99,7 +99,7 @@ impl Audio_System {
 
             Playing_Sound_Slot_Res::No_Free_Slot => {
                 // replace first sound (TODO: we might want a better approach, like LRU or something)
-                if self.sounds_playing.len() > 0 {
+                if !self.sounds_playing.is_empty() {
                     let old_gen = self.sounds_playing[0].gen;
                     self.sounds_playing[0] = Playing_Sound {
                         sound: Some(sound),

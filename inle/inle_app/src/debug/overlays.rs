@@ -229,7 +229,7 @@ fn update_mouse_debug_overlay(
     let mpos = Vec2i::from(Vec2f::from(mouse::raw_mouse_pos(
         &input_state.raw.mouse_state,
     )));
-    let wpos = render_window::mouse_pos_in_world(window, mpos, &camera);
+    let wpos = render_window::mouse_pos_in_world(window, mpos, camera);
     debug_overlay
         .add_line(&format!("w {:.2},{:.2}", wpos.x, wpos.y,))
         .with_color(colors::rgba(200, 200, 200, 220));

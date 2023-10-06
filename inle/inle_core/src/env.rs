@@ -36,7 +36,10 @@ impl Env_Info {
             working_dir.pop();
             working_dir.pop();
         } else if matches!(cur_dir, Some("deps"))
-            && matches!(parent_dir, Some("debug" | "release" | "profile" | "shipping"))
+            && matches!(
+                parent_dir,
+                Some("debug" | "release" | "profile" | "shipping")
+            )
         {
             working_dir.pop();
             working_dir.pop();

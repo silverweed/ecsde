@@ -47,7 +47,7 @@ fn max_texture_units() -> usize {
     }
 }
 
-#[inline(always)]
+#[inline]
 fn assert_shader_in_use(shader: &Shader) {
     #[cfg(debug_assertions)]
     {
@@ -347,8 +347,7 @@ pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) 
         glcheck!(gl::CompileShader(vertex_shader));
 
         const INFO_LOG_CAP: GLint = 512;
-        let mut info_log = Vec::with_capacity(INFO_LOG_CAP as usize);
-        info_log.set_len(INFO_LOG_CAP as usize - 1); // subtract 1 to skip the trailing null character
+        let mut info_log = [0; INFO_LOG_CAP as usize];
 
         let mut success = gl::FALSE as GLint;
         glcheck!(gl::GetShaderiv(
@@ -360,7 +359,7 @@ pub fn new_shader_internal(vert_src: &[u8], frag_src: &[u8], shader_name: &str) 
         if success != gl::TRUE.into() {
             glcheck!(gl::GetShaderInfoLog(
                 vertex_shader,
-                INFO_LOG_CAP,
+                INFO_LOG_CAP - 1,
                 &mut info_len,
                 info_log.as_mut_ptr() as *mut GLchar,
             ));
@@ -736,7 +735,7 @@ pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
     vbuf.primitive_type
 }
 
-#[inline(always)]
+#[inline]
 fn new_vbuf_internal(
     window: &mut Render_Window_Handle,
     primitive: Primitive_Type,
@@ -884,7 +883,7 @@ pub fn vbuf_max_vertices(vbuf: &Vertex_Buffer) -> u32 {
     vbuf.max_vertices
 }
 
-#[inline(always)]
+#[inline]
 pub fn set_vbuf_cur_vertices(vbuf: &mut Vertex_Buffer, cur_vertices: u32) {
     check_vbuf_valid(vbuf);
     vbuf.vertices
@@ -942,7 +941,7 @@ pub fn render_vbuf_ws(
         return;
     }
 
-    use_vbuf_ws_shader(window, transform, camera, window.gl.vbuf_shader);
+    use_vbuf_ws_shader(transform, camera, window.gl.vbuf_shader);
     render_vbuf_internal(window, vbuf);
 }
 
@@ -958,7 +957,7 @@ pub fn render_vbuf_ws_with_texture(
         return;
     }
 
-    use_vbuf_ws_shader(window, transform, camera, window.gl.vbuf_texture_shader);
+    use_vbuf_ws_shader(transform, camera, window.gl.vbuf_texture_shader);
 
     unsafe {
         glcheck!(gl::ActiveTexture(gl::TEXTURE0));
@@ -1479,7 +1478,6 @@ fn use_vbuf_shader(window: &mut Render_Window_Handle, transform: &Transform2D) {
 }
 
 fn use_vbuf_ws_shader(
-    window: &mut Render_Window_Handle,
     transform: &Transform2D,
     camera: &Camera,
     shader: GLuint,

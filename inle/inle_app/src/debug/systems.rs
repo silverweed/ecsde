@@ -29,7 +29,7 @@ impl Debug_Systems {
             inle_cfg::Cfg_Var::<i32>::new("engine/debug/log/hist_size_seconds", cfg).read(cfg);
         let fps = (1000. / ms_per_frame + 0.5) as i32;
         let mut console = console::Console::new();
-        if inle_debug::console::load_console_hist(&mut console, &env).is_ok() {
+        if inle_debug::console::load_console_hist(&mut console, env).is_ok() {
             lok!("Loaded console history");
         }
         Debug_Systems {

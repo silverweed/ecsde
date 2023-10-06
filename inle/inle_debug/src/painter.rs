@@ -33,7 +33,7 @@ impl Debug_Painter {
     where
         T: Into<Paint_Properties>,
     {
-        self.rects.push((size, *transform, props.into()));
+        self.rects.push((size, transform.clone(), props.into()));
     }
 
     // @Consistency: we should allow to pass the transform here like in add_rect
@@ -194,17 +194,17 @@ fn draw_arrow(vbuf: &mut Vertex_Buffer_Triangles, arrow: &Arrow, props: &Paint_P
     // Draw arrow tip
     {
         let v5 = render::new_vertex(
-            m * Vec2f::new(magnitude - arrow.arrow_size * 0.5, -arrow.arrow_size * 0.5),
+            &m * Vec2f::new(magnitude - arrow.arrow_size * 0.5, -arrow.arrow_size * 0.5),
             props.color,
             Vec2f::default(),
         );
         let v6 = render::new_vertex(
-            m * Vec2f::new(magnitude - arrow.arrow_size * 0.5, arrow.arrow_size * 0.5),
+            &m * Vec2f::new(magnitude - arrow.arrow_size * 0.5, arrow.arrow_size * 0.5),
             props.color,
             Vec2f::default(),
         );
         let v7 = render::new_vertex(
-            m * Vec2f::new(magnitude + arrow.thickness * 0.67, 0.),
+            &m * Vec2f::new(magnitude + arrow.thickness * 0.67, 0.),
             props.color,
             Vec2f::default(),
         );
@@ -227,22 +227,22 @@ fn draw_line_internal(
     let m = Transform2D::from_pos_rot_scale(start, rot, v2!(1., 1.));
 
     let v1 = render::new_vertex(
-        m * Vec2f::new(0., -thickness * 0.5),
+        &m * Vec2f::new(0., -thickness * 0.5),
         props.color,
         Vec2f::default(),
     );
     let v2 = render::new_vertex(
-        m * Vec2f::new(length, -thickness * 0.5),
+        &m * Vec2f::new(length, -thickness * 0.5),
         props.color,
         Vec2f::default(),
     );
     let v3 = render::new_vertex(
-        m * Vec2f::new(length, thickness * 0.5),
+        &m * Vec2f::new(length, thickness * 0.5),
         props.color,
         Vec2f::default(),
     );
     let v4 = render::new_vertex(
-        m * Vec2f::new(0., thickness * 0.5),
+        &m * Vec2f::new(0., thickness * 0.5),
         props.color,
         Vec2f::default(),
     );
@@ -272,11 +272,10 @@ fn draw_rect_internal(
         return;
     }
 
-    let m = *transform;
-    let v1 = render::new_vertex(m * v2!(0., 0.), props.color, v2!(0., 0.));
-    let v2 = render::new_vertex(m * v2!(size.x, 0.), props.color, v2!(0., 0.));
-    let v3 = render::new_vertex(m * size, props.color, v2!(0., 0.));
-    let v4 = render::new_vertex(m * v2!(0., size.y), props.color, v2!(0., 0.));
+    let v1 = render::new_vertex(transform * v2!(0., 0.), props.color, v2!(0., 0.));
+    let v2 = render::new_vertex(transform * v2!(size.x, 0.), props.color, v2!(0., 0.));
+    let v3 = render::new_vertex(transform * size, props.color, v2!(0., 0.));
+    let v4 = render::new_vertex(transform * v2!(0., size.y), props.color, v2!(0., 0.));
 
     render::add_triangle(vbuf, &v1, &v2, &v3);
     render::add_triangle(vbuf, &v3, &v4, &v1);

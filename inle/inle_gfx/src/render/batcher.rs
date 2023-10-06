@@ -116,7 +116,7 @@ pub(super) fn add_texture_ws(
         sprite_batches.push(Sprite {
             tex_rect: *tex_rect,
             color,
-            transform: *transform,
+            transform: transform.clone(),
         });
     }
 }
@@ -129,7 +129,6 @@ pub fn clear_batches(batches: &mut Batches) {
         .for_each(|(_, m)| m.values_mut().for_each(|batch| batch.sprites.clear()));
 }
 
-#[inline(always)]
 /// This returns the vec4 value that will be put into the vertex color.
 /// It contains:
 ///    r: rotation high byte
@@ -551,14 +550,13 @@ fn fill_vertices(
             tex_rect.height as f32 / th,
         );
         let sprite_size = v2!(tex_rect.width as f32, tex_rect.height as f32);
-        let mut render_transform = *transform;
 
         // Note: beware of the order of multiplications!
         // Scaling the local positions must be done BEFORE multiplying the matrix!
-        let p1 = render_transform * (sprite_size * v2!(-0.5, -0.5));
-        let p2 = render_transform * (sprite_size * v2!(0.5, -0.5));
-        let p3 = render_transform * (sprite_size * v2!(0.5, 0.5));
-        let p4 = render_transform * (sprite_size * v2!(-0.5, 0.5));
+        let p1 = transform * (sprite_size * v2!(-0.5, -0.5));
+        let p2 = transform * (sprite_size * v2!(0.5, -0.5));
+        let p3 = transform * (sprite_size * v2!(0.5, 0.5));
+        let p4 = transform * (sprite_size * v2!(-0.5, 0.5));
 
         let sprite_aabb = rect::aabb_of_points(&[p1, p2, p3, p4]);
         if rect::rects_intersection(visible_viewport, &sprite_aabb).is_none() {
@@ -619,11 +617,10 @@ fn fill_shadow_vertices(
             tex_rect.height as f32 / th,
         );
         let sprite_size = v2!(tex_rect.width as f32, tex_rect.height as f32);
-        let render_transform = *transform;
-        let p1 = render_transform * (sprite_size * v2!(-0.5, -0.5));
-        let p2 = render_transform * (sprite_size * v2!(0.5, -0.5));
-        let p3 = render_transform * (sprite_size * v2!(0.5, 0.5));
-        let p4 = render_transform * (sprite_size * v2!(-0.5, 0.5));
+        let p1 = transform * (sprite_size * v2!(-0.5, -0.5));
+        let p2 = transform * (sprite_size * v2!(0.5, -0.5));
+        let p3 = transform * (sprite_size * v2!(0.5, 0.5));
+        let p4 = transform * (sprite_size * v2!(-0.5, 0.5));
 
         let sprite_aabb = rect::aabb_of_points(&[p1, p2, p3, p4]);
         if rect::rects_intersection(visible_viewport, &sprite_aabb).is_none() {
@@ -638,7 +635,7 @@ fn fill_shadow_vertices(
         let mut nearby_point_lights = SmallVec::<[Point_Light; SHADOWS_PER_ENTITY]>::new();
         // @Speed: should lights be spatially accelerated?
         lights.get_all_point_lights_sorted_by_distance_within(
-            render_transform.position(),
+            transform.position(),
             10000.,
             &mut nearby_point_lights,
             SHADOWS_PER_ENTITY,

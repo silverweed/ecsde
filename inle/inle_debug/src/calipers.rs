@@ -4,7 +4,6 @@ use inle_gfx::render_window::{self, Render_Window_Handle};
 use inle_input::input_state::Input_State;
 use inle_input::mouse;
 use inle_math::shapes::Arrow;
-use inle_math::transform::Transform2D;
 use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::Camera;
 

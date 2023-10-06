@@ -214,7 +214,7 @@ impl Debug_Element for Debug_Graph_View {
         let mut vbuf = render::start_draw_linestrip_temp(window, drawn_points.len() as _);
         let mut avg = 0.0;
         let mut vertices = inle_alloc::temp::excl_temp_array(frame_alloc);
-        for (i, &point) in drawn_points.iter().enumerate() {
+        for &point in drawn_points {
             trace!("debug::graph::draw_single_point");
 
             let vpos = self.get_coords_for(point);

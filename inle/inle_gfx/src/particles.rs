@@ -215,7 +215,7 @@ pub fn render_particles(
     let color = emitter.props.color;
 
     let mut vertices = temp::excl_temp_array(frame_alloc);
-    for &transf in &emitter.particles.transforms {
+    for transf in &emitter.particles.transforms {
         let pos = transf.position();
         let s = transf.scale();
         vertices.push(new_vertex(pos + s * v2!(-1.0, -1.0), color, v2!(0., 0.)));

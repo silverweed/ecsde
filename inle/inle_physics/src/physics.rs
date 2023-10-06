@@ -3,7 +3,7 @@
 use super::layers::Collision_Matrix;
 use super::phys_world::{Collider_Handle, Collision_Data, Collision_Info, Physics_World};
 use super::spatial::Spatial_Accelerator;
-use crate::collider::{Collider, Collision_Shape, Phys_Data};
+use crate::collider::{Collider, Collision_Shape};
 use inle_alloc::temp::{excl_temp_array, Temp_Allocator};
 use inle_cfg::{Cfg_Var, Config};
 use inle_events::evt_register::{Event, Event_Register};
@@ -319,8 +319,8 @@ where
 fn solve_collision_velocities(a: &mut Collider, b: &mut Collider, normal: Vec2f) {
     trace!("physics::solve_collisions_velocities");
 
-    let a_phys = a.phys_data.unwrap();
-    let b_phys = b.phys_data.unwrap();
+    let a_phys = a.phys_data.as_ref().unwrap();
+    let b_phys = b.phys_data.as_ref().unwrap();
     if a_phys.inv_mass + b_phys.inv_mass == 0. {
         // Both infinite-mass objects
         return;
@@ -381,8 +381,8 @@ fn positional_correction(
 ) {
     trace!("physics::positional_correction");
 
-    let a_inv_mass = a.phys_data.unwrap().inv_mass;
-    let b_inv_mass = b.phys_data.unwrap().inv_mass;
+    let a_inv_mass = a.phys_data.as_ref().unwrap().inv_mass;
+    let b_inv_mass = b.phys_data.as_ref().unwrap().inv_mass;
 
     if a_inv_mass + b_inv_mass == 0. {
         // Both infinite-mass objects.

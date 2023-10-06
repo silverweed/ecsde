@@ -5,7 +5,7 @@ pub struct Thread_Safe_Ptr<T>(*mut T);
 
 impl<T> Clone for Thread_Safe_Ptr<T> {
     fn clone(&self) -> Self {
-        Self(self.0)
+        *self
     }
 }
 

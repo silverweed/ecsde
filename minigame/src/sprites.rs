@@ -203,11 +203,10 @@ pub fn update_anim_sprites<'a>(
                     sprite.cur_frame_col = 0;
                     sprite.cur_frame_row += 1;
                 }
-                if sprite.cur_frame_row == anim.end.1 {
-                    if sprite.cur_frame_col == anim.end.0 {
-                        sprite.cur_frame_row = anim.start.1;
-                        sprite.cur_frame_col = anim.start.0;
-                    }
+
+                if sprite.cur_frame_row == anim.end.1 && sprite.cur_frame_col == anim.end.0 {
+                    sprite.cur_frame_row = anim.start.1;
+                    sprite.cur_frame_col = anim.start.0;
                 }
 
                 let r = sprite.sprite.rect;

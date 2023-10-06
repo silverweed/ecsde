@@ -124,7 +124,7 @@ impl Physics_World {
     ) -> Physics_Body_Handle {
         let handle = self.new_physics_body();
         for mut cld in clds {
-            cld.phys_data = Some(phys_data);
+            cld.phys_data = Some(phys_data.clone());
             let cld_handle = self.add_collider(cld);
             let body = self.get_physics_body_mut(handle).unwrap();
             body.colliders.push(cld_handle);

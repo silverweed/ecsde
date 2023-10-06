@@ -1,16 +1,19 @@
 // @WaitForStable: make most functions here const when possible.
 
+// XXX: worth it? Measure!
 #[inline(always)]
 pub fn fast_sqrt(n: f32) -> f32 {
     n * fast_invsqrt_unchecked(n)
 }
 
+// XXX: worth it? Measure!
 #[inline(always)]
 pub fn fast_invsqrt(n: f32) -> f32 {
     assert!(n != 0., "fast_invsqrt: argument cannot be 0!");
     fast_invsqrt_unchecked(n)
 }
 
+// XXX: worth it? Measure!
 /// Like fast_invsqrt() but does not check that n is non-zero
 #[inline(always)]
 pub fn fast_invsqrt_unchecked(n: f32) -> f32 {

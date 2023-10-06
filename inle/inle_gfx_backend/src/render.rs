@@ -1,4 +1,3 @@
-use crate::render_window::Render_Window_Handle;
 use inle_math::matrix::Matrix3;
 use inle_math::rect::Recti;
 use inle_math::transform::Transform2D;
@@ -183,14 +182,14 @@ pub fn get_vp_matrix(camera: &Camera) -> Matrix3<f32> {
 /// into a view matrix by setting its scale to 1, 1
 #[inline]
 pub fn get_view_matrix(camera: &Transform2D) -> Matrix3<f32> {
-    let mut view = *camera;
+    let mut view = camera.clone();
     view.set_scale(1., 1.);
     view.inverse().get_matrix()
 }
 
 #[inline]
 pub fn get_inverse_view_matrix(camera: &Transform2D) -> Matrix3<f32> {
-    let mut view = *camera;
+    let mut view = camera.clone();
     view.set_scale(1., 1.);
     view.get_matrix()
 }

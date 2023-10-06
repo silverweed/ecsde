@@ -1,5 +1,5 @@
 use super::layers::Collision_Layer;
-use super::phys_world::{Collider_Handle, Physics_Body_Handle};
+use super::phys_world::Collider_Handle;
 use inle_math::vector::Vec2f;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -24,7 +24,7 @@ impl Default for Collision_Shape {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Phys_Data {
     pub inv_mass: f32,
     pub restitution: f32,

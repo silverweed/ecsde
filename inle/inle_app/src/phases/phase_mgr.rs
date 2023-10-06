@@ -98,7 +98,7 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
     fn current_phase(&self) -> Option<&dyn Game_Phase<Args = Phase_Args>> {
         let len = self.phase_stack.len();
         if len > 0 {
-            Some(&**self.get_phase(self.phase_stack[len - 1]))
+            Some(self.get_phase(self.phase_stack[len - 1]))
         } else {
             None
         }
@@ -108,7 +108,7 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
     fn current_phase_mut(&mut self) -> Option<&mut dyn Game_Phase<Args = Phase_Args>> {
         let len = self.phase_stack.len();
         if len > 0 {
-            Some(&mut **self.get_phase_mut(self.phase_stack[len - 1]))
+            Some(self.get_phase_mut(self.phase_stack[len - 1]))
         } else {
             None
         }
@@ -130,22 +130,22 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
         self.phase_stack.push(phase_id);
     }
 
-    fn get_phase(&self, phase_id: Phase_Id) -> &Box<dyn Game_Phase<Args = Phase_Args>> {
+    fn get_phase(&self, phase_id: Phase_Id) -> &dyn Game_Phase<Args = Phase_Args> {
         let new_phase_idx = self
             .phases
             .iter()
             .position(|(id, _)| *id == phase_id)
             .unwrap();
-        &self.phases[new_phase_idx].1
+        &*self.phases[new_phase_idx].1
     }
 
-    fn get_phase_mut(&mut self, phase_id: Phase_Id) -> &mut Box<dyn Game_Phase<Args = Phase_Args>> {
+    fn get_phase_mut(&mut self, phase_id: Phase_Id) -> &mut dyn Game_Phase<Args = Phase_Args> {
         let new_phase_idx = self
             .phases
             .iter()
             .position(|(id, _)| *id == phase_id)
             .unwrap();
-        &mut self.phases[new_phase_idx].1
+        &mut *self.phases[new_phase_idx].1
     }
 
     fn pop_phase(&mut self, args: &mut Phase_Args) {

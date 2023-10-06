@@ -156,7 +156,7 @@ impl Game_Phase for In_Game {
 
         anim_sprites::update_anim_sprites(
             gs.time.dt(),
-            self.entities.iter_mut().map(|e| &mut e.sprites).flatten(),
+            self.entities.iter_mut().flat_map(|e| &mut e.sprites),
         );
 
         self.update_phys_world(gs);
@@ -287,8 +287,7 @@ impl In_Game {
                 Some((physw.get_collider(data.other_collider)?, data.info.normal))
             });
             let collides_with_ground = collided
-                .find(|(other, normal)| normal.y < -0.9 && other.layer == GCL::Terrain as u8)
-                .is_some();
+                .any(|(other, normal)| normal.y < -0.9 && other.layer == GCL::Terrain as u8);
             if !collides_with_ground {
                 accel += v2!(0., g);
             }
@@ -367,7 +366,7 @@ fn create_mountain(
     sprite.transform.translate(0., y - 2. * h + 6.);
     sprite.z_index = Z_MOUNTAINS;
     let sprite = Anim_Sprite::from_sprite(sprite, (2, 2), Duration::from_millis(170));
-    mountain.sprites.push(sprite.into());
+    mountain.sprites.push(sprite);
 
     let phys_data = Phys_Data::default()
         .with_infinite_mass()
@@ -460,8 +459,8 @@ fn create_boundaries((win_w, win_h): (u32, u32), phys_world: &mut Physics_World)
     let phys_body_hdl = phys_world
         .new_physics_body_with_rigidbodies([cld_left, cld_right, cld_top].into_iter(), phys_data);
 
-    let mut entity = Entity::default();
-    entity.phys_body = phys_body_hdl;
-
-    entity
+    Entity {
+        phys_body: phys_body_hdl,
+        ..Default::default()
+    }
 }

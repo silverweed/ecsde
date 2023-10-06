@@ -3,7 +3,7 @@ use super::matrix::Matrix3;
 use super::vector::Vec2f;
 
 // Likely @Incomplete: we don't want to recalculate the matrix every time.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Transform2D {
     position: Vec2f,
     rotation: Angle,
@@ -165,7 +165,7 @@ impl Transform2D {
     }
 }
 
-impl std::ops::Mul<Vec2f> for Transform2D {
+impl std::ops::Mul<Vec2f> for &Transform2D {
     type Output = Vec2f;
 
     #[inline]

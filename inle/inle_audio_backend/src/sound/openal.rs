@@ -153,13 +153,9 @@ fn new_sound_buf(n_internal_buffers: usize) -> Result<Sound_Buffer, String> {
 
 pub fn create_sound_with_buffer(buf: &Sound_Buffer) -> Sound {
     let sound = new_sound().unwrap_or_default();
-    // @Speed: we clone the buffer handles so we don't have to pass `buf` as mutable.
-    // alSourceQueueBuffers probably doesn't really need a mutable pointer, but that's
-    // what the signature asks for, so we comply.
-    let mut bufs = buf.bufs.clone();
-    debug_assert!(unsafe { al::alIsBuffer(bufs[0]) == al::AL_TRUE });
+    debug_assert!(unsafe { al::alIsBuffer(buf.bufs[0]) == al::AL_TRUE });
     let err = unsafe {
-        al::alSourcei(sound.source, al::AL_BUFFER, bufs[0] as _);
+        al::alSourcei(sound.source, al::AL_BUFFER, buf.bufs[0] as _);
         al::alGetError()
     };
     if err != al::AL_NO_ERROR {
