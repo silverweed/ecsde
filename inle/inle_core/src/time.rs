@@ -26,6 +26,9 @@ pub struct Time {
     /// How fast does game_time pass relative to real_time
     pub time_scale: f32,
 
+    /// Clamp the game dt to this value
+    pub max_dt: Option<Duration>,
+
     /// Whether game_time passes or not
     pub paused: bool,
 
@@ -46,6 +49,7 @@ impl Default for Time {
             game_time: Duration::default(),
             prev_game_time: Duration::default(),
             dt: Duration::default(),
+            max_dt: None,
             time_scale: 1.,
             paused: false,
             was_paused: false,
@@ -78,6 +82,9 @@ impl Time {
         self.dt = Duration::from_micros(
             (((self.real_dt.as_micros() * (!self.paused as u128)) as f32) * self.time_scale) as u64,
         );
+        if let Some(max) = self.max_dt {
+            self.dt = self.dt.min(max);
+        }
         self.game_time += self.dt;
     }
 

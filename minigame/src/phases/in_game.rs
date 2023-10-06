@@ -236,21 +236,30 @@ impl In_Game {
         let input = &game_state.input;
         let cfg = &game_state.config;
 
-        // @Temporary
-        let input_cfg = crate::input::Input_Config::default();
-        let movement = crate::input::get_normalized_movement_from_input(
+        let mut movement = crate::input::get_normalized_movement_from_input(
             &input.processed.virtual_axes,
-            input_cfg,
+            &game_state.input_cfg,
             cfg,
         );
+        // No vertical movement
+        movement.y = 0.;
+
         let p_cfg = &self.player_cfg;
 
         let dt = game_state.time.dt_secs();
         let player = self.entities.get_mut(self.players[0]).unwrap();
 
         // acceleration
-        let accel = p_cfg.accel.read(cfg);
-        player.velocity += movement * accel * dt;
+        let accel_magn = p_cfg.accel.read(cfg);
+        let mut accel = movement * accel_magn;
+
+        // gravity
+        let g = p_cfg.gravity.read(cfg);
+        accel += v2!(0., g);
+
+        linfo_once!("dt", "{}", dt);
+
+        player.velocity += accel * dt;
 
         // dampening
         let dampening = p_cfg.dampening.read(cfg);

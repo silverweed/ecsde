@@ -31,6 +31,7 @@ pub struct Game_State {
     pub audio_system: inle_audio::audio_system::Audio_System,
 
     pub input: inle_input::input_state::Input_State,
+    pub input_cfg: crate::input::Input_Config,
 
     pub phys_world: inle_physics::phys_world::Physics_World,
     pub entities: crate::entity::Entity_Container,
@@ -156,6 +157,9 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
 
     let mut input = inle_input::input_state::create_input_state(&env);
     inle_input::joystick::init_joysticks(&window, &env, &mut input.raw.joy_state);
+    let input_cfg = crate::input::Input_Config {
+        joy_deadzone: Cfg_Var::new("game/input/joystick/deadzone", &config),
+    };
 
     let seed = inle_core::rand::new_random_seed().unwrap();
     let rng = inle_core::rand::new_rng_with_seed(seed);
@@ -163,7 +167,9 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
     #[cfg(debug_assertions)]
     let debug_systems = inle_app::debug::systems::Debug_Systems::new(&config);
 
-    let time = inle_core::time::Time::default();
+    let mut time = inle_core::time::Time::default();
+    time.max_dt = Some(Duration::from_millis(100));
+
     let frame_alloc =
         inle_alloc::temp::Temp_Allocator::with_capacity(inle_common::units::gigabytes(1));
 
@@ -194,6 +200,7 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
         time,
         prev_frame_time: Duration::default(),
         input,
+        input_cfg,
         rng,
         cur_frame: 0,
         frame_alloc,
