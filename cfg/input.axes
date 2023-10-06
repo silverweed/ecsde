@@ -1,5 +1,12 @@
+# Used for the camera and generic movement
 horizontal: Stick_Left_H, +D, -A, Dpad_H, +Right, -Left
 vertical: Stick_Left_V, -W, +S, Dpad_V, -Up, +Down
+
+p1_horizontal: Stick_Left_H:1, +D, -A, Dpad_H, +Right, -Left
+p1_vertical: Stick_Left_V:1, -W, +S, Dpad_V, -Up, +Down
+
+p2_horizontal: Stick_Left_H:2, +L, -J, Dpad_H, +Numpad3, -Numpad1
+p2_vertical: Stick_Left_V:2, -I, +K, Dpad_V, -Numpad5, +Numpad2
 
 trigger_l: Trigger_Left
 trigger_r: Trigger_Right

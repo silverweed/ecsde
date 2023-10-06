@@ -119,7 +119,7 @@ impl Physics_World {
 
     pub fn new_physics_body_with_rigidbodies(
         &mut self,
-        clds: impl Iterator<Item=Collider>,
+        clds: impl Iterator<Item = Collider>,
         phys_data: Phys_Data,
     ) -> Physics_Body_Handle {
         let handle = self.new_physics_body();

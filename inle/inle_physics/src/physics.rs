@@ -9,7 +9,7 @@ use inle_cfg::{Cfg_Var, Config};
 use inle_events::evt_register::{Event, Event_Register};
 use inle_math::math::clamp;
 use inle_math::vector::{sanity_check_v, Vec2f};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 pub struct Evt_Collision_Happened;
 

@@ -412,6 +412,7 @@ fn update_free_camera(game_state: &mut Game_State) {
 
     let movement = crate::input::get_normalized_movement_from_input(
         &game_state.input.processed.virtual_axes,
+        [sid!("horizontal"), sid!("vertical")],
         &game_state.input_cfg,
         &game_state.config,
     );

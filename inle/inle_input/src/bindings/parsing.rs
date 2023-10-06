@@ -52,6 +52,10 @@ const COMMENT_START: char = '#';
 ///     CTRL+SHIFT+A
 /// Allowed modifiers are: CTRL, LCTRL, RCTRL, etc (see code). They're case insensitive.
 ///
+/// An action can also be of the form:
+///     Key:N
+/// where N is a number [1, 8] referring to a specific joystick id. This is only valid for joystick
+/// buttons and filters which joysticks are considered for that specific button.
 // @Cutnpaste from cfg/parsing.rs
 fn parse_action_bindings_lines(
     lines: impl std::iter::Iterator<Item = String>,
@@ -160,7 +164,28 @@ fn parse_action(mods_and_key: &str) -> SmallVec<[Input_Action; 2]> {
 
 fn parse_action_simple(s: &str) -> Option<Input_Action_Simple> {
     if let Some(strip) = s.strip_prefix("Joy_") {
-        joystick::string_to_joy_btn(strip).map(Input_Action_Simple::Joystick)
+        let tokens = strip.splitn(2, ':').collect::<Vec<_>>();
+        if tokens.len() == 2 {
+            // Has the form Button:N
+            if let Ok(id) = tokens[1].parse::<u32>() {
+                if id > 0 && id <= joystick::JOY_COUNT as _ {
+                    let btn = joystick::string_to_joy_btn(tokens[0])?;
+                    dbg!((btn, id));
+                    return Some(Input_Action_Simple::Joystick(btn, Some(id - 1)));
+                } else {
+                    lerr!(
+                        "Joystick id {} is invalid (must be between 1 and {})",
+                        id,
+                        joystick::JOY_COUNT
+                    );
+                }
+            }
+            lerr!("Failed to parse axis {}", s);
+            None
+        } else {
+            let btn = joystick::string_to_joy_btn(strip)?;
+            Some(Input_Action_Simple::Joystick(btn, None))
+        }
     } else if let Some(strip) = s.strip_prefix("Mouse_") {
         mouse::string_to_mouse_btn(strip).map(Input_Action_Simple::Mouse)
     } else if s == "Wheel_Up" {
@@ -194,7 +219,8 @@ fn parse_modifier(s: &str) -> SmallVec<[Input_Action_Modifiers; 2]> {
 
 #[derive(Debug, PartialOrd, PartialEq, Eq, Ord, Hash)]
 enum Virtual_Axis_Mapping {
-    Axis(joystick::Joystick_Axis),
+    // If Joystick_Id is Some, this mapping is only valid for that joystick.
+    Axis(joystick::Joystick_Axis, Option<joystick::Joystick_Id>),
     Action_Emulate_Min(Input_Action),
     Action_Emulate_Max(Input_Action),
 }
@@ -205,7 +231,13 @@ enum Virtual_Axis_Mapping {
 /// axis_name: Axis1, +Key1, -Key2, ... # whitespace doesn't matter
 ///
 /// # note that +Key1 means that Key1 yields the max value for that axis, and -Key2
-/// # means Key2 yields the min value.
+/// # means Key2 yields the min value. Axis1 is a real axis mapped analogically to the virtual
+/// axis.
+///
+/// If you want only specific joysticks to map to a specific axis, you can use the syntax
+///     axis_name: Axis1:N
+/// where N is a number from 1 to 8 inclusive. This means that only the joystick with id N will be
+/// considered as a binding for axis_name.
 // @Cutnpaste from cfg/parsing.rs
 fn parse_axis_bindings_lines(lines: impl std::iter::Iterator<Item = String>) -> Axis_Bindings {
     let mut bindings = Axis_Bindings {
@@ -247,8 +279,10 @@ fn parse_axis_bindings_lines(lines: impl std::iter::Iterator<Item = String>) -> 
             let axis_id = String_Id::from(axis_name);
             bindings.axes_names.push(axis_id);
             match key {
-                Virtual_Axis_Mapping::Axis(axis) => {
-                    bindings.real[axis as usize].push(axis_id);
+                Virtual_Axis_Mapping::Axis(axis, joy_id) => {
+                    // convert joy_id to a mask (None means all joysticks)
+                    let joy_mask = if let Some(id) = joy_id { 1 << id } else { !0 };
+                    bindings.real[axis as usize].push((axis_id, joy_mask));
                 }
                 Virtual_Axis_Mapping::Action_Emulate_Min(action) => {
                     bindings
@@ -282,7 +316,34 @@ fn parse_axis(s: &str) -> Option<Virtual_Axis_Mapping> {
         Some('-') => Some(Virtual_Axis_Mapping::Action_Emulate_Min(
             *parse_action(&s[1..]).get(0)?,
         )),
-        _ => Some(Virtual_Axis_Mapping::Axis(joystick::string_to_joy_axis(s)?)),
+        _ => {
+            let tokens: Vec<_> = s.splitn(2, ':').collect();
+            if tokens.len() == 2 {
+                // Axis name has the form `Axis_Name:N`, where N is a joystick id
+                if let Ok(id) = tokens[1].parse::<u32>() {
+                    if id > 0 && id <= joystick::JOY_COUNT as _ {
+                        // NOTE: remapping the id from [1,JOY_COUNT] to [0,JOY_COUNT-1].
+                        // We want the user-facing cfg value to start from 1, but internally the
+                        // joystick ids start from 0.
+                        let axis = joystick::string_to_joy_axis(tokens[0])?;
+                        return Some(Virtual_Axis_Mapping::Axis(axis, Some(id - 1)));
+                    } else {
+                        lerr!(
+                            "Joystick id {} is invalid (must be between 1 and {})",
+                            id,
+                            joystick::JOY_COUNT
+                        );
+                    }
+                }
+                lerr!("Failed to parse axis {}", s);
+                None
+            } else {
+                Some(Virtual_Axis_Mapping::Axis(
+                    joystick::string_to_joy_axis(s)?,
+                    None,
+                ))
+            }
+        }
     }
 }
 
@@ -320,9 +381,18 @@ mod tests {
         assert_eq!(
             parse_action("Joy_Shoulder_Right"),
             actionvec!(Input_Action::new(Input_Action_Simple::Joystick(
-                Joystick_Button::Shoulder_Right
+                Joystick_Button::Shoulder_Right,
+                None
             )))
         );
+        assert_eq!(
+            parse_action("Joy_Shoulder_Right:1"),
+            actionvec!(Input_Action::new(Input_Action_Simple::Joystick(
+                Joystick_Button::Shoulder_Right,
+                Some(0)
+            )))
+        );
+        assert_eq!(parse_action("Joy_Shoulder_Right:10"), actionvec!());
         assert_eq!(parse_action("Mouse_"), actionvec![]);
         assert_eq!(
             parse_action("Mouse_Left"),
@@ -340,12 +410,22 @@ mod tests {
         use Input_Action_Simple as IS;
         use Virtual_Axis_Mapping as V;
 
-        assert_eq!(parse_axis("Stick_Left_H"), Some(V::Axis(J::Stick_Left_H)));
+        assert_eq!(
+            parse_axis("Stick_Left_H"),
+            Some(V::Axis(J::Stick_Left_H, None))
+        );
+        assert_eq!(
+            parse_axis("Stick_Left_H:2"),
+            Some(V::Axis(J::Stick_Left_H, Some(1)))
+        );
+        assert_eq!(parse_axis("Stick_Left_H:0"), None);
+        assert_eq!(parse_axis("Stick_Left_H:1i"), None);
         assert_eq!(parse_axis("Stick_Left"), None);
         assert_eq!(
             parse_axis("+Joy_Stick_Left"),
             Some(V::Action_Emulate_Max(I::new(IS::Joystick(
-                Joystick_Button::Stick_Left
+                Joystick_Button::Stick_Left,
+                None
             ))))
         );
         assert_eq!(parse_axis("+Stick_Left_H"), None);
@@ -380,7 +460,7 @@ mod tests {
             "action9: Num1",
             "action9: Num2",
             "action10: Joy_Face_Bottom, Joy_Special_Left",
-            "action11: J, Joy_Stick_Right, Mouse_Middle",
+            "action11: J, Joy_Stick_Right:1, Mouse_Middle",
         ]
         .iter()
         .map(|&s| String::from(s))
@@ -429,12 +509,17 @@ mod tests {
             vec![sid!("action8")],
         );
         assert_eq!(
-            parsed[&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Face_Bottom))],
+            parsed[&Input_Action::new(Input_Action_Simple::Joystick(
+                Joystick_Button::Face_Bottom,
+                None
+            ))],
             vec![sid!("action10")],
         );
         assert_eq!(
-            parsed
-                [&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Special_Left))],
+            parsed[&Input_Action::new(Input_Action_Simple::Joystick(
+                Joystick_Button::Special_Left,
+                None
+            ))],
             vec![sid!("action10")],
         );
         assert_eq!(
@@ -442,7 +527,10 @@ mod tests {
             vec![sid!("action11")],
         );
         assert_eq!(
-            parsed[&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Stick_Right))],
+            parsed[&Input_Action::new(Input_Action_Simple::Joystick(
+                Joystick_Button::Stick_Right,
+                Some(0)
+            ))],
             vec![sid!("action11")],
         );
         assert_eq!(
@@ -455,9 +543,9 @@ mod tests {
     fn test_parse_axis_bindings_lines() {
         let lines: Vec<String> = vec![
             "# This is a sample file",
-            "axis1: Stick_Right_V, Stick_Left_H",
+            "axis1: Stick_Right_V, Stick_Left_H:1",
             "axis2: ,+D#This is an axis",
-            "   axis3   :   Trigger_Right,+Joy_Stick_Right,Stick_Left_H,",
+            "   axis3   :   Trigger_Right,+Joy_Stick_Right:2,Stick_Left_H,",
             " axis4:",
             "",
             "##############",
@@ -476,10 +564,10 @@ mod tests {
 
         assert_eq!(emulated.len(), 2);
         assert_eq!(axes_names.len(), 4);
-        assert_eq!(real[J::Stick_Right_V as usize], vec![sid!("axis1")]);
+        assert_eq!(real[J::Stick_Right_V as usize], vec![(sid!("axis1"), !0)]);
         assert_eq!(
             real[J::Stick_Left_H as usize],
-            vec![sid!("axis1"), sid!("axis3")]
+            vec![(sid!("axis1"), 1), (sid!("axis3"), !0)]
         );
         assert_eq!(
             emulated[&Input_Action::new(Input_Action_Simple::Key(Key::D))],
@@ -489,10 +577,12 @@ mod tests {
             ]
         );
         assert_eq!(
-            emulated
-                [&Input_Action::new(Input_Action_Simple::Joystick(Joystick_Button::Stick_Right))],
+            emulated[&Input_Action::new(Input_Action_Simple::Joystick(
+                Joystick_Button::Stick_Right,
+                Some(1)
+            ))],
             vec![(sid!("axis3"), Axis_Emulation_Type::Max)]
         );
-        assert_eq!(real[J::Trigger_Right as usize], vec![sid!("axis3")]);
+        assert_eq!(real[J::Trigger_Right as usize], vec![(sid!("axis3"), !0)]);
     }
 }

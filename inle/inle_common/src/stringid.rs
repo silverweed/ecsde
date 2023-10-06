@@ -12,6 +12,8 @@ lazy_static! {
 }
 
 impl String_Id {
+    pub const INVALID: String_Id = String_Id::from_u32(0);
+
     pub const fn from_u32(x: u32) -> String_Id {
         String_Id(x)
     }
@@ -65,7 +67,15 @@ pub const fn sid_from_str(s: &str) -> String_Id {
 }
 
 pub const fn const_sid_from_str(s: &str) -> String_Id {
-    String_Id(fnv1a(s.as_bytes()))
+    let hash = if s.is_empty() {
+        0
+    } else {
+        let mut hash = fnv1a(s.as_bytes());
+        // Ensure the hash is never 0
+        hash |= 1;
+        hash
+    };
+    String_Id(hash)
 }
 
 #[macro_export]
@@ -159,5 +169,11 @@ mod tests {
             sid!("Another test string").to_string(),
             String::from("Another test string")
         );
+    }
+
+    #[test]
+    fn empty_str() {
+        assert_eq!(sid!(""), String_Id::from_u32(0));
+        assert_eq!(sid!(""), String_Id::INVALID);
     }
 }

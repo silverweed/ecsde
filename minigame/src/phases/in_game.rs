@@ -6,6 +6,7 @@ use crate::game::Game_State;
 use crate::sprites::{self as anim_sprites, Anim_Sprite};
 use inle_app::phases::{Game_Phase, Phase_Id, Phase_Transition};
 use inle_cfg::Cfg_Var;
+use inle_common::stringid::String_Id;
 use inle_core::env::Env_Info;
 use inle_gfx::render::Z_Index;
 use inle_gfx::res::tex_path;
@@ -101,7 +102,8 @@ impl Game_Phase for In_Game {
         sprite.color.a = 120;
         self.entities.push(Entity::new(sprite.into()));
 
-        self.entities.push(create_boundaries(gs.app_config.target_win_size, physw));
+        self.entities
+            .push(create_boundaries(gs.app_config.target_win_size, physw));
 
         let terrain = create_terrain(env, gres, physw);
         self.entities.push(terrain);
@@ -120,13 +122,22 @@ impl Game_Phase for In_Game {
             .transform
             .translate(mountain_off_x, mountain_off_y);
 
+        let mountain_height = left_mountain.sprites[0].rect.height * 3;
+
         self.entities.push(left_mountain);
         self.entities.push(right_mountain);
 
         // Players
+        let player_y = mountain_off_y - mountain_height as f32;
         let mut player = create_player(env, gres, physw);
-        player.sprites[0].color = inle_common::colors::color_from_hex_no_alpha(0xdd98844);
+        player.sprites[0].color = inle_common::colors::color_from_hex_no_alpha(0xdd9884);
+        player.transform.set_position(-mountain_off_x, player_y);
         self.players[0] = self.entities.push(player);
+
+        let mut player = create_player(env, gres, physw);
+        player.sprites[0].color = inle_common::colors::color_from_hex_no_alpha(0x1e98ff);
+        player.transform.set_position(mountain_off_x, player_y);
+        self.players[1] = self.entities.push(player);
     }
 
     fn on_end(&mut self, args: &mut Self::Args) {
@@ -142,16 +153,6 @@ impl Game_Phase for In_Game {
         let gs = game_state.deref_mut();
 
         self.update_players(gs);
-
-        /*
-        gs.camera.transform.set_position_v(
-            self.entities
-                .get(self.players[0])
-                .unwrap()
-                .transform
-                .position(),
-        );
-        */
 
         anim_sprites::update_anim_sprites(
             gs.time.dt(),
@@ -246,71 +247,75 @@ impl In_Game {
     fn update_players(&mut self, game_state: &mut Game_State) {
         let input = &game_state.input;
         let cfg = &game_state.config;
-
-        let movement = if game_state.free_camera {
-            v2!(0., 0.)
-        } else {
-            let mut movement = crate::input::get_normalized_movement_from_input(
-                &input.processed.virtual_axes,
-                &game_state.input_cfg,
-                cfg,
-            );
-            // No vertical movement
-            movement.y = 0.;
-
-            movement
-        };
-
         let p_cfg = &self.player_cfg;
-
-        let dt = game_state.time.dt_secs();
-        let player = self.entities.get_mut(self.players[0]).unwrap();
-
-        // acceleration
         let accel_magn = p_cfg.accel.read(cfg);
-        let mut accel = movement * accel_magn;
-
-        // gravity
-        let physw = &game_state.phys_world;
-        let cld = physw
-            .get_first_rigidbody_collider(player.phys_body)
-            .unwrap();
-        let mut collided = physw
-            .get_collisions(cld.handle)
-            .iter()
-            .filter_map(|data| Some((physw.get_collider(data.other_collider)?, data.info.normal)));
-        let collides_with_ground = collided
-            .find(|(other, normal)| normal.y < -0.9 && other.layer == GCL::Terrain as u8)
-            .is_some();
-        if !collides_with_ground {
-            let g = p_cfg.gravity.read(cfg);
-            accel += v2!(0., g);
-        }
-
-        player.velocity += accel * dt;
-
-        // jump
-        if !game_state.free_camera
-            && input
-                .processed
-                .game_actions
-                .contains(&(sid!("jump"), Action_Kind::Pressed))
-        {
-            let jump_impulse = p_cfg.jump_impulse.read(cfg);
-            player.velocity += v2!(0., -jump_impulse);
-        }
-
-        // dampening
+        let g = p_cfg.gravity.read(cfg);
+        let jump_impulse = p_cfg.jump_impulse.read(cfg);
         let horiz_dampening = p_cfg.horiz_dampening.read(cfg);
-        let vert_dampening = if player.velocity.y > 0. {
-            p_cfg.descending_vert_dampening.read(cfg)
-        } else {
-            p_cfg.ascending_vert_dampening.read(cfg)
-        };
-        player.velocity.x -= player.velocity.x * horiz_dampening * dt;
-        player.velocity.y -= player.velocity.y * vert_dampening * dt;
+        let dt = game_state.time.dt_secs();
+        let physw = &game_state.phys_world;
 
-        player.transform.translate_v(player.velocity * dt);
+        for (player_idx, &player_entity) in self.players.iter().enumerate() {
+            let player = self.entities.get_mut(player_entity).unwrap();
+            let movement = if game_state.free_camera {
+                v2!(0., 0.)
+            } else {
+                let axes = [
+                    String_Id::from(format!("p{}_horizontal", player_idx + 1).as_str()),
+                    String_Id::from(format!("p{}_vertical", player_idx + 1).as_str()),
+                ];
+                let mut movement = crate::input::get_normalized_movement_from_input(
+                    &input.processed.virtual_axes,
+                    axes,
+                    &game_state.input_cfg,
+                    cfg,
+                );
+                // No vertical movement
+                movement.y = 0.;
+
+                movement
+            };
+
+            // acceleration
+            let mut accel = movement * accel_magn;
+
+            // gravity
+            let cld = physw
+                .get_first_rigidbody_collider(player.phys_body)
+                .unwrap();
+            let mut collided = physw.get_collisions(cld.handle).iter().filter_map(|data| {
+                Some((physw.get_collider(data.other_collider)?, data.info.normal))
+            });
+            let collides_with_ground = collided
+                .find(|(other, normal)| normal.y < -0.9 && other.layer == GCL::Terrain as u8)
+                .is_some();
+            if !collides_with_ground {
+                accel += v2!(0., g);
+            }
+
+            player.velocity += accel * dt;
+
+            // jump
+            if !game_state.free_camera
+                && input.processed.game_actions.contains(&(
+                    String_Id::from(format!("p{}_jump", player_idx + 1).as_str()),
+                    Action_Kind::Pressed,
+                ))
+            {
+                player.velocity += v2!(0., -jump_impulse);
+            }
+
+            // dampening
+            let vert_dampening = if player.velocity.y > 0. {
+                p_cfg.descending_vert_dampening.read(cfg)
+            } else {
+                p_cfg.ascending_vert_dampening.read(cfg)
+            };
+            player.velocity.x -= player.velocity.x * horiz_dampening * dt;
+            player.velocity.y -= player.velocity.y * vert_dampening * dt;
+
+            player.transform.translate_v(player.velocity * dt);
+        }
     }
 }
 
@@ -439,7 +444,7 @@ fn create_boundaries((win_w, win_h): (u32, u32), phys_world: &mut Physics_World)
     let cld_top = Collider {
         shape: Collision_Shape::Rect {
             width: 2. * (win_w as f32),
-            height: 500.
+            height: 500.,
         },
         layer: GCL::Terrain.into(),
         is_static: true,
@@ -452,7 +457,8 @@ fn create_boundaries((win_w, win_h): (u32, u32), phys_world: &mut Physics_World)
         .with_restitution(PHYS_RESTITUTION)
         .with_static_friction(0.5)
         .with_dyn_friction(0.3);
-    let mut phys_body_hdl = phys_world.new_physics_body_with_rigidbodies([cld_left, cld_right, cld_top].into_iter(), phys_data);
+    let phys_body_hdl = phys_world
+        .new_physics_body_with_rigidbodies([cld_left, cld_right, cld_top].into_iter(), phys_data);
 
     let mut entity = Entity::default();
     entity.phys_body = phys_body_hdl;

@@ -1,4 +1,4 @@
-use super::joystick::{self, Joystick_Button};
+use super::joystick::{self, Joystick_Button, Joystick_Id, Joystick_Mask};
 use super::keyboard::Key;
 use super::mouse::{self, Mouse_Button};
 use inle_common::stringid::String_Id;
@@ -13,7 +13,7 @@ use self::modifiers::*;
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub enum Input_Action_Simple {
     Key(Key),
-    Joystick(Joystick_Button),
+    Joystick(Joystick_Button, Option<Joystick_Id>),
     Mouse(Mouse_Button),
     Mouse_Wheel { up: bool },
 }
@@ -41,8 +41,16 @@ impl Axis_Emulation_Type {
 }
 
 pub struct Axis_Bindings {
+    /// The entire list of existing virtual axes names.
     pub axes_names: Vec<String_Id>,
-    pub real: [Vec<String_Id>; joystick::Joystick_Axis::_Count as usize],
+
+    /// Contains the mapping { real_axis => [(virtual axis name, joystick mask)] }
+    /// (meaning that the real axis of any joystick in the mask will map to the specific
+    /// virtual axis).
+    pub real: [Vec<(String_Id, Joystick_Mask)>; joystick::Joystick_Axis::_Count as usize],
+
+    /// Contains the mapping of input actions that emulate a joystick axis
+    /// (e.g. Key::A may map to "horizontal_movement", setting a value of -1).
     pub emulated: HashMap<Input_Action, Vec<(String_Id, Axis_Emulation_Type)>>,
 }
 
@@ -68,7 +76,7 @@ impl Input_Bindings {
     pub fn get_virtual_axes_from_real_axis(
         &self,
         real_axis: joystick::Joystick_Axis,
-    ) -> &[String_Id] {
+    ) -> &[(String_Id, Joystick_Mask)] {
         &self.axis_bindings.real[real_axis as usize]
     }
 
@@ -98,10 +106,26 @@ impl Input_Bindings {
         ))
     }
 
-    pub(super) fn get_joystick_actions(&self, button: Joystick_Button) -> Option<&[String_Id]> {
+    pub(super) fn get_joystick_actions(
+        &self,
+        button: Joystick_Button,
+        id: Joystick_Id,
+    ) -> Option<impl IntoIterator<Item = String_Id>> {
         // @Incomplete: do we want to support modifiers on joysticks?
-        let input_action = Input_Action::new(Input_Action_Simple::Joystick(button));
-        self.action_bindings.get(&input_action).map(Vec::as_slice)
+
+        // NOTE: we check both if there is an action matching our specific id and if there is a
+        // generic joystick action (with joystick_id == None).
+        let input_action = Input_Action::new(Input_Action_Simple::Joystick(button, Some(id)));
+        let mut actions = self.action_bindings.get(&input_action).cloned();
+
+        let input_action = Input_Action::new(Input_Action_Simple::Joystick(button, None));
+        if let Some(actions) = actions.as_mut() {
+            if let Some(other) = self.action_bindings.get(&input_action).cloned() {
+                actions.extend(other);
+            }
+        };
+
+        actions
     }
 
     pub(super) fn get_mouse_actions(
@@ -138,10 +162,28 @@ impl Input_Bindings {
     pub(super) fn get_joystick_emulated_axes(
         &self,
         button: Joystick_Button,
-    ) -> Option<&Vec<(String_Id, Axis_Emulation_Type)>> {
-        self.axis_bindings
+        joystick_id: Joystick_Id,
+    ) -> Option<impl IntoIterator<Item = (String_Id, Axis_Emulation_Type)>> {
+        let mut emu = self
+            .axis_bindings
             .emulated
-            .get(&Input_Action::new(Input_Action_Simple::Joystick(button)))
+            .get(&Input_Action::new(Input_Action_Simple::Joystick(
+                button,
+                Some(joystick_id),
+            )))
+            .cloned();
+        if let Some(emu) = emu.as_mut() {
+            if let Some(other) =
+                self.axis_bindings
+                    .emulated
+                    .get(&Input_Action::new(Input_Action_Simple::Joystick(
+                        button, None,
+                    )))
+            {
+                emu.extend(other);
+            }
+        }
+        emu
     }
 
     pub(super) fn get_mouse_emulated_axes(
