@@ -270,9 +270,11 @@ impl Physics_World {
             self.cld_index_table.len()
         );
         let mut index2 = self.cld_index_table[h2.index as usize];
+        let mut swapped = false;
 
         if index1 > index2 {
             std::mem::swap(&mut index1, &mut index2);
+            swapped = true;
         }
 
         debug_assert!(index1 < self.colliders.len());
@@ -283,7 +285,11 @@ impl Physics_World {
         let c1 = &mut a[index1];
         let c2 = &mut b[index2 - index1 - 1];
 
-        Some((c1, c2))
+        if swapped {
+            Some((c2, c1))
+        } else {
+            Some((c1, c2))
+        }
     }
 
     #[inline]

@@ -114,8 +114,8 @@ impl Game_Phase for In_Game {
             .transform
             .translate(mountain_off_x, mountain_off_y);
 
-        // self.entities.push(left_mountain);
-        // self.entities.push(right_mountain);
+        self.entities.push(left_mountain);
+        self.entities.push(right_mountain);
 
         // Players
         let mut player = create_player(env, gres, physw);

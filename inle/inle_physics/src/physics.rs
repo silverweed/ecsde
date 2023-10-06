@@ -111,9 +111,6 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Interna
         panic!("Failed to unwrap Rect!")
     };
     let diff = b.position - a.position;
-    dbg!(diff);
-
-    ldebug!("{:?} vs {:?}", a.shape, b.shape);
 
     let a_half_ext_x = a_width * 0.5;
     let b_half_ext_x = b_width * 0.5;
@@ -133,29 +130,33 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Interna
         return None;
     }
 
-    dbg!((x_overlap, y_overlap));
-
     // Find least penetration axis
     if x_overlap < y_overlap {
         let normal = if diff.x < 0. {
+            // a is on the right, normal points to the left (towards b)
             v2!(-1., 0.)
         } else {
+            // a is on the left, normal points to the right (towards b)
             v2!(1., 0.)
         };
+        debug_assert!(x_overlap > 0.);
         Some(Collision_Info_Internal {
             cld1: a.handle,
             cld2: b.handle,
             info: Collision_Info {
                 normal,
-                penetration: x_overlap.abs(),
+                penetration: x_overlap,
             },
         })
     } else {
         let normal = if diff.y < 0. {
+            // a is below b, normal points upwards (towards b)
             v2!(0., -1.)
         } else {
+            // a is above b, normal points downwards (towards b)
             v2!(0., 1.)
         };
+        debug_assert!(y_overlap > 0.);
         Some(Collision_Info_Internal {
             cld1: a.handle,
             cld2: b.handle,
@@ -171,14 +172,14 @@ fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Interna
 fn detect_circle_rect(circle: &Collider, rect: &Collider) -> Option<Collision_Info_Internal> {
     trace!("physics::detect_circle_rect");
 
-    let (r_width, r_height) = if let Collision_Shape::Rect { width, height } = rect.shape {
-        (width, height)
-    } else {
+    let Collision_Shape::Rect {
+        width: r_width,
+        height: r_height,
+    } = rect.shape
+    else {
         panic!("Failed to unwrap Rect!")
     };
-    let c_radius = if let Collision_Shape::Circle { radius } = circle.shape {
-        radius
-    } else {
+    let Collision_Shape::Circle { radius: c_radius } = circle.shape else {
         panic!("Failed to unwrap Circle!")
     };
 
@@ -271,12 +272,10 @@ where
     let mut collision_infos = vec![];
     let mut storage: HashSet<(*const Collider, *const Collider)> = HashSet::default();
 
-    ldebug!("-----");
     // @Speed: maybe we should iterate on the chunks? Can we do that in parallel?
     for a in phys_world.colliders.iter().filter(|cld| !cld.is_static) {
         trace!("iterate_colliders");
 
-        ldebug!("iter");
         let a_extent = a.shape.extent();
         let a_shape = collision_shape_type_index(&a.shape);
         let a_partial_cb = COLLISION_CB_TABLE[a_shape];
@@ -295,7 +294,6 @@ where
             let pb: *const Collider = b as *const _;
 
             if !collision_matrix.layers_collide(a.layer, b.layer) || storage.contains(&(pb, pa)) {
-                ldebug!("skipping {:p} {:p}", pa, pb);
                 continue;
             }
 
@@ -307,7 +305,6 @@ where
             }
 
             if let Some(info) = info {
-                ldebug!("colliding {:p} {:p}", pa, pb);
                 collision_infos.push(info);
                 storage.insert((pa, pb));
             }
@@ -410,8 +407,8 @@ fn solve_collisions(phys_world: &mut Physics_World, infos: &[Collision_Info_Inte
 
         let (cld1, cld2) = phys_world.get_collider_pair_mut(cld1, cld2).unwrap();
         if cld1.phys_data.is_some() && cld2.phys_data.is_some() {
-            //solve_collision_velocities(cld1, cld2, normal);
-            //positional_correction(cld1, cld2, normal, penetration);
+            solve_collision_velocities(cld1, cld2, normal);
+            positional_correction(cld1, cld2, normal, penetration);
         }
     }
 }
