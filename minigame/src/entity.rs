@@ -3,6 +3,7 @@ use inle_gfx::render::batcher::Batches;
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
+use inle_math::rect::Rectf;
 use inle_physics::collider::{Collider, Collision_Shape, Phys_Data};
 use inle_physics::phys_world::{Collider_Handle, Physics_Body_Handle, Physics_World};
 use smallvec::SmallVec;
@@ -63,13 +64,25 @@ impl Entity {
         layer: Game_Collision_Layer,
         phys_type: Phys_Type,
     ) {
-        // @Temporary
-        let width = self.sprites[0].rect.width as f32;
-        let height = self.sprites[0].rect.height as f32;
+        let mut min = Vec2f::default();
+        let mut max = Vec2f::default();
+        let mut offset = Vec2f::default();
+        for sprite in &self.sprites {
+            let r = (Rectf::from(sprite.rect) + sprite.transform.position()) * sprite.transform.scale();
+            min.x = min.x.min(r.x );
+            min.y = min.y.min(r.y );
+            max.x = max.x.max(r.x + r.width);
+            max.y = max.y.max(r.y + r.height);
+            offset += min;
+        }
+        let width = (max - min).x;
+        let height = (max - min).y;
+        offset /= self.sprites.len() as f32;
         let cld = Collider {
             shape: Collision_Shape::Rect { width, height },
             layer: layer as _,
             is_static: phys_type == Phys_Type::Static,
+            offset,
             ..Default::default()
         };
         let phys_body = phys_world.new_physics_body_with_rigidbody(cld, phys_data.clone());

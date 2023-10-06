@@ -201,7 +201,9 @@ impl In_Game {
             if let Some(phys_body) = physw.get_physics_body(entity.phys_body).cloned() {
                 for cld_handle in phys_body.all_colliders() {
                     let collider = physw.get_collider_mut(cld_handle).unwrap();
-                    collider.position = entity.transform.position();
+                    // NOTE: currently we don't support fancy stuff like rotations for offset
+                    // colliders.
+                    collider.position = entity.transform.position() + collider.offset;
                 }
             }
         }
@@ -224,7 +226,7 @@ impl In_Game {
             if let Some(phys_body) = physw.get_physics_body(entity.phys_body).cloned() {
                 for cld_handle in phys_body.all_colliders() {
                     let collider = physw.get_collider_mut(cld_handle).unwrap();
-                    entity.transform.set_position_v(collider.position);
+                    entity.transform.set_position_v(collider.position - collider.offset);
                 }
             }
         }

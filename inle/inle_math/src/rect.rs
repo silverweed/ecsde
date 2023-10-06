@@ -178,6 +178,22 @@ where
     }
 }
 
+impl<T> Mul<Vector2<T>> for Rect<T>
+where
+    T: Mul<Output = T>,
+{
+    type Output = Self;
+
+    fn mul(self, scale: Vector2<T>) -> Self::Output {
+        Rect::new(
+            self.x,
+            self.y,
+            self.width * scale.x,
+            self.height * scale.y
+        )
+    }
+}
+
 fn min<T: PartialOrd + Copy>(a: T, b: T) -> T {
     match a.partial_cmp(&b) {
         Some(Ordering::Greater) => b,

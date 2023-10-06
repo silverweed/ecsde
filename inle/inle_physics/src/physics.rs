@@ -10,8 +10,6 @@ use inle_math::math::clamp;
 use inle_math::vector::{sanity_check_v, Vec2f};
 use std::collections::{HashMap, HashSet};
 
-type Rigidbodies = HashMap<Collider_Handle, Rigidbody>;
-
 pub struct Evt_Collision_Happened;
 
 impl Event for Evt_Collision_Happened {
@@ -21,15 +19,6 @@ impl Event for Evt_Collision_Happened {
 #[derive(Default)]
 pub struct Physics_Settings {
     pub collision_matrix: Collision_Matrix,
-}
-
-#[derive(Debug, Clone)]
-struct Rigidbody {
-    pub shape: Collision_Shape,
-    pub position: Vec2f,
-    pub offset: Vec2f,
-    pub velocity: Vec2f,
-    pub phys_data: Phys_Data,
 }
 
 #[derive(Debug, Clone)]
@@ -93,6 +82,8 @@ fn detect_circle_circle(a: &Collider, b: &Collider) -> Option<Collision_Info_Int
 
 fn detect_rect_rect(a: &Collider, b: &Collider) -> Option<Collision_Info_Internal> {
     trace!("physics::detect_rect_rect");
+
+    // TODO: handle non-AA rects
 
     const OVERLAP_EPSILON: f32 = f32::EPSILON;
 
