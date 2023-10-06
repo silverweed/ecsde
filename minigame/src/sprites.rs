@@ -179,8 +179,6 @@ pub fn update_anim_sprites<'a>(
     dt: Duration,
     anim_sprites: impl IntoIterator<Item = &'a mut Anim_Sprite>,
 ) {
-    let dt_secs = dt.as_secs_f32();
-
     for sprite in anim_sprites {
         if sprite.n_frame_cols * sprite.n_frame_rows <= 1 {
             continue;

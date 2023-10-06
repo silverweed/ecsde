@@ -4,23 +4,18 @@ use crate::entity::{
 };
 use crate::game::Game_State;
 use crate::sprites::{self as anim_sprites, Anim_Sprite};
-use inle_input::input_state::Action_Kind;
 use inle_app::phases::{Game_Phase, Phase_Id, Phase_Transition};
 use inle_cfg::Cfg_Var;
 use inle_core::env::Env_Info;
 use inle_gfx::render::Z_Index;
-use inle_gfx::render_window::Render_Window_Handle;
 use inle_gfx::res::tex_path;
 use inle_gfx::res::Gfx_Resources;
 use inle_gfx::sprites::Sprite;
-use inle_math::rect::Rect;
-use inle_math::vector::{lerp_v, Vec2f};
+use inle_input::input_state::Action_Kind;
 use inle_physics::collider::Phys_Data;
 use inle_physics::phys_world::Physics_World;
 use inle_physics::physics;
-use inle_physics::spatial::Spatial_Accelerator;
-use inle_win::window;
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 use std::time::Duration;
 
 struct Player_Cfg {
@@ -37,13 +32,16 @@ struct Player_Cfg {
 impl Player_Cfg {
     pub fn new(cfg: &inle_cfg::Config) -> Self {
         let accel = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/acceleration", cfg);
-    //    let horiz_max_speed =
-    //        inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/horiz_max_speed", cfg);
-    //    let vert_max_speed =
-    //        inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/vert_max_speed", cfg);
-        let horiz_dampening = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/horiz_dampening", cfg);
-        let ascending_vert_dampening = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/ascending_vert_dampening", cfg);
-        let descending_vert_dampening = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/descending_vert_dampening", cfg);
+        //    let horiz_max_speed =
+        //        inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/horiz_max_speed", cfg);
+        //    let vert_max_speed =
+        //        inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/vert_max_speed", cfg);
+        let horiz_dampening =
+            inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/horiz_dampening", cfg);
+        let ascending_vert_dampening =
+            inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/ascending_vert_dampening", cfg);
+        let descending_vert_dampening =
+            inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/descending_vert_dampening", cfg);
         let gravity = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/gravity", cfg);
         let jump_impulse = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/jump_impulse", cfg);
         Self {
@@ -81,13 +79,12 @@ impl Game_Phase for In_Game {
 
     fn on_start(&mut self, args: &mut Self::Args) {
         let game_state = &mut args.game_state_mut();
-        let mut gs = game_state.deref_mut();
+        let gs = game_state.deref_mut();
         let mut res = args.game_res_mut();
-        let (win_w, win_h) = gs.app_config.target_win_size;
-        let (win_hw, win_hh) = (win_w as f32 * 0.5, win_h as f32 * 0.5);
+        let win_w = gs.app_config.target_win_size.0;
+        let win_hw = win_w as f32 * 0.5;
 
         debug_assert_eq!(self.entities.n_live(), 0);
-        let win_rect = inle_math::rect::Rect::new(0, 0, win_w as _, win_h as _);
 
         let gres = &mut res.gfx;
         let env = &gs.env;
@@ -141,9 +138,6 @@ impl Game_Phase for In_Game {
     fn update(&mut self, args: &mut Self::Args) -> Phase_Transition {
         let mut game_state = args.game_state_mut();
         let gs = game_state.deref_mut();
-        let game_res = args.game_res();
-
-        let dt = gs.time.dt().as_secs_f32();
 
         self.update_players(gs);
 
@@ -187,9 +181,10 @@ fn create_collision_matrix() -> inle_physics::layers::Collision_Matrix {
 impl In_Game {
     pub fn new(cfg: &inle_cfg::Config) -> Self {
         let collision_matrix = create_collision_matrix();
-        let positional_correction_percent = Cfg_Var::new("game/physics/positional_correction_percent", cfg);
+        let positional_correction_percent =
+            Cfg_Var::new("game/physics/positional_correction_percent", cfg);
         let phys_settings = physics::Physics_Settings {
-            collision_matrix, 
+            collision_matrix,
             positional_correction_percent,
         };
 
@@ -238,7 +233,9 @@ impl In_Game {
             if let Some(phys_body) = physw.get_physics_body(entity.phys_body).cloned() {
                 for cld_handle in phys_body.all_colliders() {
                     let collider = physw.get_collider_mut(cld_handle).unwrap();
-                    entity.transform.set_position_v(collider.position - collider.offset);
+                    entity
+                        .transform
+                        .set_position_v(collider.position - collider.offset);
                 }
             }
         }
@@ -248,13 +245,19 @@ impl In_Game {
         let input = &game_state.input;
         let cfg = &game_state.config;
 
-        let mut movement = crate::input::get_normalized_movement_from_input(
-            &input.processed.virtual_axes,
-            &game_state.input_cfg,
-            cfg,
-        );
-        // No vertical movement
-        movement.y = 0.;
+        let movement = if game_state.free_camera {
+            v2!(0., 0.)
+        } else {
+            let mut movement = crate::input::get_normalized_movement_from_input(
+                &input.processed.virtual_axes,
+                &game_state.input_cfg,
+                cfg,
+            );
+            // No vertical movement
+            movement.y = 0.;
+
+            movement
+        };
 
         let p_cfg = &self.player_cfg;
 
@@ -267,10 +270,16 @@ impl In_Game {
 
         // gravity
         let physw = &game_state.phys_world;
-        let cld = physw.get_first_rigidbody_collider(player.phys_body).unwrap();
-        let mut collided = physw.get_collisions(cld.handle).iter().filter_map(|data| Some((physw.get_collider(data.other_collider)?, data.info.normal)));
-        let collides_with_ground = collided.find(|(other, normal)|
-                                                        normal.y < -0.9 && other.layer == GCL::Terrain as u8).is_some();
+        let cld = physw
+            .get_first_rigidbody_collider(player.phys_body)
+            .unwrap();
+        let mut collided = physw
+            .get_collisions(cld.handle)
+            .iter()
+            .filter_map(|data| Some((physw.get_collider(data.other_collider)?, data.info.normal)));
+        let collides_with_ground = collided
+            .find(|(other, normal)| normal.y < -0.9 && other.layer == GCL::Terrain as u8)
+            .is_some();
         if !collides_with_ground {
             let g = p_cfg.gravity.read(cfg);
             accel += v2!(0., g);
@@ -279,7 +288,12 @@ impl In_Game {
         player.velocity += accel * dt;
 
         // jump
-        if input.processed.game_actions.contains(&(sid!("jump"), Action_Kind::Pressed)) {
+        if !game_state.free_camera
+            && input
+                .processed
+                .game_actions
+                .contains(&(sid!("jump"), Action_Kind::Pressed))
+        {
             let jump_impulse = p_cfg.jump_impulse.read(cfg);
             player.velocity += v2!(0., -jump_impulse);
         }
@@ -383,7 +397,17 @@ fn create_player(
         .with_restitution(PHYS_RESTITUTION)
         .with_static_friction(0.5)
         .with_dyn_friction(0.3);
-    player.register_to_physics(phys_world, &phys_data, GCL::Player, Phys_Type::Dynamic);
+
+    let cld = inle_physics::collider::Collider {
+        shape: inle_physics::collider::Collision_Shape::Rect {
+            width: 28.,
+            height: 54.,
+        },
+        layer: GCL::Player.into(),
+        is_static: false,
+        ..Default::default()
+    };
+    player.phys_body = phys_world.new_physics_body_with_rigidbody(cld, phys_data.clone());
 
     player
 }

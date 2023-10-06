@@ -1,9 +1,9 @@
 use crate::sprites::{self as anim_sprites, Anim_Sprite};
 use inle_gfx::render::batcher::Batches;
 use inle_gfx::render_window::Render_Window_Handle;
+use inle_math::rect::Rectf;
 use inle_math::transform::Transform2D;
 use inle_math::vector::Vec2f;
-use inle_math::rect::Rectf;
 use inle_physics::collider::{Collider, Collision_Shape, Phys_Data};
 use inle_physics::phys_world::{Collider_Handle, Physics_Body_Handle, Physics_World};
 use smallvec::SmallVec;
@@ -68,9 +68,10 @@ impl Entity {
         let mut max = Vec2f::default();
         let mut offset = Vec2f::default();
         for sprite in &self.sprites {
-            let r = (Rectf::from(sprite.rect) + sprite.transform.position()) * sprite.transform.scale();
-            min.x = min.x.min(r.x );
-            min.y = min.y.min(r.y );
+            let r =
+                (Rectf::from(sprite.rect) + sprite.transform.position()) * sprite.transform.scale();
+            min.x = min.x.min(r.x);
+            min.y = min.y.min(r.y);
             max.x = max.x.max(r.x + r.width);
             max.y = max.y.max(r.y + r.height);
             offset += min;
@@ -248,8 +249,8 @@ impl Entity_Container {
 impl inle_physics::spatial::Spatial_Accelerator<Collider_Handle> for Entity_Container {
     fn get_neighbours<R>(
         &self,
-        pos: Vec2f,
-        extent: Vec2f,
+        _pos: Vec2f,
+        _extent: Vec2f,
         phys_world: &Physics_World,
         result: &mut R,
     ) where

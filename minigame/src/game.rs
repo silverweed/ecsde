@@ -36,6 +36,7 @@ pub struct Game_State {
     pub phys_world: inle_physics::phys_world::Physics_World,
     pub entities: crate::entity::Entity_Container,
     pub camera: inle_win::window::Camera,
+    pub free_camera: bool,
 
     // XXX: ??
     pub default_font: inle_gfx::res::Font_Handle,
@@ -89,6 +90,9 @@ pub fn parse_game_args(args: &[String]) -> Game_Args {
                     }
                 }
             }
+            "--game" => {
+                game_args.starting_phase = In_Game::PHASE_ID;
+            }
             _ => {
                 lwarn!("Ignoring command line argument {}", arg);
             }
@@ -133,7 +137,7 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
         }
     };
 
-    let mut window = {
+    let window = {
         let window_create_args = inle_win::window::Create_Window_Args { vsync: true };
         let window = inle_win::window::create_window(
             &window_create_args,
@@ -165,7 +169,7 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
     let rng = inle_core::rand::new_rng_with_seed(seed);
 
     #[cfg(debug_assertions)]
-    let debug_systems = inle_app::debug::systems::Debug_Systems::new(&config);
+    let debug_systems = inle_app::debug::systems::Debug_Systems::new(&env, &config);
 
     let mut time = inle_core::time::Time::default();
     time.max_dt = Some(Duration::from_millis(100));
@@ -210,6 +214,7 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
         phys_world,
         entities,
         camera,
+        free_camera: false,
         engine_cvars,
         phase_mgr,
         bg_music: Sound_Handle::INVALID,
@@ -260,7 +265,7 @@ pub fn game_post_init(
 
     inle_ui::init_ui(&mut game_state.ui, &mut game_res.gfx, &game_state.env);
 
-    register_game_phases(game_state);
+    register_game_phases(game_state, game_res);
     let mut args = Phase_Args::new(game_state, game_res);
     game_state
         .phase_mgr
@@ -272,7 +277,7 @@ pub fn game_post_init(
     }
 }
 
-pub fn register_game_phases(game_state: &mut Game_State) {
+pub fn register_game_phases(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     use crate::phases;
 
     game_state.phase_mgr.register_phase(
@@ -283,6 +288,16 @@ pub fn register_game_phases(game_state: &mut Game_State) {
         phases::In_Game::PHASE_ID,
         Box::new(phases::In_Game::new(&game_state.config)),
     );
+
+    #[cfg(debug_assertions)]
+    {
+        let mut args = Phase_Args::new(game_state, game_res);
+        game_state.phase_mgr.add_persistent_phase(
+            phases::Debug::PHASE_ID,
+            Box::new(phases::Debug::default()),
+            &mut args,
+        );
+    }
 }
 
 pub fn start_frame(game_state: &mut Game_State) {
@@ -378,6 +393,8 @@ fn handle_core_actions(
 pub fn update(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     inle_gfx::render::batcher::clear_batches(&mut game_state.batches);
 
+    update_free_camera(game_state);
+
     if !game_state.time.paused {
         let mut args = Phase_Args::new(game_state, game_res);
         let should_quit = game_state.phase_mgr.update(&mut args);
@@ -385,6 +402,24 @@ pub fn update(game_state: &mut Game_State, game_res: &mut Game_Resources) {
             game_state.should_quit = should_quit;
         }
     }
+}
+
+// TODO handle this on engine side
+fn update_free_camera(game_state: &mut Game_State) {
+    if !game_state.free_camera {
+        return;
+    }
+
+    let movement = crate::input::get_normalized_movement_from_input(
+        &game_state.input.processed.virtual_axes,
+        &game_state.input_cfg,
+        &game_state.config,
+    );
+    let cam_speed =
+        Cfg_Var::<f32>::new("game/camera/speed", &game_state.config).read(&game_state.config);
+    let dt = game_state.time.dt_secs();
+    let delta = movement * cam_speed * dt;
+    game_state.camera.transform.translate_v(delta);
 }
 
 //

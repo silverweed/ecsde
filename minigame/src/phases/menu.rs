@@ -3,7 +3,7 @@ use crate::sprites::{self as anim_sprites, Anim_Sprite};
 use inle_app::phases::{Game_Phase, Phase_Id, Phase_Transition};
 use inle_core::rand;
 use inle_gfx::render_window::Render_Window_Handle;
-use inle_gfx::sprites::{self, Sprite};
+use inle_gfx::sprites::Sprite;
 use inle_math::angle;
 use inle_math::rect::Rect;
 use inle_math::vector::{lerp_v, Vec2f};
@@ -270,7 +270,6 @@ impl Game_Phase for Main_Menu {
         //
         // Update falling blocks
         //
-        let win_x = gs.app_config.target_win_size.0 as f32 * 0.5;
         let win_h = gs.app_config.target_win_size.1 as f32 * 0.5;
         for block in &mut self.falling_blocks {
             let sprite = &mut self.sprites[block.sprite_idx];

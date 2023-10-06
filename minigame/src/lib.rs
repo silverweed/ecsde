@@ -177,7 +177,7 @@ pub unsafe extern "C" fn game_reload(game_state: *mut Game_State, game_res: *mut
     let mut phase_args = phases::Phase_Args::new(game_state, game_res);
     game_state.phase_mgr.teardown(&mut phase_args);
 
-    game::register_game_phases(game_state);
+    game::register_game_phases(game_state, game_res);
 
     for phase_id in cur_phase_stack {
         game_state.phase_mgr.push_phase(phase_id, &mut phase_args);

@@ -135,6 +135,7 @@ pub fn create_engine_debug_cvars(cfg: &inle_cfg::Config) -> Engine_Debug_CVars {
     }
 }
 
+/*
 pub fn create_engine_state(
     env: Env_Info,
     config: inle_cfg::Config,
@@ -156,7 +157,7 @@ pub fn create_engine_state(
         seed = rand::new_random_seed()?;
     }
     #[cfg(debug_assertions)]
-    let debug_systems = Debug_Systems::new(&config);
+    let debug_systems = Debug_Systems::new(&env, &config);
     let rng = rand::new_rng_with_seed(seed);
 
     Ok(Engine_State {
@@ -176,6 +177,7 @@ pub fn create_engine_state(
         prev_frame_time: Duration::default(),
     })
 }
+*/
 
 #[cfg(debug_assertions)]
 pub fn start_config_watch(env: &Env_Info, config: &mut inle_cfg::Config) -> Maybe_Error {
@@ -194,6 +196,7 @@ pub fn start_config_watch(env: &Env_Info, config: &mut inle_cfg::Config) -> Mayb
     Ok(())
 }
 
+/*
 pub fn init_engine_systems(
     engine_state: &mut Engine_State,
     gres: &mut Gfx_Resources,
@@ -216,6 +219,7 @@ pub fn init_engine_systems(
 
     Ok(())
 }
+*/
 
 #[cfg(debug_assertions)]
 pub fn init_engine_debug(

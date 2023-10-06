@@ -130,13 +130,11 @@ pub fn start_debug_frame(
     }
 }
 
-pub fn update_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) {
+pub fn update_debug(game_state: &mut Game_State, _game_res: &mut Game_Resources) {
     trace!("update_debug");
 
     update_console(game_state);
     update_scroller(game_state);
-
-    handle_debug_actions(game_state, game_res);
 
     game_state.fps_counter.tick(&game_state.time.dt());
     game_state.config.update();
@@ -180,6 +178,9 @@ fn update_console(game_state: &mut Game_State) {
             }
 
             console = game_state.debug_systems.console.lock().unwrap();
+
+            inle_debug::console::save_console_hist(&console, &game_state.env)
+                .unwrap_or_else(|err| lwarn!("Failed to save console history: {}", err));
         }
 
         for (out, color) in output {
@@ -366,8 +367,6 @@ pub fn render_debug(
     gres: &mut inle_gfx::res::Gfx_Resources,
     camera: &Camera,
 ) {
-    use inle_math::transform::Transform2D;
-
     let real_dt = time.real_dt();
 
     // Draw debug calipers
@@ -425,109 +424,6 @@ pub fn render_debug(
             .lock()
             .unwrap()
             .draw(window, gres, config);
-    }
-}
-
-macro_rules! add_msg {
-    ($game_state: expr, $msg: expr) => {
-        $game_state
-            .debug_systems
-            .debug_ui
-            .get_overlay(sid!("msg"))
-            .add_line($msg)
-    };
-}
-
-fn handle_debug_actions(game_state: &mut Game_State, _game_res: &mut Game_Resources) {
-    let actions = &game_state.input.processed.game_actions;
-    // @Speed: eventually we want to replace all the *name == sid with a const sid function, to allow doing
-    // (sid!("game_speed_up"), Action_Kind::Pressed) => { ... }
-    for action in actions {
-        match action {
-            (name, Action_Kind::Pressed) if *name == sid!("calipers") => {
-                // @Incomplete
-                let camera = Camera::default();
-                game_state.debug_systems.calipers.start_measuring_dist(
-                    &game_state.window,
-                    &camera,
-                    &game_state.input,
-                );
-            }
-            (name, Action_Kind::Released) if *name == sid!("calipers") => {
-                game_state.debug_systems.calipers.end_measuring();
-            }
-            (name, Action_Kind::Pressed)
-                if *name == sid!("game_speed_up") || *name == sid!("game_speed_down") =>
-            {
-                let mut ts = game_state.time.time_scale;
-                if action.0 == sid!("game_speed_up") {
-                    ts *= 2.0;
-                } else {
-                    ts *= 0.5;
-                }
-                ts = inle_math::math::clamp(ts, 0.001, 32.0);
-                if ts > 0.0 {
-                    game_state.time.time_scale = ts;
-                }
-                add_msg!(
-                    game_state,
-                    &format!("Time scale: {:.3}", game_state.time.time_scale)
-                );
-            }
-            (name, Action_Kind::Pressed) if *name == sid!("pause_toggle") => {
-                game_state.time.pause_toggle();
-                inle_win::window::set_key_repeat_enabled(
-                    &mut game_state.window,
-                    game_state.time.paused,
-                );
-                add_msg!(
-                    game_state,
-                    if game_state.time.paused {
-                        "Paused"
-                    } else {
-                        "Resumed"
-                    }
-                );
-            }
-            (name, Action_Kind::Pressed) if *name == sid!("step_sim") => {}
-            (name, Action_Kind::Pressed) if *name == sid!("toggle_trace_overlay") => {
-                let show_trace = game_state.debug_systems.show_overlay;
-                let show_trace = show_trace != Overlay_Shown::Trace;
-                if show_trace {
-                    game_state.debug_systems.show_overlay = Overlay_Shown::Trace;
-                } else {
-                    game_state.debug_systems.show_overlay = Overlay_Shown::None;
-                }
-                game_state
-                    .debug_systems
-                    .debug_ui
-                    .set_overlay_enabled(sid!("trace"), show_trace);
-            }
-            (name, Action_Kind::Pressed) if *name == sid!("toggle_threads_overlay") => {
-                let show_threads = game_state.debug_systems.show_overlay;
-                let show_threads = show_threads != Overlay_Shown::Threads;
-                if show_threads {
-                    game_state
-                        .debug_systems
-                        .debug_ui
-                        .set_overlay_enabled(sid!("trace"), false);
-                    game_state.debug_systems.show_overlay = Overlay_Shown::Threads;
-                } else {
-                    game_state.debug_systems.show_overlay = Overlay_Shown::None;
-                }
-            }
-            (name, Action_Kind::Pressed) if *name == sid!("move_camera_to_origin") => {
-                add_msg!(game_state, "Moved camera to origin");
-            }
-            (name, Action_Kind::Released) if *name == sid!("toggle_camera_on_player") => {}
-            (name, Action_Kind::Pressed) if *name == sid!("toggle_overlays") => {
-                game_state
-                    .config
-                    .toggle_cfg(sid!("engine/debug/overlay/display"))
-                    .unwrap_or_else(|err| lerr!("{}", err));
-            }
-            _ => {}
-        }
     }
 }
 

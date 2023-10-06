@@ -185,12 +185,7 @@ where
     type Output = Self;
 
     fn mul(self, scale: Vector2<T>) -> Self::Output {
-        Rect::new(
-            self.x,
-            self.y,
-            self.width * scale.x,
-            self.height * scale.y
-        )
+        Rect::new(self.x, self.y, self.width * scale.x, self.height * scale.y)
     }
 }
 

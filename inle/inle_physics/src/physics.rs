@@ -4,8 +4,8 @@ use super::layers::Collision_Matrix;
 use super::phys_world::{Collider_Handle, Collision_Data, Collision_Info, Physics_World};
 use super::spatial::Spatial_Accelerator;
 use crate::collider::{Collider, Collision_Shape, Phys_Data};
-use inle_cfg::{Config, Cfg_Var};
 use inle_alloc::temp::{excl_temp_array, Temp_Allocator};
+use inle_cfg::{Cfg_Var, Config};
 use inle_events::evt_register::{Event, Event_Register};
 use inle_math::math::clamp;
 use inle_math::vector::{sanity_check_v, Vec2f};
@@ -371,7 +371,14 @@ fn solve_collision_velocities(a: &mut Collider, b: &mut Collider, normal: Vec2f)
     b.velocity += 1. * b_phys.inv_mass * friction_impulse;
 }
 
-fn positional_correction(a: &mut Collider, b: &mut Collider, normal: Vec2f, penetration: f32, settings: &Physics_Settings, cfg: &Config) {
+fn positional_correction(
+    a: &mut Collider,
+    b: &mut Collider,
+    normal: Vec2f,
+    penetration: f32,
+    settings: &Physics_Settings,
+    cfg: &Config,
+) {
     trace!("physics::positional_correction");
 
     let a_inv_mass = a.phys_data.unwrap().inv_mass;
@@ -392,7 +399,12 @@ fn positional_correction(a: &mut Collider, b: &mut Collider, normal: Vec2f, pene
     b.position += b_inv_mass * correction;
 }
 
-fn solve_collisions(phys_world: &mut Physics_World, settings: &Physics_Settings, cfg: &Config, infos: &[Collision_Info_Internal]) {
+fn solve_collisions(
+    phys_world: &mut Physics_World,
+    settings: &Physics_Settings,
+    cfg: &Config,
+    infos: &[Collision_Info_Internal],
+) {
     trace!("physics::solve_collisions");
 
     for info in infos {

@@ -4,8 +4,14 @@ use std::cell::{Ref, RefCell, RefMut};
 pub mod in_game;
 pub mod menu;
 
+#[cfg(debug_assertions)]
+pub mod debug;
+
 pub use in_game::*;
 pub use menu::*;
+
+#[cfg(debug_assertions)]
+pub use debug::*;
 
 pub struct Phase_Args {
     game_state: RefCell<*mut Game_State>,
