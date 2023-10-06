@@ -170,7 +170,6 @@ fn parse_action_simple(s: &str) -> Option<Input_Action_Simple> {
             if let Ok(id) = tokens[1].parse::<u32>() {
                 if id > 0 && id <= joystick::JOY_COUNT as _ {
                     let btn = joystick::string_to_joy_btn(tokens[0])?;
-                    dbg!((btn, id));
                     return Some(Input_Action_Simple::Joystick(btn, Some(id - 1)));
                 } else {
                     lerr!(

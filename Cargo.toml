@@ -6,6 +6,10 @@ resolver = "1"
 inherits = "dev"
 opt-level = 3
 
+[profile.shipping]
+inherits = "release"
+lto = "fat"
+
 [workspace.dependencies]
 notify = "4.0"
 rayon = "1.8"

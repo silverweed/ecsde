@@ -26,6 +26,7 @@ pub type Uniform_Buffer = backend::Uniform_Buffer;
 //////////////////////////// DRAWING //////////////////////////////////
 
 /// Draws a color-filled rectangle in screen space
+#[inline]
 pub fn render_rect<R, P>(window: &mut Render_Window_Handle, rect: R, paint_props: P)
 where
     R: Into<Rect<f32>> + Copy + Clone + std::fmt::Debug,
@@ -37,6 +38,7 @@ where
 }
 
 /// Draws a color-filled rectangle in world space
+#[inline]
 pub fn render_rect_ws<R, P>(
     window: &mut Render_Window_Handle,
     rect: R,
@@ -52,6 +54,7 @@ pub fn render_rect_ws<R, P>(
     backend::fill_color_rect_ws(window, &paint_props, rect, transform, camera);
 }
 
+#[inline]
 pub fn render_circle<P>(window: &mut Render_Window_Handle, circle: Circle, paint_props: P)
 where
     P: Into<Paint_Properties>,
@@ -62,6 +65,7 @@ where
 }
 
 /// Draws a color-filled circle in world space
+#[inline]
 pub fn render_circle_ws<P>(
     window: &mut Render_Window_Handle,
     circle: Circle,
@@ -75,6 +79,7 @@ pub fn render_circle_ws<P>(
     backend::fill_color_circle_ws(window, &paint_props, circle, camera);
 }
 
+#[inline]
 pub fn render_texture_ws(
     window: &mut Render_Window_Handle,
     batches: &mut batcher::Batches,
@@ -90,6 +95,7 @@ pub fn render_texture_ws(
     );
 }
 
+#[inline]
 pub fn render_text<P>(
     window: &mut Render_Window_Handle,
     text: &Text,
@@ -102,6 +108,7 @@ pub fn render_text<P>(
     backend::render_text(window, text, &paint_props.into(), screen_pos);
 }
 
+#[inline]
 pub fn render_text_ws<P>(
     window: &mut Render_Window_Handle,
     text: &Text,
@@ -115,6 +122,7 @@ pub fn render_text_ws<P>(
     backend::render_text_ws(window, text, &paint_props.into(), world_transform, camera);
 }
 
+#[inline]
 pub fn render_vbuf(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
@@ -124,6 +132,7 @@ pub fn render_vbuf(
     backend::render_vbuf(window, vbuf, transform);
 }
 
+#[inline]
 pub fn render_vbuf_ws(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
@@ -134,6 +143,7 @@ pub fn render_vbuf_ws(
     backend::render_vbuf_ws(window, vbuf, transform, camera);
 }
 
+#[inline]
 pub fn render_vbuf_ws_with_texture(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
@@ -145,6 +155,7 @@ pub fn render_vbuf_ws_with_texture(
     backend::render_vbuf_ws_with_texture(window, vbuf, transform, camera, texture);
 }
 
+#[inline]
 pub fn render_vbuf_with_shader(
     window: &mut Render_Window_Handle,
     vbuf: &Vertex_Buffer,
@@ -155,20 +166,24 @@ pub fn render_vbuf_with_shader(
 }
 
 // Note: this always renders a line with thickness = 1px
+#[inline]
 pub fn render_line(window: &mut Render_Window_Handle, start: &Vertex, end: &Vertex) {
     trace!("render_line");
     backend::render_line(window, start, end);
 }
 
 ///////////////////////////////// QUERYING ///////////////////////////////////
+#[inline]
 pub fn get_texture_size(texture: &Texture) -> (u32, u32) {
     backend::get_texture_size(texture)
 }
 
+#[inline]
 pub fn copy_texture_to_image(texture: &Texture) -> Image {
     backend::copy_texture_to_image(texture)
 }
 
+#[inline]
 pub fn new_texture_from_image(image: &Image, rect: Option<Rect<i32>>) -> Texture {
     backend::new_texture_from_image(image, rect)
 }
@@ -177,34 +192,42 @@ pub fn get_image_pixel(image: &Image, x: u32, y: u32) -> Color {
     backend::get_image_pixel(image, x, y)
 }
 
+#[inline]
 pub fn get_image_size(image: &Image) -> (u32, u32) {
     backend::get_image_size(image)
 }
 
+#[inline]
 pub fn get_image_pixels(image: &Image) -> &[Color] {
     backend::get_image_pixels(image)
 }
 
+#[inline]
 pub fn get_text_size(text: &Text) -> Vec2f {
     backend::get_text_size(text)
 }
 
+#[inline]
 pub fn get_text_string(text: &Text) -> &str {
     backend::get_text_string(text)
 }
 
+#[inline]
 pub fn shaders_are_available() -> bool {
     backend::shaders_are_available()
 }
 
+#[inline]
 pub fn geom_shaders_are_available() -> bool {
     backend::geom_shaders_are_available()
 }
 
+#[inline]
 pub fn vbuf_cur_vertices(vbuf: &Vertex_Buffer) -> u32 {
     backend::vbuf_cur_vertices(vbuf)
 }
 
+#[inline]
 pub fn vbuf_max_vertices(vbuf: &Vertex_Buffer) -> u32 {
     backend::vbuf_max_vertices(vbuf)
 }
@@ -252,6 +275,7 @@ simple_wrap!(Vertex_Buffer_Linestrip, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Lines, Vertex_Buffer);
 simple_wrap!(Vertex_Buffer_Points, Vertex_Buffer);
 
+#[inline]
 pub fn new_image(width: u32, height: u32, color_type: Color_Type) -> Image {
     backend::new_image(width, height, color_type)
 }
@@ -283,6 +307,7 @@ pub fn dealloc_vbuf(vbuf: &mut Vertex_Buffer) {
     backend::dealloc_vbuf(vbuf);
 }
 
+#[inline]
 pub fn vbuf_primitive_type(vbuf: &Vertex_Buffer) -> Primitive_Type {
     backend::vbuf_primitive_type(vbuf)
 }
@@ -358,8 +383,9 @@ pub fn add_line(vbuf: &mut Vertex_Buffer_Lines, from: &Vertex, to: &Vertex) {
 }
 
 #[inline]
-pub fn add_vertex(vbuf: &mut Vertex_Buffer_Linestrip, v: &Vertex) {
-    backend::add_vertices(vbuf, &[*v]);
+pub fn add_vertices(vbuf: &mut Vertex_Buffer_Linestrip, v: &[Vertex]) {
+    debug_assert!(!v.is_empty());
+    backend::add_vertices(vbuf, v);
 }
 
 #[inline]
@@ -372,44 +398,54 @@ pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     backend::new_vertex(pos, col, tex_coords)
 }
 
+#[inline]
 pub fn set_vbuf_cur_vertices(vbuf: &mut Vertex_Buffer, cur_vertices: u32) {
     backend::set_vbuf_cur_vertices(vbuf, cur_vertices);
 }
 
+#[inline]
 pub fn swap_vbuf(a: &mut Vertex_Buffer, b: &mut Vertex_Buffer) -> bool {
     backend::swap_vbuf(a, b)
 }
 
+#[inline]
 pub fn update_vbuf(vbuf: &mut Vertex_Buffer, vertices: &[Vertex], offset: u32) {
     backend::update_vbuf(vbuf, vertices, offset);
 }
 
+#[inline]
 pub fn set_image_pixel(image: &mut Image, x: u32, y: u32, val: Color) {
     trace!("set_image_pixels");
     backend::set_image_pixel(image, x, y, val);
 }
 
+#[inline]
 pub fn update_texture_pixels(texture: &mut Texture, rect: &Rect<u32>, pixels: &[Color]) {
     trace!("update_texture_pixels");
     backend::update_texture_pixels(texture, rect, pixels);
 }
 
+#[inline]
 pub fn use_shader(shader: &mut Shader) {
     backend::use_shader(shader);
 }
 
+#[inline]
 pub fn set_uniform<T: Uniform_Value>(shader: &mut Shader, name: &std::ffi::CStr, val: T) {
     inle_gfx_backend::render::set_uniform(shader, name, val);
 }
 
+#[inline]
 pub fn set_texture_repeated(texture: &mut Texture, repeated: bool) {
     backend::set_texture_repeated(texture, repeated);
 }
 
+#[inline]
 pub fn set_texture_smooth(texture: &mut Texture, smooth: bool) {
     backend::set_texture_repeated(texture, smooth);
 }
 
+#[inline]
 pub fn create_or_get_uniform_buffer<'window>(
     window: &'window mut Render_Window_Handle,
     shader: &Shader,
@@ -424,6 +460,7 @@ pub fn create_or_get_uniform_buffer<'window>(
 pub unsafe trait Std140 {}
 
 /// Returns the offset where to write next
+#[inline]
 pub fn write_into_uniform_buffer<T: Std140>(
     ubo: &mut Uniform_Buffer,
     offset: usize,
@@ -437,6 +474,7 @@ pub fn write_into_uniform_buffer<T: Std140>(
 }
 
 /// Returns the offset where to write next
+#[inline]
 pub fn write_array_into_uniform_buffer<T: Std140>(
     ubo: &mut Uniform_Buffer,
     offset: usize,
@@ -454,6 +492,7 @@ pub fn write_array_into_uniform_buffer<T: Std140>(
     }
 }
 
+#[inline]
 pub fn bind_uniform_buffer(ubo: &Uniform_Buffer) {
     backend::bind_uniform_buffer(ubo);
 }

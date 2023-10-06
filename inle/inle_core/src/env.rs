@@ -30,13 +30,13 @@ impl Env_Info {
             .parent()
             .and_then(Path::file_name)
             .and_then(OsStr::to_str);
-        if matches!(cur_dir, Some("debug" | "release" | "profile"))
+        if matches!(cur_dir, Some("debug" | "release" | "profile" | "shipping"))
             && matches!(parent_dir, Some("target"))
         {
             working_dir.pop();
             working_dir.pop();
         } else if matches!(cur_dir, Some("deps"))
-            && matches!(parent_dir, Some("debug" | "release" | "profile"))
+            && matches!(parent_dir, Some("debug" | "release" | "profile" | "shipping"))
         {
             working_dir.pop();
             working_dir.pop();

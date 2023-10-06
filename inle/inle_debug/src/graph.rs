@@ -121,6 +121,7 @@ impl Debug_Element for Debug_Graph_View {
             gres,
             input_state,
             config,
+            frame_alloc,
             ..
         }: Draw_Args,
     ) {
@@ -212,6 +213,7 @@ impl Debug_Element for Debug_Graph_View {
         let drawn_points = &self.data.points;
         let mut vbuf = render::start_draw_linestrip_temp(window, drawn_points.len() as _);
         let mut avg = 0.0;
+        let mut vertices = inle_alloc::temp::excl_temp_array(frame_alloc);
         for (i, &point) in drawn_points.iter().enumerate() {
             trace!("debug::graph::draw_single_point");
 
@@ -219,67 +221,69 @@ impl Debug_Element for Debug_Graph_View {
             let col = self.get_color_for(point);
             let vertex = render::new_vertex(vpos, col, Vec2f::default());
             avg += point.y;
-            render::add_vertex(&mut vbuf, &vertex);
+            vertices.push(vertex);
+        }
 
-            // Draw selection line
-            if let Some(x) = self.selected_point {
-                if i == x {
-                    let rpos = pos + v2!(vpos.x, 0.) + v2!(-1., -1.);
-                    let rect = Rect::new(rpos.x, rpos.y, 2., self.size.y as f32 + 2.);
-                    render::render_rect(
-                        window,
-                        rect,
-                        Paint_Properties {
-                            color: colors::WHITE,
-                            border_color: colors::WHITE,
-                            border_thick: 1.,
-                            ..Default::default()
-                        },
-                    );
-                    render::render_circle(
-                        window,
-                        Circle {
-                            center: pos + vpos,
-                            radius: 4.0,
-                        },
-                        colors::rgb(255, 50, 10),
-                    );
-                }
-            }
+        if !vertices.is_empty() {
+            render::add_vertices(&mut vbuf, &vertices);
+        }
 
-            // Draw hover line
-            if let Some(x) = self.hovered_point {
-                if i == x {
-                    let color = colors::WHITE;
-                    let mpos = Vec2f::from(mouse::mouse_pos_in_window(
-                        window,
-                        &input_state.raw.mouse_state,
-                    ));
-                    let v1 = render::new_vertex(pos + v2!(mpos.x, 0.0), color, Vec2f::default());
-                    let v2 = render::new_vertex(
-                        pos + v2!(mpos.x, self.size.y as f32),
-                        color,
-                        Vec2f::default(),
-                    );
-                    let circle_col = colors::rgb(10, 255, 200);
-                    render::render_line(window, &v1, &v2);
-                    render::render_circle(
-                        window,
-                        Circle {
-                            center: pos + vpos,
-                            radius: 4.0,
-                        },
-                        circle_col,
-                    );
-                    let text = render::create_text(
-                        window,
-                        &format!("{:.2}", self.data.points[x].y),
-                        font,
-                        (1.5 * label_font_size as f32) as _,
-                    );
-                    render::render_text(window, &text, circle_col, pos + vpos + v2!(30.0, -30.0));
-                }
-            }
+        // Draw selection line
+        if let Some(x) = self.selected_point {
+            let vpos = self.get_coords_for(drawn_points[x]);
+            let rpos = pos + v2!(vpos.x, 0.) + v2!(-1., -1.);
+            let rect = Rect::new(rpos.x, rpos.y, 2., self.size.y as f32 + 2.);
+            render::render_rect(
+                window,
+                rect,
+                Paint_Properties {
+                    color: colors::WHITE,
+                    border_color: colors::WHITE,
+                    border_thick: 1.,
+                    ..Default::default()
+                },
+            );
+            render::render_circle(
+                window,
+                Circle {
+                    center: pos + vpos,
+                    radius: 4.0,
+                },
+                colors::rgb(255, 50, 10),
+            );
+        }
+
+        // Draw hover line
+        if let Some(x) = self.hovered_point {
+            let vpos = self.get_coords_for(drawn_points[x]);
+            let color = colors::WHITE;
+            let mpos = Vec2f::from(mouse::mouse_pos_in_window(
+                window,
+                &input_state.raw.mouse_state,
+            ));
+            let v1 = render::new_vertex(pos + v2!(mpos.x, 0.0), color, Vec2f::default());
+            let v2 = render::new_vertex(
+                pos + v2!(mpos.x, self.size.y as f32),
+                color,
+                Vec2f::default(),
+            );
+            let circle_col = colors::rgb(10, 255, 200);
+            render::render_line(window, &v1, &v2);
+            render::render_circle(
+                window,
+                Circle {
+                    center: pos + vpos,
+                    radius: 4.0,
+                },
+                circle_col,
+            );
+            let text = render::create_text(
+                window,
+                &format!("{:.2}", self.data.points[x].y),
+                font,
+                (1.5 * label_font_size as f32) as _,
+            );
+            render::render_text(window, &text, circle_col, pos + vpos + v2!(30.0, -30.0));
         }
 
         // Draw average

@@ -892,7 +892,7 @@ pub fn set_vbuf_cur_vertices(vbuf: &mut Vertex_Buffer, cur_vertices: u32) {
     vbuf.needs_transfer_to_gpu.set(true);
 }
 
-#[inline]
+#[inline(always)]
 pub fn new_vertex(pos: Vec2f, col: Color, tex_coords: Vec2f) -> Vertex {
     Vertex {
         position: pos,
