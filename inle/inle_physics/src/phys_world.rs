@@ -34,6 +34,10 @@ pub struct Physics_Body {
 }
 
 impl Physics_Body {
+    pub fn add_collider(&mut self, cld: Collider_Handle) {
+        self.colliders.push(cld);
+    }
+
     pub fn all_colliders(&self) -> impl Iterator<Item = Collider_Handle> + '_ {
         self.colliders.iter().copied()
     }
@@ -109,6 +113,22 @@ impl Physics_World {
         let handle = self.new_physics_body();
         let body = self.get_physics_body_mut(handle).unwrap();
         body.colliders.push(cld_handle);
+
+        handle
+    }
+
+    pub fn new_physics_body_with_rigidbodies(
+        &mut self,
+        clds: impl Iterator<Item=Collider>,
+        phys_data: Phys_Data,
+    ) -> Physics_Body_Handle {
+        let handle = self.new_physics_body();
+        for mut cld in clds {
+            cld.phys_data = Some(phys_data);
+            let cld_handle = self.add_collider(cld);
+            let body = self.get_physics_body_mut(handle).unwrap();
+            body.colliders.push(cld_handle);
+        }
 
         handle
     }

@@ -91,6 +91,9 @@ impl Persistent_Game_Phase for Debug {
                 }
                 (name, Action_Kind::Released) if *name == sid!("toggle_camera_on_player") => {
                     gs.free_camera = !gs.free_camera;
+                    if !gs.free_camera {
+                        gs.camera.transform = inle_math::transform::Transform2D::default();
+                    }
                 }
                 (name, Action_Kind::Pressed) if *name == sid!("toggle_overlays") => {
                     gs.config

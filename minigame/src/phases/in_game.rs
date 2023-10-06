@@ -12,7 +12,7 @@ use inle_gfx::res::tex_path;
 use inle_gfx::res::Gfx_Resources;
 use inle_gfx::sprites::Sprite;
 use inle_input::input_state::Action_Kind;
-use inle_physics::collider::Phys_Data;
+use inle_physics::collider::{Collider, Collision_Shape, Phys_Data};
 use inle_physics::phys_world::Physics_World;
 use inle_physics::physics;
 use std::ops::DerefMut;
@@ -100,6 +100,8 @@ impl Game_Phase for In_Game {
         sprite.z_index = Z_BG;
         sprite.color.a = 120;
         self.entities.push(Entity::new(sprite.into()));
+
+        self.entities.push(create_boundaries(gs.app_config.target_win_size, physw));
 
         let terrain = create_terrain(env, gres, physw);
         self.entities.push(terrain);
@@ -398,16 +400,62 @@ fn create_player(
         .with_static_friction(0.5)
         .with_dyn_friction(0.3);
 
-    let cld = inle_physics::collider::Collider {
-        shape: inle_physics::collider::Collision_Shape::Rect {
+    let cld = Collider {
+        shape: Collision_Shape::Rect {
             width: 28.,
             height: 54.,
         },
         layer: GCL::Player.into(),
-        is_static: false,
         ..Default::default()
     };
-    player.phys_body = phys_world.new_physics_body_with_rigidbody(cld, phys_data.clone());
+    player.phys_body = phys_world.new_physics_body_with_rigidbody(cld, phys_data);
 
     player
+}
+
+fn create_boundaries((win_w, win_h): (u32, u32), phys_world: &mut Physics_World) -> Entity {
+    let cld_left = Collider {
+        shape: Collision_Shape::Rect {
+            width: 500.,
+            height: 2. * (win_h as f32),
+        },
+        layer: GCL::Terrain.into(),
+        is_static: true,
+        offset: v2!(-(win_w as f32) * 0.5 - 250., 0.),
+        ..Default::default()
+    };
+
+    let cld_right = Collider {
+        shape: Collision_Shape::Rect {
+            width: 500.,
+            height: 2. * (win_h as f32),
+        },
+        layer: GCL::Terrain.into(),
+        is_static: true,
+        offset: v2!((win_w as f32) * 0.5 + 250., 0.),
+        ..Default::default()
+    };
+
+    let cld_top = Collider {
+        shape: Collision_Shape::Rect {
+            width: 2. * (win_w as f32),
+            height: 500.
+        },
+        layer: GCL::Terrain.into(),
+        is_static: true,
+        offset: v2!(0., -(win_h as f32) * 0.5 - 250.),
+        ..Default::default()
+    };
+
+    let phys_data = Phys_Data::default()
+        .with_infinite_mass()
+        .with_restitution(PHYS_RESTITUTION)
+        .with_static_friction(0.5)
+        .with_dyn_friction(0.3);
+    let mut phys_body_hdl = phys_world.new_physics_body_with_rigidbodies([cld_left, cld_right, cld_top].into_iter(), phys_data);
+
+    let mut entity = Entity::default();
+    entity.phys_body = phys_body_hdl;
+
+    entity
 }
