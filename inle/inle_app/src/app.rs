@@ -225,18 +225,22 @@ pub fn init_engine_systems(
 #[cfg(debug_assertions)]
 pub fn init_engine_debug(
     env: &inle_core::env::Env_Info,
+    cvars: &Engine_CVars,
     config: &inle_cfg::Config,
     debug_systems: &mut Debug_Systems,
     app_config: &crate::app_config::App_Config,
     input_state: &inle_input::input_state::Input_State,
     gfx_resources: &mut Gfx_Resources,
-    cfg: inle_debug::debug_ui::Debug_Ui_System_Config,
+    ui_cfg: inle_debug::debug_ui::Debug_Ui_System_Config,
 ) -> Maybe_Error {
     use inle_common::vis_align::Align;
     use inle_debug::{graph, overlay};
     use inle_math::vector::{Vec2f, Vec2u};
 
-    let font = gfx_resources.load_font(&inle_gfx::res::font_path(env, cfg.font_name.read(config)));
+    let font = gfx_resources.load_font(&inle_gfx::res::font_path(
+        env,
+        ui_cfg.font_name.read(config),
+    ));
 
     debug_systems.global_painter.init(gfx_resources, env);
 
@@ -248,27 +252,23 @@ pub fn init_engine_debug(
     let debug_ui = &mut debug_systems.debug_ui;
     debug_ui.set_font(font);
 
-    // Frame scroller
-    {
-        let scroller = &mut debug_ui.frame_scroller;
-        scroller.size.x = (win_w * 0.75) as _;
-        scroller.pos.x = (win_w * 0.125) as _;
-        scroller.size.y = 35;
-        scroller.pos.y = 15;
-        scroller.cfg = inle_debug::frame_scroller::Debug_Frame_Scroller_Config {
-            font,
-            font_size: Cfg_Var::new("engine/debug/frame_scroller/label_font_size", config),
-            ui_scale: cfg.ui_scale,
-        };
-    }
+    init_frame_scroller(
+        &mut debug_ui.frame_scroller,
+        &debug_systems.log,
+        font,
+        cvars,
+        config,
+        &ui_cfg,
+        app_config,
+    );
 
-    let ui_scale = cfg.ui_scale.read(config);
+    let ui_scale = ui_cfg.ui_scale.read(config);
     // Debug overlays
     {
         let mut debug_overlay_config = overlay::Debug_Overlay_Config {
-            ui_scale: cfg.ui_scale,
+            ui_scale: ui_cfg.ui_scale,
             row_spacing: Cfg_Var::new("engine/debug/overlay/row_spacing", config),
-            font_size: cfg.font_size,
+            font_size: ui_cfg.font_size,
             pad_x: Cfg_Var::new("engine/debug/overlay/pad_x", config),
             pad_y: Cfg_Var::new("engine/debug/overlay/pad_y", config),
             background: Cfg_Var::new("engine/debug/overlay/background", config),
@@ -355,7 +355,7 @@ pub fn init_engine_debug(
         let mut graph_config = graph::Debug_Graph_View_Config {
             grid_xstep: Some(graph::Grid_Step::Fixed_Step(5.)),
             grid_ystep: Some(graph::Grid_Step::Fixed_Step(30.)),
-            ui_scale: cfg.ui_scale,
+            ui_scale: ui_cfg.ui_scale,
             label_font_size: Cfg_Var::new("engine/debug/graphs/label_font_size", config),
             title: Some(String::from("FPS")),
             title_font_size: Cfg_Var::new("engine/debug/graphs/title_font_size", config),
@@ -408,7 +408,7 @@ pub fn init_engine_debug(
             title: std::borrow::Cow::Borrowed("Log"),
             title_font_size: Cfg_Var::new("engine/debug/log_window/title_font_size", config),
             header_height: Cfg_Var::new("engine/debug/log_window/header_height", config),
-            ui_scale: cfg.ui_scale,
+            ui_scale: ui_cfg.ui_scale,
             pad_x: Cfg_Var::new("engine/debug/log_window/pad_x", config),
             pad_y: Cfg_Var::new("engine/debug/log_window/pad_y", config),
             linesep: Cfg_Var::new("engine/debug/log_window/linesep", config),
@@ -432,7 +432,7 @@ pub fn init_engine_debug(
     }
     */
 
-    debug_ui.cfg = cfg;
+    debug_ui.cfg = ui_cfg;
 
     {
         use inle_input::bindings::{Input_Action, Input_Action_Simple};
@@ -495,6 +495,36 @@ pub fn handle_core_actions(
     false
 }
 */
+
+fn init_frame_scroller(
+    scroller: &mut inle_debug::frame_scroller::Debug_Frame_Scroller,
+    debug_log: &inle_debug::log::Debug_Log,
+    font: inle_gfx::res::Font_Handle,
+    cvars: &Engine_CVars,
+    cfg: &inle_cfg::Config,
+    ui_cfg: &inle_debug::debug_ui::Debug_Ui_System_Config,
+    app_config: &App_Config,
+) {
+    let ms_per_frame = cvars.gameplay_update_tick_ms.read(cfg);
+    let fps = 1000. / ms_per_frame;
+    let log_len = debug_log.max_hist_len;
+    scroller.n_frames = fps as _;
+    scroller.n_seconds = (log_len / fps as u32) as _;
+
+    let (win_w, win_h) = (
+        app_config.target_win_size.0 as f32,
+        app_config.target_win_size.1 as f32,
+    );
+    scroller.size.x = (win_w * 0.75) as _;
+    scroller.pos.x = (win_w * 0.125) as _;
+    scroller.size.y = 35;
+    scroller.pos.y = 15;
+    scroller.cfg = inle_debug::frame_scroller::Debug_Frame_Scroller_Config {
+        font,
+        font_size: Cfg_Var::new("engine/debug/frame_scroller/label_font_size", cfg),
+        ui_scale: ui_cfg.ui_scale,
+    };
+}
 
 pub fn limit_framerate(
     t_before_work: std::time::Instant,

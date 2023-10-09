@@ -23,8 +23,8 @@ print_em_debug_info: M
 sound_test: CTRL+K
 toggle_trace_overlay: Tab
 toggle_threads_overlay: T
-camera_zoom_up: CTRL+Wheel_Up, Add
-camera_zoom_down: CTRL+Wheel_Down, Subtract
+camera_zoom_in: CTRL+Wheel_Up, Add
+camera_zoom_out: CTRL+Wheel_Down, Subtract
 move_camera_to_origin: O
 toggle_console: Tilde
 calipers: Mouse_Middle, CTRL+Mouse_Left

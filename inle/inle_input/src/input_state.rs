@@ -195,7 +195,7 @@ fn process_event_core_actions(
 fn handle_actions(
     actions: &mut Vec<Game_Action>,
     kind: Action_Kind,
-    mut names: impl IntoIterator<Item = String_Id>,
+    names: impl IntoIterator<Item = String_Id>,
 ) {
     for name in names.into_iter() {
         actions.push((name, kind));

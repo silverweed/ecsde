@@ -20,6 +20,7 @@ pub fn init_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) {
 
     inle_app::app::init_engine_debug(
         &game_state.env,
+        &game_state.engine_cvars,
         &game_state.config,
         &mut game_state.debug_systems,
         &game_state.app_config,
@@ -29,6 +30,7 @@ pub fn init_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     )
     .unwrap();
 
+    // TODO: move initialization of all overlays that are used in inle_app/src/overlays there
     init_game_debug(game_state, game_res);
 }
 
@@ -46,16 +48,6 @@ fn init_game_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) {
         .load_font(&inle_gfx::res::font_path(&game_state.env, font_name));
 
     let (win_w, win_h) = game_state.app_config.target_win_size;
-
-    {
-        // Frame scroller
-        let scroller = &mut debug_ui.frame_scroller;
-        let ms_per_frame = game_state.engine_cvars.gameplay_update_tick_ms.read(cfg);
-        let fps = 1000. / ms_per_frame;
-        let log_len = game_state.debug_systems.log.max_hist_len;
-        scroller.n_frames = fps as _;
-        scroller.n_seconds = (log_len / fps as u32) as _;
-    }
 
     let overlay_cfg = Debug_Overlay_Config {
         row_spacing: Cfg_Var::new("debug/overlay/gameplay/row_spacing", cfg),
@@ -149,6 +141,7 @@ pub fn update_debug(game_state: &mut Game_State, _game_res: &mut Game_Resources)
         &game_state.input,
         &game_state.phys_world,
         &game_state.camera,
+        &game_state.phys_debug_data,
     );
 }
 

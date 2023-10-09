@@ -120,12 +120,12 @@ fn replace_falling_block(
 
     // Initial random position + rotation
     block.transform.translate(
-        rand::rand_range(rng, -win_w, win_w),
-        rand::rand_range(rng, -win_h * 2.0, -win_h),
+        rand::rand_range(rng, -win_w..win_w),
+        rand::rand_range(rng, -win_h * 2.0..-win_h),
     );
     block
         .transform
-        .rotate(angle::rad(rand::rand_range(rng, 0., angle::TAU)));
+        .rotate(angle::rad(rand::rand_range(rng, 0.0..angle::TAU)));
     //
     // 50% chance to be drawn atop of the mountains
     let z_index = if rand::rand_01(rng) < 0.5 { -1 } else { 1 };
@@ -133,13 +133,11 @@ fn replace_falling_block(
 
     let speed = rand::rand_range(
         rng,
-        FALLING_BLOCK_SPEED_RANGE.0,
-        FALLING_BLOCK_SPEED_RANGE.1,
+        FALLING_BLOCK_SPEED_RANGE.0..FALLING_BLOCK_SPEED_RANGE.1,
     );
     let ang_speed = angle::deg(rand::rand_range(
         rng,
-        -FALLING_BLOCK_ANG_SPEED_DEG,
-        FALLING_BLOCK_ANG_SPEED_DEG,
+        -FALLING_BLOCK_ANG_SPEED_DEG..FALLING_BLOCK_ANG_SPEED_DEG,
     ));
     Falling_Block {
         sprite_idx: replaced_idx,

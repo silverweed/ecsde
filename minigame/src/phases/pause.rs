@@ -1,12 +1,12 @@
-use inle_app::phases::{Game_Phase, Phase_Id, Phase_Transition};
 use super::Phase_Args;
+use inle_app::phases::{Game_Phase, Phase_Id, Phase_Transition};
 use inle_gfx::render_window::Render_Window_Handle;
 use inle_input::input_state::{Action_Kind, Game_Action};
 use inle_math::rect::Rect;
 use inle_math::vector::Vec2f;
 use inle_win::window;
-use std::time::Duration;
 use std::ops::DerefMut;
+use std::time::Duration;
 
 #[derive(Default)]
 struct Menu_Button {
@@ -18,7 +18,7 @@ struct Menu_Button {
 }
 
 #[derive(Default)]
-pub struct Pause_Menu  {
+pub struct Pause_Menu {
     buttons: Vec<Menu_Button>,
 }
 
@@ -77,11 +77,7 @@ impl Game_Phase for Pause_Menu {
         game_state.time.paused = false;
     }
 
-    fn update(
-        &mut self,
-        args: &mut Phase_Args,
-    ) -> Phase_Transition {
-
+    fn update(&mut self, args: &mut Phase_Args) -> Phase_Transition {
         let mut game_state = args.game_state_mut();
         let gs = game_state.deref_mut();
         let istate = &gs.input;

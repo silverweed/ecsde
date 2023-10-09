@@ -12,15 +12,17 @@ use inle_gfx::render::Z_Index;
 use inle_gfx::res::tex_path;
 use inle_gfx::res::Gfx_Resources;
 use inle_gfx::sprites::Sprite;
-use inle_math::vector::Vec2f;
 use inle_input::input_state::Action_Kind;
+use inle_math::vector::Vec2f;
 use inle_physics::collider::{Collider, Collision_Shape, Phys_Data};
 use inle_physics::phys_world::{Collider_Handle, Physics_World};
 use inle_physics::physics;
 use std::ops::DerefMut;
 use std::time::Duration;
 
-struct Player_Cfg {
+mod blocks;
+
+pub(super) struct Entity_Phys_Cfg {
     pub accel: Cfg_Var<f32>,
     //pub horiz_max_speed: Cfg_Var<f32>,
     //pub vert_max_speed: Cfg_Var<f32>,
@@ -28,23 +30,24 @@ struct Player_Cfg {
     pub ascending_vert_dampening: Cfg_Var<f32>,
     pub descending_vert_dampening: Cfg_Var<f32>,
     pub gravity: Cfg_Var<f32>,
+    // For blocks this is the throw impulse
     pub jump_impulse: Cfg_Var<f32>,
 }
 
-impl Player_Cfg {
-    pub fn new(cfg: &Config) -> Self {
-        let accel = Cfg_Var::<f32>::new("game/player/acceleration", cfg);
+impl Entity_Phys_Cfg {
+    pub fn new(cfg: &Config, cfg_path: &str) -> Self {
+        let accel = Cfg_Var::<f32>::new(&format!("{}/acceleration", cfg_path), cfg);
         //    let horiz_max_speed =
-        //        Cfg_Var::<f32>::new("game/player/horiz_max_speed", cfg);
+        //        Cfg_Var::<f32>::new(&format!("{}/horiz_max_speed", cfg_path), cfg);
         //    let vert_max_speed =
-        //        Cfg_Var::<f32>::new("game/player/vert_max_speed", cfg);
-        let horiz_dampening = Cfg_Var::<f32>::new("game/player/horiz_dampening", cfg);
+        //        Cfg_Var::<f32>::new(&format!("{}/vert_max_speed", cfg_path), cfg);
+        let horiz_dampening = Cfg_Var::<f32>::new(&format!("{}/horiz_dampening", cfg_path), cfg);
         let ascending_vert_dampening =
-            Cfg_Var::<f32>::new("game/player/ascending_vert_dampening", cfg);
+            Cfg_Var::<f32>::new(&format!("{}/ascending_vert_dampening", cfg_path), cfg);
         let descending_vert_dampening =
-            Cfg_Var::<f32>::new("game/player/descending_vert_dampening", cfg);
-        let gravity = Cfg_Var::<f32>::new("game/player/gravity", cfg);
-        let jump_impulse = Cfg_Var::<f32>::new("game/player/jump_impulse", cfg);
+            Cfg_Var::<f32>::new(&format!("{}/descending_vert_dampening", cfg_path), cfg);
+        let gravity = Cfg_Var::<f32>::new(&format!("{}/gravity", cfg_path), cfg);
+        let jump_impulse = Cfg_Var::<f32>::new(&format!("{}/jump_impulse", cfg_path), cfg);
         Self {
             accel,
             //horiz_max_speed,
@@ -86,20 +89,24 @@ pub struct In_Game {
     entities: Entity_Container,
     players: [Player; NUM_PLAYERS],
     houses: [Collider_Handle; NUM_PLAYERS],
-    player_cfg: Player_Cfg,
+
+    player_cfg: Entity_Phys_Cfg,
     phys_settings: physics::Physics_Settings,
+
+    block_system: blocks::Block_System,
 }
 
 impl In_Game {
     pub const PHASE_ID: Phase_Id = Phase_Id::new("in_game");
 }
 
-const Z_SKY: Z_Index = -3;
-const Z_BG: Z_Index = -2;
-const Z_HOUSES: Z_Index = -1;
-const Z_MOUNTAINS: Z_Index = 0;
-const Z_TERRAIN: Z_Index = 1;
-const Z_PLAYERS: Z_Index = 2;
+pub(super) const Z_SKY: Z_Index = -3;
+pub(super) const Z_BG: Z_Index = -2;
+pub(super) const Z_HOUSES: Z_Index = -1;
+pub(super) const Z_MOUNTAINS: Z_Index = 0;
+pub(super) const Z_TERRAIN: Z_Index = 1;
+pub(super) const Z_BLOCKS: Z_Index = 2;
+pub(super) const Z_PLAYERS: Z_Index = 3;
 
 impl Game_Phase for In_Game {
     type Args = Phase_Args;
@@ -160,12 +167,22 @@ impl Game_Phase for In_Game {
         // Houses
         let mut house1 = create_house(env, gres, physw, "game/house_cyclops.png", cfg);
         house1.transform.set_position(-mountain_off_x, house_y);
-        self.houses[0] = physw.get_physics_body(house1.phys_body).unwrap().all_colliders().next().unwrap();
+        self.houses[0] = physw
+            .get_physics_body(house1.phys_body)
+            .unwrap()
+            .all_colliders()
+            .next()
+            .unwrap();
         self.entities.push(house1);
 
         let mut house2 = create_house(env, gres, physw, "game/house_evil.png", cfg);
         house2.transform.set_position(mountain_off_x, house_y);
-        self.houses[1] = physw.get_physics_body(house2.phys_body).unwrap().all_colliders().next().unwrap();
+        self.houses[1] = physw
+            .get_physics_body(house2.phys_body)
+            .unwrap()
+            .all_colliders()
+            .next()
+            .unwrap();
         self.entities.push(house2);
 
         // Players
@@ -178,6 +195,10 @@ impl Game_Phase for In_Game {
         player.sprites[0].color = inle_common::colors::color_from_hex_no_alpha(0x1e98ff);
         player.transform.set_position(mountain_off_x, player_y);
         self.players[1] = self.entities.push(player).into();
+
+        // Blocks
+        self.block_system
+            .init(100, &mut self.entities, gs, &mut res);
     }
 
     fn on_end(&mut self, args: &mut Self::Args) {
@@ -204,6 +225,8 @@ impl Game_Phase for In_Game {
                 _ => {}
             }
         }
+
+        self.block_system.update(gs, &mut self.entities);
 
         let players_input = Self::read_players_input(gs);
         self.update_players(gs, &players_input);
@@ -235,6 +258,10 @@ fn create_collision_matrix() -> inle_physics::layers::Collision_Matrix {
     collision_matrix.set_layers_collide(GCL::Player, GCL::Terrain);
     collision_matrix.set_layers_collide(GCL::Player, GCL::Player);
     collision_matrix.set_layers_collide(GCL::Player, GCL::Houses);
+    collision_matrix.set_layers_collide(GCL::Player, GCL::Boundary);
+    collision_matrix.set_layers_collide(GCL::Player, GCL::Blocks);
+    collision_matrix.set_layers_collide(GCL::Blocks, GCL::Blocks);
+    collision_matrix.set_layers_collide(GCL::Blocks, GCL::Terrain);
     collision_matrix
 }
 
@@ -247,13 +274,15 @@ impl In_Game {
             collision_matrix,
             positional_correction_percent,
         };
+        let block_system = blocks::Block_System::new(cfg);
 
         Self {
-            player_cfg: Player_Cfg::new(cfg),
+            player_cfg: Entity_Phys_Cfg::new(cfg, "game/player"),
             entities: Entity_Container::default(),
             players: Default::default(),
             houses: Default::default(),
             phys_settings,
+            block_system,
         }
     }
 
@@ -276,8 +305,6 @@ impl In_Game {
             }
         }
 
-        #[cfg(debug_assertions)]
-        let mut debug_data = inle_physics::physics::Collision_System_Debug_Data::default();
         inle_physics::physics::update_collisions(
             &self.entities,
             physw,
@@ -286,7 +313,7 @@ impl In_Game {
             &mut game_state.frame_alloc,
             &game_state.config,
             #[cfg(debug_assertions)]
-            &mut debug_data,
+            &mut game_state.phys_debug_data,
         );
 
         // Copy back new colliders positions to entities
@@ -306,7 +333,6 @@ impl In_Game {
             }
         }
     }
-
 
     fn read_players_input(game_state: &Game_State) -> Players_Input {
         let mut players_input = Players_Input::default();
@@ -419,15 +445,21 @@ impl In_Game {
         let physw = &game_state.phys_world;
         for (player_idx, player_state) in self.players.iter().enumerate() {
             let player = self.entities.get(player_state.entity).unwrap();
-            let cld = physw.get_first_rigidbody_collider(player.phys_body).unwrap();
-            let collided_house = physw.get_collisions(cld.handle).iter().find(|data| {
-                if let Some(oth) = physw.get_collider(data.other_collider) {
-                    if oth.layer == GCL::Houses.into() {
-                        return true;
+            let cld = physw
+                .get_first_rigidbody_collider(player.phys_body)
+                .unwrap();
+            let collided_house = physw
+                .get_collisions(cld.handle)
+                .iter()
+                .find(|data| {
+                    if let Some(oth) = physw.get_collider(data.other_collider) {
+                        if oth.layer == GCL::Houses.into() {
+                            return true;
+                        }
                     }
-                } 
-                false
-            }).map(|data| data.other_collider);
+                    false
+                })
+                .map(|data| data.other_collider);
 
             if let Some(house) = collided_house {
                 if house == self.houses[(player_idx + 1) % 2] {
@@ -564,7 +596,7 @@ fn create_boundaries(
             width: 500.,
             height: 2. * (win_h as f32),
         },
-        layer: GCL::Terrain.into(),
+        layer: GCL::Boundary.into(),
         is_static: true,
         offset: v2!((win_w as f32) * 0.5 + 250., 0.),
         ..Default::default()
@@ -608,7 +640,8 @@ fn create_house(
     sprite.z_index = Z_HOUSES;
     let cld = Collider {
         shape: Collision_Shape::Rect {
-            width: sprite.rect.width as _, height: sprite.rect.height as _,
+            width: sprite.rect.width as _,
+            height: sprite.rect.height as _,
         },
         layer: GCL::Houses.into(),
         is_static: true,

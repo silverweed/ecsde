@@ -13,6 +13,8 @@ pub enum Game_Collision_Layer {
     Player,
     Terrain,
     Houses,
+    Blocks,
+    Boundary,
 }
 
 impl From<Game_Collision_Layer> for inle_physics::layers::Collision_Layer {

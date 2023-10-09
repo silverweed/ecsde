@@ -51,6 +51,10 @@ pub struct Game_State {
 
     #[cfg(debug_assertions)]
     pub debug_systems: inle_app::debug::systems::Debug_Systems,
+
+    #[cfg(debug_assertions)]
+    pub phys_debug_data: inle_physics::physics::Collision_System_Debug_Data,
+
     #[cfg(debug_assertions)]
     pub fps_counter: inle_debug::fps::Fps_Counter,
 }
@@ -220,6 +224,8 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
         bg_music: Sound_Handle::INVALID,
         #[cfg(debug_assertions)]
         debug_systems,
+        #[cfg(debug_assertions)]
+        phys_debug_data: inle_physics::physics::Collision_System_Debug_Data::default(),
         #[cfg(debug_assertions)]
         fps_counter: inle_debug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(1)),
     })

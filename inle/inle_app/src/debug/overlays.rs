@@ -24,6 +24,7 @@ pub fn update_debug(
     input_state: &inle_input::input_state::Input_State,
     phys_world: &inle_physics::phys_world::Physics_World,
     camera: &Camera,
+    collision_data: &inle_physics::physics::Collision_System_Debug_Data,
 ) {
     // Overlays
     let display_overlays = cvars.debug.display_overlays.read(config);
@@ -43,6 +44,10 @@ pub fn update_debug(
         );
 
         update_win_debug_overlay(debug_systems.debug_ui.get_overlay(sid!("window")), window);
+        update_physics_debug_overlay(
+            debug_systems.debug_ui.get_overlay(sid!("physics")),
+            collision_data,
+        );
     } else if overlays_were_visible {
         set_debug_hud_enabled(&mut debug_systems.debug_ui, false);
     }

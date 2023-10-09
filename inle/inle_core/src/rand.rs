@@ -56,9 +56,14 @@ pub fn rand_01(rng: &mut Rand_Xoshiro256) -> f32 {
     (rng.next() >> 32) as f32 / u32::max_value() as f32
 }
 
-pub fn rand_range(rng: &mut Rand_Xoshiro256, min: f32, max: f32) -> f32 {
-    debug_assert!(min <= max);
-    min + rand_01(rng) * (max - min)
+pub fn rand_range<T: From<f32> + Into<f32>>(
+    rng: &mut Rand_Xoshiro256,
+    range: std::ops::Range<T>,
+) -> T {
+    let start = range.start.into();
+    let end = range.end.into();
+    let res = start + rand_01(rng) * (end - start);
+    res.into()
 }
 
 impl Rand_Xoshiro256 {

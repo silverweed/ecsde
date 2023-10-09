@@ -1,7 +1,10 @@
 use super::Phase_Args;
 use inle_app::debug::systems::Overlay_Shown;
 use inle_app::phases::{Persistent_Game_Phase, Phase_Id};
+use inle_cfg::Cfg_Var;
 use inle_input::input_state::{Action_Kind, Game_Action};
+use inle_input::mouse;
+use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window::Camera;
 use std::ops::DerefMut;
 
@@ -100,8 +103,66 @@ impl Persistent_Game_Phase for Debug {
                         .toggle_cfg(sid!("engine/debug/overlay/display"))
                         .unwrap_or_else(|err| lerr!("{}", err));
                 }
+                (name, Action_Kind::Pressed) if *name == sid!("camera_zoom_in") => {
+                    if gs.free_camera {
+                        camera_zoom_preserve_mouse_pos(
+                            &mut gs.camera,
+                            &gs.config,
+                            &gs.input,
+                            &gs.window,
+                            -1.,
+                        );
+                    }
+                }
+                (name, Action_Kind::Pressed) if *name == sid!("camera_zoom_out") => {
+                    if gs.free_camera {
+                        camera_zoom_preserve_mouse_pos(
+                            &mut gs.camera,
+                            &gs.config,
+                            &gs.input,
+                            &gs.window,
+                            1.,
+                        );
+                    }
+                }
                 _ => {}
             }
         }
     }
+}
+
+fn camera_zoom_preserve_mouse_pos(
+    camera: &mut inle_win::window::Camera,
+    config: &inle_cfg::Config,
+    input: &inle_input::input_state::Input_State,
+    window: &inle_gfx::render_window::Render_Window_Handle,
+    zoom_direction: f32,
+) {
+    let sx = camera.transform.scale().x;
+    let mut cam_translation = v2!(0., 0.);
+    let mut add_scale = v2!(0., 0.);
+
+    let base_delta_zoom_per_scroll =
+        Cfg_Var::<f32>::new("game/camera/free/base_delta_zoom_per_scroll", config).read(config);
+
+    add_scale.x += zoom_direction * base_delta_zoom_per_scroll * sx;
+    add_scale.y = add_scale.x;
+
+    if add_scale.magnitude2() > 0. {
+        // Preserve mouse world position
+        let mpos = Vec2i::from(Vec2f::from(mouse::raw_mouse_pos(&input.raw.mouse_state)));
+        let cur_mouse_wpos = inle_gfx::render_window::mouse_pos_in_world(window, mpos, camera);
+
+        camera.transform.add_scale_v(add_scale);
+        let mut new_scale = camera.transform.scale();
+        new_scale.x = new_scale.x.max(0.001);
+        new_scale.y = new_scale.y.max(0.001);
+        camera.transform.set_scale_v(new_scale);
+
+        let new_mouse_wpos = inle_gfx::render_window::mouse_pos_in_world(window, mpos, camera);
+
+        cam_translation += cur_mouse_wpos - new_mouse_wpos;
+    }
+
+    camera.transform.translate_v(cam_translation);
 }
