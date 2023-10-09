@@ -15,7 +15,7 @@ use inle_gfx::sprites::Sprite;
 use inle_math::vector::Vec2f;
 use inle_input::input_state::Action_Kind;
 use inle_physics::collider::{Collider, Collision_Shape, Phys_Data};
-use inle_physics::phys_world::Physics_World;
+use inle_physics::phys_world::{Collider_Handle, Physics_World};
 use inle_physics::physics;
 use std::ops::DerefMut;
 use std::time::Duration;
@@ -85,6 +85,7 @@ const NUM_PLAYERS: usize = 2;
 pub struct In_Game {
     entities: Entity_Container,
     players: [Player; NUM_PLAYERS],
+    houses: [Collider_Handle; NUM_PLAYERS],
     player_cfg: Player_Cfg,
     phys_settings: physics::Physics_Settings,
 }
@@ -93,8 +94,9 @@ impl In_Game {
     pub const PHASE_ID: Phase_Id = Phase_Id::new("in_game");
 }
 
-const Z_SKY: Z_Index = -2;
-const Z_BG: Z_Index = -1;
+const Z_SKY: Z_Index = -3;
+const Z_BG: Z_Index = -2;
+const Z_HOUSES: Z_Index = -1;
 const Z_MOUNTAINS: Z_Index = 0;
 const Z_TERRAIN: Z_Index = 1;
 const Z_PLAYERS: Z_Index = 2;
@@ -152,8 +154,21 @@ impl Game_Phase for In_Game {
         self.entities.push(left_mountain);
         self.entities.push(right_mountain);
 
-        // Players
         let player_y = mountain_off_y - mountain_height as f32;
+        let house_y = player_y + 80.;
+
+        // Houses
+        let mut house1 = create_house(env, gres, physw, "game/house_cyclops.png", cfg);
+        house1.transform.set_position(-mountain_off_x, house_y);
+        self.houses[0] = physw.get_physics_body(house1.phys_body).unwrap().all_colliders().next().unwrap();
+        self.entities.push(house1);
+
+        let mut house2 = create_house(env, gres, physw, "game/house_evil.png", cfg);
+        house2.transform.set_position(mountain_off_x, house_y);
+        self.houses[1] = physw.get_physics_body(house2.phys_body).unwrap().all_colliders().next().unwrap();
+        self.entities.push(house2);
+
+        // Players
         let mut player = create_player(env, gres, physw, cfg);
         player.sprites[0].color = inle_common::colors::color_from_hex_no_alpha(0xdd9884);
         player.transform.set_position(-mountain_off_x, player_y);
@@ -177,6 +192,19 @@ impl Game_Phase for In_Game {
         let mut game_state = args.game_state_mut();
         let gs = game_state.deref_mut();
 
+        if gs.time.paused {
+            return Phase_Transition::None;
+        }
+
+        for action in &gs.input.processed.game_actions {
+            match action {
+                (name, Action_Kind::Pressed) if *name == sid!("open_pause_menu") => {
+                    return Phase_Transition::Push(super::Pause_Menu::PHASE_ID);
+                }
+                _ => {}
+            }
+        }
+
         let players_input = Self::read_players_input(gs);
         self.update_players(gs, &players_input);
         self.update_anim_states(gs, &players_input);
@@ -187,6 +215,7 @@ impl Game_Phase for In_Game {
         );
 
         self.update_phys_world(gs);
+        self.check_win(gs);
 
         Phase_Transition::None
     }
@@ -205,6 +234,7 @@ fn create_collision_matrix() -> inle_physics::layers::Collision_Matrix {
     let mut collision_matrix = inle_physics::layers::Collision_Matrix::default();
     collision_matrix.set_layers_collide(GCL::Player, GCL::Terrain);
     collision_matrix.set_layers_collide(GCL::Player, GCL::Player);
+    collision_matrix.set_layers_collide(GCL::Player, GCL::Houses);
     collision_matrix
 }
 
@@ -222,6 +252,7 @@ impl In_Game {
             player_cfg: Player_Cfg::new(cfg),
             entities: Entity_Container::default(),
             players: Default::default(),
+            houses: Default::default(),
             phys_settings,
         }
     }
@@ -382,6 +413,31 @@ impl In_Game {
             }
         }
     }
+
+    fn check_win(&mut self, game_state: &mut Game_State) {
+        let mut player_won = [false; NUM_PLAYERS];
+        let physw = &game_state.phys_world;
+        for (player_idx, player_state) in self.players.iter().enumerate() {
+            let player = self.entities.get(player_state.entity).unwrap();
+            let cld = physw.get_first_rigidbody_collider(player.phys_body).unwrap();
+            let collided_house = physw.get_collisions(cld.handle).iter().find(|data| {
+                if let Some(oth) = physw.get_collider(data.other_collider) {
+                    if oth.layer == GCL::Houses.into() {
+                        return true;
+                    }
+                } 
+                false
+            }).map(|data| data.other_collider);
+
+            if let Some(house) = collided_house {
+                if house == self.houses[(player_idx + 1) % 2] {
+                    player_won[player_idx] = true;
+                }
+            }
+        }
+
+        // TODO: handle win
+    }
 }
 
 fn create_terrain(
@@ -538,4 +594,34 @@ fn create_boundaries(
         phys_body: phys_body_hdl,
         ..Default::default()
     }
+}
+
+fn create_house(
+    env: &Env_Info,
+    gres: &mut Gfx_Resources,
+    phys_world: &mut Physics_World,
+    path: &str,
+    cfg: &Config,
+) -> Entity {
+    let tex_p = tex_path(env, path);
+    let mut sprite = Sprite::from_tex_path(gres, &tex_p);
+    sprite.z_index = Z_HOUSES;
+    let cld = Collider {
+        shape: Collision_Shape::Rect {
+            width: sprite.rect.width as _, height: sprite.rect.height as _,
+        },
+        layer: GCL::Houses.into(),
+        is_static: true,
+        ..Default::default()
+    };
+
+    let mut house = Entity::new(sprite.into());
+
+    let cld = phys_world.add_collider(cld);
+    let phys_body_hdl = phys_world.new_physics_body();
+    let phys_body = phys_world.get_physics_body_mut(phys_body_hdl).unwrap();
+    phys_body.add_collider(cld);
+    house.phys_body = phys_body_hdl;
+
+    house
 }

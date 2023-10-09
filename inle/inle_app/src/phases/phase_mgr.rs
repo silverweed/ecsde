@@ -4,6 +4,7 @@ use inle_input::input_state::Game_Action;
 /// Manages a PDA of Game_Phases.
 pub struct Phase_Manager<Phase_Args> {
     /// Only the topmost phase is updated and queried for actions at any time.
+    /// However, all phases are drawn, bottom-to-top. // XXX: we might want to make this opt-out
     phase_stack: Vec<Phase_Id>,
 
     /// Persistent phases are always updated and their handle_actions is always called.
@@ -54,8 +55,8 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
             phase.draw(args);
         }
 
-        if let Some(phase) = self.current_phase() {
-            phase.draw(args);
+        for &phase_id in &self.phase_stack {
+            self.get_phase(phase_id).draw(args);
         }
     }
 

@@ -288,6 +288,10 @@ pub fn register_game_phases(game_state: &mut Game_State, game_res: &mut Game_Res
         phases::In_Game::PHASE_ID,
         Box::new(phases::In_Game::new(&game_state.config)),
     );
+    game_state.phase_mgr.register_phase(
+        phases::Pause_Menu::PHASE_ID,
+        Box::new(phases::Pause_Menu::default()),
+    );
 
     #[cfg(debug_assertions)]
     {
@@ -395,12 +399,10 @@ pub fn update(game_state: &mut Game_State, game_res: &mut Game_Resources) {
 
     update_free_camera(game_state);
 
-    if !game_state.time.paused {
-        let mut args = Phase_Args::new(game_state, game_res);
-        let should_quit = game_state.phase_mgr.update(&mut args);
-        if should_quit {
-            game_state.should_quit = should_quit;
-        }
+    let mut args = Phase_Args::new(game_state, game_res);
+    let should_quit = game_state.phase_mgr.update(&mut args);
+    if should_quit {
+        game_state.should_quit = should_quit;
     }
 }
 

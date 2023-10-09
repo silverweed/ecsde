@@ -12,6 +12,7 @@ use smallvec::SmallVec;
 pub enum Game_Collision_Layer {
     Player,
     Terrain,
+    Houses,
 }
 
 impl From<Game_Collision_Layer> for inle_physics::layers::Collision_Layer {

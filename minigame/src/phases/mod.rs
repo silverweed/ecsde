@@ -3,12 +3,14 @@ use std::cell::{Ref, RefCell, RefMut};
 
 pub mod in_game;
 pub mod menu;
+pub mod pause;
 
 #[cfg(debug_assertions)]
 pub mod debug;
 
 pub use in_game::*;
 pub use menu::*;
+pub use pause::*;
 
 #[cfg(debug_assertions)]
 pub use debug::*;
