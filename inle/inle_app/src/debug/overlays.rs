@@ -124,6 +124,10 @@ pub fn update_debug(
     if draw_colliders {
         debug_draw_colliders(&mut debug_systems.global_painter, phys_world);
     }
+    let draw_velocities = cvars.debug.draw_velocities.read(config);
+    if draw_velocities {
+        debug_draw_velocities(&mut debug_systems.global_painter, phys_world);
+    }
 
     // @Cleanup
     if cvars.debug.draw_buf_alloc.read(config) {
@@ -593,7 +597,7 @@ fn debug_draw_colliders(
             );
             debug_painter.add_arrow(
                 Arrow {
-                    center: collider.position, // @Incomplete: it'd be nice to have the exact collision position
+                    center: collider.position,
                     direction: cls_data.info.normal * 20.0,
                     thickness: 1.,
                     arrow_size: 5.,
@@ -631,8 +635,79 @@ fn debug_draw_colliders(
         debug_painter.add_text(
             &format!("{},{}", collider.handle.gen, collider.handle.index),
             collider.position + v2!(2., -3.),
-            5,
+            10,
             colors::ORANGE,
+        );
+    }
+}
+
+fn debug_draw_velocities(
+    debug_painter: &mut Debug_Painter,
+    phys_world: &inle_physics::phys_world::Physics_World,
+) {
+    for collider in phys_world.get_all_colliders() {
+        let mut v = collider.velocity;
+        let len = v.magnitude().min(200.);
+        v = v.normalized_or_zero() * len;
+        if len > f32::EPSILON {
+            debug_painter.add_arrow(
+                Arrow {
+                    center: collider.position,
+                    direction: v,
+                    thickness: 2.,
+                    arrow_size: 15.,
+                },
+                colors::DARK_RED,
+            );
+            if v.x.abs() > f32::EPSILON {
+                debug_painter.add_arrow(
+                    Arrow {
+                        center: collider.position,
+                        direction: v2!(v.x, 0.),
+                        thickness: 1.,
+                        arrow_size: 10.,
+                    },
+                    colors::DARK_GREEN,
+                );
+                debug_painter.add_text(
+                    &format!("{:.3}", collider.velocity.x),
+                    collider.position + v2!(4., 10.),
+                    10,
+                    colors::DARK_GREEN,
+                );
+            }
+            if v.y.abs() > f32::EPSILON {
+                debug_painter.add_arrow(
+                    Arrow {
+                        center: collider.position,
+                        direction: v2!(0., v.y),
+                        thickness: 1.,
+                        arrow_size: 10.,
+                    },
+                    colors::DARK_GREEN,
+                );
+                debug_painter.add_text(
+                    &format!("{:.3}", collider.velocity.y),
+                    collider.position + v2!(4., 20.),
+                    10,
+                    colors::DARK_GREEN,
+                );
+            }
+        } else {
+            debug_painter.add_circle(
+                Circle {
+                    center: collider.position,
+                    radius: 2.,
+                },
+                colors::DARK_RED,
+            );
+        }
+
+        debug_painter.add_text(
+            &format!("{:.3}", collider.velocity.magnitude()),
+            collider.position + v2!(2., -3.),
+            12,
+            colors::DARK_RED,
         );
     }
 }

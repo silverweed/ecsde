@@ -1,5 +1,6 @@
 use super::layers::Collision_Layer;
 use super::phys_world::Collider_Handle;
+use inle_cfg::Cfg_Var;
 use inle_math::vector::Vec2f;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -26,48 +27,10 @@ impl Default for Collision_Shape {
 
 #[derive(Clone, Debug, Default)]
 pub struct Phys_Data {
-    pub inv_mass: f32,
-    pub restitution: f32,
-    pub static_friction: f32,
-    pub dyn_friction: f32,
-}
-
-impl Phys_Data {
-    pub fn with_mass(self, mass: f32) -> Self {
-        assert!(mass > 0., "Mass must be positive!");
-        Self {
-            inv_mass: 1.0 / mass,
-            ..self
-        }
-    }
-
-    pub fn with_infinite_mass(self) -> Self {
-        Self {
-            inv_mass: 0.,
-            ..self
-        }
-    }
-
-    pub fn with_restitution(self, restitution: f32) -> Self {
-        Self {
-            restitution,
-            ..self
-        }
-    }
-
-    pub fn with_static_friction(self, static_friction: f32) -> Self {
-        Self {
-            static_friction,
-            ..self
-        }
-    }
-
-    pub fn with_dyn_friction(self, dyn_friction: f32) -> Self {
-        Self {
-            dyn_friction,
-            ..self
-        }
-    }
+    pub inv_mass: Cfg_Var<f32>,
+    pub restitution: Cfg_Var<f32>,
+    pub static_friction: Cfg_Var<f32>,
+    pub dyn_friction: Cfg_Var<f32>,
 }
 
 #[derive(Clone, Debug, Default)]

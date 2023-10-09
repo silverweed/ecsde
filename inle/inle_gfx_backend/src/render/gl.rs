@@ -1477,11 +1477,7 @@ fn use_vbuf_shader(window: &mut Render_Window_Handle, transform: &Transform2D) {
     }
 }
 
-fn use_vbuf_ws_shader(
-    transform: &Transform2D,
-    camera: &Camera,
-    shader: GLuint,
-) {
+fn use_vbuf_ws_shader(transform: &Transform2D, camera: &Camera, shader: GLuint) {
     let mvp = get_mvp_matrix(transform, camera);
     unsafe {
         glcheck!(gl::UseProgram(shader));

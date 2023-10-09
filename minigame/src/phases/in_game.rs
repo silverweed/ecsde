@@ -5,7 +5,7 @@ use crate::entity::{
 use crate::game::Game_State;
 use crate::sprites::{self as anim_sprites, Anim_Sprite};
 use inle_app::phases::{Game_Phase, Phase_Id, Phase_Transition};
-use inle_cfg::Cfg_Var;
+use inle_cfg::{Cfg_Var, Config};
 use inle_common::stringid::String_Id;
 use inle_core::env::Env_Info;
 use inle_gfx::render::Z_Index;
@@ -31,20 +31,19 @@ struct Player_Cfg {
 }
 
 impl Player_Cfg {
-    pub fn new(cfg: &inle_cfg::Config) -> Self {
-        let accel = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/acceleration", cfg);
+    pub fn new(cfg: &Config) -> Self {
+        let accel = Cfg_Var::<f32>::new("game/player/acceleration", cfg);
         //    let horiz_max_speed =
-        //        inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/horiz_max_speed", cfg);
+        //        Cfg_Var::<f32>::new("game/player/horiz_max_speed", cfg);
         //    let vert_max_speed =
-        //        inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/vert_max_speed", cfg);
-        let horiz_dampening =
-            inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/horiz_dampening", cfg);
+        //        Cfg_Var::<f32>::new("game/player/vert_max_speed", cfg);
+        let horiz_dampening = Cfg_Var::<f32>::new("game/player/horiz_dampening", cfg);
         let ascending_vert_dampening =
-            inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/ascending_vert_dampening", cfg);
+            Cfg_Var::<f32>::new("game/player/ascending_vert_dampening", cfg);
         let descending_vert_dampening =
-            inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/descending_vert_dampening", cfg);
-        let gravity = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/gravity", cfg);
-        let jump_impulse = inle_cfg::Cfg_Var::<f32>::new("game/gameplay/player/jump_impulse", cfg);
+            Cfg_Var::<f32>::new("game/player/descending_vert_dampening", cfg);
+        let gravity = Cfg_Var::<f32>::new("game/player/gravity", cfg);
+        let jump_impulse = Cfg_Var::<f32>::new("game/player/jump_impulse", cfg);
         Self {
             accel,
             //horiz_max_speed,
@@ -90,6 +89,7 @@ impl Game_Phase for In_Game {
         let gres = &mut res.gfx;
         let env = &gs.env;
         let physw = &mut gs.phys_world;
+        let cfg = &gs.config;
 
         let tex_p = tex_path(env, "game/sky.png");
         let mut sprite = Sprite::from_tex_path(gres, &tex_p);
@@ -103,16 +103,16 @@ impl Game_Phase for In_Game {
         self.entities.push(Entity::new(sprite.into()));
 
         self.entities
-            .push(create_boundaries(gs.app_config.target_win_size, physw));
+            .push(create_boundaries(gs.app_config.target_win_size, physw, cfg));
 
-        let terrain = create_terrain(env, gres, physw);
+        let terrain = create_terrain(env, gres, physw, cfg);
         self.entities.push(terrain);
 
         // Mountains
         let mountain_off_x = win_hw - 100.;
         let mountain_off_y = 280.;
 
-        let mut left_mountain = create_mountain(env, gres, physw);
+        let mut left_mountain = create_mountain(env, gres, physw, cfg);
         let mut right_mountain = left_mountain.clone(physw);
         left_mountain
             .transform
@@ -129,12 +129,12 @@ impl Game_Phase for In_Game {
 
         // Players
         let player_y = mountain_off_y - mountain_height as f32;
-        let mut player = create_player(env, gres, physw);
+        let mut player = create_player(env, gres, physw, cfg);
         player.sprites[0].color = inle_common::colors::color_from_hex_no_alpha(0xdd9884);
         player.transform.set_position(-mountain_off_x, player_y);
         self.players[0] = self.entities.push(player);
 
-        let mut player = create_player(env, gres, physw);
+        let mut player = create_player(env, gres, physw, cfg);
         player.sprites[0].color = inle_common::colors::color_from_hex_no_alpha(0x1e98ff);
         player.transform.set_position(mountain_off_x, player_y);
         self.players[1] = self.entities.push(player);
@@ -182,7 +182,7 @@ fn create_collision_matrix() -> inle_physics::layers::Collision_Matrix {
 }
 
 impl In_Game {
-    pub fn new(cfg: &inle_cfg::Config) -> Self {
+    pub fn new(cfg: &Config) -> Self {
         let collision_matrix = create_collision_matrix();
         let positional_correction_percent =
             Cfg_Var::new("game/physics/positional_correction_percent", cfg);
@@ -213,6 +213,7 @@ impl In_Game {
                     // NOTE: currently we don't support fancy stuff like rotations for offset
                     // colliders.
                     collider.position = entity.transform.position() + collider.offset;
+                    collider.velocity = entity.velocity;
                 }
             }
         }
@@ -239,6 +240,10 @@ impl In_Game {
                     entity
                         .transform
                         .set_position_v(collider.position - collider.offset);
+                    entity.velocity = collider.velocity;
+                    if entity.velocity.magnitude2() < 100. {
+                        entity.velocity = v2!(0., 0.);
+                    }
                 }
             }
         }
@@ -318,12 +323,11 @@ impl In_Game {
     }
 }
 
-const PHYS_RESTITUTION: f32 = 1.0;
-
 fn create_terrain(
     env: &Env_Info,
     gres: &mut Gfx_Resources,
     phys_world: &mut Physics_World,
+    cfg: &Config,
 ) -> Entity {
     let tex_p = tex_path(env, "game/terrain.png");
     let mut sprite = Sprite::from_tex_path(gres, &tex_p);
@@ -331,11 +335,12 @@ fn create_terrain(
     let mut terrain = Entity::new(sprite.into());
     terrain.transform.translate(0., 450.);
 
-    let phys_data = Phys_Data::default()
-        .with_infinite_mass()
-        .with_restitution(PHYS_RESTITUTION)
-        .with_static_friction(0.5)
-        .with_dyn_friction(0.3);
+    let phys_data = Phys_Data {
+        inv_mass: Cfg_Var::new_from_val(0.),
+        restitution: Cfg_Var::new("game/physics/restitution", cfg),
+        static_friction: Cfg_Var::new("game/physics/static_friction", cfg),
+        dyn_friction: Cfg_Var::new("game/physics/dyn_friction", cfg),
+    };
     terrain.register_to_physics(phys_world, &phys_data, GCL::Terrain, Phys_Type::Static);
 
     terrain
@@ -345,6 +350,7 @@ fn create_mountain(
     env: &Env_Info,
     gres: &mut Gfx_Resources,
     phys_world: &mut Physics_World,
+    cfg: &Config,
 ) -> Entity {
     let tex_p = tex_path(env, "game/mountain_bottom.png");
     let mut sprite = Sprite::from_tex_path(gres, &tex_p);
@@ -368,11 +374,12 @@ fn create_mountain(
     let sprite = Anim_Sprite::from_sprite(sprite, (2, 2), Duration::from_millis(170));
     mountain.sprites.push(sprite);
 
-    let phys_data = Phys_Data::default()
-        .with_infinite_mass()
-        .with_restitution(PHYS_RESTITUTION)
-        .with_static_friction(0.5)
-        .with_dyn_friction(0.3);
+    let phys_data = Phys_Data {
+        inv_mass: Cfg_Var::new_from_val(0.),
+        restitution: Cfg_Var::new("game/physics/restitution", cfg),
+        static_friction: Cfg_Var::new("game/physics/static_friction", cfg),
+        dyn_friction: Cfg_Var::new("game/physics/dyn_friction", cfg),
+    };
     mountain.register_to_physics(phys_world, &phys_data, GCL::Terrain, Phys_Type::Static);
 
     mountain
@@ -382,6 +389,7 @@ fn create_player(
     env: &Env_Info,
     gres: &mut Gfx_Resources,
     phys_world: &mut Physics_World,
+    cfg: &Config,
 ) -> Entity {
     let tex_p = tex_path(env, "game/player_white.png");
     let mut sprite = Sprite::from_tex_path(gres, &tex_p);
@@ -398,12 +406,12 @@ fn create_player(
     sprite.play(sid!("idle"));
 
     let mut player = Entity::new(sprite);
-    let phys_data = Phys_Data::default()
-        .with_mass(1.)
-        .with_restitution(PHYS_RESTITUTION)
-        .with_static_friction(0.5)
-        .with_dyn_friction(0.3);
-
+    let phys_data = Phys_Data {
+        inv_mass: Cfg_Var::new("game/physics/player/mass", cfg),
+        restitution: Cfg_Var::new("game/physics/restitution", cfg),
+        static_friction: Cfg_Var::new("game/physics/static_friction", cfg),
+        dyn_friction: Cfg_Var::new("game/physics/dyn_friction", cfg),
+    };
     let cld = Collider {
         shape: Collision_Shape::Rect {
             width: 28.,
@@ -417,7 +425,11 @@ fn create_player(
     player
 }
 
-fn create_boundaries((win_w, win_h): (u32, u32), phys_world: &mut Physics_World) -> Entity {
+fn create_boundaries(
+    (win_w, win_h): (u32, u32),
+    phys_world: &mut Physics_World,
+    cfg: &Config,
+) -> Entity {
     let cld_left = Collider {
         shape: Collision_Shape::Rect {
             width: 500.,
@@ -451,11 +463,12 @@ fn create_boundaries((win_w, win_h): (u32, u32), phys_world: &mut Physics_World)
         ..Default::default()
     };
 
-    let phys_data = Phys_Data::default()
-        .with_infinite_mass()
-        .with_restitution(PHYS_RESTITUTION)
-        .with_static_friction(0.5)
-        .with_dyn_friction(0.3);
+    let phys_data = Phys_Data {
+        inv_mass: Cfg_Var::new_from_val(0.),
+        restitution: Cfg_Var::new("game/physics/restitution", cfg),
+        static_friction: Cfg_Var::new("game/physics/static_friction", cfg),
+        dyn_friction: Cfg_Var::new("game/physics/dyn_friction", cfg),
+    };
     let phys_body_hdl = phys_world
         .new_physics_body_with_rigidbodies([cld_left, cld_right, cld_top].into_iter(), phys_data);
 

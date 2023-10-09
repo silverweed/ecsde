@@ -316,12 +316,14 @@ where
     collision_infos
 }
 
-fn solve_collision_velocities(a: &mut Collider, b: &mut Collider, normal: Vec2f) {
+fn solve_collision_velocities(a: &mut Collider, b: &mut Collider, normal: Vec2f, cfg: &Config) {
     trace!("physics::solve_collisions_velocities");
 
     let a_phys = a.phys_data.as_ref().unwrap();
     let b_phys = b.phys_data.as_ref().unwrap();
-    if a_phys.inv_mass + b_phys.inv_mass == 0. {
+    let a_inv_mass = a_phys.inv_mass.read(cfg);
+    let b_inv_mass = b_phys.inv_mass.read(cfg);
+    if a_inv_mass + b_inv_mass == 0. {
         // Both infinite-mass objects
         return;
     }
@@ -338,15 +340,19 @@ fn solve_collision_velocities(a: &mut Collider, b: &mut Collider, normal: Vec2f)
     sanity_check_v(rel_vel);
     debug_assert!(!vel_along_normal.is_nan());
 
-    let e = a_phys.restitution.min(b_phys.restitution);
+    let e = {
+        let a_res = a_phys.restitution.read(cfg);
+        let b_res = b_phys.restitution.read(cfg);
+        a_res.min(b_res)
+    };
 
     // Impulse scalar
-    let j = -(1. + e) * vel_along_normal / (a_phys.inv_mass + b_phys.inv_mass);
+    let j = -(1. + e) * vel_along_normal / (a_inv_mass + b_inv_mass);
     debug_assert!(!j.is_nan());
 
     let impulse = j * normal;
-    a.velocity -= 1. * a_phys.inv_mass * impulse;
-    a.velocity += 1. * b_phys.inv_mass * impulse;
+    a.velocity -= 1. * a_inv_mass * impulse;
+    a.velocity += 1. * b_inv_mass * impulse;
 
     // apply friction
     let new_rel_vel = b.velocity - a.velocity;
@@ -356,19 +362,23 @@ fn solve_collision_velocities(a: &mut Collider, b: &mut Collider, normal: Vec2f)
 
     let tangent = (new_rel_vel - new_rel_vel.dot(normal) * normal).normalized_or_zero();
 
-    let jt = -new_rel_vel.dot(tangent) / (a_phys.inv_mass * b_phys.inv_mass);
+    let jt = -new_rel_vel.dot(tangent) / (a_inv_mass * b_inv_mass);
 
-    let mu = (a_phys.static_friction + b_phys.static_friction) * 0.5;
+    let a_static_friction = a_phys.static_friction.read(cfg);
+    let b_static_friction = b_phys.static_friction.read(cfg);
+    let mu = (a_static_friction + b_static_friction) * 0.5;
 
     let friction_impulse = if jt.abs() < j * mu {
         jt * tangent
     } else {
-        let dyn_friction = (a_phys.dyn_friction + b_phys.dyn_friction) * 0.5;
+        let a_dyn_friction = a_phys.dyn_friction.read(cfg);
+        let b_dyn_friction = b_phys.dyn_friction.read(cfg);
+        let dyn_friction = (a_dyn_friction + b_dyn_friction) * 0.5;
         -j * tangent * dyn_friction
     };
 
-    a.velocity -= 1. * a_phys.inv_mass * friction_impulse;
-    b.velocity += 1. * b_phys.inv_mass * friction_impulse;
+    a.velocity -= 1. * a_inv_mass * friction_impulse;
+    b.velocity += 1. * b_inv_mass * friction_impulse;
 }
 
 fn positional_correction(
@@ -381,8 +391,8 @@ fn positional_correction(
 ) {
     trace!("physics::positional_correction");
 
-    let a_inv_mass = a.phys_data.as_ref().unwrap().inv_mass;
-    let b_inv_mass = b.phys_data.as_ref().unwrap().inv_mass;
+    let a_inv_mass = a.phys_data.as_ref().unwrap().inv_mass.read(cfg);
+    let b_inv_mass = b.phys_data.as_ref().unwrap().inv_mass.read(cfg);
 
     if a_inv_mass + b_inv_mass == 0. {
         // Both infinite-mass objects.
@@ -421,7 +431,7 @@ fn solve_collisions(
 
         let (cld1, cld2) = phys_world.get_collider_pair_mut(cld1, cld2).unwrap();
         if cld1.phys_data.is_some() && cld2.phys_data.is_some() {
-            solve_collision_velocities(cld1, cld2, normal);
+            solve_collision_velocities(cld1, cld2, normal, cfg);
             positional_correction(cld1, cld2, normal, penetration, settings, cfg);
         }
     }

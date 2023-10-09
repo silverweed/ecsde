@@ -16,3 +16,5 @@ pub const AQUA: Color = rgb(0, 255, 255);
 pub const ORANGE: Color = color_from_hex_no_alpha(0xffa500);
 pub const DARK_ORANGE: Color = color_from_hex_no_alpha(0xff7000);
 pub const PINK: Color = color_from_hex_no_alpha(0xffc0cb);
+pub const DARK_RED: Color = color_from_hex_no_alpha(0x830000);
+pub const DARK_GREEN: Color = color_from_hex_no_alpha(0x003800);
