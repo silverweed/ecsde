@@ -365,10 +365,6 @@ pub fn process_input(game_state: &mut Game_State, game_res: &mut Game_Resources)
         game_state.should_quit = true;
         return;
     }
-
-    let actions = game_state.input.processed.game_actions.clone();
-    let mut args = Phase_Args::new(game_state, game_res);
-    game_state.phase_mgr.handle_actions(&actions, &mut args);
 }
 
 fn handle_core_actions(

@@ -7,9 +7,7 @@ pub struct Phase_Manager<Phase_Args> {
     /// However, all phases are drawn, bottom-to-top. // XXX: we might want to make this opt-out
     phase_stack: Vec<Phase_Id>,
 
-    /// Persistent phases are always updated and their handle_actions is always called.
-    /// Update is called for every persistent phase *before* the regular phases, whereas
-    /// handle_actions is called after.
+    /// Persistent phases are always updated.
     persistent_phases: Vec<(Phase_Id, Box<dyn Persistent_Game_Phase<Args = Phase_Args>>)>,
 
     phases: Vec<(Phase_Id, Box<dyn Game_Phase<Args = Phase_Args>>)>,
@@ -57,16 +55,6 @@ impl<Phase_Args> Phase_Manager<Phase_Args> {
 
         for &phase_id in &self.phase_stack {
             self.get_phase(phase_id).draw(args);
-        }
-    }
-
-    pub fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Phase_Args) {
-        if let Some(phase) = self.current_phase_mut() {
-            phase.handle_actions(actions, args);
-        }
-
-        for (_, phase) in &mut self.persistent_phases {
-            phase.handle_actions(actions, args);
         }
     }
 

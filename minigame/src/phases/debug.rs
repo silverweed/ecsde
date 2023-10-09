@@ -25,11 +25,11 @@ macro_rules! add_msg {
 impl Persistent_Game_Phase for Debug {
     type Args = Phase_Args;
 
-    fn handle_actions(&mut self, actions: &[Game_Action], args: &mut Phase_Args) {
+    fn update(&mut self, args: &mut Phase_Args) {
         let mut game_state = args.game_state_mut();
         let gs = game_state.deref_mut();
 
-        for action in actions {
+        for action in &gs.input.processed.game_actions {
             match action {
                 (name, Action_Kind::Pressed) if *name == sid!("calipers") => {
                     // @Incomplete

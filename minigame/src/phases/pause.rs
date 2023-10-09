@@ -20,7 +20,6 @@ struct Menu_Button {
 #[derive(Default)]
 pub struct Pause_Menu  {
     buttons: Vec<Menu_Button>,
-    should_close: bool,
 }
 
 impl Pause_Menu {
@@ -71,7 +70,6 @@ impl Game_Phase for Pause_Menu {
         let mut game_state = args.game_state_mut();
         self.buttons = Self::create_buttons(&mut game_state.window);
         game_state.time.paused = true;
-        self.should_close = false;
     }
 
     fn on_end(&mut self, args: &mut Phase_Args) {
@@ -83,17 +81,24 @@ impl Game_Phase for Pause_Menu {
         &mut self,
         args: &mut Phase_Args,
     ) -> Phase_Transition {
-        if self.should_close {
-            return Phase_Transition::Pop;
+
+        let mut game_state = args.game_state_mut();
+        let gs = game_state.deref_mut();
+        let istate = &gs.input;
+
+        for action in &istate.processed.game_actions {
+            match action {
+                (name, Action_Kind::Pressed) if *name == sid!("open_pause_menu") => {
+                    return Phase_Transition::Pop;
+                }
+                _ => (),
+            }
         }
 
         let game_res = args.game_res();
-        let mut game_state = args.game_state_mut();
-        let gs = game_state.deref_mut();
         let window = &mut gs.window;
         let gres = &game_res.gfx;
         let ui_ctx = &mut gs.ui;
-        let istate = &gs.input;
 
         let b = &self.buttons[0];
         let rect = Rect::new(b.pos.x, b.pos.y, b.size.x, b.size.y);
@@ -117,16 +122,5 @@ impl Game_Phase for Pause_Menu {
         }
 
         Phase_Transition::None
-    }
-
-    fn handle_actions(&mut self, actions: &[Game_Action], _args: &mut Phase_Args) {
-        for action in actions {
-            match action {
-                (name, Action_Kind::Pressed) if *name == sid!("open_pause_menu") => {
-                    self.should_close = true;
-                }
-                _ => (),
-            }
-        }
     }
 }
