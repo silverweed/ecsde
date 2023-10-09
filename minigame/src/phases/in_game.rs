@@ -12,6 +12,7 @@ use inle_gfx::render::Z_Index;
 use inle_gfx::res::tex_path;
 use inle_gfx::res::Gfx_Resources;
 use inle_gfx::sprites::Sprite;
+use inle_math::vector::Vec2f;
 use inle_input::input_state::Action_Kind;
 use inle_physics::collider::{Collider, Collision_Shape, Phys_Data};
 use inle_physics::phys_world::Physics_World;
@@ -57,9 +58,33 @@ impl Player_Cfg {
     }
 }
 
+#[derive(Default)]
+struct Player_Input {
+    pub movement: Vec2f,
+}
+
+type Players_Input = [Player_Input; NUM_PLAYERS];
+
+#[derive(Default)]
+struct Player {
+    pub entity: Entity_Handle,
+    pub jumping: bool,
+}
+
+impl From<Entity_Handle> for Player {
+    fn from(entity: Entity_Handle) -> Self {
+        Self {
+            entity,
+            ..Default::default()
+        }
+    }
+}
+
+const NUM_PLAYERS: usize = 2;
+
 pub struct In_Game {
     entities: Entity_Container,
-    players: [Entity_Handle; 2],
+    players: [Player; NUM_PLAYERS],
     player_cfg: Player_Cfg,
     phys_settings: physics::Physics_Settings,
 }
@@ -132,12 +157,12 @@ impl Game_Phase for In_Game {
         let mut player = create_player(env, gres, physw, cfg);
         player.sprites[0].color = inle_common::colors::color_from_hex_no_alpha(0xdd9884);
         player.transform.set_position(-mountain_off_x, player_y);
-        self.players[0] = self.entities.push(player);
+        self.players[0] = self.entities.push(player).into();
 
         let mut player = create_player(env, gres, physw, cfg);
         player.sprites[0].color = inle_common::colors::color_from_hex_no_alpha(0x1e98ff);
         player.transform.set_position(mountain_off_x, player_y);
-        self.players[1] = self.entities.push(player);
+        self.players[1] = self.entities.push(player).into();
     }
 
     fn on_end(&mut self, args: &mut Self::Args) {
@@ -152,7 +177,9 @@ impl Game_Phase for In_Game {
         let mut game_state = args.game_state_mut();
         let gs = game_state.deref_mut();
 
-        self.update_players(gs);
+        let players_input = Self::read_players_input(gs);
+        self.update_players(gs, &players_input);
+        self.update_anim_states(gs, &players_input);
 
         anim_sprites::update_anim_sprites(
             gs.time.dt(),
@@ -249,7 +276,33 @@ impl In_Game {
         }
     }
 
-    fn update_players(&mut self, game_state: &mut Game_State) {
+
+    fn read_players_input(game_state: &Game_State) -> Players_Input {
+        let mut players_input = Players_Input::default();
+        for player_idx in 0..NUM_PLAYERS {
+            players_input[player_idx].movement = if game_state.free_camera {
+                v2!(0., 0.)
+            } else {
+                let axes = [
+                    String_Id::from(format!("p{}_horizontal", player_idx + 1).as_str()),
+                    String_Id::from(format!("p{}_vertical", player_idx + 1).as_str()),
+                ];
+                let mut movement = crate::input::get_normalized_movement_from_input(
+                    &game_state.input.processed.virtual_axes,
+                    axes,
+                    &game_state.input_cfg,
+                    &game_state.config,
+                );
+                // No vertical movement
+                movement.y = 0.;
+
+                movement
+            };
+        }
+        players_input
+    }
+
+    fn update_players(&mut self, game_state: &mut Game_State, players_input: &Players_Input) {
         let input = &game_state.input;
         let cfg = &game_state.config;
         let p_cfg = &self.player_cfg;
@@ -260,26 +313,9 @@ impl In_Game {
         let dt = game_state.time.dt_secs();
         let physw = &game_state.phys_world;
 
-        for (player_idx, &player_entity) in self.players.iter().enumerate() {
-            let player = self.entities.get_mut(player_entity).unwrap();
-            let movement = if game_state.free_camera {
-                v2!(0., 0.)
-            } else {
-                let axes = [
-                    String_Id::from(format!("p{}_horizontal", player_idx + 1).as_str()),
-                    String_Id::from(format!("p{}_vertical", player_idx + 1).as_str()),
-                ];
-                let mut movement = crate::input::get_normalized_movement_from_input(
-                    &input.processed.virtual_axes,
-                    axes,
-                    &game_state.input_cfg,
-                    cfg,
-                );
-                // No vertical movement
-                movement.y = 0.;
-
-                movement
-            };
+        for (player_idx, player_state) in self.players.iter_mut().enumerate() {
+            let player = self.entities.get_mut(player_state.entity).unwrap();
+            let movement = players_input[player_idx].movement;
 
             // acceleration
             let mut accel = movement * accel_magn;
@@ -295,6 +331,8 @@ impl In_Game {
                 .any(|(other, normal)| normal.y < -0.9 && other.layer == GCL::Terrain as u8);
             if !collides_with_ground {
                 accel += v2!(0., g);
+            } else {
+                player_state.jumping = false;
             }
 
             player.velocity += accel * dt;
@@ -307,6 +345,7 @@ impl In_Game {
                 ))
             {
                 player.velocity += v2!(0., -jump_impulse);
+                player_state.jumping = true;
             }
 
             // dampening
@@ -319,6 +358,28 @@ impl In_Game {
             player.velocity.y -= player.velocity.y * vert_dampening * dt;
 
             player.transform.translate_v(player.velocity * dt);
+        }
+    }
+
+    fn update_anim_states(&mut self, game_state: &mut Game_State, players_input: &Players_Input) {
+        for (player_idx, player_state) in self.players.iter().enumerate() {
+            let player = self.entities.get_mut(player_state.entity).unwrap();
+            let movement = players_input[player_idx].movement;
+
+            match movement.x.partial_cmp(&0.) {
+                Some(std::cmp::Ordering::Greater) => player.transform.set_scale(-1., 1.),
+                Some(std::cmp::Ordering::Less) => player.transform.set_scale(1., 1.),
+                _ => {}
+            }
+
+            let sprite = &mut player.sprites[0];
+            if player_state.jumping {
+                sprite.play(sid!("jump"));
+            } else if movement.x.abs() > f32::EPSILON {
+                sprite.play(sid!("walk"));
+            } else {
+                sprite.play(sid!("idle"));
+            }
         }
     }
 }
@@ -397,6 +458,7 @@ fn create_player(
     let mut sprite = Anim_Sprite::from_sprite_with_size(sprite, v2!(64, 64));
 
     let d = Duration::from_millis(100);
+    // TODO: some anims should not be looped
     sprite.add_animation(sid!("walk"), (0, 0), (4, 0), d);
     sprite.add_animation(sid!("idle"), (4, 0), (8, 0), d);
     sprite.add_animation(sid!("grab_walk"), (8, 0), (12, 0), d);

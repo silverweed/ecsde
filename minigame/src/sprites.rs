@@ -165,12 +165,14 @@ impl Anim_Sprite {
     }
 
     pub fn play(&mut self, name: String_Id) {
-        if let Some(anim) = self.animations.iter().find(|a| a.name == name) {
-            self.cur_anim = name;
-            self.cur_frame_col = anim.start.0;
-            self.cur_frame_row = anim.start.1;
-        } else {
-            lerr!("Failed to play animation {:?}: it doesn't exist!", name);
+        if self.cur_anim != name {
+            if let Some(anim) = self.animations.iter().find(|a| a.name == name) {
+                self.cur_anim = name;
+                self.cur_frame_col = anim.start.0;
+                self.cur_frame_row = anim.start.1;
+            } else {
+                lerr!("Failed to play animation {:?}: it doesn't exist!", name);
+            }
         }
     }
 }
