@@ -585,21 +585,15 @@ fn create_boundaries(
             width: 500.,
             height: 2. * (win_h as f32),
         },
-        layer: GCL::Terrain.into(),
+        layer: GCL::Boundary.into(),
         is_static: true,
         offset: v2!(-(win_w as f32) * 0.5 - 250., 0.),
         ..Default::default()
     };
 
     let cld_right = Collider {
-        shape: Collision_Shape::Rect {
-            width: 500.,
-            height: 2. * (win_h as f32),
-        },
-        layer: GCL::Boundary.into(),
-        is_static: true,
         offset: v2!((win_w as f32) * 0.5 + 250., 0.),
-        ..Default::default()
+        ..cld_left.clone()
     };
 
     let cld_top = Collider {
@@ -607,10 +601,8 @@ fn create_boundaries(
             width: 2. * (win_w as f32),
             height: 500.,
         },
-        layer: GCL::Terrain.into(),
-        is_static: true,
         offset: v2!(0., -(win_h as f32) * 0.5 - 250.),
-        ..Default::default()
+        ..cld_left.clone()
     };
 
     let phys_data = Phys_Data {
