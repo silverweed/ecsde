@@ -223,7 +223,7 @@ fn detect_circle_rect(circle: &Collider, rect: &Collider) -> Option<Collision_In
     }
 
     let d = d.sqrt();
-    let normal = normal.normalized_or_zero();
+    let normal = normal / d;
     debug_assert!(normal.is_normalized(), "{}", normal.magnitude());
 
     Some(Collision_Info_Internal {
