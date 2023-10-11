@@ -127,7 +127,6 @@ fn create_block(
 
     let mut entity = Entity::new(sprite);
     entity.transform.set_scale(1.886, 1.886);
-    /*
     let phys_data = Phys_Data {
         inv_mass: Cfg_Var::new("game/physics/block/mass", cfg),
         restitution: Cfg_Var::new("game/physics/block/restitution", cfg),
@@ -135,13 +134,14 @@ fn create_block(
         dyn_friction: Cfg_Var::new("game/physics/dyn_friction", cfg),
     };
     entity.register_to_physics(phys_world, &phys_data, GCL::Blocks, Phys_Type::Dynamic);
-    */
 
+    /*
     let cld = phys_world.add_collider(cld);
     let phys_body_hdl = phys_world.new_physics_body();
     let phys_body = phys_world.get_physics_body_mut(phys_body_hdl).unwrap();
     phys_body.add_collider(cld);
     entity.phys_body = phys_body_hdl;
+    */
 
     entity
 }

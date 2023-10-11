@@ -673,7 +673,7 @@ fn phys_body_collides_with_ground(
         .iter()
         .filter_map(|data| Some((physw.get_collider(data.other_collider)?, data.info.normal)));
     let collides_with_ground =
-        collided.any(|(other, normal)| normal.y < -0.9 && other.layer == GCL::Terrain as u8);
+        collided.any(|(other, normal)| normal.y < -0.9);//&& other.layer == GCL::Terrain as u8);
 
     collides_with_ground
 }
