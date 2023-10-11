@@ -49,6 +49,7 @@ pub fn update_debug(
             debug_systems.debug_ui.get_overlay(sid!("physics")),
             collision_data,
         );
+        update_camera_debug_overlay(debug_systems.debug_ui.get_overlay(sid!("camera")), camera);
     } else if overlays_were_visible {
         set_debug_hud_enabled(&mut debug_systems.debug_ui, false);
     }
@@ -301,15 +302,16 @@ fn update_win_debug_overlay(
 
 fn update_camera_debug_overlay(
     debug_overlay: &mut inle_debug::overlay::Debug_Overlay,
-    camera: &Transform2D,
+    camera: &Camera,
 ) {
     debug_overlay.clear();
     debug_overlay
         .add_line(&format!(
-            "[cam] pos: {:.2},{:.2}, scale: {:.1}",
-            camera.position().x,
-            camera.position().y,
-            camera.scale().x
+            "[cam] pos: {:.2},{:.2}, scale: {:.1}, size: {:?}",
+            camera.transform.position().x,
+            camera.transform.position().y,
+            camera.transform.scale().x,
+            camera.size * camera.transform.scale(),
         ))
         .with_color(colors::rgba(220, 180, 100, 220));
 }
