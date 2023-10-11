@@ -112,7 +112,13 @@ fn create_block(
     cfg: &Config,
     rng: &mut Default_Rng,
 ) -> Entity {
-    let typ = ((rng.next() % 20) as u8).min(3).into();
+    let r = rng.next() % 16;
+    let typ = match r {
+        0 => Block_Type::Angry,
+        1 => Block_Type::Annoyed,
+        2 => Block_Type::Dummy,
+        _ => Block_Type::Standard
+    };
     let mut sprite = make_block_sprite(env, gres, typ);
     sprite.z_index = super::Z_BLOCKS;
 

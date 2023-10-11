@@ -165,28 +165,32 @@ impl Game_Phase for Main_Menu {
 
             let tex_p = tex_path(env, "menu/main_menu_background.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
+            sprite.transform.set_scale(1.5, 1.5);
             sprite.z_index = -1;
             self.sprites.push(sprite.into());
 
             let tex_p = tex_path(env, "menu/main_menu_mountains.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
+            sprite.transform.set_scale(1.5, 1.5);
             sprite.rect = tex_rect;
             self.sprites.push(sprite.into());
 
             let tex_p = tex_path(env, "menu/game_logo.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
+            sprite.transform.set_scale(1.5, 1.5);
             sprite.transform.translate(0., -300.);
             sprite.z_index = 2;
             self.sprites.push(sprite.into());
 
             let tex_p = tex_path(env, "game/rays.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
-            sprite.transform.set_scale(1.5, 1.5);
+            sprite.transform.set_scale(2.5, 2.5);
             self.sprites.push(sprite.into());
             self.rays_sprite_idx = self.sprites.len() - 1;
 
             let tex_p = tex_path(env, "game/sun_eyes_animation.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
+            sprite.transform.set_scale(1.5, 1.5);
             sprite.z_index = 2;
             let anim_sprite = Anim_Sprite::from_sprite(sprite, (4, 2), Duration::from_millis(120));
             self.sprites.push(anim_sprite);
