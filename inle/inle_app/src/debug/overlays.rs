@@ -223,9 +223,14 @@ fn update_mouse_debug_overlay(
     camera: &Camera,
     input_state: &inle_input::input_state::Input_State,
 ) {
-    let (win_w, win_h) = window::get_window_target_size(window);
-    let (win_w, win_h) = (win_w as i32, win_h as i32);
-    let pos = mouse::mouse_pos_in_window(window, &input_state.raw.mouse_state);
+    let (win_w, win_h) = {
+        let (win_w, win_h) = window::get_window_target_size(window);
+        (win_w as i32, win_h as i32)
+    };
+    let raw_pos = mouse::raw_mouse_pos(&input_state.raw.mouse_state);
+    let pos = window::correct_mouse_pos_in_window(window, raw_pos);
+
+    // Adjust overlay pos
     debug_overlay.position = Vec2f::from(pos) + v2!(5., -15.);
     let overlay_size = debug_overlay.bounds().size();
     debug_overlay.position.x =
@@ -235,32 +240,32 @@ fn update_mouse_debug_overlay(
     debug_overlay
         .add_line(&format!("s {},{}", pos.x, pos.y))
         .with_color(colors::rgba(220, 220, 220, 220));
-    let mpos = Vec2i::from(Vec2f::from(mouse::raw_mouse_pos(
-        &input_state.raw.mouse_state,
-    )));
-    let wpos = render_window::mouse_pos_in_world(window, mpos, camera);
+
+    // Get world position
+    let wpos = render_window::unproject_screen_pos(Vec2i::from(raw_pos), window, camera);
     debug_overlay
-        .add_line(&format!("w {:.2},{:.2}", wpos.x, wpos.y,))
+        .add_line(&format!("w {:.2},{:.2}", wpos.x, wpos.y))
         .with_color(colors::rgba(200, 200, 200, 220));
 
+    let from_horiz = v2!(0., pos.y as f32);
+    let to_horiz = v2!(win_w as f32, pos.y as f32);
+    let from_vert = v2!(pos.x as f32, 0.);
+    let to_vert = v2!(pos.x as f32, win_h as f32);
+
     let color = colors::rgba(255, 255, 255, 150);
-    let from_horiz = Vec2f::from(v2!(-win_w / 2, pos.y - win_h / 2));
-    let to_horiz = Vec2f::from(v2!(win_w / 2, pos.y - win_h / 2));
-    let from_vert = Vec2f::from(v2!(pos.x - win_w / 2, -win_h / 2));
-    let to_vert = Vec2f::from(v2!(pos.x - win_w / 2, win_h / 2));
-    painter.add_line(
+    painter.add_line_ss(
         Line {
             from: from_horiz,
             to: to_horiz,
-            thickness: 1.0,
+            thickness: 2.0,
         },
         color,
     );
-    painter.add_line(
+    painter.add_line_ss(
         Line {
             from: from_vert,
             to: to_vert,
-            thickness: 1.0,
+            thickness: 2.0,
         },
         color,
     );

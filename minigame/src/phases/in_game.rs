@@ -25,7 +25,7 @@ mod blocks;
 pub(super) struct Entity_Phys_Cfg {
     pub accel: Cfg_Var<f32>,
     //pub horiz_max_speed: Cfg_Var<f32>,
-    //pub vert_max_speed: Cfg_Var<f32>,
+    pub vert_max_speed: Cfg_Var<f32>,
     pub horiz_dampening: Cfg_Var<f32>,
     pub ascending_vert_dampening: Cfg_Var<f32>,
     pub descending_vert_dampening: Cfg_Var<f32>,
@@ -39,8 +39,7 @@ impl Entity_Phys_Cfg {
         let accel = Cfg_Var::<f32>::new(&format!("{}/acceleration", cfg_path), cfg);
         //    let horiz_max_speed =
         //        Cfg_Var::<f32>::new(&format!("{}/horiz_max_speed", cfg_path), cfg);
-        //    let vert_max_speed =
-        //        Cfg_Var::<f32>::new(&format!("{}/vert_max_speed", cfg_path), cfg);
+        let vert_max_speed = Cfg_Var::<f32>::new(&format!("{}/vert_max_speed", cfg_path), cfg);
         let horiz_dampening = Cfg_Var::<f32>::new(&format!("{}/horiz_dampening", cfg_path), cfg);
         let ascending_vert_dampening =
             Cfg_Var::<f32>::new(&format!("{}/ascending_vert_dampening", cfg_path), cfg);
@@ -51,7 +50,7 @@ impl Entity_Phys_Cfg {
         Self {
             accel,
             //horiz_max_speed,
-            //vert_max_speed,
+            vert_max_speed,
             horiz_dampening,
             ascending_vert_dampening,
             descending_vert_dampening,
@@ -118,6 +117,10 @@ impl Game_Phase for In_Game {
         let win_w = gs.app_config.target_win_size.0;
         let win_hw = win_w as f32 * 0.5;
 
+        let grid_step = 64;
+        let n_grid_cols = win_w / grid_step;
+        let grid_begin = -(win_w as i64 / 2);
+
         debug_assert_eq!(self.entities.n_live(), 0);
 
         let gres = &mut res.gfx;
@@ -127,11 +130,13 @@ impl Game_Phase for In_Game {
 
         let tex_p = tex_path(env, "game/sky.png");
         let mut sprite = Sprite::from_tex_path(gres, &tex_p);
+        sprite.transform.set_scale(1.5, 1.5);
         sprite.z_index = Z_SKY;
         self.entities.push(Entity::new(sprite.into()));
 
         let tex_p = tex_path(env, "game/sky_mountains_background_.png");
         let mut sprite = Sprite::from_tex_path(gres, &tex_p);
+        sprite.transform.set_scale(1.5, 1.5);
         sprite.z_index = Z_BG;
         sprite.color.a = 120;
         self.entities.push(Entity::new(sprite.into()));
@@ -143,6 +148,8 @@ impl Game_Phase for In_Game {
         self.entities.push(terrain);
 
         // Mountains
+        // NOTE: we need to leave room for 24 blocks in the middle; the mountain is 256px wide.
+        //let mountain_off_x = -grid_step * 15 - grid_step * 4
         let mountain_off_x = win_hw - 100.;
         let mountain_off_y = 280.;
 
@@ -156,6 +163,7 @@ impl Game_Phase for In_Game {
             .transform
             .translate(mountain_off_x, mountain_off_y);
 
+        let mountain_width = left_mountain.sprites[0].rect.width;
         let mountain_height = left_mountain.sprites[0].rect.height * 3;
 
         self.entities.push(left_mountain);
@@ -165,7 +173,7 @@ impl Game_Phase for In_Game {
         let house_y = player_y + 80.;
 
         // Houses
-        let mut house1 = create_house(env, gres, physw, "game/house_cyclops.png", cfg);
+        let mut house1 = create_house(env, gres, physw, "game/house_evil.png", cfg);
         house1.transform.set_position(-mountain_off_x, house_y);
         self.houses[0] = physw
             .get_physics_body(house1.phys_body)
@@ -175,7 +183,7 @@ impl Game_Phase for In_Game {
             .unwrap();
         self.entities.push(house1);
 
-        let mut house2 = create_house(env, gres, physw, "game/house_evil.png", cfg);
+        let mut house2 = create_house(env, gres, physw, "game/house_cyclops.png", cfg);
         house2.transform.set_position(mountain_off_x, house_y);
         self.houses[1] = physw
             .get_physics_body(house2.phys_body)
@@ -197,8 +205,15 @@ impl Game_Phase for In_Game {
         self.players[1] = self.entities.push(player).into();
 
         // Blocks
-        self.block_system
-            .init(100, &mut self.entities, gs, &mut res);
+        //let block_spawn_area_x = (win_w - (2 * mountain_width as u32) - 2) as f32;
+        let block_spawn_area_x = 1472;
+        self.block_system.init(
+            100,
+            v2!(block_spawn_area_x, 200),
+            &mut self.entities,
+            gs,
+            &mut res,
+        );
     }
 
     fn on_end(&mut self, args: &mut Self::Args) {
@@ -378,14 +393,7 @@ impl In_Game {
             let mut accel = movement * accel_magn;
 
             // gravity
-            let cld = physw
-                .get_first_rigidbody_collider(player.phys_body)
-                .unwrap();
-            let mut collided = physw.get_collisions(cld.handle).iter().filter_map(|data| {
-                Some((physw.get_collider(data.other_collider)?, data.info.normal))
-            });
-            let collides_with_ground = collided
-                .any(|(other, normal)| normal.y < -0.9 && other.layer == GCL::Terrain as u8);
+            let collides_with_ground = phys_body_collides_with_ground(physw, player.phys_body);
             if !collides_with_ground {
                 accel += v2!(0., g);
             } else {
@@ -482,7 +490,8 @@ fn create_terrain(
     let mut sprite = Sprite::from_tex_path(gres, &tex_p);
     sprite.z_index = Z_TERRAIN;
     let mut terrain = Entity::new(sprite.into());
-    terrain.transform.translate(0., 450.);
+    terrain.transform.set_scale(2., 2.);
+    terrain.transform.translate(0., 900.);
 
     let phys_data = Phys_Data {
         inv_mass: Cfg_Var::new_from_val(0.),
@@ -519,6 +528,7 @@ fn create_mountain(
     let tex_p = tex_path(env, "game/mountain_top_eyes_animation.png");
     let mut sprite = Sprite::from_tex_path(gres, &tex_p);
     sprite.transform.translate(0., y - 2. * h + 6.);
+    sprite.transform.set_scale(1.5, 1.5);
     sprite.z_index = Z_MOUNTAINS;
     let sprite = Anim_Sprite::from_sprite(sprite, (2, 2), Duration::from_millis(170));
     mountain.sprites.push(sprite);
@@ -649,4 +659,19 @@ fn create_house(
     house.phys_body = phys_body_hdl;
 
     house
+}
+
+fn phys_body_collides_with_ground(
+    physw: &Physics_World,
+    phys_body: inle_physics::phys_world::Physics_Body_Handle,
+) -> bool {
+    let cld = physw.get_first_rigidbody_collider(phys_body).unwrap();
+    let mut collided = physw
+        .get_collisions(cld.handle)
+        .iter()
+        .filter_map(|data| Some((physw.get_collider(data.other_collider)?, data.info.normal)));
+    let collides_with_ground =
+        collided.any(|(other, normal)| normal.y < -0.9 && other.layer == GCL::Terrain as u8);
+
+    collides_with_ground
 }

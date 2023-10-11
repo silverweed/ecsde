@@ -7,6 +7,7 @@ use inle_cfg::{Cfg_Var, Config};
 use inle_core::env::Env_Info;
 use inle_core::rand::Default_Rng;
 use inle_gfx::res::{tex_path, Gfx_Resources};
+use inle_math::vector::Vec2i;
 use inle_physics::collider::Phys_Data;
 use inle_physics::phys_world::Physics_World;
 use std::time::Duration;
@@ -35,6 +36,7 @@ impl Block_System {
     pub fn init(
         &mut self,
         n_blocks: usize,
+        spawn_area_size: Vec2i,
         entities: &mut Entity_Container,
         game_state: &mut Game_State,
         game_res: &mut Game_Resources,
@@ -53,11 +55,17 @@ impl Block_System {
 
         let win_w = game_state.app_config.target_win_size.0 as f32;
         let win_h = game_state.app_config.target_win_size.1 as f32;
+        let spawn_offset_x =
+            (game_state.app_config.target_win_size.0 - spawn_area_size.x as u32) / 2;
 
         for i in 0..n_blocks {
             let mut entity = create_block(env, gres, physw, cfg, rng);
-            let x = inle_core::rand::rand_range(rng, -0.5 * win_w..0.5 * win_w);
-            let y = -win_h - (n_blocks - i) as f32 * 200.;
+            let block_width = entity.sprites[0].sprite.rect.width;
+            let x = (block_width as f32)
+                * ((rng.next() % (spawn_area_size.x as u64 / block_width as u64)) as f32)
+                + spawn_offset_x as f32
+                - win_w * 0.5;
+            let y = -win_h - ((n_blocks - i) * spawn_area_size.y as usize) as f32;
             entity.transform.set_position(x, y);
             let handle = entities.push(entity);
             let mut block = Block { entity: handle };
@@ -69,14 +77,28 @@ impl Block_System {
     pub fn update(&mut self, game_state: &mut Game_State, entities: &mut Entity_Container) {
         let gravity = self.phys_cfg.gravity.read(&game_state.config);
         let dt = game_state.time.dt_secs();
+        let max_vspeed = self.phys_cfg.vert_max_speed.read(&game_state.config);
+        let max_vspeed2 = max_vspeed * max_vspeed;
+        let physw = &game_state.phys_world;
 
         for &block_idx in &self.travelling_blocks {
             let block = &self.blocks[block_idx];
             let block_ent = entities.get_mut(block.entity).unwrap();
 
-            // Apply gravity
-            let accel = v2!(0., gravity);
-            block_ent.velocity += accel * dt;
+            let collides_below = block_collides_from_below(physw, block_ent.phys_body);
+            let mut accel = v2!(0., 0.);
+            if collides_below {
+                block_ent.velocity = v2!(0., 0.);
+            } else {
+                // Apply gravity
+                accel = v2!(0., gravity);
+                block_ent.velocity += accel * dt;
+            }
+
+            let vspeed2 = block_ent.velocity.magnitude2();
+            if vspeed2 > max_vspeed2 {
+                block_ent.velocity = max_vspeed * block_ent.velocity.normalized();
+            }
 
             block_ent.transform.translate_v(block_ent.velocity * dt);
         }
@@ -90,18 +112,36 @@ fn create_block(
     cfg: &Config,
     rng: &mut Default_Rng,
 ) -> Entity {
-    let typ = (inle_core::rand::rand_range(rng, 0.0..3.0) as u8).into();
+    let typ = ((rng.next() % 20) as u8).min(3).into();
     let mut sprite = make_block_sprite(env, gres, typ);
     sprite.z_index = super::Z_BLOCKS;
 
+    let cld = inle_physics::collider::Collider {
+        shape: inle_physics::collider::Collision_Shape::Rect {
+            width: sprite.rect.width as _,
+            height: sprite.rect.height as _,
+        },
+        layer: GCL::Blocks.into(),
+        ..Default::default()
+    };
+
     let mut entity = Entity::new(sprite);
+    entity.transform.set_scale(1.886, 1.886);
+    /*
     let phys_data = Phys_Data {
         inv_mass: Cfg_Var::new("game/physics/block/mass", cfg),
-        restitution: Cfg_Var::new("game/physics/restitution", cfg),
+        restitution: Cfg_Var::new("game/physics/block/restitution", cfg),
         static_friction: Cfg_Var::new("game/physics/static_friction", cfg),
         dyn_friction: Cfg_Var::new("game/physics/dyn_friction", cfg),
     };
     entity.register_to_physics(phys_world, &phys_data, GCL::Blocks, Phys_Type::Dynamic);
+    */
+
+    let cld = phys_world.add_collider(cld);
+    let phys_body_hdl = phys_world.new_physics_body();
+    let phys_body = phys_world.get_physics_body_mut(phys_body_hdl).unwrap();
+    phys_body.add_collider(cld);
+    entity.phys_body = phys_body_hdl;
 
     entity
 }
@@ -152,4 +192,18 @@ fn make_block_sprite(
             Duration::from_millis(100),
         ),
     }
+}
+
+fn block_collides_from_below(
+    physw: &Physics_World,
+    phys_body: inle_physics::phys_world::Physics_Body_Handle,
+) -> bool {
+    let cld = physw.get_all_phys_body_colliders(phys_body).next().unwrap();
+    let mut collided = physw
+        .get_collisions(cld.handle)
+        .iter()
+        .filter_map(|data| Some((physw.get_collider(data.other_collider)?, data.info.normal)));
+    let collides = collided.any(|(other, normal)| normal.y < -0.9);
+
+    collides
 }

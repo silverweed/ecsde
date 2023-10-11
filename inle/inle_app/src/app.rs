@@ -744,3 +744,16 @@ pub unsafe fn args_to_string_vec(
     }
     args
 }
+
+// NOTE: this is here a bit randomly, but it's done to avoid having dependencies between
+// inle_input, inle_window and inle_gfx.
+pub fn mouse_pos_in_world(
+    window: &inle_gfx::render_window::Render_Window_Handle,
+    input_state: &inle_input::input_state::Input_State,
+    camera: &inle_win::window::Camera,
+) -> inle_math::vector::Vec2f {
+    let mpos = inle_input::mouse::raw_mouse_pos(&input_state.raw.mouse_state);
+    let mpos = inle_win::window::correct_mouse_pos_in_window(window, mpos);
+    let wpos = inle_gfx::render_window::unproject_screen_pos(mpos, window, camera);
+    wpos
+}

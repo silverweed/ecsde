@@ -78,15 +78,26 @@ pub fn mouse_went_down(state: &Mouse_State, button: Mouse_Button) -> bool {
 /// Returns the mouse position relative to the window,
 /// without taking the target size into account (so if the window aspect ratio
 /// does not match with the target ratio, the result does not take "black bands" into account).
+/// In other words, this is the *actual* mouse position relative to the *actual* window as
+/// seen by the OS, regardless of our internal settings. Always goes from (0,0) (top-left) to
+/// (win_w, win_h) (bot-right).
 /// Use this when you want to unproject mouse coordinates!
 #[inline(always)]
-pub fn raw_mouse_pos(state: &Mouse_State) -> (f32, f32) {
-    (state.cursor.0 as f32, state.cursor.1 as f32)
+pub fn raw_mouse_pos(state: &Mouse_State) -> Vec2f {
+    Vec2f::new(state.cursor.0 as f32, state.cursor.1 as f32)
 }
 
+#[inline(always)]
+pub fn raw_mouse_pos_v2i(state: &Mouse_State) -> Vec2i {
+    Vec2i::new(state.cursor.0 as i32, state.cursor.1 as i32)
+}
+
+/// Returns the mouse position relative to the window, corrected in a way that (0, 0) is top-left
+/// of the viewport and (target_win_size.0, target_win_size.1) is bottom right of the viewport.
+/// May return negative numbers if the mouse is in the "black bands" area.
 #[inline]
 pub fn mouse_pos_in_window<W: AsRef<Window_Handle>>(window: &W, state: &Mouse_State) -> Vec2i {
-    let raw = Vec2f::new(state.cursor.0 as f32, state.cursor.1 as f32);
+    let raw = raw_mouse_pos(state);
     inle_win::window::correct_mouse_pos_in_window(window, raw)
 }
 

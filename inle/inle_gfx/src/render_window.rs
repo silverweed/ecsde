@@ -60,6 +60,10 @@ pub fn resize_keep_ratio(window: &mut Render_Window_Handle, new_width: u32, new_
 
 /// Converts screen coordinates (where (0,0) is top-left of the _viewport_) to world coordinates
 /// as seen from `camera`.
+/// `screen_pos` should be obtained by:
+///
+/// let raw_pos = mouse::raw_mouse_pos(...)
+/// let screen_pos = window::correct_mouse_pos_in_window(window, raw_pos)
 pub fn unproject_screen_pos(
     screen_pos: Vec2i,
     window: &Render_Window_Handle,
@@ -76,14 +80,6 @@ pub fn project_world_pos(
     camera: &Camera,
 ) -> Vec2i {
     backend::project_world_pos(world_pos, window, camera)
-}
-
-pub fn mouse_pos_in_world(
-    window: &Render_Window_Handle,
-    mouse_pos: Vec2i,
-    camera: &Camera,
-) -> Vec2f {
-    unproject_screen_pos(mouse_pos, window, camera)
 }
 
 #[inline(always)]

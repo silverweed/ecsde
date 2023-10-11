@@ -107,7 +107,10 @@ pub fn poll_event<W: AsMut<Window_Handle>>(window: &mut W) -> Option<Event> {
     backend::poll_event(window.as_mut())
 }
 
-/// Converts a raw pos (one in pixels) to a scaled pos (one in screen coordinates)
+/// Converts a raw pos (one in pixels, relative to the window) to a scaled pos (one in screen coordinates,
+/// considering our target win size).
+/// Note that the corrected position, differently from raw_pos, *can* be negative (meaning the
+/// mouse is in the "black bands" area).
 /// Should be passed the position taken from `mouse::raw_mouse_pos`.
 pub fn correct_mouse_pos_in_window<W: AsRef<Window_Handle>>(window: &W, raw_pos: Vec2f) -> Vec2i {
     trace!("correct_mouse_pos_in_window");

@@ -18,7 +18,8 @@ pub struct Debug_Painter {
     circles: Vec<(Circle, Paint_Properties)>,
     texts: Vec<(String, Vec2f, u16, Paint_Properties)>,
     arrows: Vec<(Arrow, Paint_Properties)>,
-    lines: Vec<(Line, Paint_Properties)>,
+    lines_ws: Vec<(Line, Paint_Properties)>,
+    lines_ss: Vec<(Line, Paint_Properties)>,
     font: res::Font_Handle,
 }
 
@@ -110,11 +111,18 @@ impl Debug_Painter {
     }
 
     // @Consistency: maybe we should allow to pass the transform here like in add_rect
-    pub fn add_line<T>(&mut self, line: Line, props: T)
+    pub fn add_line_ws<T>(&mut self, line: Line, props: T)
     where
         T: Into<Paint_Properties>,
     {
-        self.lines.push((line, props.into()));
+        self.lines_ws.push((line, props.into()));
+    }
+
+    pub fn add_line_ss<T>(&mut self, line: Line, props: T)
+    where
+        T: Into<Paint_Properties>,
+    {
+        self.lines_ss.push((line, props.into()));
     }
 
     pub fn clear(&mut self) {
@@ -122,7 +130,8 @@ impl Debug_Painter {
         self.circles.clear();
         self.texts.clear();
         self.arrows.clear();
-        self.lines.clear();
+        self.lines_ws.clear();
+        self.lines_ss.clear();
     }
 
     pub fn draw(
@@ -133,54 +142,78 @@ impl Debug_Painter {
     ) {
         trace!("painter::draw");
 
-        let visible_viewport = inle_win::window::get_camera_viewport(camera);
+        // Draw world-space stuff
+        {
+            let visible_viewport = inle_win::window::get_camera_viewport(camera);
 
-        let tot_circle_points_needed = 3 * self
-            .circles
-            .iter()
-            .map(|(_, props)| props.point_count as usize)
-            .sum::<usize>();
-        let tot_triangles = tot_circle_points_needed
-            + 2 * self.rects.len()
-            + 3 * self.arrows.len()
-            + 2 * self.lines.len();
+            let tot_circle_points_needed = 3 * self
+                .circles
+                .iter()
+                .map(|(_, props)| props.point_count as usize)
+                .sum::<usize>();
+            let tot_triangles = tot_circle_points_needed
+                + 2 * self.rects.len()
+                + 3 * self.arrows.len()
+                + 2 * self.lines_ws.len();
 
-        if tot_triangles > 0 {
-            let mut vbuf =
-                render::start_draw_triangles_temp(window, u32::try_from(tot_triangles).unwrap());
+            if tot_triangles > 0 {
+                let mut vbuf = render::start_draw_triangles_temp(
+                    window,
+                    u32::try_from(tot_triangles).unwrap(),
+                );
 
-            for (size, transform, props) in &self.rects {
-                draw_rect_internal(&mut vbuf, *size, transform, props, &visible_viewport);
+                for (size, transform, props) in &self.rects {
+                    draw_rect_internal(&mut vbuf, *size, transform, props, &visible_viewport);
+                }
+
+                for (circle, props) in &self.circles {
+                    draw_circle_internal(&mut vbuf, circle, props, &visible_viewport);
+                }
+
+                for (arrow, props) in &self.arrows {
+                    draw_arrow(&mut vbuf, arrow, props);
+                }
+
+                for (line, props) in &self.lines_ws {
+                    let direction = line.to - line.from;
+                    draw_line_internal(&mut vbuf, line.from, direction, line.thickness, props);
+                }
+
+                render::render_vbuf_ws(window, &vbuf, &Transform2D::default(), camera);
             }
 
-            for (circle, props) in &self.circles {
-                draw_circle_internal(&mut vbuf, circle, props, &visible_viewport);
+            let font = gres.get_font(self.font);
+            for (text, world_pos, font_size, props) in &self.texts {
+                draw_text(
+                    window,
+                    text,
+                    *world_pos,
+                    font,
+                    *font_size,
+                    props,
+                    camera,
+                    &visible_viewport,
+                );
             }
-
-            for (arrow, props) in &self.arrows {
-                draw_arrow(&mut vbuf, arrow, props);
-            }
-
-            for (line, props) in &self.lines {
-                let direction = line.to - line.from;
-                draw_line_internal(&mut vbuf, line.from, direction, line.thickness, props);
-            }
-
-            render::render_vbuf_ws(window, &vbuf, &Transform2D::default(), camera);
         }
 
-        let font = gres.get_font(self.font);
-        for (text, world_pos, font_size, props) in &self.texts {
-            draw_text(
-                window,
-                text,
-                *world_pos,
-                font,
-                *font_size,
-                props,
-                camera,
-                &visible_viewport,
-            );
+        // Draw screen-space stuff
+        {
+            let tot_triangles = 2 * self.lines_ss.len();
+
+            if tot_triangles > 0 {
+                let mut vbuf = render::start_draw_triangles_temp(
+                    window,
+                    u32::try_from(tot_triangles).unwrap(),
+                );
+
+                for (line, props) in &self.lines_ss {
+                    let direction = line.to - line.from;
+                    draw_line_internal(&mut vbuf, line.from, direction, line.thickness, props);
+                }
+
+                render::render_vbuf(window, &vbuf, &Transform2D::default());
+            }
         }
     }
 }

@@ -150,8 +150,7 @@ fn camera_zoom_preserve_mouse_pos(
 
     if add_scale.magnitude2() > 0. {
         // Preserve mouse world position
-        let mpos = Vec2i::from(Vec2f::from(mouse::raw_mouse_pos(&input.raw.mouse_state)));
-        let cur_mouse_wpos = inle_gfx::render_window::mouse_pos_in_world(window, mpos, camera);
+        let cur_mouse_wpos = inle_app::app::mouse_pos_in_world(window, input, camera);
 
         camera.transform.add_scale_v(add_scale);
         let mut new_scale = camera.transform.scale();
@@ -159,7 +158,7 @@ fn camera_zoom_preserve_mouse_pos(
         new_scale.y = new_scale.y.max(0.001);
         camera.transform.set_scale_v(new_scale);
 
-        let new_mouse_wpos = inle_gfx::render_window::mouse_pos_in_world(window, mpos, camera);
+        let new_mouse_wpos = inle_app::app::mouse_pos_in_world(window, input, camera);
 
         cam_translation += cur_mouse_wpos - new_mouse_wpos;
     }
