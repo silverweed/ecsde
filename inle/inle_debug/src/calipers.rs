@@ -21,9 +21,9 @@ impl Debug_Calipers {
         camera: &Camera,
         input_state: &Input_State,
     ) {
-        let mpos = mouse::raw_mouse_pos(&input_state.raw.mouse_state);
-        let mpos = inle_win::window::correct_mouse_pos_in_window(window, mpos);
+        let mpos = mouse::raw_mouse_pos_v2i(&input_state.raw.mouse_state);
         let world_pos = render_window::unproject_screen_pos(mpos, window, camera);
+        dbg!((mpos, world_pos));
         self.start_world_pos = world_pos;
         self.dragging = true;
     }
@@ -43,8 +43,7 @@ impl Debug_Calipers {
             return;
         }
 
-        let end_screen_pos = mouse::raw_mouse_pos(&input_state.raw.mouse_state);
-        let end_screen_pos = inle_win::window::correct_mouse_pos_in_window(window, end_screen_pos);
+        let end_screen_pos = mouse::raw_mouse_pos_v2i(&input_state.raw.mouse_state);
         let end_world_pos = render_window::unproject_screen_pos(end_screen_pos, window, camera);
         let delta = end_world_pos - self.start_world_pos;
         let scale = camera.transform.scale().x;
@@ -58,7 +57,7 @@ impl Debug_Calipers {
 
         let d = (15. * scale).max(5.);
         let text_pos = arrow.center + arrow.direction + v2!(d, d);
-        let font_size = (15. * scale).max(8.) as u16;
+        let font_size = (17. * scale).max(8.) as u16;
         let shadow = v2!(1., 1.) * scale;
         painter.add_text(
             &format!("{:.2}", delta.magnitude()),

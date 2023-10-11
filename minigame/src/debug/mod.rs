@@ -365,9 +365,7 @@ pub fn render_debug(
     // Draw debug calipers
     {
         let calipers = &debug_systems.calipers;
-        // @Incomplete: use level camera
-        let camera = Camera::default();
-        calipers.draw(window, &mut debug_systems.global_painter, &camera, input);
+        calipers.draw(window, &mut debug_systems.global_painter, camera, input);
     }
 
     // Draw global debug painter

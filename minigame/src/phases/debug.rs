@@ -35,11 +35,9 @@ impl Persistent_Game_Phase for Debug {
         for action in &gs.input.processed.game_actions {
             match action {
                 (name, Action_Kind::Pressed) if *name == sid!("calipers") => {
-                    // @Incomplete
-                    let camera = Camera::default();
                     gs.debug_systems
                         .calipers
-                        .start_measuring_dist(&gs.window, &camera, &gs.input);
+                        .start_measuring_dist(&gs.window, &gs.camera, &gs.input);
                 }
                 (name, Action_Kind::Released) if *name == sid!("calipers") => {
                     gs.debug_systems.calipers.end_measuring();
