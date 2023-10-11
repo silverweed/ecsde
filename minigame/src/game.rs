@@ -422,8 +422,9 @@ fn update_free_camera(game_state: &mut Game_State) {
     );
     let cam_speed =
         Cfg_Var::<f32>::new("game/camera/speed", &game_state.config).read(&game_state.config);
+    let cam_speed_mul = 1.8_f32.powf(game_state.camera.transform.scale().x - 1.).min(15.);
     let dt = game_state.time.dt_secs();
-    let delta = movement * cam_speed * dt;
+    let delta = movement * cam_speed * cam_speed_mul * dt;
     game_state.camera.transform.translate_v(delta);
 }
 

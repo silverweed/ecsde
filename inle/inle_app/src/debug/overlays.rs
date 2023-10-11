@@ -25,6 +25,7 @@ pub fn update_debug(
     phys_world: &inle_physics::phys_world::Physics_World,
     camera: &Camera,
     collision_data: &inle_physics::physics::Collision_System_Debug_Data,
+    lights: &inle_gfx::light::Lights,
 ) {
     // Overlays
     let display_overlays = cvars.debug.display_overlays.read(config);
@@ -83,6 +84,18 @@ pub fn update_debug(
         debug_systems
             .debug_ui
             .set_log_window_enabled(sid!("log_window"), display_log_window);
+    }
+    */
+
+    let draw_lights = cvars.debug.draw_lights.read(config);
+    if draw_lights {
+        debug_draw_lights(&mut debug_systems.global_painter, lights);
+    }
+
+    /*
+    let draw_particle_emitters = cvars.debug.draw_particle_emitters.read(config);
+    if draw_particle_emitters {
+        debug_draw_particles(&mut debug_systems.global_painter, particles);
     }
     */
 
@@ -332,11 +345,11 @@ fn update_record_debug_overlay(
 }
 
 fn debug_draw_lights(
-    screenspace_debug_painter: &mut Debug_Painter,
+    //screenspace_debug_painter: &mut Debug_Painter,
     debug_painter: &mut Debug_Painter,
     lights: &inle_gfx::light::Lights,
 ) {
-    screenspace_debug_painter.add_shaded_text(
+    /*screenspace_*/debug_painter.add_shaded_text(
         &format!(
             "Ambient Light: color: #{:X}, intensity: {}",
             colors::color_to_hex_no_alpha(lights.ambient_light().color),

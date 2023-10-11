@@ -350,7 +350,6 @@ pub fn draw_batches(
     let visible_viewport = inle_win::window::get_camera_viewport(camera);
 
     let mut lights_ubo_needs_update = lights.process_commands();
-
     {
         let mut old_point_lights_near_camera = SmallVec::<[Point_Light; MAX_POINT_LIGHTS]>::new();
         std::mem::swap(

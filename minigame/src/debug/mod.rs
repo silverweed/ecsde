@@ -142,6 +142,7 @@ pub fn update_debug(game_state: &mut Game_State, _game_res: &mut Game_Resources)
         &game_state.phys_world,
         &game_state.camera,
         &game_state.phys_debug_data,
+        &game_state.lights,
     );
 }
 
