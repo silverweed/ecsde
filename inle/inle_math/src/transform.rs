@@ -112,6 +112,12 @@ impl Transform2D {
     }
 
     #[inline]
+    pub fn mul_scale(&mut self, x: f32, y: f32) {
+        self.scale.x *= x;
+        self.scale.y *= y;
+    }
+
+    #[inline]
     pub fn scale(&self) -> Vec2f {
         self.scale
     }
@@ -249,6 +255,17 @@ mod tests {
         assert_eq!(tr.scale(), Vec2f::new(0.5, -0.5));
         tr.set_scale(-1.0, 10.5);
         assert_eq!(tr.scale(), Vec2f::new(-1.0, 10.5));
+    }
+
+    #[test]
+    fn mul_scale() {
+        let mut tr = Transform2D::new();
+        tr.set_scale(0.5, -0.5);
+        assert_eq!(tr.scale(), Vec2f::new(0.5, -0.5));
+        tr.mul_scale(-1.0, 0.5);
+        assert_eq!(tr.scale(), Vec2f::new(-0.5, -0.25));
+        tr.mul_scale(2.0, -1.0);
+        assert_eq!(tr.scale(), Vec2f::new(-1.0, 0.25));
     }
 
     #[test]

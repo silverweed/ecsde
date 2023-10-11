@@ -6,7 +6,7 @@ use inle_math::rect::{Rect, Recti};
 use inle_math::transform::Transform2D;
 use std::path::Path;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Sprite {
     pub material: Material,
     pub rect: Recti,

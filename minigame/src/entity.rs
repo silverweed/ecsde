@@ -31,7 +31,7 @@ pub enum Phys_Type {
     Dynamic,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Entity {
     pub transform: Transform2D,
     pub velocity: Vec2f,
@@ -79,8 +79,8 @@ impl Entity {
             max.y = max.y.max(r.y + r.height);
             offset += min;
         }
-        let width = (max - min).x;
-        let height = (max - min).y;
+        let width = (max - min).x * self.transform.scale().x;
+        let height = (max - min).y * self.transform.scale().y;
         offset /= self.sprites.len() as f32;
         let cld = Collider {
             shape: Collision_Shape::Rect { width, height },

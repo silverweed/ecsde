@@ -7,7 +7,7 @@ use smallvec::SmallVec;
 use std::ops::{Deref, DerefMut};
 use std::time::Duration;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Animation {
     pub name: String_Id,
 
@@ -22,7 +22,7 @@ struct Animation {
     pub frame_time: Duration,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Anim_Sprite {
     pub sprite: Sprite,
 

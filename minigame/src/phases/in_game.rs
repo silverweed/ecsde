@@ -142,7 +142,7 @@ impl Game_Phase for In_Game {
         self.entities.push(Entity::new(sprite.into()));
 
         self.entities
-            .push(create_boundaries(gs.app_config.target_win_size, physw, cfg));
+            .push(create_boundaries(gs.camera.size, physw, cfg));
 
         let terrain = create_terrain(env, gres, physw, cfg);
         self.entities.push(terrain);
@@ -158,7 +158,7 @@ impl Game_Phase for In_Game {
         left_mountain
             .transform
             .translate(-mountain_off_x, mountain_off_y);
-        left_mountain.transform.set_scale(-1., 1.);
+        left_mountain.transform.mul_scale(-1., 1.);
         right_mountain
             .transform
             .translate(mountain_off_x, mountain_off_y);
@@ -208,7 +208,7 @@ impl Game_Phase for In_Game {
         //let block_spawn_area_x = (win_w - (2 * mountain_width as u32) - 2) as f32;
         let block_spawn_area_x = 1472;
         self.block_system.init(
-            100,
+            50,
             v2!(block_spawn_area_x, 200),
             &mut self.entities,
             gs,
@@ -431,9 +431,10 @@ impl In_Game {
             let player = self.entities.get_mut(player_state.entity).unwrap();
             let movement = players_input[player_idx].movement;
 
+            let s = player.transform.scale();
             match movement.x.partial_cmp(&0.) {
-                Some(std::cmp::Ordering::Greater) => player.transform.set_scale(-1., 1.),
-                Some(std::cmp::Ordering::Less) => player.transform.set_scale(1., 1.),
+                Some(std::cmp::Ordering::Greater) => player.transform.set_scale(-s.x.abs(), s.y),
+                Some(std::cmp::Ordering::Less) => player.transform.set_scale(s.x.abs(), s.y),
                 _ => {}
             }
 
@@ -528,10 +529,10 @@ fn create_mountain(
     let tex_p = tex_path(env, "game/mountain_top_eyes_animation.png");
     let mut sprite = Sprite::from_tex_path(gres, &tex_p);
     sprite.transform.translate(0., y - 2. * h + 6.);
-    sprite.transform.set_scale(1.5, 1.5);
     sprite.z_index = Z_MOUNTAINS;
     let sprite = Anim_Sprite::from_sprite(sprite, (2, 2), Duration::from_millis(170));
     mountain.sprites.push(sprite);
+    mountain.transform.set_scale(1.5, 1.5);
 
     let phys_data = Phys_Data {
         inv_mass: Cfg_Var::new_from_val(0.),
@@ -580,38 +581,39 @@ fn create_player(
         layer: GCL::Player.into(),
         ..Default::default()
     };
+    player.transform.set_scale(1.5, 1.5);
     player.phys_body = phys_world.new_physics_body_with_rigidbody(cld, phys_data);
 
     player
 }
 
 fn create_boundaries(
-    (win_w, win_h): (u32, u32),
+    world_size: Vec2f,
     phys_world: &mut Physics_World,
     cfg: &Config,
 ) -> Entity {
     let cld_left = Collider {
         shape: Collision_Shape::Rect {
             width: 500.,
-            height: 2. * (win_h as f32),
+            height: 2. * world_size.y,
         },
         layer: GCL::Boundary.into(),
         is_static: true,
-        offset: v2!(-(win_w as f32) * 0.5 - 250., 0.),
+        offset: v2!(-world_size.x * 0.5 - 250., 0.),
         ..Default::default()
     };
 
     let cld_right = Collider {
-        offset: v2!((win_w as f32) * 0.5 + 250., 0.),
+        offset: v2!(world_size.x * 0.5 + 250., 0.),
         ..cld_left.clone()
     };
 
     let cld_top = Collider {
         shape: Collision_Shape::Rect {
-            width: 2. * (win_w as f32),
+            width: 2. * world_size.x,
             height: 500.,
         },
-        offset: v2!(0., -(win_h as f32) * 0.5 - 250.),
+        offset: v2!(0., -world_size.y * 0.5 - 250.),
         ..cld_left.clone()
     };
 
