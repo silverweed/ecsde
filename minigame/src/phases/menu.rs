@@ -96,33 +96,24 @@ fn replace_falling_block(
     sprites: &mut [Anim_Sprite],
     replaced_idx: usize, // this is the index (into `sprites`) we're replacing
     block_sprites_first_idx: usize,
-    win_size: (u32, u32),
+    world_size: Vec2f,
     rng: &mut rand::Default_Rng,
 ) -> Falling_Block {
     const FALLING_BLOCK_SPEED_RANGE: (f32, f32) = (100., 250.);
     const FALLING_BLOCK_ANG_SPEED_DEG: f32 = 200.;
 
-    let win_w = win_size.0 as f32 * 0.5;
-    let win_h = win_size.1 as f32 * 0.5;
-    let bt_rand = rand::rand_01(rng);
-    let block_type = if bt_rand < 0.1 {
-        1
-    } else if bt_rand < 0.2 {
-        2
-    } else if bt_rand < 0.3 {
-        3
-    } else {
-        0
-    };
+    let bt_rand = rng.next() % 10;
+    let block_type = if bt_rand > 3 { 0 } else { bt_rand as usize };
 
     sprites[replaced_idx] = sprites[block_sprites_first_idx + block_type].clone();
     let block = &mut sprites[replaced_idx];
 
     // Initial random position + rotation
     block.transform.translate(
-        rand::rand_range(rng, -win_w..win_w),
-        rand::rand_range(rng, -win_h * 2.0..-win_h),
+        rand::rand_range(rng, -world_size.x * 0.5..world_size.x * 0.5),
+        rand::rand_range(rng, -world_size.y..-world_size.y * 0.5),
     );
+    block.transform.set_scale(1.5, 1.5);
     block
         .transform
         .rotate(angle::rad(rand::rand_range(rng, 0.0..angle::TAU)));
@@ -166,7 +157,7 @@ impl Game_Phase for Main_Menu {
             let tex_p = tex_path(env, "menu/main_menu_background.png");
             let mut sprite = Sprite::from_tex_path(gres, &tex_p);
             sprite.transform.set_scale(1.5, 1.5);
-            sprite.z_index = -1;
+            sprite.z_index = -2;
             self.sprites.push(sprite.into());
 
             let tex_p = tex_path(env, "menu/main_menu_mountains.png");
@@ -238,7 +229,7 @@ impl Game_Phase for Main_Menu {
                     &mut self.sprites,
                     first_falling_block_idx + i,
                     self.block_sprites_first_idx,
-                    gs.app_config.target_win_size,
+                    gs.camera.size,
                     &mut gs.rng,
                 ));
             }
@@ -272,17 +263,17 @@ impl Game_Phase for Main_Menu {
         //
         // Update falling blocks
         //
-        let win_h = gs.app_config.target_win_size.1 as f32 * 0.5;
+        let max_y = gs.camera.size.y * 0.5 + 20.;
         for block in &mut self.falling_blocks {
             let sprite = &mut self.sprites[block.sprite_idx];
             sprite.transform.translate(0., block.speed * dt);
             sprite.transform.rotate(block.ang_speed * dt);
-            if sprite.transform.position().y > win_h + 20. {
+            if sprite.transform.position().y > max_y {
                 let mut new_block = replace_falling_block(
                     &mut self.sprites,
                     block.sprite_idx,
                     self.block_sprites_first_idx,
-                    gs.app_config.target_win_size,
+                    gs.camera.size,
                     &mut gs.rng,
                 );
                 std::mem::swap(&mut new_block, block);
