@@ -60,8 +60,9 @@ impl Block_System {
 
         for i in 0..n_blocks {
             let mut entity = create_block(env, gres, physw, cfg, rng);
-            let block_width = entity.sprites[0].sprite.rect.width;
-            let x = (block_width as f32)
+            let block_width =
+                entity.transform.scale().x * entity.sprites[0].sprite.rect.width as f32 + 2.;
+            let x = block_width
                 * ((rng.next() % (spawn_area_size.x as u64 / block_width as u64)) as f32)
                 + spawn_offset_x as f32
                 - win_w * 0.5;
@@ -117,7 +118,7 @@ fn create_block(
         0 => Block_Type::Angry,
         1 => Block_Type::Annoyed,
         2 => Block_Type::Dummy,
-        _ => Block_Type::Standard
+        _ => Block_Type::Standard,
     };
     let mut sprite = make_block_sprite(env, gres, typ);
     sprite.z_index = super::Z_BLOCKS;
