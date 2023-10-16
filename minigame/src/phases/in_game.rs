@@ -150,7 +150,8 @@ impl Game_Phase for In_Game {
         // Mountains
         // NOTE: we need to leave room for 24 blocks in the middle; the mountain is 256px wide.
         //let mountain_off_x = -grid_step * 15 - grid_step * 4
-        let mountain_off_x = win_hw - 100.;
+        let mountain_off_x = 1120.;
+        // let mountain_off_x = win_hw - 100.;
         let mountain_off_y = 280.;
 
         let mut left_mountain = create_mountain(env, gres, physw, cfg);
@@ -587,11 +588,7 @@ fn create_player(
     player
 }
 
-fn create_boundaries(
-    world_size: Vec2f,
-    phys_world: &mut Physics_World,
-    cfg: &Config,
-) -> Entity {
+fn create_boundaries(world_size: Vec2f, phys_world: &mut Physics_World, cfg: &Config) -> Entity {
     let cld_left = Collider {
         shape: Collision_Shape::Rect {
             width: 500.,
@@ -672,8 +669,7 @@ fn phys_body_collides_with_ground(
         .get_collisions(cld.handle)
         .iter()
         .filter_map(|data| Some((physw.get_collider(data.other_collider)?, data.info.normal)));
-    let collides_with_ground =
-        collided.any(|(other, normal)| normal.y < -0.9);//&& other.layer == GCL::Terrain as u8);
+    let collides_with_ground = collided.any(|(other, normal)| normal.y < -0.9); //&& other.layer == GCL::Terrain as u8);
 
     collides_with_ground
 }

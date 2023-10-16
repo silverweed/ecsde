@@ -144,6 +144,8 @@ pub fn update_debug(game_state: &mut Game_State, _game_res: &mut Game_Resources)
         &game_state.phys_debug_data,
         &game_state.lights,
     );
+
+    update_traced_fn_console_hints(game_state);
 }
 
 fn update_console(game_state: &mut Game_State) {
@@ -425,4 +427,46 @@ pub fn set_traced_fn(debug_systems: &mut Debug_Systems, fn_name: String) {
     graph.cfg.title = Some(fn_name);
     graph.data.points.clear();
     graph.selected_point = None;
+}
+
+pub fn update_traced_fn_console_hints(game_state: &mut Game_State) {
+    // Initialize the hints for the `trace` command. Do this after the first
+    // frame so the tracer contains all the function names.
+    // We also add hints every X frames to catch also all functions
+    // that weren't added during the very first frame.
+    // This is done asynchronously since it's a quite heavy operation (needs a sort + dedup)
+    // FIXME: seems like not all trace hints are properly added?
+    if game_state.update_trace_hints_countdown == 0 {
+        let console = game_state.debug_systems.console.clone();
+        let tracers = inle_diagnostics::prelude::DEBUG_TRACERS.lock().unwrap();
+        let saved_traces = tracers
+            .iter()
+            .map(|(_, tracer)| tracer.lock().unwrap().saved_traces.to_vec())
+            .flatten()
+            .collect::<Vec<_>>();
+        game_state.long_task_mgr.create_task(move || {
+            use std::collections::HashSet;
+
+            let fn_names: HashSet<_> = saved_traces
+                .into_iter()
+                .map(|trace| String::from(trace.info.tag))
+                .collect();
+            // Note: we do the heavy work in the task and not in add_hints so we can lock the console
+            // for as little as possible.
+            let cur_hints = console
+                .lock()
+                .unwrap()
+                .hints
+                .get("trace")
+                .cloned()
+                .unwrap_or_default();
+            let cur_hints: HashSet<String> = cur_hints.into_iter().collect();
+            let fn_names = fn_names.difference(&cur_hints).cloned();
+            console.lock().unwrap().add_hints("trace", fn_names);
+        });
+        // Add more hints after this number of frames.
+        game_state.update_trace_hints_countdown = 60;
+    } else {
+        game_state.update_trace_hints_countdown -= 1;
+    }
 }

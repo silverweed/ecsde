@@ -128,11 +128,10 @@ pub fn update_debug(
         let square_size = cvars.debug.debug_grid_square_size.read(config);
         let opacity = cvars.debug.debug_grid_opacity.read(config);
         let font_size = cvars.debug.debug_grid_font_size.read(config);
-        let win_size = window::get_window_real_size(window);
         debug_draw_grid(
             &mut debug_systems.global_painter,
             &camera.transform,
-            win_size,
+            camera.size,
             square_size,
             opacity as _,
             font_size as _,
@@ -351,7 +350,8 @@ fn debug_draw_lights(
     debug_painter: &mut Debug_Painter,
     lights: &inle_gfx::light::Lights,
 ) {
-    /*screenspace_*/debug_painter.add_shaded_text(
+    /*screenspace_*/
+    debug_painter.add_shaded_text(
         &format!(
             "Ambient Light: color: #{:X}, intensity: {}",
             colors::color_to_hex_no_alpha(lights.ambient_light().color),
@@ -453,18 +453,14 @@ fn debug_draw_lights(
 fn debug_draw_grid(
     debug_painter: &mut Debug_Painter,
     camera_transform: &Transform2D,
-    (screen_width, screen_height): (u32, u32),
+    screen_size: Vec2f,
     square_size: f32,
     grid_opacity: u8,
     font_size: u16,
 ) {
     let Vec2f { x: cx, y: cy } = camera_transform.position();
-    let Vec2f {
-        x: cam_sx,
-        y: cam_sy,
-    } = camera_transform.scale();
-    let sw = screen_width as f32 * cam_sx;
-    let sh = screen_height as f32 * cam_sy;
+    let screen_size = screen_size * camera_transform.scale();
+    let Vec2f { x: sw, y: sh } = screen_size;
     let n_horiz = (sw / square_size).floor() as usize + 2;
     let n_vert = (sh / square_size).floor() as usize + 2;
     if n_vert * n_horiz > 14_000 {

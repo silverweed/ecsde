@@ -126,8 +126,12 @@ pub unsafe extern "C" fn game_shutdown(game_state: *mut Game_State, game_res: *m
             .unwrap_or_else(|err| lwarn!("Failed to save console history: {}", err));
     }
 
+    gs.long_task_mgr.begin_shutdown();
+
     inle_gfx::render::batcher::clear_batches(&mut (*game_state).batches);
     inle_gfx::render_window::shutdown(&mut (*game_state).window);
+
+    gs.long_task_mgr.block_until_shutdown_complete();
 
     std::ptr::drop_in_place(game_state);
     std::alloc::dealloc(

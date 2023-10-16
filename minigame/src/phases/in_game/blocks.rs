@@ -55,8 +55,7 @@ impl Block_System {
 
         let win_w = game_state.app_config.target_win_size.0 as f32;
         let win_h = game_state.app_config.target_win_size.1 as f32;
-        let spawn_offset_x =
-            (game_state.app_config.target_win_size.0 - spawn_area_size.x as u32) / 2;
+        let spawn_offset_x = -spawn_area_size.x / 2 + 1;
 
         for i in 0..n_blocks {
             let mut entity = create_block(env, gres, physw, cfg, rng);

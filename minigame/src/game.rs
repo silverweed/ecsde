@@ -30,6 +30,8 @@ pub struct Game_State {
 
     pub audio_system: inle_audio::audio_system::Audio_System,
 
+    pub long_task_mgr: inle_core::tasks::Long_Task_Manager,
+
     pub input: inle_input::input_state::Input_State,
     pub input_cfg: crate::input::Input_Config,
 
@@ -57,6 +59,9 @@ pub struct Game_State {
 
     #[cfg(debug_assertions)]
     pub fps_counter: inle_debug::fps::Fps_Counter,
+
+    #[cfg(debug_assertions)]
+    pub update_trace_hints_countdown: i16,
 }
 
 pub struct Game_Resources {
@@ -195,6 +200,13 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
     let phys_world = inle_physics::phys_world::Physics_World::default();
     let entities = crate::entity::Entity_Container::default();
 
+    let mut long_task_mgr = inle_core::tasks::Long_Task_Manager::default();
+    let n_threads = std::thread::available_parallelism()
+        .map_or(2, std::num::NonZeroUsize::get)
+        .max(2)
+        - 1;
+    long_task_mgr.start(n_threads);
+
     Box::new(Game_State {
         env,
         config,
@@ -222,12 +234,15 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
         engine_cvars,
         phase_mgr,
         bg_music: Sound_Handle::INVALID,
+        long_task_mgr,
         #[cfg(debug_assertions)]
         debug_systems,
         #[cfg(debug_assertions)]
         phys_debug_data: inle_physics::physics::Collision_System_Debug_Data::default(),
         #[cfg(debug_assertions)]
         fps_counter: inle_debug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(1)),
+        #[cfg(debug_assertions)]
+        update_trace_hints_countdown: 0,
     })
 }
 
@@ -422,7 +437,9 @@ fn update_free_camera(game_state: &mut Game_State) {
     );
     let cam_speed =
         Cfg_Var::<f32>::new("game/camera/speed", &game_state.config).read(&game_state.config);
-    let cam_speed_mul = 1.8_f32.powf(game_state.camera.transform.scale().x - 1.).min(15.);
+    let cam_speed_mul = 1.8_f32
+        .powf(game_state.camera.transform.scale().x - 1.)
+        .min(15.);
     let dt = game_state.time.dt_secs();
     let delta = movement * cam_speed * cam_speed_mul * dt;
     game_state.camera.transform.translate_v(delta);
