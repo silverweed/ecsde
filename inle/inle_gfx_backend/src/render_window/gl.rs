@@ -28,11 +28,6 @@ macro_rules! glcheck {
 pub struct Render_Window_Handle {
     window: Window_Handle,
 
-    // Unnormalized viewport, the same used in glViewport().
-    // Specifies the transformation from NDC to window coordinates.
-    // Initially it's equal to the window size, but that can change if the window is resized.
-    viewport: Recti,
-
     pub gl: Gl,
     pub temp_allocator: temp::Temp_Allocator,
 
@@ -60,7 +55,6 @@ pub fn create_render_window(mut window: Window_Handle) -> Render_Window_Handle {
     let win_size = inle_win::window::get_window_target_size(&window);
     Render_Window_Handle {
         window,
-        viewport: Rect::new(0, 0, win_size.0 as _, win_size.1 as _),
         gl: init_gl(),
         temp_allocator: temp::Temp_Allocator::with_capacity(inle_common::units::megabytes(10)),
         #[cfg(debug_assertions)]
@@ -269,8 +263,6 @@ pub fn set_viewport(window: &mut Render_Window_Handle, normalized_viewport: &Rec
         (0.5 + height * normalized_viewport.height) as i32,
     );
 
-    window.viewport = viewport;
-
     unsafe {
         glcheck!(gl::Viewport(
             viewport.x,
@@ -289,9 +281,13 @@ pub fn unproject_screen_pos(
     camera: &Camera,
 ) -> Vec2f {
     let vp = get_vp_matrix(camera);
+    let (win_w, win_h) = inle_win::window::get_window_target_size(window);
+    // NOTE: since screen_pos is already corrected to range from (0, 0) to (target_win_size.0, target_win_size.1)
+    // when the position is outside the "black bands area", we normalize to NDC by dividing by the target
+    // window size (and we don't need to offset the position at all).
     let ndc = v2!(
-        2. * (screen_pos.x as f32 - window.viewport.x as f32) / window.viewport.width as f32 - 1.,
-        1. - 2. * (screen_pos.y as f32 - window.viewport.y as f32) / window.viewport.height as f32,
+        2. * screen_pos.x as f32 / win_w as f32 - 1.,
+        1. - 2. * screen_pos.y as f32 / win_h as f32,
     );
 
     (&vp.inverse() * v3!(ndc.x, ndc.y, 1.0)).into()

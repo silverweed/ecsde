@@ -96,7 +96,10 @@ fn execute_command(cmd: Console_Cmd, game_state: &mut Game_State) -> Option<(Str
             game_state.should_quit = true;
             None
         }
-        Console_Cmd::Move_Camera { .. } => None,
+        Console_Cmd::Move_Camera { to } => {
+            game_state.camera.transform.set_position_v(to);
+            None
+        },
         Console_Cmd::Zoom_Camera { .. } => None,
         Console_Cmd::Get_Cfg_Var { name } => Some((
             format!(

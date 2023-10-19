@@ -89,11 +89,9 @@ pub fn get_window_real_size<W: AsRef<Window_Handle>>(window: &W) -> (u32, u32) {
 
 #[inline]
 pub fn get_camera_viewport(camera: &Camera) -> Rectf {
-    let mut visible = Rect::from_topleft_size(
-        camera.transform.position(),
-        camera.size * camera.transform.scale(),
-    );
-    visible = visible - visible.size() * 0.5;
+    let center = camera.transform.position();
+    let size = camera.size * camera.transform.scale();
+    let mut visible = Rect::from_center_size(center, size);
     visible
 }
 

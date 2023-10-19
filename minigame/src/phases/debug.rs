@@ -148,7 +148,6 @@ fn camera_zoom_preserve_mouse_pos(
 
     if add_scale.magnitude2() > 0. {
         // Preserve mouse world position
-        ldebug!("bef {:?}", camera.transform.position());
         let cur_mouse_wpos = inle_app::app::mouse_pos_in_world(window, input, camera);
 
         camera.transform.add_scale_v(add_scale);
@@ -158,12 +157,9 @@ fn camera_zoom_preserve_mouse_pos(
         camera.transform.set_scale_v(new_scale);
 
         let new_mouse_wpos = inle_app::app::mouse_pos_in_world(window, input, camera);
-        dbg!((cur_mouse_wpos, new_mouse_wpos));
 
         cam_translation += cur_mouse_wpos - new_mouse_wpos;
     }
 
     camera.transform.translate_v(cam_translation);
-    if cam_translation.magnitude2() > 0. {
-    dbg!(camera.transform.position()); }
 }
