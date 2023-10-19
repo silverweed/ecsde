@@ -11,7 +11,7 @@ use std::convert::TryInto;
 pub fn init_debug(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     let ui_scale = Cfg_Var::<f32>::new("engine/debug/ui/ui_scale", &game_state.config);
     let font_name = Cfg_Var::<String>::new("engine/debug/ui/font", &game_state.config);
-    let cfg = inle_debug::debug_ui::Debug_Ui_System_Config {
+    let cfg = inle_debug::debug_ui::Debug_Ui_Config {
         target_win_size: game_state.app_config.target_win_size,
         ui_scale,
         font_name,

@@ -16,14 +16,14 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 #[derive(Debug)]
-pub struct Debug_Ui_System_Config {
+pub struct Debug_Ui_Config {
     pub ui_scale: Cfg_Var<f32>,
     pub target_win_size: (u32, u32),
     pub font_name: Cfg_Var<String>,
     pub font_size: Cfg_Var<u32>,
 }
 
-impl Default for Debug_Ui_System_Config {
+impl Default for Debug_Ui_Config {
     fn default() -> Self {
         Self {
             ui_scale: Cfg_Var::new_from_val(1.),
@@ -150,14 +150,14 @@ impl<T> Debug_Element_Container<T> {
 }
 
 #[derive(Default)]
-pub struct Debug_Ui_System {
+pub struct Debug_Ui {
     overlays: Debug_Element_Container<overlay::Debug_Overlay>,
     graphs: Debug_Element_Container<graph::Debug_Graph_View>,
     log_windows: Debug_Element_Container<log_window::Log_Window>,
     font: Font_Handle,
 
     pub frame_scroller: Debug_Frame_Scroller,
-    pub cfg: Debug_Ui_System_Config,
+    pub cfg: Debug_Ui_Config,
 }
 
 macro_rules! add_debug_elem {
@@ -218,7 +218,7 @@ macro_rules! update_and_draw_elems {
     };
 }
 
-impl Debug_Ui_System {
+impl Debug_Ui {
     add_debug_elem!(
         overlay::Debug_Overlay,
         overlay::Debug_Overlay_Config,
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn debug_ui_set_enabled() {
-        let mut debug_ui = Debug_Ui_System::default();
+        let mut debug_ui = Debug_Ui::default();
         debug_ui.create_overlay(sid!("test"), &Debug_Overlay_Config::default());
 
         assert!(debug_ui.is_overlay_enabled(sid!("test")));

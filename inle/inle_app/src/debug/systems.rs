@@ -9,7 +9,7 @@ pub enum Overlay_Shown {
 }
 
 pub struct Debug_Systems {
-    pub debug_ui: debug_ui::Debug_Ui_System,
+    pub debug_ui: debug_ui::Debug_Ui,
 
     pub global_painter: Debug_Painter,
     pub console: Arc<Mutex<console::Console>>,
@@ -33,7 +33,7 @@ impl Debug_Systems {
             lok!("Loaded console history");
         }
         Debug_Systems {
-            debug_ui: debug_ui::Debug_Ui_System::default(),
+            debug_ui: debug_ui::Debug_Ui::default(),
             global_painter: Debug_Painter::default(),
             show_overlay: Overlay_Shown::None,
             trace_overlay_update_t: 0.0,

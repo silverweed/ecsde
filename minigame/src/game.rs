@@ -263,6 +263,9 @@ pub fn game_post_init(
     game_res: &mut Game_Resources,
     game_args: &Game_Args,
 ) {
+    game_res.gfx.init();
+    game_res.shader_cache.init();
+    
     let font_name = inle_cfg::Cfg_Var::<String>::new("engine/debug/ui/font", &game_state.config);
     game_state.default_font = game_res.gfx.load_font(&inle_gfx::res::font_path(
         &game_state.env,

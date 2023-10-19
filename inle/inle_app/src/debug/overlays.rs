@@ -1,4 +1,5 @@
 use super::systems::Debug_Systems;
+use inle_cfg::Cfg_Var;
 use inle_common::colors;
 use inle_common::paint_props::Paint_Properties;
 use inle_core::time;
@@ -11,6 +12,103 @@ use inle_math::vector::{Vec2f, Vec2i};
 use inle_win::window;
 use inle_win::window::Camera;
 use std::convert::TryInto;
+
+pub fn init_debug_overlays(
+    debug_ui: &mut inle_debug::debug_ui::Debug_Ui,
+    config: &inle_cfg::Config,
+    app_config: &crate::app_config::App_Config,
+    ui_cfg: &inle_debug::debug_ui::Debug_Ui_Config,
+    font: inle_gfx::res::Font_Handle,
+) {
+    use inle_common::vis_align::Align;
+
+    let (win_w, win_h) = (
+        app_config.target_win_size.0 as f32,
+        app_config.target_win_size.1 as f32,
+    );
+    let ui_scale = ui_cfg.ui_scale.read(config);
+
+    let mut debug_overlay_config = inle_debug::overlay::Debug_Overlay_Config {
+        ui_scale: ui_cfg.ui_scale,
+        row_spacing: Cfg_Var::new("engine/debug/overlay/row_spacing", config),
+        font_size: ui_cfg.font_size,
+        pad_x: Cfg_Var::new("engine/debug/overlay/pad_x", config),
+        pad_y: Cfg_Var::new("engine/debug/overlay/pad_y", config),
+        background: Cfg_Var::new("engine/debug/overlay/background", config),
+        font,
+        ..Default::default()
+    };
+
+    let joy_overlay = debug_ui
+        .create_overlay(sid!("joysticks"), &debug_overlay_config)
+        .unwrap();
+    joy_overlay.cfg.horiz_align = Align::End;
+    joy_overlay.cfg.vert_align = Align::Middle;
+    joy_overlay.position = v2!(win_w, win_h * 0.5);
+
+    let time_overlay = debug_ui
+        .create_overlay(sid!("time"), &debug_overlay_config)
+        .unwrap();
+    time_overlay.cfg.horiz_align = Align::End;
+    time_overlay.cfg.vert_align = Align::End;
+    time_overlay.position = Vec2f::new(win_w, win_h);
+
+    let win_overlay = debug_ui
+        .create_overlay(sid!("window"), &debug_overlay_config)
+        .unwrap();
+    win_overlay.cfg.horiz_align = Align::End;
+    win_overlay.cfg.vert_align = Align::End;
+    win_overlay.position = v2!(win_w, win_h - 20. * ui_scale);
+
+    let fps_overlay = debug_ui
+        .create_overlay(sid!("fps"), &debug_overlay_config)
+        .unwrap();
+    fps_overlay.cfg.vert_align = Align::End;
+    fps_overlay.position = v2!(0.0, win_h);
+
+    debug_overlay_config.fadeout_time =
+        Cfg_Var::new("engine/debug/overlay/msg/fadeout_time", config);
+    let msg_overlay = debug_ui
+        .create_overlay(sid!("msg"), &debug_overlay_config)
+        .unwrap();
+    msg_overlay.cfg.horiz_align = Align::Begin;
+    msg_overlay.position = Vec2f::new(0.0, 0.0);
+    debug_overlay_config.fadeout_time = Cfg_Var::new_from_val(0.0);
+
+    debug_overlay_config.pad_x = Cfg_Var::new("engine/debug/overlay/mouse/pad_x", config);
+    debug_overlay_config.pad_y = Cfg_Var::new("engine/debug/overlay/mouse/pad_y", config);
+    debug_overlay_config.background = Cfg_Var::new("engine/debug/overlay/mouse/background", config);
+    let mouse_overlay = debug_ui
+        .create_overlay(sid!("mouse"), &debug_overlay_config)
+        .unwrap();
+    mouse_overlay.cfg.horiz_align = Align::Begin;
+    mouse_overlay.cfg.vert_align = Align::End;
+
+    debug_overlay_config.background = Cfg_Var::new("engine/debug/overlay/trace/background", config);
+    debug_overlay_config.pad_x = Cfg_Var::new("engine/debug/overlay/trace/pad_x", config);
+    debug_overlay_config.pad_y = Cfg_Var::new("engine/debug/overlay/trace/pad_y", config);
+    let trace_overlay = debug_ui
+        .create_overlay(sid!("trace"), &debug_overlay_config)
+        .unwrap();
+    trace_overlay.cfg.vert_align = Align::Middle;
+    trace_overlay.cfg.horiz_align = Align::Middle;
+    trace_overlay.cfg.hoverable = true;
+    trace_overlay.position = v2!(win_w * 0.5, win_h * 0.5);
+    // Trace overlay starts disabled
+    debug_ui.set_overlay_enabled(sid!("trace"), false);
+
+    debug_overlay_config.background =
+        Cfg_Var::new("engine/debug/overlay/record/background", config);
+    debug_overlay_config.pad_x = Cfg_Var::new("engine/debug/overlay/record/pad_x", config);
+    debug_overlay_config.pad_y = Cfg_Var::new("engine/debug/overlay/record/pad_y", config);
+    debug_overlay_config.font_size = Cfg_Var::new("engine/debug/overlay/record/font_size", config);
+    let record_overlay = debug_ui
+        .create_overlay(sid!("record"), &debug_overlay_config)
+        .unwrap();
+    record_overlay.cfg.vert_align = Align::Begin;
+    record_overlay.cfg.horiz_align = Align::Begin;
+    record_overlay.position = v2!(2.0, 2.0);
+}
 
 // @Refactoring: maybe we should not have a monolithic function on the engine side,
 // but only expose the various sub-functions and have the game call them.
@@ -525,7 +623,7 @@ fn update_graph_prev_frame_t(graph: &mut inle_debug::graph::Debug_Graph_View, ti
     );
 }
 
-fn set_debug_hud_enabled(debug_ui: &mut inle_debug::debug_ui::Debug_Ui_System, enabled: bool) {
+fn set_debug_hud_enabled(debug_ui: &mut inle_debug::debug_ui::Debug_Ui, enabled: bool) {
     debug_ui.set_overlay_enabled(sid!("time"), enabled);
     debug_ui.set_overlay_enabled(sid!("fps"), enabled);
     debug_ui.set_overlay_enabled(sid!("window"), enabled);

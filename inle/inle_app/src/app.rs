@@ -136,50 +136,6 @@ pub fn create_engine_debug_cvars(cfg: &inle_cfg::Config) -> Engine_Debug_CVars {
     }
 }
 
-/*
-pub fn create_engine_state(
-    env: Env_Info,
-    config: inle_cfg::Config,
-    app_config: App_Config,
-    loggers: inle_diagnostics::log::Loggers,
-) -> Result<Engine_State, Box<dyn std::error::Error>> {
-    let time = time::Time::default();
-    let seed;
-    #[cfg(debug_assertions)]
-    {
-        seed = rand::Default_Rng_Seed([
-            0x12, 0x23, 0x33, 0x44, 0x44, 0xab, 0xbc, 0xcc, 0x45, 0x21, 0x72, 0x21, 0xfe, 0x31,
-            0xdf, 0x46, 0xfe, 0xb4, 0x2a, 0xa9, 0x47, 0xdd, 0xd1, 0x37, 0x80, 0xfc, 0x22, 0xa1,
-            0xa2, 0xb3, 0xc0, 0xfe,
-        ]);
-    }
-    #[cfg(not(debug_assertions))]
-    {
-        seed = rand::new_random_seed()?;
-    }
-    #[cfg(debug_assertions)]
-    let debug_systems = Debug_Systems::new(&env, &config);
-    let rng = rand::new_rng_with_seed(seed);
-
-    Ok(Engine_State {
-        should_close: false,
-        cur_frame: 0,
-        env,
-        config,
-        app_config,
-        loggers,
-        time,
-        rng,
-        frame_alloc: Temp_Allocator::with_capacity(megabytes(10)),
-        long_task_mgr: Long_Task_Manager::default(),
-        #[cfg(debug_assertions)]
-        debug_systems,
-        #[cfg(debug_assertions)]
-        prev_frame_time: Duration::default(),
-    })
-}
-*/
-
 #[cfg(debug_assertions)]
 pub fn start_config_watch(env: &Env_Info, config: &mut inle_cfg::Config) -> Maybe_Error {
     use notify::RecursiveMode;
@@ -231,11 +187,10 @@ pub fn init_engine_debug(
     app_config: &crate::app_config::App_Config,
     input_state: &inle_input::input_state::Input_State,
     gfx_resources: &mut Gfx_Resources,
-    ui_cfg: inle_debug::debug_ui::Debug_Ui_System_Config,
+    ui_cfg: inle_debug::debug_ui::Debug_Ui_Config,
 ) -> Maybe_Error {
-    use inle_common::vis_align::Align;
-    use inle_debug::{graph, overlay};
-    use inle_math::vector::{Vec2f, Vec2u};
+    use inle_debug::graph;
+    use inle_math::vector::Vec2u;
 
     let font = gfx_resources.load_font(&inle_gfx::res::font_path(
         env,
@@ -251,6 +206,7 @@ pub fn init_engine_debug(
 
     let debug_ui = &mut debug_systems.debug_ui;
     debug_ui.set_font(font);
+    crate::debug::overlays::init_debug_overlays(debug_ui, config, app_config, &ui_cfg, font);
 
     init_frame_scroller(
         &mut debug_ui.frame_scroller,
@@ -261,94 +217,6 @@ pub fn init_engine_debug(
         &ui_cfg,
         app_config,
     );
-
-    let ui_scale = ui_cfg.ui_scale.read(config);
-    // Debug overlays
-    {
-        let mut debug_overlay_config = overlay::Debug_Overlay_Config {
-            ui_scale: ui_cfg.ui_scale,
-            row_spacing: Cfg_Var::new("engine/debug/overlay/row_spacing", config),
-            font_size: ui_cfg.font_size,
-            pad_x: Cfg_Var::new("engine/debug/overlay/pad_x", config),
-            pad_y: Cfg_Var::new("engine/debug/overlay/pad_y", config),
-            background: Cfg_Var::new("engine/debug/overlay/background", config),
-            font,
-            ..Default::default()
-        };
-
-        let joy_overlay = debug_ui
-            .create_overlay(sid!("joysticks"), &debug_overlay_config)
-            .unwrap();
-        joy_overlay.cfg.horiz_align = Align::End;
-        joy_overlay.cfg.vert_align = Align::Middle;
-        joy_overlay.position = v2!(win_w, win_h * 0.5);
-
-        let time_overlay = debug_ui
-            .create_overlay(sid!("time"), &debug_overlay_config)
-            .unwrap();
-        time_overlay.cfg.horiz_align = Align::End;
-        time_overlay.cfg.vert_align = Align::End;
-        time_overlay.position = Vec2f::new(win_w, win_h);
-
-        let win_overlay = debug_ui
-            .create_overlay(sid!("window"), &debug_overlay_config)
-            .unwrap();
-        win_overlay.cfg.horiz_align = Align::End;
-        win_overlay.cfg.vert_align = Align::End;
-        win_overlay.position = v2!(win_w, win_h - 20. * ui_scale);
-
-        let fps_overlay = debug_ui
-            .create_overlay(sid!("fps"), &debug_overlay_config)
-            .unwrap();
-        fps_overlay.cfg.vert_align = Align::End;
-        fps_overlay.position = v2!(0.0, win_h);
-
-        debug_overlay_config.fadeout_time =
-            Cfg_Var::new("engine/debug/overlay/msg/fadeout_time", config);
-        let msg_overlay = debug_ui
-            .create_overlay(sid!("msg"), &debug_overlay_config)
-            .unwrap();
-        msg_overlay.cfg.horiz_align = Align::Begin;
-        msg_overlay.position = Vec2f::new(0.0, 0.0);
-        debug_overlay_config.fadeout_time = Cfg_Var::new_from_val(0.0);
-
-        debug_overlay_config.pad_x = Cfg_Var::new("engine/debug/overlay/mouse/pad_x", config);
-        debug_overlay_config.pad_y = Cfg_Var::new("engine/debug/overlay/mouse/pad_y", config);
-        debug_overlay_config.background =
-            Cfg_Var::new("engine/debug/overlay/mouse/background", config);
-        let mouse_overlay = debug_ui
-            .create_overlay(sid!("mouse"), &debug_overlay_config)
-            .unwrap();
-        mouse_overlay.cfg.horiz_align = Align::Begin;
-        mouse_overlay.cfg.vert_align = Align::End;
-
-        debug_overlay_config.background =
-            Cfg_Var::new("engine/debug/overlay/trace/background", config);
-        debug_overlay_config.pad_x = Cfg_Var::new("engine/debug/overlay/trace/pad_x", config);
-        debug_overlay_config.pad_y = Cfg_Var::new("engine/debug/overlay/trace/pad_y", config);
-        let trace_overlay = debug_ui
-            .create_overlay(sid!("trace"), &debug_overlay_config)
-            .unwrap();
-        trace_overlay.cfg.vert_align = Align::Middle;
-        trace_overlay.cfg.horiz_align = Align::Middle;
-        trace_overlay.cfg.hoverable = true;
-        trace_overlay.position = v2!(win_w * 0.5, win_h * 0.5);
-        // Trace overlay starts disabled
-        debug_ui.set_overlay_enabled(sid!("trace"), false);
-
-        debug_overlay_config.background =
-            Cfg_Var::new("engine/debug/overlay/record/background", config);
-        debug_overlay_config.pad_x = Cfg_Var::new("engine/debug/overlay/record/pad_x", config);
-        debug_overlay_config.pad_y = Cfg_Var::new("engine/debug/overlay/record/pad_y", config);
-        debug_overlay_config.font_size =
-            Cfg_Var::new("engine/debug/overlay/record/font_size", config);
-        let record_overlay = debug_ui
-            .create_overlay(sid!("record"), &debug_overlay_config)
-            .unwrap();
-        record_overlay.cfg.vert_align = Align::Begin;
-        record_overlay.cfg.horiz_align = Align::Begin;
-        record_overlay.position = v2!(2.0, 2.0);
-    }
 
     // Graphs
     {
@@ -502,7 +370,7 @@ fn init_frame_scroller(
     font: inle_gfx::res::Font_Handle,
     cvars: &Engine_CVars,
     cfg: &inle_cfg::Config,
-    ui_cfg: &inle_debug::debug_ui::Debug_Ui_System_Config,
+    ui_cfg: &inle_debug::debug_ui::Debug_Ui_Config,
     app_config: &App_Config,
 ) {
     let ms_per_frame = cvars.gameplay_update_tick_ms.read(cfg);
