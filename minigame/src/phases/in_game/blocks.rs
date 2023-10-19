@@ -55,16 +55,15 @@ impl Block_System {
 
         let win_w = game_state.app_config.target_win_size.0 as f32;
         let win_h = game_state.app_config.target_win_size.1 as f32;
-        let spawn_offset_x = -spawn_area_size.x / 2 + 1;
+        let spawn_offset_x = -spawn_area_size.x / 2;
 
         for i in 0..n_blocks {
             let mut entity = create_block(env, gres, physw, cfg, rng);
             let block_width =
-                entity.transform.scale().x * entity.sprites[0].sprite.rect.width as f32 + 2.;
+                entity.transform.scale().x * entity.sprites[0].sprite.rect.width as f32;
             let x = block_width
                 * ((rng.next() % (spawn_area_size.x as u64 / block_width as u64)) as f32)
-                + spawn_offset_x as f32
-                - win_w * 0.5;
+                + spawn_offset_x as f32;
             let y = -win_h - ((n_blocks - i) * spawn_area_size.y as usize) as f32;
             entity.transform.set_position(x, y);
             let handle = entities.push(entity);
@@ -124,7 +123,7 @@ fn create_block(
 
     let cld = inle_physics::collider::Collider {
         shape: inle_physics::collider::Collision_Shape::Rect {
-            width: sprite.rect.width as _,
+            width: (sprite.rect.width - 4) as _,
             height: sprite.rect.height as _,
         },
         layer: GCL::Blocks.into(),

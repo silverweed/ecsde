@@ -470,3 +470,4 @@ pub fn update_traced_fn_console_hints(game_state: &mut Game_State) {
         game_state.update_trace_hints_countdown -= 1;
     }
 }
+

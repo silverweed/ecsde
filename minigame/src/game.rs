@@ -62,6 +62,9 @@ pub struct Game_State {
 
     #[cfg(debug_assertions)]
     pub update_trace_hints_countdown: i16,
+
+    #[cfg(debug_assertions)]
+    pub debug_cvars: Debug_CVars,
 }
 
 pub struct Game_Resources {
@@ -72,6 +75,12 @@ pub struct Game_Resources {
 
 pub struct Game_Args {
     pub starting_phase: inle_app::phases::Phase_Id,
+}
+
+#[cfg(debug_assertions)]
+#[derive(Default)]
+pub struct Debug_CVars {
+    pub draw_positions: Cfg_Var<bool>,
 }
 
 //
@@ -207,6 +216,9 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
         - 1;
     long_task_mgr.start(n_threads);
 
+    #[cfg(debug_assertions)] 
+    let debug_cvars = create_debug_cvars(&config);
+    
     Box::new(Game_State {
         env,
         config,
@@ -243,6 +255,8 @@ pub fn internal_game_init(_args: &Game_Args) -> Box<Game_State> {
         fps_counter: inle_debug::fps::Fps_Counter::with_update_rate(&Duration::from_secs(1)),
         #[cfg(debug_assertions)]
         update_trace_hints_countdown: 0,
+        #[cfg(debug_assertions)]
+        debug_cvars
     })
 }
 
@@ -500,4 +514,13 @@ pub fn render(game_state: &mut Game_State, game_res: &mut Game_Resources) {
     }
 
     inle_win::window::display(win);
+}
+
+#[cfg(debug_assertions)]
+fn create_debug_cvars(cfg: &inle_cfg::Config) -> Debug_CVars {
+    let draw_positions = Cfg_Var::new("game/debug/entities/draw_positions", cfg);
+
+    Debug_CVars {
+        draw_positions
+    }
 }

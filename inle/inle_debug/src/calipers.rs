@@ -23,7 +23,6 @@ impl Debug_Calipers {
     ) {
         let mpos = mouse::raw_mouse_pos_v2i(&input_state.raw.mouse_state);
         let world_pos = render_window::unproject_screen_pos(mpos, window, camera);
-        dbg!((mpos, world_pos));
         self.start_world_pos = world_pos;
         self.dragging = true;
     }

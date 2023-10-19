@@ -150,7 +150,7 @@ impl Game_Phase for In_Game {
         // Mountains
         // NOTE: we need to leave room for 24 blocks in the middle; the mountain is 256px wide.
         //let mountain_off_x = -grid_step * 15 - grid_step * 4
-        let mountain_off_x = 1120.;
+        let mountain_off_x = 1272.;
         // let mountain_off_x = win_hw - 100.;
         let mountain_off_y = 280.;
 
@@ -207,7 +207,8 @@ impl Game_Phase for In_Game {
 
         // Blocks
         //let block_spawn_area_x = (win_w - (2 * mountain_width as u32) - 2) as f32;
-        let block_spawn_area_x = 1472;
+        let n_block_columns = 18;
+        let block_spawn_area_x = n_block_columns * 120;
         self.block_system.init(
             50,
             v2!(block_spawn_area_x, 200),
@@ -266,6 +267,9 @@ impl Game_Phase for In_Game {
         for entity in &self.entities {
             entity.draw(&mut gs.window, &mut gs.batches);
         }
+
+        #[cfg(debug_assertions)]
+        self.draw_debugs(gs);
     }
 }
 
@@ -479,6 +483,23 @@ impl In_Game {
         }
 
         // TODO: handle win
+    }
+
+    #[cfg(debug_assertions)]
+    fn draw_debugs(&self, game_state: &mut Game_State) {
+        let cfg = &game_state.config;
+        let painter = &mut game_state.debug_systems.global_painter;
+        
+        let draw_positions = game_state.debug_cvars.draw_positions.read(cfg);
+        if draw_positions {
+            for entity in &self.entities {
+                let pos = entity.transform.position();
+                painter.add_circle(inle_math::shapes::Circle {
+                    center: pos,
+                    radius: 8.0,
+                }, inle_common::colors::BLUE);
+            }
+        }
     }
 }
 
