@@ -5,14 +5,8 @@ use inle_math::vector::{Vec2f, Vec2i, Vec2u};
 #[cfg(feature = "win-glfw")]
 mod glfw;
 
-#[cfg(feature = "win-winit")]
-mod winit;
-
 #[cfg(feature = "win-glfw")]
 use self::glfw as backend;
-
-#[cfg(feature = "win-winit")]
-use self::winit as backend;
 
 #[cfg(all(feature = "win-glfw", feature = "gfx-gl"))]
 pub use backend::get_gl_handle;

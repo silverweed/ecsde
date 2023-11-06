@@ -128,7 +128,7 @@ pub fn update_debug(game_state: &mut Game_State, _game_res: &mut Game_Resources)
     update_console(game_state);
     update_scroller(game_state);
 
-    game_state.fps_counter.tick(&game_state.time.dt());
+    game_state.fps_counter.tick(&game_state.time.real_dt());
     game_state.config.update();
 
     inle_app::debug::overlays::update_debug(
@@ -470,4 +470,3 @@ pub fn update_traced_fn_console_hints(game_state: &mut Game_State) {
         game_state.update_trace_hints_countdown -= 1;
     }
 }
-
